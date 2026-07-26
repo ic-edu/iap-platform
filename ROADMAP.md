@@ -14,5 +14,5 @@
   - Passage Management, 12 Question Types, Difficulty Levels, Tagging, MediaService Abstraction, Test Builder & Validation Rules, Granular Permissions, and Architectural Documentation (`docs/architecture/`).
 - [x] **Sprint 5 — CBT Engine & Student Examination Interface** (`v0.5.0-sprint5`)
   - Candidate Portal, Engine Layer (`AssessmentEngine`, `AttemptEngine`, `TimerEngine`, `NavigationEngine`, `AutoSaveEngine`, `RandomizationEngine`, `ScoringEngine`, `ReviewEngine`), Distraction-Free CBT UI, Anti-Cheating Foundation, Architecture Decision Records (`docs/adr/`), and 60+ Pest Tests.
-- [ ] **Sprint 6 — Extensions & Public API**
-  - PDF Certificate Generator, Payment Gateway Integration (Midtrans/Xendit), REST API, and Mobile Ready.
+- [x] **Sprint 6 — Results, Certificate & Analytics** (`v0.6.0-sprint6`)
+  - Result Engine, Certificate Engine & Template System, Public Verification Portal (`/verify`), Analytics Engine, Psychometric Item Analysis, Export Service, Queue Foundation, GitHub Actions CI Pipeline, ADRs (`0006`, `0007`), and 71 Pest Tests.

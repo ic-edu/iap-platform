@@ -58,6 +58,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'assessment.result.view',
             'assessment.result.export',
             'certificate.view',
+            'certificate.issue',
+            'certificate.reissue',
+            'certificate.revoke',
+            'certificate.download',
+            'result.view',
+            'result.export',
+            'analytics.view',
+            'verification.manage',
             'finance.view',
             'cms.view',
             'reporting.view',
@@ -79,6 +87,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $roleStudent->syncPermissions([
             'take tests',
             'view results',
+            'certificate.download',
         ]);
 
         $roleTeacher = Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
@@ -90,6 +99,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'grade tests',
             'view results',
             'issue certificates',
+            'certificate.view',
+            'certificate.issue',
+            'certificate.download',
+            'result.view',
+            'analytics.view',
         ]);
 
         $roleAdmin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);

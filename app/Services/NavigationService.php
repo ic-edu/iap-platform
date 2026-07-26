@@ -55,10 +55,10 @@ class NavigationService
             ],
             [
                 'label' => 'Certificates',
-                'route' => 'dashboard',
+                'route' => 'admin.certificates.index',
                 'icon' => 'badge-check',
                 'permission' => 'certificate.view',
-                'active_pattern' => 'certificate*',
+                'active_pattern' => 'admin/certificates*',
                 'badge' => null,
             ],
             [

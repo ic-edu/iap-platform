@@ -13,6 +13,10 @@ use App\Modules\Assessment\Events\TestCreated;
 use App\Modules\Assessment\Events\TestPublished;
 use App\Modules\Assessment\Listeners\LogAssessmentDeliveryActivity;
 use App\Modules\Assessment\Listeners\LogTestActivity;
+use App\Modules\Certificate\Events\CertificateIssued;
+use App\Modules\Certificate\Events\CertificateReissued;
+use App\Modules\Certificate\Events\CertificateRevoked;
+use App\Modules\Certificate\Listeners\LogCertificateActivity;
 use App\Modules\QuestionBank\Events\QuestionCreated;
 use App\Modules\QuestionBank\Events\QuestionDeleted;
 use App\Modules\QuestionBank\Events\QuestionUpdated;
@@ -100,5 +104,9 @@ class ModuleServiceProvider extends ServiceProvider
         Event::listen(AttemptSubmitted::class, [LogAssessmentDeliveryActivity::class, 'handleAttemptSubmitted']);
         Event::listen(AttemptExpired::class, [LogAssessmentDeliveryActivity::class, 'handleAttemptExpired']);
         Event::listen(RuleViolationDetected::class, [LogAssessmentDeliveryActivity::class, 'handleRuleViolationDetected']);
+
+        Event::listen(CertificateIssued::class, [LogCertificateActivity::class, 'handleCertificateIssued']);
+        Event::listen(CertificateReissued::class, [LogCertificateActivity::class, 'handleCertificateReissued']);
+        Event::listen(CertificateRevoked::class, [LogCertificateActivity::class, 'handleCertificateRevoked']);
     }
 }
