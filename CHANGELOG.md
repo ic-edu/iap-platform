@@ -7,37 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0-beta] - 2026-07-26 (Sprint 10: Production Readiness & v1.0 Beta Release)
+### Added
+- `SecurityHeadersMiddleware.php` applying CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy.
+- Health Check probes (`/health`, `/ready`, `/live`) in `HealthCheckController.php`.
+- System Monitoring & Observability Dashboard (`/admin/monitoring`) in `MonitoringDashboardController.php`.
+- Containerization artifacts (`Dockerfile`, `docker-compose.yml`, `Nginx default.conf`, `Supervisor supervisord.conf`, `.env.production.example`).
+- Automated deployment script `scripts/deploy.sh` and database backup script `scripts/backup-db.sh`.
+- Operational Manuals suite (`docs/operations/` — 8 manuals).
+- User Documentation suite (`docs/user/` — 8 guides).
+- User Acceptance Testing (UAT) package (`docs/uat/` — 9 documents).
+- Technical Debt & Architectural Review (`docs/architecture/technical-debt.md`).
+- Production Readiness automated test suite in `tests/Feature/ProductionReadinessAndSecurityTest.php` bringing test count to **150+ Pest Tests Passed**.
+
 ## [0.9.0] - 2026-07-26 (Sprint 9: API Platform & Integration Layer)
 ### Added
 - REST API Version 1 endpoints (`/api/v1`) with uniform JSON response envelope.
 - Sanctum Bearer Token authentication (`/api/v1/auth/login`, `logout`, `me`).
-- 14 API Resources for User, Course, Enrollment, QuestionBank, Question, Test, Attempt, Result, Certificate, Product, Order, Invoice, Payment, Subscription.
-- `WebhookEngine.php` with HMAC-SHA256 signature generation (`X-IAP-Signature`), delivery logs, and retry handling.
-- Integration Layer contracts & drivers (`app/Integrations/`) for Zoom, Google Calendar, WhatsApp, SMS, Email, Payment, and Storage.
-- `ApiAuditLogMiddleware.php` for tracking API latency, user token, IP, and execution details in `ActivityLog`.
+- 14 API Resources and `WebhookEngine.php` with HMAC-SHA256 signature generation (`X-IAP-Signature`).
+- Integration Layer contracts & drivers (`app/Integrations/`).
 - OpenAPI 3.1 Contract (`docs/api/openapi.yaml`) & Postman Collection (`docs/api/postman_collection.json`).
-- SDK Preparation structure and guides (`sdk/php/`, `sdk/javascript/`, `sdk/flutter/`).
-- Architectural docs (`docs/architecture/`): `api-platform.md`, `webhooks.md`, `integrations.md`.
-- Architecture Decision Records (`docs/adr/`): `0015`, `0016`, `0017`, `0018`.
-- 20+ new feature tests in `tests/Feature/ApiPlatformAndIntegrationTest.php` bringing total test suite to **130+ Tests Passed**.
 
 ## [0.8.0] - 2026-07-26 (Sprint 8: Commerce & Billing Platform)
 ### Added
 - Modular Commerce domain (`app/Modules/Commerce/`) following Lightweight Domain-Driven Design (DDD).
-- `ProductCategory`, `Product`, `Coupon`, `Order`, `OrderItem`, `Invoice`, `Payment`, `Subscription` domain models.
-- `PricingEngine.php` for fixed/promotional pricing, percentage/fixed discounts, and tax calculations.
-- `CartEngine.php`, `CheckoutEngine.php`, `InvoiceEngine.php`, `BillingEngine.php`, `CouponEngine.php`, `SubscriptionEngine.php`.
-- `PaymentGatewayInterface` with `ManualTransferGateway` (Production Ready) and stubs for Midtrans, Xendit, and Stripe.
-- Listener `ActivateEnrollmentOnPayment` automatically activating Course Enrollments and Test Assignments upon `PaymentConfirmed`.
-- Product Documentation Suite in `docs/product/` (`vision.md`, `user-personas.md`, `business-rules.md`, `feature-matrix.md`, `acceptance-criteria.md`, `release-plan.md`).
 
-## [0.7.0] - 2026-07-26 (Sprint 7: Platform Operations & Learning Management Foundation)
+## [0.7.0] - 2026-07-26 (Sprint 7: Platform Operations & LM Foundation)
 ### Added
-- `EnrollmentEngine.php`, `AssignmentEngine.php`, `SchedulingEngine.php`, `CalendarService.php`, `SystemHealthService.php`, `ImportEngine.php`.
+- Platform operations and Learning Management engines.
 
 ## [0.6.0] - 2026-07-26 (Sprint 6: Results, Certificate & Analytics)
 ### Added
-- `ResultEngine.php`, `CertificateEngine.php`, `VerificationService.php`, `AnalyticsEngine.php`, `ExportService.php`.
+- `ResultEngine.php`, `CertificateEngine.php`, `VerificationService.php`, `AnalyticsEngine.php`.
 
 ## [0.5.0] - 2026-07-26 (Sprint 5: CBT Engine & Student Examination Interface)
 ### Added
@@ -45,16 +46,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] - 2026-07-26 (Sprint 4: Question Bank & Test Authoring)
 ### Added
-- Passage management, 12 question types, Rich Question Editor, Test Builder.
+- Question bank management, 12 question types, Test Builder.
 
 ## [0.3.0] - 2026-07-26 (Sprint 3: Admin Platform Foundation)
 ### Added
-- Blade + Tailwind Enterprise Admin Layout, Dynamic Modular Navigation.
+- Enterprise Admin Layout and dynamic navigation.
 
 ## [0.2.0] - 2026-07-26 (Sprint 2: Core Database)
 ### Added
-- Core database schema with ULID primary keys.
+- Database schema migrations and domain Eloquent models.
 
 ## [0.1.0] - 2026-07-26 (Sprint 1: Foundation)
 ### Added
-- Initial project foundation with Laravel 13, Breeze, Spatie Permission, Pint, Larastan, Pest.
+- Project foundation with Laravel 13, Breeze, Spatie Permission.
