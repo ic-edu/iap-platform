@@ -39,18 +39,18 @@ class NavigationService
             ],
             [
                 'label' => 'Question Bank',
-                'route' => 'dashboard',
+                'route' => 'admin.question-banks.index',
                 'icon' => 'folder',
                 'permission' => 'question-bank.view',
-                'active_pattern' => 'question-bank*',
+                'active_pattern' => 'admin/question-banks*',
                 'badge' => null,
             ],
             [
                 'label' => 'Assessment',
-                'route' => 'dashboard',
+                'route' => 'admin.tests.index',
                 'icon' => 'clipboard-check',
                 'permission' => 'assessment.view',
-                'active_pattern' => 'assessment*',
+                'active_pattern' => 'admin/tests*',
                 'badge' => null,
             ],
             [

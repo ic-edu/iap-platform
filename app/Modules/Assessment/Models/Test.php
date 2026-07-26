@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property TestType $test_type
  * @property int $duration_minutes
  * @property int $pass_score
+ * @property bool $shuffle_questions
+ * @property bool $shuffle_choices
  * @property bool $is_published
  * @property int $created_by
  */
@@ -33,6 +35,8 @@ class Test extends Model
         'test_type',
         'duration_minutes',
         'pass_score',
+        'shuffle_questions',
+        'shuffle_choices',
         'is_published',
         'created_by',
     ];
@@ -43,6 +47,8 @@ class Test extends Model
             'test_type' => TestType::class,
             'duration_minutes' => 'integer',
             'pass_score' => 'integer',
+            'shuffle_questions' => 'boolean',
+            'shuffle_choices' => 'boolean',
             'is_published' => 'boolean',
         ];
     }

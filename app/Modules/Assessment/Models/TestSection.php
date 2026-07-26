@@ -9,6 +9,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string $id
+ * @property string $test_id
+ * @property string $title
+ * @property SectionType $section_type
+ * @property int $duration_minutes
+ * @property int $order
+ */
 class TestSection extends Model
 {
     use HasFactory, HasUlids;

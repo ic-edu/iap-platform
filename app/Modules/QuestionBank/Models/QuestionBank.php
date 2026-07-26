@@ -12,6 +12,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property string $title
+ * @property string $slug
+ * @property string|null $category_id
+ * @property int $created_by
+ * @property TestType $test_type
+ * @property string|null $description
+ */
 class QuestionBank extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
