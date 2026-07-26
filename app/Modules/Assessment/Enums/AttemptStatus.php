@@ -4,18 +4,20 @@ namespace App\Modules\Assessment\Enums;
 
 enum AttemptStatus: string
 {
+    case Draft = 'draft';
     case InProgress = 'in_progress';
-    case Completed = 'completed';
-    case Abandoned = 'abandoned';
-    case Evaluated = 'evaluated';
+    case Submitted = 'submitted';
+    case Expired = 'expired';
+    case Cancelled = 'cancelled';
 
     public function label(): string
     {
         return match ($this) {
+            self::Draft => 'Draft Attempt',
             self::InProgress => 'In Progress',
-            self::Completed => 'Completed (Pending Evaluation)',
-            self::Abandoned => 'Abandoned',
-            self::Evaluated => 'Evaluated & Scored',
+            self::Submitted => 'Submitted & Completed',
+            self::Expired => 'Time Expired',
+            self::Cancelled => 'Cancelled',
         };
     }
 }

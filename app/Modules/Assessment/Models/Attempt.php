@@ -20,6 +20,11 @@ use Illuminate\Support\Carbon;
  * @property float|null $total_score
  * @property array<string, mixed>|null $section_scores
  * @property AttemptStatus $status
+ * @property string|null $current_question_id
+ * @property array<int, string>|null $flagged_questions
+ * @property array<int, string>|null $review_later_questions
+ * @property int $violations_count
+ * @property string|null $seed
  * @property Carbon|null $updated_at
  * @property User|null $user
  * @property Test|null $test
@@ -38,6 +43,11 @@ class Attempt extends Model
         'total_score',
         'section_scores',
         'status',
+        'current_question_id',
+        'flagged_questions',
+        'review_later_questions',
+        'violations_count',
+        'seed',
     ];
 
     protected function casts(): array
@@ -47,6 +57,9 @@ class Attempt extends Model
             'submitted_at' => 'datetime',
             'total_score' => 'float',
             'section_scores' => 'array',
+            'flagged_questions' => 'array',
+            'review_later_questions' => 'array',
+            'violations_count' => 'integer',
             'status' => AttemptStatus::class,
         ];
     }

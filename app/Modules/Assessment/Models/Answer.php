@@ -9,6 +9,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id
+ * @property string $attempt_id
+ * @property string $question_id
+ * @property string|null $selected_choice_id
+ * @property string|null $text_response
+ * @property string|null $audio_response_url
+ * @property bool|null $is_correct
+ * @property float|null $score_earned
+ * @property string|null $feedback
+ * @property Question|null $question
+ */
 class Answer extends Model
 {
     use HasFactory, HasUlids;

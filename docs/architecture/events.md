@@ -17,3 +17,8 @@ IAP menggunakan Event & Listener terpisah untuk merekam seluruh audit log secara
 | `QuestionDeleted` | `LogQuestionActivity` | `question_bank.question_deleted` |
 | `TestCreated` | `LogTestActivity` | `assessment.test_created` |
 | `TestPublished` | `LogTestActivity` | `assessment.test_published` |
+| `AttemptStarted` | `LogAssessmentDeliveryActivity` | `cbt.attempt_started` |
+| `AttemptResumed` | `LogAssessmentDeliveryActivity` | `cbt.attempt_resumed` |
+| `AttemptSubmitted` | `LogAssessmentDeliveryActivity` | `cbt.attempt_submitted` |
+| `AttemptExpired` | `LogAssessmentDeliveryActivity` | `cbt.attempt_expired` |
+| `RuleViolationDetected` | `LogAssessmentDeliveryActivity` | `cbt.violation_detected` |

@@ -4,15 +4,15 @@
 
 ## 📌 Sprint Progress Summary
 
-- [x] **Sprint 1 — Foundation**
+- [x] **Sprint 1 — Foundation** (`v0.1.0-sprint1`)
   - Laravel 13, Breeze, Modular Architecture (`app/Modules/Authentication`), Spatie Permission, Pint, Larastan, Pest.
-- [x] **Sprint 2 — Core Database**
+- [x] **Sprint 2 — Core Database** (`v0.2.0-sprint2`)
   - ULID Primary Keys, Enums, Migrations, Models, and Seeders across Academic, QuestionBank, Assessment, Certificate, Finance, CMS, and Reporting.
-- [x] **Sprint 3 — Admin Platform Foundation**
+- [x] **Sprint 3 — Admin Platform Foundation** (`v0.3.0-sprint3`)
   - Enterprise Admin Layout, Dynamic Modular Navigation, Extended Dashboard Metrics (5-min cache), Event-Driven Activity Logging, Settings Module, and Notification Foundation.
-- [x] **Sprint 4 — Question Bank & Test Authoring**
+- [x] **Sprint 4 — Question Bank & Test Authoring** (`v0.4.0-sprint4`)
   - Passage Management, 12 Question Types, Difficulty Levels, Tagging, MediaService Abstraction, Test Builder & Validation Rules, Granular Permissions, and Architectural Documentation (`docs/architecture/`).
-- [ ] **Sprint 5 — CBT Engine & Student Examination Interface**
-  - Interactive Student Exam Interface, Timer, Auto-Save, Auto-Scoring, and Result Analysis.
+- [x] **Sprint 5 — CBT Engine & Student Examination Interface** (`v0.5.0-sprint5`)
+  - Candidate Portal, Engine Layer (`AssessmentEngine`, `AttemptEngine`, `TimerEngine`, `NavigationEngine`, `AutoSaveEngine`, `RandomizationEngine`, `ScoringEngine`, `ReviewEngine`), Distraction-Free CBT UI, Anti-Cheating Foundation, Architecture Decision Records (`docs/adr/`), and 60+ Pest Tests.
 - [ ] **Sprint 6 — Extensions & Public API**
   - PDF Certificate Generator, Payment Gateway Integration (Midtrans/Xendit), REST API, and Mobile Ready.

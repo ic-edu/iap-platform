@@ -68,7 +68,7 @@ class AssessmentSeeder extends Seeder
                 'listening' => 430,
                 'reading' => 420,
             ],
-            'status' => AttemptStatus::Evaluated,
+            'status' => AttemptStatus::Submitted,
         ]);
 
         foreach ($questions as $question) {
