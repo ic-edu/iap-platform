@@ -1,6 +1,14 @@
 # 🚀 iC.edu Assessment Platform (IAP) — Internal UAT Start Guide
 
-Welcome Product Owner & Internal UAT Tester! This guide assumes **zero prior Laravel experience** and contains everything required to test the platform on your local macOS machine.
+Welcome Product Owner & Internal UAT Tester! This guide assumes **zero prior Laravel experience** and contains everything required to access and test the platform on your local macOS machine.
+
+---
+
+## 🟢 Server Status & Listening Address
+The development server is active and bound to `0.0.0.0:8000`, making it accessible via any of the following URLs in your browser:
+
+- **Primary Local URL**: `http://127.0.0.1:8000`
+- **Alternative Localhost URL**: `http://localhost:8000`
 
 ---
 
@@ -51,7 +59,7 @@ Use the following pre-seeded accounts to test each user role:
 ## 📋 Recommended Testing Order
 
 1. **Step 1: Admin & Observability Audit**
-   - Open `http://127.0.0.1:8000/login` and log in as `admin@icedu.org` / `password`.
+   - Open `http://127.0.0.1:8000/login` (or `http://localhost:8000/login`) and log in as `admin@icedu.org` / `password`.
    - Visit `http://127.0.0.1:8000/admin/monitoring` to review active memory, storage, database connections, and failed queue jobs.
 2. **Step 2: Question Bank & Test Authoring (Teacher Role)**
    - Log in as `teacher@icedu.org` / `password`.
@@ -72,15 +80,12 @@ Use the following pre-seeded accounts to test each user role:
 
 ---
 
-## 🛠️ Common Troubleshooting
+## 🛠️ How to Keep / Restart Server During Testing
 
-- **Server Not Responding**: Open a Terminal window and run:
-  ```bash
-  cd /Users/indrawahyudi/.gemini/antigravity/scratch/iap-platform
-  php artisan serve
-  ```
-- **Session Expired (HTTP 419)**: Refresh the browser page (`Cmd + R`) and re-submit.
-- **Cache Clearing**:
-  ```bash
-  php artisan config:clear
-  ```
+The background dev server process is currently running on `0.0.0.0:8000`. If you ever close your terminal or restart your computer, simply open Terminal and run:
+
+```bash
+cd /Users/indrawahyudi/.gemini/antigravity/scratch/iap-platform
+php artisan serve --host=0.0.0.0 --port=8000
+```
+Keep that Terminal tab open while performing UAT testing.
