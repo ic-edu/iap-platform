@@ -2,13 +2,21 @@
 
 namespace App\Providers;
 
+use App\Listeners\ActivateEnrollmentOnPayment;
+use App\Listeners\LogCommerceActivity;
+use App\Listeners\LogPlatformOperationsActivity;
 use App\Modules\Academic\Events\CourseCreated;
+use App\Modules\Academic\Events\EnrollmentCancelled;
+use App\Modules\Academic\Events\EnrollmentCreated;
 use App\Modules\Academic\Listeners\LogCourseCreated;
+use App\Modules\Assessment\Events\AssignmentRevoked;
 use App\Modules\Assessment\Events\AttemptExpired;
 use App\Modules\Assessment\Events\AttemptResumed;
 use App\Modules\Assessment\Events\AttemptStarted;
 use App\Modules\Assessment\Events\AttemptSubmitted;
+use App\Modules\Assessment\Events\ReminderSent;
 use App\Modules\Assessment\Events\RuleViolationDetected;
+use App\Modules\Assessment\Events\TestAssigned;
 use App\Modules\Assessment\Events\TestCreated;
 use App\Modules\Assessment\Events\TestPublished;
 use App\Modules\Assessment\Listeners\LogAssessmentDeliveryActivity;
@@ -17,6 +25,12 @@ use App\Modules\Certificate\Events\CertificateIssued;
 use App\Modules\Certificate\Events\CertificateReissued;
 use App\Modules\Certificate\Events\CertificateRevoked;
 use App\Modules\Certificate\Listeners\LogCertificateActivity;
+use App\Modules\Commerce\Events\CheckoutCompleted;
+use App\Modules\Commerce\Events\InvoiceGenerated;
+use App\Modules\Commerce\Events\PaymentCancelled;
+use App\Modules\Commerce\Events\PaymentConfirmed;
+use App\Modules\Commerce\Events\PaymentCreated;
+use App\Modules\Commerce\Events\PaymentRefunded;
 use App\Modules\QuestionBank\Events\QuestionCreated;
 use App\Modules\QuestionBank\Events\QuestionDeleted;
 use App\Modules\QuestionBank\Events\QuestionUpdated;
@@ -108,5 +122,20 @@ class ModuleServiceProvider extends ServiceProvider
         Event::listen(CertificateIssued::class, [LogCertificateActivity::class, 'handleCertificateIssued']);
         Event::listen(CertificateReissued::class, [LogCertificateActivity::class, 'handleCertificateReissued']);
         Event::listen(CertificateRevoked::class, [LogCertificateActivity::class, 'handleCertificateRevoked']);
+
+        Event::listen(EnrollmentCreated::class, [LogPlatformOperationsActivity::class, 'handleEnrollmentCreated']);
+        Event::listen(EnrollmentCancelled::class, [LogPlatformOperationsActivity::class, 'handleEnrollmentCancelled']);
+        Event::listen(TestAssigned::class, [LogPlatformOperationsActivity::class, 'handleTestAssigned']);
+        Event::listen(AssignmentRevoked::class, [LogPlatformOperationsActivity::class, 'handleAssignmentRevoked']);
+        Event::listen(ReminderSent::class, [LogPlatformOperationsActivity::class, 'handleReminderSent']);
+
+        // Commerce Listeners
+        Event::listen(PaymentConfirmed::class, [ActivateEnrollmentOnPayment::class, 'handle']);
+        Event::listen(CheckoutCompleted::class, [LogCommerceActivity::class, 'handleCheckoutCompleted']);
+        Event::listen(InvoiceGenerated::class, [LogCommerceActivity::class, 'handleInvoiceGenerated']);
+        Event::listen(PaymentCreated::class, [LogCommerceActivity::class, 'handlePaymentCreated']);
+        Event::listen(PaymentConfirmed::class, [LogCommerceActivity::class, 'handlePaymentConfirmed']);
+        Event::listen(PaymentCancelled::class, [LogCommerceActivity::class, 'handlePaymentCancelled']);
+        Event::listen(PaymentRefunded::class, [LogCommerceActivity::class, 'handlePaymentRefunded']);
     }
 }

@@ -81,6 +81,22 @@ class RolesAndPermissionsSeeder extends Seeder
             'system.monitor',
             'import.manage',
             'batch.manage',
+
+            // Commerce & Billing Granular Permissions
+            'commerce.view',
+            'product.view',
+            'product.create',
+            'product.update',
+            'product.delete',
+            'pricing.manage',
+            'coupon.manage',
+            'order.view',
+            'invoice.view',
+            'invoice.manage',
+            'payment.manage',
+            'subscription.manage',
+            'finance.dashboard',
+
             'finance.view',
             'cms.view',
             'reporting.view',
@@ -104,6 +120,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view results',
             'certificate.download',
             'calendar.view',
+            'product.view',
+            'order.view',
+            'invoice.view',
         ]);
 
         $roleTeacher = Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);

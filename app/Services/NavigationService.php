@@ -62,6 +62,14 @@ class NavigationService
                 'badge' => null,
             ],
             [
+                'label' => 'Commerce & Billing',
+                'route' => 'dashboard',
+                'icon' => 'shopping-bag',
+                'permission' => 'commerce.view',
+                'active_pattern' => 'commerce*',
+                'badge' => null,
+            ],
+            [
                 'label' => 'Finance',
                 'route' => 'dashboard',
                 'icon' => 'credit-card',
