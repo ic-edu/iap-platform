@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -20,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property float $discount
  * @property float $tax
  * @property float $grand_total
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property User|null $user
  * @property Invoice|null $invoice
  */

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -23,6 +24,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property bool $is_featured
  * @property string|null $course_id
  * @property string|null $test_id
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property Course|null $course
  * @property Test|null $test
  */

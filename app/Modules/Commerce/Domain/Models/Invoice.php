@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property float $amount
  * @property Carbon|null $due_date
  * @property Carbon|null $paid_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property Order|null $order
  * @property User|null $user
  */

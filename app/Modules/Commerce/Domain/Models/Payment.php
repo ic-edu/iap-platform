@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property PaymentStatus $status
  * @property float $amount
  * @property Carbon|null $confirmed_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property Invoice|null $invoice
  * @property User|null $user
  */

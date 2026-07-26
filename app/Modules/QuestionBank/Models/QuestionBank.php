@@ -11,15 +11,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
  * @property string $title
  * @property string $slug
+ * @property string|null $code
  * @property string|null $category_id
  * @property int $created_by
  * @property TestType $test_type
  * @property string|null $description
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class QuestionBank extends Model
 {

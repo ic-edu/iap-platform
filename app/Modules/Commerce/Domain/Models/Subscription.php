@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  * @property SubscriptionStatus $status
  * @property Carbon $starts_at
  * @property Carbon|null $ends_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property User|null $user
  * @property Product|null $product
  */

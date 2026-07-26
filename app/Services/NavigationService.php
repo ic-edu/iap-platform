@@ -70,6 +70,14 @@ class NavigationService
                 'badge' => null,
             ],
             [
+                'label' => 'API & Integrations',
+                'route' => 'dashboard',
+                'icon' => 'code-bracket',
+                'permission' => 'api.manage',
+                'active_pattern' => 'api*',
+                'badge' => null,
+            ],
+            [
                 'label' => 'Finance',
                 'route' => 'dashboard',
                 'icon' => 'credit-card',

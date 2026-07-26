@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -22,6 +23,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property bool $shuffle_choices
  * @property bool $is_published
  * @property int $created_by
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Test extends Model
 {

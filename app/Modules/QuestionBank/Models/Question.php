@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -21,12 +22,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $audio_url
  * @property string|null $image_url
  * @property string $prompt
+ * @property string|null $question_text
  * @property SectionType $section
  * @property int|null $part_number
  * @property QuestionType $question_type
  * @property DifficultyLevel $difficulty
  * @property int $points
  * @property string|null $explanation
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Question extends Model
 {

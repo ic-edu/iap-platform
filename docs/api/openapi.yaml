@@ -1,0 +1,44 @@
+openapi: 3.1.0
+info:
+  title: iC.edu Assessment Platform (IAP) REST API
+  description: Enterprise REST API Specification v1.0.0
+  version: 1.0.0
+servers:
+  - url: https://api.icedu.org/api/v1
+    description: Production API Server
+paths:
+  /auth/login:
+    post:
+      summary: Candidate & Staff API Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful authentication
+  /public/verify/{code}:
+    get:
+      summary: Public Certificate Verification
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificate verification result
+  /public/courses:
+    get:
+      summary: Public Courses Catalogue
+      responses:
+        '200':
+          description: Paginated courses list

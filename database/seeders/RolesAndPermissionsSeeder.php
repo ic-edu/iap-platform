@@ -97,6 +97,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'subscription.manage',
             'finance.dashboard',
 
+            // API Platform & Integration Granular Permissions
+            'api.manage',
+            'api.token.manage',
+            'webhook.manage',
+            'integration.manage',
+            'api.monitor',
+            'api.audit',
+            'sdk.manage',
+            'swagger.view',
+            'postman.export',
+
             'finance.view',
             'cms.view',
             'reporting.view',

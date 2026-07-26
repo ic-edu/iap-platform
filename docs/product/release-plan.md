@@ -8,3 +8,11 @@
 - **v0.6.0-sprint6**: Results, Certificate & Analytics (ResultEngine, Public `/verify`, CI Workflow)
 - **v0.7.0-sprint7**: Platform Operations & LM Foundation (Enrollment, Scheduling, System Health, CHANGELOG)
 - **v0.8.0-sprint8**: Commerce & Billing Platform (Products, Cart, Checkout, Invoices, Payment Abstraction, Auto-Enrollment)
+- **v0.9.0-sprint9**: API Platform & Integration Layer (Sanctum Auth, REST v1, Webhook Engine, Integrations, OpenAPI 3.1)
+- **Architecture & Beta Readiness Review (Pre-Sprint 10 Quality Gate)**:
+  - Architectural consistency check across all 8 domain modules.
+  - Query performance & caching audit.
+  - Test coverage audit (>130 Pest tests passed).
+  - Security audit (Sanctum token revocation, rate limiting, input validation).
+  - Deployment & UAT readiness verification.
+- **v1.0.0-sprint10**: Production Readiness & Beta Release (Hardening, Observability, Deployment Pipeline)
