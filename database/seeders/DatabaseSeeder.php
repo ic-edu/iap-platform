@@ -10,6 +10,7 @@ use App\Modules\Finance\Database\Seeders\FinanceSeeder;
 use App\Modules\QuestionBank\Database\Seeders\QuestionBankSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,12 +23,50 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolesAndPermissionsSeeder::class);
 
-        $user = User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // 1. Super Admin Demo Account
+        $admin = User::firstOrCreate([
+            'email' => 'admin@icedu.org',
+        ], [
+            'name' => 'Super Admin',
+            'password' => Hash::make('password'),
         ]);
+        $admin->assignRole('super-admin');
 
-        $user->assignRole('super-admin');
+        // 2. Teacher Demo Account
+        $teacher = User::firstOrCreate([
+            'email' => 'teacher@icedu.org',
+        ], [
+            'name' => 'Teacher Instructor',
+            'password' => Hash::make('password'),
+        ]);
+        $teacher->assignRole('teacher');
+
+        // 3. Student Demo Account
+        $student = User::firstOrCreate([
+            'email' => 'student@icedu.org',
+        ], [
+            'name' => 'Candidate Student',
+            'password' => Hash::make('password'),
+        ]);
+        $student->assignRole('student');
+
+        // 4. Finance Demo Account
+        $finance = User::firstOrCreate([
+            'email' => 'finance@icedu.org',
+        ], [
+            'name' => 'Finance Manager',
+            'password' => Hash::make('password'),
+        ]);
+        $finance->assignRole('admin');
+
+        // General Test User
+        $testUser = User::firstOrCreate([
+            'email' => 'test@example.com',
+        ], [
+            'name' => 'Test User',
+            'password' => Hash::make('password'),
+        ]);
+        $testUser->assignRole('super-admin');
 
         $this->call([
             AcademicSeeder::class,
