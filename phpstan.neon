@@ -1,0 +1,14 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+
+    paths:
+        - app/
+
+    # Level 5 is a robust starting level for Larastan static analysis
+    level: 5
+
+    ignoreErrors:
+
+    excludePaths:

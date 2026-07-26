@@ -31,7 +31,7 @@
                     </div>
                     <div class="rounded-lg bg-slate-50 p-4 dark:bg-slate-950">
                         <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Mode') }}</p>
-                        <p class="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{{ __('Ready') }}</p>
+                        <p class="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{{ __('Modular') }}</p>
                     </div>
                 </div>
             </section>
@@ -56,22 +56,9 @@
             <section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-3">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-slate-950 dark:text-white">{{ __('Getting started') }}</h2>
-                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Core authentication routes, profile management, and responsive navigation are ready.') }}</p>
+                        <h2 class="text-lg font-semibold text-slate-950 dark:text-white">{{ __('Modular Architecture Status') }}</h2>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Authentication module successfully isolated under app/Modules/Authentication.') }}</p>
                     </div>
-                </div>
-
-                <div class="mt-6 grid gap-4 md:grid-cols-3">
-                    @foreach ([
-                        ['title' => __('Login and registration'), 'description' => __('Users can create accounts, sign in, and securely end sessions.')],
-                        ['title' => __('Profile management'), 'description' => __('Authenticated users can update profile data and password settings.')],
-                        ['title' => __('Responsive shell'), 'description' => __('Sidebar, top navigation, dark mode, and profile actions adapt across screens.')],
-                    ] as $item)
-                        <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-                            <h3 class="font-semibold text-slate-950 dark:text-white">{{ $item['title'] }}</h3>
-                            <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{{ $item['description'] }}</p>
-                        </div>
-                    @endforeach
                 </div>
             </section>
         </div>
