@@ -40,6 +40,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage settings',
             'manage payments',
             'issue certificates',
+
+            // Granular Module View Permissions
+            'academic.view',
+            'question-bank.view',
+            'assessment.view',
+            'certificate.view',
+            'finance.view',
+            'cms.view',
+            'reporting.view',
+            'settings.view',
         ];
 
         foreach ($permissions as $permission) {

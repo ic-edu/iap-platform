@@ -10,10 +10,14 @@ use App\Modules\Authentication\Controllers\Auth\PasswordResetLinkController;
 use App\Modules\Authentication\Controllers\Auth\RegisteredUserController;
 use App\Modules\Authentication\Controllers\Auth\VerifyEmailController;
 use App\Modules\Authentication\Controllers\ProfileController;
+use App\Modules\Reporting\Services\DashboardMetricsService;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/dashboard', function () {
-    return view('authentication::dashboard');
+Route::get('/dashboard', function (DashboardMetricsService $metricsService) {
+    $metrics = $metricsService->getMetricsSummary();
+    $recentActivities = $metricsService->getRecentActivities(5);
+
+    return view('authentication::dashboard', compact('metrics', 'recentActivities'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('guest')->group(function () {

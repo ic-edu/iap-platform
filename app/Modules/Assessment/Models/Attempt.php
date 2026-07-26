@@ -9,7 +9,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $test_id
+ * @property int $user_id
+ * @property Carbon|null $started_at
+ * @property Carbon|null $submitted_at
+ * @property float|null $total_score
+ * @property array<string, mixed>|null $section_scores
+ * @property AttemptStatus $status
+ * @property Carbon|null $updated_at
+ * @property User|null $user
+ * @property Test|null $test
+ */
 class Attempt extends Model
 {
     use HasFactory, HasUlids;

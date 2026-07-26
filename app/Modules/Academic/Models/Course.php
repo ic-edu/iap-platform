@@ -10,6 +10,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property string $category_id
+ * @property string $title
+ * @property string $slug
+ * @property string $code
+ * @property string|null $description
+ * @property CourseLevel $level
+ * @property bool $is_published
+ */
 class Course extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
