@@ -8,7 +8,17 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $course_id
+ * @property int $user_id
+ * @property Carbon|null $enrolled_at
+ * @property EnrollmentStatus $status
+ * @property Course|null $course
+ * @property User|null $user
+ */
 class CourseEnrollment extends Model
 {
     use HasFactory, HasUlids;

@@ -16,3 +16,5 @@
   - Candidate Portal, Engine Layer (`AssessmentEngine`, `AttemptEngine`, `TimerEngine`, `NavigationEngine`, `AutoSaveEngine`, `RandomizationEngine`, `ScoringEngine`, `ReviewEngine`), Distraction-Free CBT UI, Anti-Cheating Foundation, Architecture Decision Records (`docs/adr/`), and 60+ Pest Tests.
 - [x] **Sprint 6 — Results, Certificate & Analytics** (`v0.6.0-sprint6`)
   - Result Engine, Certificate Engine & Template System, Public Verification Portal (`/verify`), Analytics Engine, Psychometric Item Analysis, Export Service, Queue Foundation, GitHub Actions CI Pipeline, ADRs (`0006`, `0007`), and 71 Pest Tests.
+- [x] **Sprint 7 — Platform Operations & Learning Management Foundation** (`v0.7.0-sprint7`)
+  - Enrollment Engine (`EnrollmentStatus` enum), Assignment Engine, Scheduling Engine, Calendar Module, Notification Center & Reminder Engine, System Health Monitoring, Import Engine & Batch Operation Service, Timeline Service, CHANGELOG.md, Release Notes (`docs/releases/`), 3 new ADRs (`0008`, `0009`, `0010`), and 91 Pest Tests.

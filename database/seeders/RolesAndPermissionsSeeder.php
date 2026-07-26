@@ -66,6 +66,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'result.export',
             'analytics.view',
             'verification.manage',
+            'enrollment.view',
+            'enrollment.create',
+            'enrollment.update',
+            'enrollment.delete',
+            'assignment.view',
+            'assignment.create',
+            'assignment.delete',
+            'schedule.manage',
+            'notification.manage',
+            'calendar.view',
+            'media.manage',
+            'queue.manage',
+            'system.monitor',
+            'import.manage',
+            'batch.manage',
             'finance.view',
             'cms.view',
             'reporting.view',
@@ -88,6 +103,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'take tests',
             'view results',
             'certificate.download',
+            'calendar.view',
         ]);
 
         $roleTeacher = Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
@@ -104,6 +120,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'certificate.download',
             'result.view',
             'analytics.view',
+            'enrollment.view',
+            'enrollment.create',
+            'assignment.view',
+            'assignment.create',
+            'calendar.view',
         ]);
 
         $roleAdmin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
