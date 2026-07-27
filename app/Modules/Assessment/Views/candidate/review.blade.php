@@ -30,14 +30,22 @@
         </div>
 
         <!-- Breakdown Grid -->
-        <div class="grid grid-cols-2 gap-4 text-sm mb-6 text-slate-300">
+        <div class="grid grid-cols-4 gap-3 text-sm mb-6 text-slate-300">
             <div class="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                <span class="block text-xs text-slate-400">Total Questions</span>
+                <span class="block text-xs text-slate-400">Questions</span>
                 <span class="font-bold text-white text-base">{{ $summary['total_questions'] ?? 0 }}</span>
             </div>
             <div class="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                <span class="block text-xs text-slate-400">Correct Answers</span>
+                <span class="block text-xs text-slate-400">Correct</span>
                 <span class="font-bold text-emerald-400 text-base">{{ $summary['correct_answers'] ?? 0 }}</span>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-lg border border-slate-800">
+                <span class="block text-xs text-slate-400">Accuracy</span>
+                <span class="font-bold text-indigo-400 text-base">{{ $summary['percentage'] ?? 0 }}%</span>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-lg border border-slate-800">
+                <span class="block text-xs text-slate-400">Grade</span>
+                <span class="font-bold text-amber-400 text-base">{{ $summary['grade'] ?? 'D' }}</span>
             </div>
         </div>
 

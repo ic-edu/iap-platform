@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Modules\Assessment\Engines\AttemptEngine;
+use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Engines\ReviewEngine;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Test as AssessmentTest;
@@ -139,6 +140,82 @@ test('submitting passing assessment attempt automatically generates digital cert
 
     expect($summary['is_passed'])->toBeTrue();
     expect($summary['certificate_id'])->toBe($certificate->id);
+});
+
+test('toeic full simulation test scales raw percentage to 10-990 score range', function () {
+    $student = User::factory()->create();
+    $student->assignRole('student');
+
+    $bank = QuestionBank::create([
+        'title' => 'TOEIC Bank',
+        'slug' => 'toeic-bank-'.Str::random(5),
+        'test_type' => 'toeic',
+        'created_by' => $student->id,
+    ]);
+
+    $test = AssessmentTest::create([
+        'title' => 'TOEIC Full Simulation Test 01',
+        'slug' => 'toeic-simulation-'.Str::random(5),
+        'test_type' => 'toeic',
+        'duration_minutes' => 120,
+        'pass_score' => 700,
+        'is_published' => true,
+        'created_by' => $student->id,
+    ]);
+
+    $q1 = Question::create([
+        'question_bank_id' => $bank->id,
+        'title' => 'Question 1',
+        'prompt' => 'Listen to the audio and select correct response.',
+        'question_type' => 'multiple_choice',
+        'points' => 5,
+    ]);
+    $c1 = QuestionChoice::create([
+        'question_id' => $q1->id,
+        'label' => 'A',
+        'content' => 'Correct option',
+        'is_correct' => true,
+    ]);
+
+    $q2 = Question::create([
+        'question_bank_id' => $bank->id,
+        'title' => 'Question 2',
+        'prompt' => 'Select the best phrase.',
+        'question_type' => 'multiple_choice',
+        'points' => 5,
+    ]);
+    $c2 = QuestionChoice::create([
+        'question_id' => $q2->id,
+        'label' => 'B',
+        'content' => 'Correct option B',
+        'is_correct' => true,
+    ]);
+
+    $attemptEngine = app(AttemptEngine::class);
+    $attempt = $attemptEngine->startAttempt($test, $student);
+
+    Answer::create([
+        'attempt_id' => $attempt->id,
+        'question_id' => $q1->id,
+        'selected_choice_id' => $c1->id,
+    ]);
+    Answer::create([
+        'attempt_id' => $attempt->id,
+        'question_id' => $q2->id,
+        'selected_choice_id' => $c2->id,
+    ]);
+
+    $attemptEngine->submitAttempt($attempt);
+
+    $resultEngine = app(ResultEngine::class);
+    $result = $resultEngine->generateResult($attempt);
+
+    expect($result['percentage'])->toBe(100.0);
+    expect($result['final_score'])->toBe(990.0);
+    expect($result['is_passed'])->toBeTrue();
+
+    $certificate = Certificate::where('attempt_id', $attempt->id)->first();
+    expect($certificate)->not->toBeNull();
 });
 
 test('authenticated candidate can download digital certificate HTML PDF', function () {

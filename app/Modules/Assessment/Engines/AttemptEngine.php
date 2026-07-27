@@ -17,11 +17,15 @@ class AttemptEngine
 {
     protected CertificateEngine $certificateEngine;
 
+    protected ResultEngine $resultEngine;
+
     public function __construct(
         protected ScoringEngine $scoringEngine,
-        ?CertificateEngine $certificateEngine = null
+        ?CertificateEngine $certificateEngine = null,
+        ?ResultEngine $resultEngine = null
     ) {
         $this->certificateEngine = $certificateEngine ?? app(CertificateEngine::class);
+        $this->resultEngine = $resultEngine ?? app(ResultEngine::class);
     }
 
     /**
@@ -65,10 +69,9 @@ class AttemptEngine
         ]);
 
         $attempt->refresh();
-        $attempt->loadMissing('test');
-        $passThreshold = $attempt->test?->pass_score ?? 0;
+        $result = $this->resultEngine->generateResult($attempt);
 
-        if (($attempt->total_score ?? 0.0) >= $passThreshold) {
+        if ($result['is_passed']) {
             $this->certificateEngine->issueCertificate($attempt);
         }
 
@@ -90,10 +93,9 @@ class AttemptEngine
         ]);
 
         $attempt->refresh();
-        $attempt->loadMissing('test');
-        $passThreshold = $attempt->test?->pass_score ?? 0;
+        $result = $this->resultEngine->generateResult($attempt);
 
-        if (($attempt->total_score ?? 0.0) >= $passThreshold) {
+        if ($result['is_passed']) {
             $this->certificateEngine->issueCertificate($attempt);
         }
 
