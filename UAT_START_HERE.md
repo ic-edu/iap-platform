@@ -16,7 +16,7 @@ The development server is active and bound to `0.0.0.0:8000`, making it accessib
 
 | Service / Subsystem | Local URL | Description |
 | :--- | :--- | :--- |
-| **Main Web Portal** | `http://127.0.0.1:8000` | Landing Page & Candidate Portal |
+| **Main Web Portal** | `http://127.0.0.1:8000` | Redirects guests to `/login` |
 | **Login Screen** | `http://127.0.0.1:8000/login` | User Authentication Screen |
 | **Admin Monitoring** | `http://127.0.0.1:8000/admin/monitoring` | Real-time Observability & System Metrics |
 | **OpenAPI Contract Spec**| `http://127.0.0.1:8000/docs/api/openapi.yaml` | REST API Specification |
@@ -26,48 +26,31 @@ The development server is active and bound to `0.0.0.0:8000`, making it accessib
 
 ---
 
-## 🔑 Demo Login Credentials
+## 🔑 Final Verified UAT Demo Credentials
 
-Use the following pre-seeded accounts to test each user role:
+All 4 demo accounts are seeded and 100% verified in the database:
 
-### 1. Super Administrator Account
-- **Role**: `super-admin`
-- **Email**: `admin@icedu.org`
-- **Password**: `password`
-- **Permissions**: Full system access, Question Banks, Test Authoring, System Settings, Monitoring Dashboard.
-
-### 2. Teacher / Instructor Account
-- **Role**: `teacher`
-- **Email**: `teacher@icedu.org`
-- **Password**: `password`
-- **Permissions**: Course management, Question Bank creation, Test building, Student grading, Certificate issuance.
-
-### 3. Student / Candidate Account
-- **Role**: `student`
-- **Email**: `student@icedu.org`
-- **Password**: `password`
-- **Permissions**: CBT Exam engine access, live timer test attempts, immediate scoring breakdown, digital certificate download.
-
-### 4. Finance Manager Account
-- **Role**: `admin` / `finance`
-- **Email**: `finance@icedu.org`
-- **Password**: `password`
-- **Permissions**: Product pricing, promotional coupons, order invoices, manual payment confirmations.
+| Name | Role | Email | Password | Primary Redirect Destination |
+| :--- | :--- | :--- | :--- | :--- |
+| **Super Admin** | `super-admin` | `admin@icedu.org` | `password` | `http://127.0.0.1:8000/admin/monitoring` |
+| **Teacher Instructor** | `teacher` | `teacher@icedu.org` | `password` | `http://127.0.0.1:8000/admin/question-banks` |
+| **Candidate Student** | `student` | `student@icedu.org` | `password` | `http://127.0.0.1:8000/candidate/portal` |
+| **Finance Manager** | `admin` | `finance@icedu.org` | `password` | `http://127.0.0.1:8000/admin/monitoring` |
 
 ---
 
 ## 📋 Recommended Testing Order
 
 1. **Step 1: Admin & Observability Audit**
-   - Open `http://127.0.0.1:8000/login` (or `http://localhost:8000/login`) and log in as `admin@icedu.org` / `password`.
-   - Visit `http://127.0.0.1:8000/admin/monitoring` to review active memory, storage, database connections, and failed queue jobs.
+   - Open `http://127.0.0.1:8000/login` and log in as `admin@icedu.org` / `password`.
+   - You will be automatically redirected to `http://127.0.0.1:8000/admin/monitoring`. Review active memory, storage, database connections, and queue status.
 2. **Step 2: Question Bank & Test Authoring (Teacher Role)**
    - Log in as `teacher@icedu.org` / `password`.
-   - Create a question bank, add a reading passage, and author multiple choice questions.
+   - You will be redirected to `http://127.0.0.1:8000/admin/question-banks`. Create a question bank, add a reading passage, and author multiple choice questions.
    - Build an assessment test with 60-minute duration and publish it.
 3. **Step 3: Candidate CBT Exam Experience (Student Role)**
    - Log in as `student@icedu.org` / `password`.
-   - Select an available assessment test, answer questions, observe the live timer and anti-cheating tracking, and submit the exam.
+   - You will be redirected to `http://127.0.0.1:8000/candidate/portal`. Select an available assessment test, answer questions, observe the live timer and anti-cheating tracking, and submit the exam.
    - View immediate test result breakdown and download digital certificate.
 4. **Step 4: Commerce & Public Certificate Verification**
    - Browse public courses/products, test shopping cart checkout, and simulate manual bank transfer payment confirmation.
@@ -86,6 +69,7 @@ The background dev server process is currently running on `0.0.0.0:8000`. If you
 
 ```bash
 cd /Users/indrawahyudi/.gemini/antigravity/scratch/iap-platform
+php artisan db:seed --force
 php artisan serve --host=0.0.0.0 --port=8000
 ```
 Keep that Terminal tab open while performing UAT testing.
