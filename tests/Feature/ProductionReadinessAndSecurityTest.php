@@ -384,6 +384,64 @@ test('attempt history my-attempts view displays synchronized PASSED status and s
         ->assertSee('/ 700');
 });
 
+test('candidate review page renders detailed question breakdown with explanation and section stats', function () {
+    $student = User::factory()->create();
+    $student->assignRole('student');
+
+    $bank = QuestionBank::create([
+        'title' => 'Sample Review Bank',
+        'slug' => 'sample-review-bank-'.Str::random(5),
+        'test_type' => 'toefl',
+        'created_by' => $student->id,
+    ]);
+
+    $test = AssessmentTest::create([
+        'title' => 'TOEFL Comprehensive Review Test',
+        'slug' => 'toefl-review-test-'.Str::random(5),
+        'test_type' => 'toefl',
+        'duration_minutes' => 60,
+        'pass_score' => 50,
+        'is_published' => true,
+        'created_by' => $student->id,
+    ]);
+
+    $question = Question::create([
+        'question_bank_id' => $bank->id,
+        'title' => 'Grammar Item',
+        'prompt' => 'Choose the grammatically correct sentence.',
+        'question_type' => 'multiple_choice',
+        'difficulty' => 'easy',
+        'points' => 10,
+        'explanation' => 'The subject matches the singular verb.',
+    ]);
+
+    $choice = QuestionChoice::create([
+        'question_id' => $question->id,
+        'label' => 'A',
+        'content' => 'She goes to school.',
+        'is_correct' => true,
+    ]);
+
+    $attemptEngine = app(AttemptEngine::class);
+    $attempt = $attemptEngine->startAttempt($test, $student);
+
+    Answer::create([
+        'attempt_id' => $attempt->id,
+        'question_id' => $question->id,
+        'selected_choice_id' => $choice->id,
+    ]);
+
+    $attemptEngine->submitAttempt($attempt);
+
+    $response = $this->actingAs($student)->get("/candidate/exam/{$attempt->id}/review");
+
+    $response->assertStatus(200)
+        ->assertSee('Detailed Question Review')
+        ->assertSee('Choose the grammatically correct sentence.')
+        ->assertSee('Explanation &amp; Rationale', false)
+        ->assertSee('The subject matches the singular verb.');
+});
+
 test('health check probe endpoint returns status 200 healthy json', function () {
     $response = $this->getJson('/health');
 

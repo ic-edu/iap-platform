@@ -5,6 +5,7 @@ namespace App\Modules\Assessment\Engines;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Certificate\Engines\CertificateEngine;
 use App\Modules\Certificate\Models\Certificate;
+use App\Modules\QuestionBank\Models\Question;
 
 class ReviewEngine
 {
@@ -23,7 +24,13 @@ class ReviewEngine
      */
     public function getReviewSummary(Attempt $attempt): array
     {
-        $attempt->loadMissing(['test', 'answers.question.choices']);
+        $attempt->loadMissing([
+            'test.sections.testQuestions.question.passage',
+            'test.sections.testQuestions.question.choices',
+            'answers.question.passage',
+            'answers.question.choices',
+            'answers.selectedChoice',
+        ]);
 
         $resultPayload = $this->resultEngine->generateResult($attempt);
         $isPassed = $resultPayload['is_passed'];
@@ -33,6 +40,106 @@ class ReviewEngine
         // Auto-issue if passed but certificate missing
         if ($isPassed && !$certificate) {
             $certificate = app(CertificateEngine::class)->issueCertificate($attempt);
+        }
+
+        $answersByQuestion = $attempt->answers->keyBy('question_id');
+        $detailedQuestions = collect();
+        $sectionStats = [];
+
+        $testQuestions = collect();
+        if ($attempt->test) {
+            foreach ($attempt->test->sections as $section) {
+                foreach ($section->testQuestions as $tq) {
+                    if ($tq->question) {
+                        $testQuestions->push([
+                            'question' => $tq->question,
+                            'section_title' => $section->title,
+                            'section_type' => $section->section_type?->label() ?? 'General',
+                            'points' => $tq->points ?? $tq->question->points,
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Fallback if testQuestions relation is empty (direct answers query)
+        if ($testQuestions->isEmpty()) {
+            foreach ($attempt->answers as $ans) {
+                if ($ans->question) {
+                    $testQuestions->push([
+                        'question' => $ans->question,
+                        'section_title' => $ans->question->section?->label() ?? 'General',
+                        'section_type' => $ans->question->section?->value ?? 'general',
+                        'points' => $ans->question->points,
+                    ]);
+                }
+            }
+        }
+
+        foreach ($testQuestions as $index => $item) {
+            /** @var Question $question */
+            $question = $item['question'];
+            $answer = $answersByQuestion->get($question->id);
+
+            $correctChoice = $question->choices->firstWhere('is_correct', true);
+            $selectedChoice = $answer?->selectedChoice ?? $question->choices->firstWhere('id', $answer?->selected_choice_id);
+
+            $isCorrect = (bool) ($answer?->is_correct ?? false);
+            $scoreEarned = (float) ($answer?->score_earned ?? ($isCorrect ? $item['points'] : 0));
+
+            $candidateAnswerText = $selectedChoice?->content
+                ?? $answer?->text_response
+                ?? ($answer?->selected_choice_id ? 'Option '.$answer->selected_choice_id : 'Not Answered');
+
+            $correctAnswerText = $correctChoice?->content ?? 'See Explanation';
+
+            $choicesFormatted = $question->choices->map(function ($choice) use ($answer) {
+                return [
+                    'id' => $choice->id,
+                    'label' => $choice->label,
+                    'content' => $choice->content,
+                    'is_correct' => (bool) $choice->is_correct,
+                    'is_selected' => $answer?->selected_choice_id === $choice->id,
+                ];
+            })->toArray();
+
+            $secType = $item['section_type'];
+            if (!isset($sectionStats[$secType])) {
+                $sectionStats[$secType] = ['total' => 0, 'correct' => 0];
+            }
+            $sectionStats[$secType]['total']++;
+            if ($isCorrect) {
+                $sectionStats[$secType]['correct']++;
+            }
+
+            $detailedQuestions->push([
+                'index' => $index + 1,
+                'question_id' => $question->id,
+                'prompt' => $question->prompt,
+                'passage_text' => $question->passage?->body ?? $question->passage_text,
+                'audio_url' => $question->audio_url,
+                'image_url' => $question->image_url,
+                'question_type' => $question->question_type?->label() ?? 'Multiple Choice',
+                'difficulty' => $question->difficulty?->label() ?? 'Medium',
+                'section_title' => $item['section_title'],
+                'section_type' => $secType,
+                'points_possible' => $item['points'],
+                'score_earned' => $scoreEarned,
+                'is_correct' => $isCorrect,
+                'candidate_answer' => $candidateAnswerText,
+                'correct_answer' => $correctAnswerText,
+                'choices' => $choicesFormatted,
+                'explanation' => $question->explanation ?? 'No explanation provided.',
+                'feedback' => $answer?->feedback,
+            ]);
+        }
+
+        $suggestedAreas = collect($sectionStats)->filter(function ($stats) {
+            return $stats['total'] > 0 && ($stats['correct'] / $stats['total']) < 0.7;
+        })->keys()->map(fn ($sec) => "Focus on improving {$sec} skills")->values()->toArray();
+
+        if (empty($suggestedAreas) && $resultPayload['percentage'] < 100) {
+            $suggestedAreas[] = 'Review incorrect question rationales to boost total accuracy.';
         }
 
         return array_merge($resultPayload, [
@@ -48,6 +155,10 @@ class ReviewEngine
             'submitted_at' => $attempt->submitted_at?->toIso8601String(),
             'total_questions' => $resultPayload['total_questions'],
             'correct_answers' => $resultPayload['correct_count'],
+            'incorrect_answers' => max(0, $resultPayload['total_questions'] - $resultPayload['correct_count']),
+            'detailed_questions' => $detailedQuestions,
+            'section_stats' => $sectionStats,
+            'suggested_learning_areas' => $suggestedAreas,
         ]);
     }
 }
