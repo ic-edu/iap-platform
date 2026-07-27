@@ -27,9 +27,10 @@
                 </div>
 
                 <div class="flex items-center gap-6 text-sm font-medium">
-                    <a href="{{ route('candidate.portal') }}" class="text-slate-300 hover:text-white transition-colors">Portal Dashboard</a>
-                    <a href="{{ route('candidate.available-tests') }}" class="text-slate-300 hover:text-white transition-colors">Available Tests</a>
-                    <a href="{{ route('candidate.my-attempts') }}" class="text-slate-300 hover:text-white transition-colors">My Attempts</a>
+                    <a href="{{ route('candidate.portal') }}" class="{{ request()->routeIs('candidate.portal') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">Portal Dashboard</a>
+                    <a href="{{ route('candidate.available-tests') }}" class="{{ request()->routeIs('candidate.available-tests') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">Available Tests</a>
+                    <a href="{{ route('candidate.my-attempts') }}" class="{{ request()->routeIs('candidate.my-attempts') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">My Attempts</a>
+                    <a href="{{ route('candidate.my-certificates') }}" class="{{ request()->routeIs('candidate.my-certificates') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">🎓 My Certificates</a>
                 </div>
 
                 <div class="flex items-center gap-3">

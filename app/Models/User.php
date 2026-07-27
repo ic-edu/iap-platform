@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Modules\Academic\Models\CourseEnrollment;
+use App\Modules\Certificate\Models\Certificate;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -51,5 +52,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function enrollments(): HasMany
     {
         return $this->hasMany(CourseEnrollment::class, 'user_id');
+    }
+
+    /**
+     * Get certificates issued to user.
+     *
+     * @return HasMany<Certificate, $this>
+     */
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class, 'user_id');
     }
 }

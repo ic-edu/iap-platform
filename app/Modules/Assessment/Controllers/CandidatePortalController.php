@@ -7,6 +7,7 @@ use App\Modules\Assessment\Engines\AssessmentEngine;
 use App\Modules\Assessment\Events\RuleViolationDetected;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Certificate\Models\Certificate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,12 +29,19 @@ class CandidatePortalController extends Controller
         $availableTestsCount = Test::where('is_published', true)->count();
         $myAttemptsCount = Attempt::where('user_id', $userId)->count();
         $completedAttemptsCount = Attempt::where('user_id', $userId)->whereIn('status', ['submitted', 'expired'])->count();
+        $issuedCertificatesCount = Certificate::where('user_id', $userId)->count();
         $ongoingAttempt = Attempt::where('user_id', $userId)->where('status', 'in_progress')->first();
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.portal';
 
-        return view($viewName, compact('availableTestsCount', 'myAttemptsCount', 'completedAttemptsCount', 'ongoingAttempt'));
+        return view($viewName, compact(
+            'availableTestsCount',
+            'myAttemptsCount',
+            'completedAttemptsCount',
+            'issuedCertificatesCount',
+            'ongoingAttempt'
+        ));
     }
 
     /**
@@ -61,6 +69,23 @@ class CandidatePortalController extends Controller
         $viewName = 'assessment::candidate.my_attempts';
 
         return view($viewName, compact('attempts'));
+    }
+
+    /**
+     * Candidate issued certificates history.
+     */
+    public function myCertificates(Request $request): View
+    {
+        $userId = (int) $request->user()?->id;
+        $certificates = Certificate::where('user_id', $userId)
+            ->with(['attempt.test'])
+            ->latest('issued_at')
+            ->paginate(10);
+
+        /** @var view-string $viewName */
+        $viewName = 'assessment::candidate.my_certificates';
+
+        return view($viewName, compact('certificates'));
     }
 
     /**

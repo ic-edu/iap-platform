@@ -17,6 +17,7 @@ Route::middleware(['web', 'auth'])->prefix('candidate')->group(function () {
     Route::get('/portal', [CandidatePortalController::class, 'portal'])->name('candidate.portal');
     Route::get('/available-tests', [CandidatePortalController::class, 'availableTests'])->name('candidate.available-tests');
     Route::get('/my-attempts', [CandidatePortalController::class, 'myAttempts'])->name('candidate.my-attempts');
+    Route::get('/my-certificates', [CandidatePortalController::class, 'myCertificates'])->name('candidate.my-certificates');
 
     Route::post('/tests/{test}/start', [CandidatePortalController::class, 'startAttempt'])->name('candidate.tests.start');
     Route::get('/exam/{attempt}', [CandidatePortalController::class, 'exam'])->name('candidate.exam');

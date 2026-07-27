@@ -1,11 +1,11 @@
 <x-candidate-layout>
     <div class="mb-8">
         <h1 class="text-3xl font-bold tracking-tight text-white">Student Portal Dashboard</h1>
-        <p class="text-sm text-slate-400 mt-1">Welcome back, {{ Auth::user()?->name }}. Manage your test attempts and certifications.</p>
+        <p class="text-sm text-slate-400 mt-1">Welcome back, {{ Auth::user()?->name }}. Manage your test attempts and digital certifications.</p>
     </div>
 
-    <!-- Metrics Summary -->
-    <div class="grid gap-5 sm:grid-cols-3 mb-8">
+    <!-- Metrics Summary Grid -->
+    <div class="grid gap-5 sm:grid-cols-4 mb-8">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
             <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Available Tests</p>
             <p class="text-3xl font-bold text-indigo-400 mt-2">{{ $availableTestsCount }}</p>
@@ -18,6 +18,13 @@
             <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Completed Tests</p>
             <p class="text-3xl font-bold text-emerald-400 mt-2">{{ $completedAttemptsCount }}</p>
         </div>
+        <a href="{{ route('candidate.my-certificates') }}" class="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl p-5 shadow-sm transition-all group">
+            <div class="flex items-center justify-between">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider group-hover:text-indigo-300">My Certificates</p>
+                <span class="text-xs">🎓</span>
+            </div>
+            <p class="text-3xl font-bold text-amber-400 mt-2">{{ $issuedCertificatesCount ?? 0 }}</p>
+        </a>
     </div>
 
     <!-- Active / Ongoing Attempt Alert -->
@@ -37,14 +44,30 @@
         </div>
     @endif
 
-    <!-- Quick Action Banner -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h3 class="text-lg font-semibold text-white">Ready to take a new simulation test?</h3>
-            <p class="text-sm text-slate-400">Browse through the available Computer-Based Testing catalog.</p>
+    <!-- Quick Action Banners -->
+    <div class="grid sm:grid-cols-2 gap-5">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-semibold text-white">Ready to take a new simulation test?</h3>
+                <p class="text-sm text-slate-400 mt-1">Browse through the available Computer-Based Testing catalog.</p>
+            </div>
+            <div>
+                <a href="{{ route('candidate.available-tests') }}" class="inline-flex items-center px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm transition-colors">
+                    Browse Test Catalog
+                </a>
+            </div>
         </div>
-        <a href="{{ route('candidate.available-tests') }}" class="px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm transition-colors">
-            Browse Test Catalog
-        </a>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-semibold text-white">View &amp; Verify Digital Certificates</h3>
+                <p class="text-sm text-slate-400 mt-1">Access all your official achievement certificates and download PDFs.</p>
+            </div>
+            <div>
+                <a href="{{ route('candidate.my-certificates') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-colors shadow-md shadow-indigo-600/30">
+                    <span>🎓</span> Open My Certificates
+                </a>
+            </div>
+        </div>
     </div>
 </x-candidate-layout>
