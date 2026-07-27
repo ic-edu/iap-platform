@@ -56,6 +56,24 @@ test('authenticated admin user accessing root route redirects to monitoring dash
     $response->assertRedirect(route('admin.monitoring.index'));
 });
 
+test('authenticated teacher can render question bank index modular view', function () {
+    $teacher = User::factory()->create();
+    $teacher->assignRole('teacher');
+
+    $response = $this->actingAs($teacher)->get('/admin/question-banks');
+
+    $response->assertStatus(200);
+});
+
+test('authenticated admin can render settings modular view', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    $response = $this->actingAs($admin)->get('/admin/settings');
+
+    $response->assertStatus(200);
+});
+
 test('health check probe endpoint returns status 200 healthy json', function () {
     $response = $this->getJson('/health');
 

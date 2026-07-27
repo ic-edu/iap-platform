@@ -85,10 +85,22 @@ class ModuleServiceProvider extends ServiceProvider
                     ->group($apiRoute);
             }
 
-            // 2. Load Views
+            // 2. Load Views with Multi-Convention Namespace Registration
             $viewsPath = $modulePath.'/Views';
             if (file_exists($viewsPath)) {
-                $this->loadViewsFrom($viewsPath, Str::lower($moduleName));
+                $snakeName = Str::snake($moduleName);
+                $kebabName = Str::kebab($moduleName);
+                $lowerName = Str::lower($moduleName);
+
+                $this->loadViewsFrom($viewsPath, $snakeName);
+
+                if ($kebabName !== $snakeName) {
+                    $this->loadViewsFrom($viewsPath, $kebabName);
+                }
+
+                if ($lowerName !== $snakeName && $lowerName !== $kebabName) {
+                    $this->loadViewsFrom($viewsPath, $lowerName);
+                }
             }
 
             // 3. Load Migrations
