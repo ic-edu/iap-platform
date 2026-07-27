@@ -273,7 +273,7 @@ test('authenticated candidate can download digital certificate HTML PDF', functi
         ->assertHeader('Content-Type', 'text/html; charset=utf-8');
 });
 
-test('authenticated candidate can access my certificates view and see issued certificates', function () {
+test('authenticated candidate can access my certificates view and see issued certificates with valid badge', function () {
     $student = User::factory()->create();
     $student->assignRole('student');
 
@@ -325,8 +325,63 @@ test('authenticated candidate can access my certificates view and see issued cer
     $response->assertStatus(200)
         ->assertSee('My Digital Certificates')
         ->assertSee('TOEFL ITP Certification')
+        ->assertSee('VALID &amp; AUTHENTIC', false)
         ->assertSee('Download PDF')
         ->assertSee('Verify Online');
+});
+
+test('attempt history my-attempts view displays synchronized PASSED status and scaled score', function () {
+    $student = User::factory()->create();
+    $student->assignRole('student');
+
+    $bank = QuestionBank::create([
+        'title' => 'TOEIC Bank Sync',
+        'slug' => 'toeic-bank-sync-'.Str::random(5),
+        'test_type' => 'toeic',
+        'created_by' => $student->id,
+    ]);
+
+    $test = AssessmentTest::create([
+        'title' => 'TOEIC Full Simulation Test 01',
+        'slug' => 'toeic-simulation-sync-'.Str::random(5),
+        'test_type' => 'toeic',
+        'duration_minutes' => 120,
+        'pass_score' => 700,
+        'is_published' => true,
+        'created_by' => $student->id,
+    ]);
+
+    $q1 = Question::create([
+        'question_bank_id' => $bank->id,
+        'title' => 'Question 1',
+        'prompt' => 'Listen to audio.',
+        'question_type' => 'multiple_choice',
+        'points' => 5,
+    ]);
+    $c1 = QuestionChoice::create([
+        'question_id' => $q1->id,
+        'label' => 'A',
+        'content' => 'Correct',
+        'is_correct' => true,
+    ]);
+
+    $attemptEngine = app(AttemptEngine::class);
+    $attempt = $attemptEngine->startAttempt($test, $student);
+
+    Answer::create([
+        'attempt_id' => $attempt->id,
+        'question_id' => $q1->id,
+        'selected_choice_id' => $c1->id,
+    ]);
+
+    $attemptEngine->submitAttempt($attempt);
+
+    $response = $this->actingAs($student)->get('/candidate/my-attempts');
+
+    $response->assertStatus(200)
+        ->assertSee('PASSED')
+        ->assertSee('990')
+        ->assertSee('/ 700');
 });
 
 test('health check probe endpoint returns status 200 healthy json', function () {

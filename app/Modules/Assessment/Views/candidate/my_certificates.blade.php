@@ -32,6 +32,9 @@
     @else
         <div class="space-y-4 mb-8">
             @foreach($certificates as $certificate)
+                @php
+                    $effStatus = $certificate->effective_status->value ?? 'valid';
+                @endphp
                 <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-6 shadow-sm transition-all flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 rounded-xl bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center text-xl shrink-0">
@@ -42,17 +45,17 @@
                                 <span class="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-md">
                                     #{{ $certificate->certificate_number }}
                                 </span>
-                                @if(($certificate->status->value ?? 'issued') === 'issued')
+                                @if($effStatus === 'valid')
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                        ISSUED &amp; VALID
+                                        VALID &amp; AUTHENTIC
                                     </span>
-                                @elseif(($certificate->status->value ?? '') === 'revoked')
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                @elseif($effStatus === 'revoked')
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
                                         REVOKED
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
                                         EXPIRED
                                     </span>
                                 @endif

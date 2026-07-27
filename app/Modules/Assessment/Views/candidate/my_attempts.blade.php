@@ -18,13 +18,17 @@
             <tbody class="divide-y divide-slate-800/60">
                 @forelse ($attempts as $att)
                     @php
-                        $passScore = $att->test?->pass_score ?? 0;
-                        $isPassed = ($att->total_score ?? 0.0) >= $passScore;
+                        $res = $att->result_summary;
+                        $isPassed = $res['is_passed'] ?? false;
+                        $finalScore = $res['final_score'] ?? 0;
+                        $passScore = $res['pass_score'] ?? 0;
                     @endphp
                     <tr>
                         <td class="p-4 font-semibold text-white">{{ $att->test?->title ?? 'Test Session' }}</td>
                         <td class="p-4 text-slate-400 text-xs">{{ $att->started_at?->format('d M Y, H:i') }}</td>
-                        <td class="p-4 font-bold text-indigo-400">{{ $att->total_score ?? 'N/A' }} <span class="text-xs font-normal text-slate-500">/ {{ $passScore }}</span></td>
+                        <td class="p-4 font-bold text-indigo-400">
+                            {{ $finalScore }} <span class="text-xs font-normal text-slate-500">/ {{ $passScore }}</span>
+                        </td>
                         <td class="p-4">
                             @if ($att->status->value === 'in_progress')
                                 <span class="px-2.5 py-0.5 text-xs font-semibold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">

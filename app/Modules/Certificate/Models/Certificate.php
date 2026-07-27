@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $pdf_url
  * @property User|null $user
  * @property Attempt|null $attempt
+ * @property CertificateStatus $effective_status
  */
 class Certificate extends Model
 {
@@ -54,6 +55,18 @@ class Certificate extends Model
             'expires_at' => 'datetime',
             'status' => CertificateStatus::class,
         ];
+    }
+
+    /**
+     * Get effective status taking expiration date into account.
+     */
+    public function getEffectiveStatusAttribute(): CertificateStatus
+    {
+        if ($this->status === CertificateStatus::Valid && $this->expires_at && $this->expires_at->isPast()) {
+            return CertificateStatus::Expired;
+        }
+
+        return $this->status;
     }
 
     /**

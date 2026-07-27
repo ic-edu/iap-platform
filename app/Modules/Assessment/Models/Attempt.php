@@ -3,6 +3,7 @@
 namespace App\Modules\Assessment\Models;
 
 use App\Models\User;
+use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Certificate\Models\Certificate;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -31,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property User|null $user
  * @property Test|null $test
  * @property Certificate|null $certificate
+ * @property array<string, mixed> $result_summary
  */
 class Attempt extends Model
 {
@@ -65,6 +67,16 @@ class Attempt extends Model
             'violations_count' => 'integer',
             'status' => AttemptStatus::class,
         ];
+    }
+
+    /**
+     * Get evaluated result summary from single source of truth (ResultEngine).
+     *
+     * @return array<string, mixed>
+     */
+    public function getResultSummaryAttribute(): array
+    {
+        return app(ResultEngine::class)->generateResult($this);
     }
 
     /**
