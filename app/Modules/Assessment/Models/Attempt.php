@@ -4,11 +4,13 @@ namespace App\Modules\Assessment\Models;
 
 use App\Models\User;
 use App\Modules\Assessment\Enums\AttemptStatus;
+use App\Modules\Certificate\Models\Certificate;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -28,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property User|null $user
  * @property Test|null $test
+ * @property Certificate|null $certificate
  */
 class Attempt extends Model
 {
@@ -92,5 +95,15 @@ class Attempt extends Model
     public function answers(): HasMany
     {
         return $this->hasMany(Answer::class, 'attempt_id');
+    }
+
+    /**
+     * Get certificate issued for this attempt.
+     *
+     * @return HasOne<Certificate, $this>
+     */
+    public function certificate(): HasOne
+    {
+        return $this->hasOne(Certificate::class, 'attempt_id');
     }
 }

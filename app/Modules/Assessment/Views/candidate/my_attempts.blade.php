@@ -1,7 +1,7 @@
 <x-candidate-layout>
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-white">My Test Attempt History</h1>
-        <p class="text-sm text-slate-400">View your past CBT examination results and evaluations.</p>
+        <p class="text-sm text-slate-400">View your past CBT examination results, Pass/Fail status, and digital certificates.</p>
     </div>
 
     <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
@@ -9,28 +9,47 @@
             <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
                 <tr>
                     <th class="p-4">Test Title</th>
-                    <th class="p-4">Started At</th>
-                    <th class="p-4">Status</th>
+                    <th class="p-4">Date</th>
                     <th class="p-4">Score</th>
-                    <th class="p-4 text-right">Action</th>
+                    <th class="p-4">Pass / Fail</th>
+                    <th class="p-4 text-right">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-800/60">
                 @forelse ($attempts as $att)
+                    @php
+                        $passScore = $att->test?->pass_score ?? 0;
+                        $isPassed = ($att->total_score ?? 0.0) >= $passScore;
+                    @endphp
                     <tr>
                         <td class="p-4 font-semibold text-white">{{ $att->test?->title ?? 'Test Session' }}</td>
                         <td class="p-4 text-slate-400 text-xs">{{ $att->started_at?->format('d M Y, H:i') }}</td>
+                        <td class="p-4 font-bold text-indigo-400">{{ $att->total_score ?? 'N/A' }} <span class="text-xs font-normal text-slate-500">/ {{ $passScore }}</span></td>
                         <td class="p-4">
-                            <span class="px-2.5 py-0.5 text-xs font-semibold rounded bg-slate-800 text-slate-300 border border-slate-700">
-                                {{ $att->status->label() }}
-                            </span>
+                            @if ($att->status->value === 'in_progress')
+                                <span class="px-2.5 py-0.5 text-xs font-semibold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    IN PROGRESS
+                                </span>
+                            @elseif ($isPassed)
+                                <span class="px-2.5 py-0.5 text-xs font-semibold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    PASSED
+                                </span>
+                            @else
+                                <span class="px-2.5 py-0.5 text-xs font-semibold rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                    FAILED
+                                </span>
+                            @endif
                         </td>
-                        <td class="p-4 font-bold text-indigo-400">{{ $att->total_score ?? 'N/A' }}</td>
-                        <td class="p-4 text-right">
+                        <td class="p-4 text-right space-x-2">
                             @if ($att->status->value === 'in_progress')
                                 <a href="{{ route('candidate.exam', $att) }}" class="text-xs text-indigo-400 font-semibold hover:underline">Resume Exam &rarr;</a>
                             @else
                                 <a href="{{ route('candidate.review', $att) }}" class="text-xs text-slate-400 font-semibold hover:underline">View Review</a>
+                                @if ($isPassed && $att->certificate)
+                                    <a href="{{ route('candidate.certificates.download', $att->certificate->id) }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-400 font-semibold hover:underline ml-2">
+                                        🎓 Certificate
+                                    </a>
+                                @endif
                             @endif
                         </td>
                     </tr>

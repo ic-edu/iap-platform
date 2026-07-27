@@ -10,13 +10,19 @@ use App\Modules\Assessment\Events\AttemptStarted;
 use App\Modules\Assessment\Events\AttemptSubmitted;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Certificate\Engines\CertificateEngine;
 use Illuminate\Support\Str;
 
 class AttemptEngine
 {
+    protected CertificateEngine $certificateEngine;
+
     public function __construct(
-        protected ScoringEngine $scoringEngine
-    ) {}
+        protected ScoringEngine $scoringEngine,
+        ?CertificateEngine $certificateEngine = null
+    ) {
+        $this->certificateEngine = $certificateEngine ?? app(CertificateEngine::class);
+    }
 
     /**
      * Start a new attempt for a test.
@@ -58,6 +64,14 @@ class AttemptEngine
             'submitted_at' => now(),
         ]);
 
+        $attempt->refresh();
+        $attempt->loadMissing('test');
+        $passThreshold = $attempt->test?->pass_score ?? 0;
+
+        if (($attempt->total_score ?? 0.0) >= $passThreshold) {
+            $this->certificateEngine->issueCertificate($attempt);
+        }
+
         event(new AttemptSubmitted($attempt));
 
         return $attempt;
@@ -74,6 +88,14 @@ class AttemptEngine
             'status' => AttemptStatus::Expired,
             'submitted_at' => now(),
         ]);
+
+        $attempt->refresh();
+        $attempt->loadMissing('test');
+        $passThreshold = $attempt->test?->pass_score ?? 0;
+
+        if (($attempt->total_score ?? 0.0) >= $passThreshold) {
+            $this->certificateEngine->issueCertificate($attempt);
+        }
 
         event(new AttemptExpired($attempt));
 

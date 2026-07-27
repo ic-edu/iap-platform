@@ -27,7 +27,7 @@ class CandidatePortalController extends Controller
 
         $availableTestsCount = Test::where('is_published', true)->count();
         $myAttemptsCount = Attempt::where('user_id', $userId)->count();
-        $completedAttemptsCount = Attempt::where('user_id', $userId)->where('status', 'submitted')->count();
+        $completedAttemptsCount = Attempt::where('user_id', $userId)->whereIn('status', ['submitted', 'expired'])->count();
         $ongoingAttempt = Attempt::where('user_id', $userId)->where('status', 'in_progress')->first();
 
         /** @var view-string $viewName */
@@ -55,7 +55,7 @@ class CandidatePortalController extends Controller
     public function myAttempts(Request $request): View
     {
         $userId = (int) $request->user()?->id;
-        $attempts = Attempt::where('user_id', $userId)->with('test')->latest()->paginate(10);
+        $attempts = Attempt::where('user_id', $userId)->with(['test', 'certificate'])->latest()->paginate(10);
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.my_attempts';
