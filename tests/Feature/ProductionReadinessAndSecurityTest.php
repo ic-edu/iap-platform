@@ -13,7 +13,7 @@ beforeEach(function () {
 });
 
 test('security headers middleware applies csp and security headers to web requests', function () {
-    $response = $this->get('/');
+    $response = $this->get('/login');
 
     $response->assertStatus(200)
         ->assertHeader('X-Frame-Options', 'SAMEORIGIN')
@@ -21,6 +21,39 @@ test('security headers middleware applies csp and security headers to web reques
         ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
         ->assertHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
         ->assertHeaderContains('Content-Security-Policy', "default-src 'self'");
+});
+
+test('unauthenticated root route redirects guests to login screen', function () {
+    $response = $this->get('/');
+
+    $response->assertRedirect('/login');
+});
+
+test('authenticated student user accessing root route redirects to candidate portal', function () {
+    $student = User::factory()->create();
+    $student->assignRole('student');
+
+    $response = $this->actingAs($student)->get('/');
+
+    $response->assertRedirect(route('candidate.portal'));
+});
+
+test('authenticated teacher user accessing root route redirects to question banks index', function () {
+    $teacher = User::factory()->create();
+    $teacher->assignRole('teacher');
+
+    $response = $this->actingAs($teacher)->get('/');
+
+    $response->assertRedirect(route('admin.question-banks.index'));
+});
+
+test('authenticated admin user accessing root route redirects to monitoring dashboard', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    $response = $this->actingAs($admin)->get('/');
+
+    $response->assertRedirect(route('admin.monitoring.index'));
 });
 
 test('health check probe endpoint returns status 200 healthy json', function () {
