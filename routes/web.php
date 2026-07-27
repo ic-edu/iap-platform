@@ -36,10 +36,6 @@ Route::get('/live', [HealthCheckController::class, 'live']);
 
 // Admin Monitoring Dashboard
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-
     Route::get('/admin/monitoring', [MonitoringDashboardController::class, 'index'])
         ->name('admin.monitoring.index');
 });

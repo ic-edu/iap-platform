@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use App\Modules\Authentication\Controllers\Auth\AuthenticatedSessionController;
 use App\Modules\Authentication\Controllers\Auth\ConfirmablePasswordController;
 use App\Modules\Authentication\Controllers\Auth\EmailVerificationNotificationController;
@@ -11,14 +12,30 @@ use App\Modules\Authentication\Controllers\Auth\RegisteredUserController;
 use App\Modules\Authentication\Controllers\Auth\VerifyEmailController;
 use App\Modules\Authentication\Controllers\ProfileController;
 use App\Modules\Reporting\Services\DashboardMetricsService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/dashboard', function (DashboardMetricsService $metricsService) {
+    /** @var User $user */
+    $user = Auth::user();
+
+    if ($user->hasRole('student')) {
+        return redirect()->route('candidate.portal');
+    }
+
+    if ($user->hasRole('teacher')) {
+        return redirect()->route('admin.question-banks.index');
+    }
+
+    if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
+        return redirect()->route('admin.monitoring.index');
+    }
+
     $metrics = $metricsService->getMetricsSummary();
     $recentActivities = $metricsService->getRecentActivities(5);
 
     return view('authentication::dashboard', compact('metrics', 'recentActivities'));
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
