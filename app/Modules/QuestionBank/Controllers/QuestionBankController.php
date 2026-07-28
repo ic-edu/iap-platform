@@ -114,6 +114,79 @@ class QuestionBankController extends Controller
             'audio_url' => $validated['audio_url'] ?? null,
         ]);
 
+        $this->saveChoicesForQuestion($question, $qType, $validated);
+
+        return redirect()->route('admin.question-banks.show', $questionBank->id)
+            ->with('status', "Question successfully authored and saved. Total questions in bank: {$questionBank->questions()->count()}.");
+    }
+
+    /**
+     * Update an existing question.
+     */
+    public function updateQuestion(Request $request, Question $question): RedirectResponse
+    {
+        $validated = $request->validate([
+            'prompt' => ['required', 'string'],
+            'question_type' => ['required', 'string'],
+            'difficulty' => ['required', 'string'],
+            'points' => ['required', 'integer', 'min:1'],
+            'explanation' => ['nullable', 'string'],
+            'passage_text' => ['nullable', 'string'],
+            'audio_url' => ['nullable', 'string'],
+            'choices' => ['nullable', 'array'],
+            'choices.*.label' => ['nullable', 'string'],
+            'choices.*.content' => ['nullable', 'string'],
+            'correct_choice' => ['nullable'],
+            'correct_choices' => ['nullable', 'array'],
+            'tf_correct_choice' => ['nullable', 'string'],
+            'short_answer_text' => ['nullable', 'string'],
+            'reference_answer_text' => ['nullable', 'string'],
+        ]);
+
+        $qType = $validated['question_type'];
+
+        $question->update([
+            'prompt' => $validated['prompt'],
+            'question_type' => $qType,
+            'difficulty' => $validated['difficulty'],
+            'points' => $validated['points'],
+            'explanation' => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
+            'passage_text' => $validated['passage_text'] ?? null,
+            'audio_url' => $validated['audio_url'] ?? null,
+        ]);
+
+        // Rebuild choices for updated question while preserving Question ID
+        $question->choices()->delete();
+        $this->saveChoicesForQuestion($question, $qType, $validated);
+
+        return redirect()->route('admin.question-banks.show', $question->question_bank_id)
+            ->with('status', 'Question updated successfully.');
+    }
+
+    /**
+     * Duplicate a question inside a question bank.
+     */
+    public function duplicateQuestion(Question $question): RedirectResponse
+    {
+        $newQ = $question->replicate();
+        $newQ->prompt = 'Copy of '.$question->prompt;
+        $newQ->save();
+
+        foreach ($question->choices as $choice) {
+            $newC = $choice->replicate();
+            $newC->question_id = (string) $newQ->id;
+            $newC->save();
+        }
+
+        return redirect()->route('admin.question-banks.show', $question->question_bank_id)
+            ->with('status', 'Question duplicated successfully.');
+    }
+
+    /**
+     * Helper to save choices for a question based on its question_type.
+     */
+    private function saveChoicesForQuestion(Question $question, string $qType, array $validated): void
+    {
         if (in_array($qType, ['single_choice', 'listening', 'reading'])) {
             if (!empty($validated['choices'])) {
                 $correctIdx = (int) ($validated['correct_choice'] ?? 0);
@@ -165,9 +238,6 @@ class QuestionBankController extends Controller
                 'is_correct' => true,
             ]);
         }
-
-        return redirect()->route('admin.question-banks.show', $questionBank->id)
-            ->with('status', "Question successfully authored and saved. Total questions in bank: {$questionBank->questions()->count()}.");
     }
 
     /**
