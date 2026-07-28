@@ -270,8 +270,8 @@
                         <a href="{{ route('admin.commerce.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             🛍️ Billing &amp; Packages
                         </a>
-                        <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📊 Commerce Reports
+                        <a href="{{ route('admin.commerce.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📊 Financial Reports
                         </a>
                     @endif
                 @endauth

@@ -58,11 +58,13 @@
                             </span>
                         </td>
                         <td class="p-4 text-right">
-                            <form action="{{ route('admin.academic.courses.destroy', $course->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete course {{ $course->title }}?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-xs text-rose-400 hover:underline">Delete</button>
-                            </form>
+                            @if (!Auth::user()?->hasRole('teacher'))
+                                <form action="{{ route('admin.academic.courses.destroy', $course->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete course {{ $course->title }}?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-xs text-rose-400 hover:underline">Delete</button>
+                                </form>
+                            @endif
                         </td>
                     </tr>
                 @empty

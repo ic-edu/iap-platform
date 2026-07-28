@@ -32,6 +32,7 @@
                 <option value="ROLE_ASSIGNED" {{ request('action') === 'ROLE_ASSIGNED' ? 'selected' : '' }}>ROLE_ASSIGNED</option>
                 <option value="ROLE_REMOVED" {{ request('action') === 'ROLE_REMOVED' ? 'selected' : '' }}>ROLE_REMOVED</option>
                 <option value="USER_DELETED" {{ request('action') === 'USER_DELETED' ? 'selected' : '' }}>USER_DELETED</option>
+                <option value="QUESTION_DELETE" {{ request('action') === 'QUESTION_DELETE' ? 'selected' : '' }}>QUESTION_DELETE</option>
             </select>
 
             <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
@@ -63,7 +64,7 @@
                     @php
                         $actionStyle = match($log->action) {
                             'LOGIN', 'USER_ACTIVATED', 'USER_CREATED' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                            'LOGOUT', 'USER_DEACTIVATED', 'USER_DELETED', 'LOGIN_FAILED' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                            'LOGOUT', 'USER_DEACTIVATED', 'USER_DELETED', 'LOGIN_FAILED', 'QUESTION_DELETE' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
                             'PASSWORD_RESET', 'ROLE_ASSIGNED', 'ROLE_REMOVED' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
                             default => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
                         };

@@ -99,11 +99,13 @@
                                 @csrf
                                 <button type="submit" class="text-xs text-amber-400 hover:underline font-semibold">📄 Duplicate</button>
                             </form>
-                            <form action="{{ route('admin.question-banks.destroy-question', $q->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete this question?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-xs text-rose-400 hover:underline font-semibold">🗑 Delete</button>
-                            </form>
+                            @if (!Auth::user()?->hasRole('teacher'))
+                                <form action="{{ route('admin.question-banks.destroy-question', $q->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete this question?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-xs text-rose-400 hover:underline font-semibold">🗑 Delete</button>
+                                </form>
+                            @endif
                         </td>
                     </tr>
                 @empty

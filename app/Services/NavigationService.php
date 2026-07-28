@@ -148,7 +148,7 @@ class NavigationService
             }
 
             if ($user->hasRole('finance')) {
-                return in_array($item['route'], ['admin.commerce.index', 'admin.reporting.index']);
+                return in_array($item['route'], ['admin.commerce.index']);
             }
 
             return false;

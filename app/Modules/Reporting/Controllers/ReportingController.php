@@ -18,6 +18,10 @@ class ReportingController extends Controller
      */
     public function index(Request $request): View
     {
+        if ($request->user()?->hasRole('finance')) {
+            abort(403, 'Finance users are restricted to Financial & Commerce Reports.');
+        }
+
         $totalAttempts = Attempt::where('status', 'submitted')->count();
         $totalPassed = Attempt::where('status', 'submitted')->get()->filter(fn ($att) => ($att->result_summary['is_passed'] ?? false))->count();
         $passRate = $totalAttempts > 0 ? round(($totalPassed / $totalAttempts) * 100, 1) : 0;
@@ -39,8 +43,12 @@ class ReportingController extends Controller
     /**
      * Export attempts performance data as CSV file.
      */
-    public function exportCsv(): StreamedResponse
+    public function exportCsv(Request $request): StreamedResponse
     {
+        if ($request->user()?->hasRole('finance')) {
+            abort(403, 'Finance users are restricted to Financial & Commerce Reports.');
+        }
+
         $attempts = Attempt::with(['user', 'test', 'certificate'])->where('status', 'submitted')->get();
 
         $headers = [

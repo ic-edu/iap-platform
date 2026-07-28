@@ -119,11 +119,13 @@
                                         @csrf
                                         <button type="submit" class="text-xs text-slate-400 hover:text-white hover:underline">Duplicate</button>
                                     </form>
-                                    <form method="POST" action="{{ route('admin.question-banks.destroy', $bank->id) }}" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-xs text-rose-400 hover:underline">Delete</button>
-                                    </form>
+                                    @if (!Auth::user()?->hasRole('teacher'))
+                                        <form method="POST" action="{{ route('admin.question-banks.destroy', $bank->id) }}" class="inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-xs text-rose-400 hover:underline">Delete</button>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

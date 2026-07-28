@@ -2,7 +2,7 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-white">Commerce &amp; Finance Management</h1>
-            <p class="text-xs text-slate-400">Manage assessment vouchers, test pricing packages, and payment transaction logs.</p>
+            <p class="text-xs text-slate-400">Manage assessment vouchers, test pricing packages, payment transactions, and financial analytics.</p>
         </div>
         <button onclick="document.getElementById('create-voucher-modal').classList.remove('hidden')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
             + Create Discount Voucher
@@ -15,6 +15,30 @@
             ✅ {{ session('status') }}
         </div>
     @endif
+
+    <!-- Financial Reports & Key Metrics Hub -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Gross Revenue Report</span>
+            <span class="text-2xl font-extrabold text-emerald-400 mt-1 block">$14,850.00</span>
+            <span class="text-xs text-slate-500 mt-1 block">↑ 12.4% vs last month</span>
+        </div>
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Payment Transactions</span>
+            <span class="text-2xl font-extrabold text-white mt-1 block">342</span>
+            <span class="text-xs text-slate-500 mt-1 block">Completed online payments</span>
+        </div>
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Invoices Issued</span>
+            <span class="text-2xl font-extrabold text-indigo-400 mt-1 block">289</span>
+            <span class="text-xs text-slate-500 mt-1 block">Tax invoices &amp; receipts</span>
+        </div>
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Promotional Redemptions</span>
+            <span class="text-2xl font-extrabold text-amber-400 mt-1 block">65</span>
+            <span class="text-xs text-slate-500 mt-1 block">Voucher discounts applied</span>
+        </div>
+    </div>
 
     <!-- Active Vouchers Grid -->
     <div class="mb-8">
@@ -34,10 +58,11 @@
         </div>
     </div>
 
-    <!-- Transactions Table -->
+    <!-- Payment Reports & Transactions Table -->
     <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-        <div class="p-4 border-b border-slate-800">
-            <h2 class="text-sm font-bold text-white">Recent Payment Transactions</h2>
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white">Payment &amp; Invoice Transaction Reports</h2>
+            <span class="text-xs text-slate-400 font-mono">Gateway: Live Webhooks</span>
         </div>
         <table class="w-full text-left text-sm text-slate-300">
             <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
@@ -50,19 +75,19 @@
                     <th class="p-4 text-right">Date</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-800/60">
+            <tbody class="divide-y divide-slate-800/60 font-mono text-xs">
                 @foreach($transactions as $txn)
                     <tr>
-                        <td class="p-4 font-mono text-xs font-bold text-slate-400">{{ $txn['id'] }}</td>
-                        <td class="p-4 font-semibold text-white text-xs">{{ $txn['user'] }}</td>
-                        <td class="p-4 text-xs text-indigo-400 font-medium">{{ $txn['package'] }}</td>
+                        <td class="p-4 font-bold text-slate-400">{{ $txn['id'] }}</td>
+                        <td class="p-4 font-semibold text-white font-sans text-xs">{{ $txn['user'] }}</td>
+                        <td class="p-4 text-xs text-indigo-400 font-medium font-sans">{{ $txn['package'] }}</td>
                         <td class="p-4 font-bold text-emerald-400">{{ $txn['amount'] }}</td>
                         <td class="p-4">
                             <span class="px-2.5 py-0.5 text-xs font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                 {{ $txn['status'] }}
                             </span>
                         </td>
-                        <td class="p-4 text-right text-xs text-slate-400">{{ $txn['date'] }}</td>
+                        <td class="p-4 text-right text-xs text-slate-400 font-sans">{{ $txn['date'] }}</td>
                     </tr>
                 @endforeach
             </tbody>

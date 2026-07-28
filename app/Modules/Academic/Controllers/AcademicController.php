@@ -57,6 +57,11 @@ class AcademicController extends Controller
      */
     public function destroyCourse(Course $course): RedirectResponse
     {
+        $user = request()->user();
+        if ($user && $user->hasRole('teacher')) {
+            abort(403, 'Teachers are not permitted to delete academic courses.');
+        }
+
         $course->delete();
 
         return redirect()->route('admin.academic.index')->with('status', 'academic-course-deleted');

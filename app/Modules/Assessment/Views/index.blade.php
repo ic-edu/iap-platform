@@ -114,11 +114,13 @@
                                         <button type="submit" class="text-xs text-indigo-400 hover:underline">Duplicate</button>
                                     </form>
 
-                                    <form method="POST" action="{{ route('admin.tests.destroy', $test->id) }}" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-xs text-rose-400 hover:underline">Delete</button>
-                                    </form>
+                                    @if (!Auth::user()?->hasRole('teacher') && (!$test->is_published || Auth::user()?->hasRole('super-admin')))
+                                        <form method="POST" action="{{ route('admin.tests.destroy', $test->id) }}" class="inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-xs text-rose-400 hover:underline">Delete</button>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

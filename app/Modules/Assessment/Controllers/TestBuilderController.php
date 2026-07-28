@@ -100,10 +100,15 @@ class TestBuilderController extends Controller
     }
 
     /**
-     * Approve and publish test.
+     * Approve and publish test (Super Admin & Admin only).
      */
     public function publish(Test $test): RedirectResponse
     {
+        $user = request()->user();
+        if ($user && $user->hasRole('teacher')) {
+            abort(403, 'Teachers are not permitted to publish tests.');
+        }
+
         $this->builderService->publishTest($test);
 
         return redirect()->route('admin.tests.index')->with('status', 'test-published');
@@ -124,6 +129,15 @@ class TestBuilderController extends Controller
      */
     public function destroy(Test $test): RedirectResponse
     {
+        $user = request()->user();
+        if ($user && $user->hasRole('teacher')) {
+            abort(403, 'Teachers are not permitted to delete tests.');
+        }
+
+        if ($test->is_published && !$user?->hasRole('super-admin')) {
+            abort(403, 'Published tests cannot be deleted except by Super Admin.');
+        }
+
         $test->delete();
 
         return redirect()->route('admin.tests.index')->with('status', 'test-deleted');

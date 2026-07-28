@@ -7,6 +7,7 @@ use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionBank\Models\QuestionChoice;
+use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -311,10 +312,25 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Delete a question.
+     * Delete a question with QUESTION_DELETE audit log.
      */
     public function destroyQuestion(Question $question): RedirectResponse
     {
+        $user = request()->user();
+        if ($user && $user->hasRole('teacher')) {
+            abort(403, 'Teachers are not permitted to delete questions.');
+        }
+
+        ActivityLogger::log(
+            action: 'QUESTION_DELETE',
+            description: "Deleted Question #{$question->id}: {$question->prompt}",
+            subject: $question,
+            properties: [
+                'question_id' => $question->id,
+                'question_title' => $question->prompt,
+            ]
+        );
+
         $bankId = $question->question_bank_id;
         $question->delete();
 
@@ -326,6 +342,11 @@ class QuestionBankController extends Controller
      */
     public function destroy(QuestionBank $questionBank): RedirectResponse
     {
+        $user = request()->user();
+        if ($user && $user->hasRole('teacher')) {
+            abort(403, 'Teachers are not permitted to delete question banks.');
+        }
+
         $questionBank->delete();
 
         return redirect()->route('admin.question-banks.index')->with('status', 'Question bank deleted successfully.');
