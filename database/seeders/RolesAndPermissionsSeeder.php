@@ -157,6 +157,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'calendar.view',
         ]);
 
+        $roleFinance = Role::firstOrCreate(['name' => 'finance', 'guard_name' => 'web']);
+        $roleFinance->syncPermissions([
+            'commerce.view',
+            'finance.view',
+            'finance.dashboard',
+            'invoice.view',
+            'invoice.manage',
+            'payment.manage',
+            'reporting.view',
+        ]);
+
         $roleAdmin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $roleAdmin->syncPermissions(Permission::all());
 

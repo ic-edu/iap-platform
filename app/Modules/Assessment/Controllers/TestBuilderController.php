@@ -33,7 +33,7 @@ class TestBuilderController extends Controller
     }
 
     /**
-     * Store new test.
+     * Store new test in draft mode.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -70,13 +70,33 @@ class TestBuilderController extends Controller
     }
 
     /**
-     * Publish a test.
+     * Submit draft test for approval.
+     */
+    public function submitForApproval(Test $test): RedirectResponse
+    {
+        $test->update(['is_published' => false]);
+
+        return redirect()->route('admin.tests.index')->with('status', 'test-submitted-for-approval');
+    }
+
+    /**
+     * Approve and publish test.
      */
     public function publish(Test $test): RedirectResponse
     {
         $this->builderService->publishTest($test);
 
         return redirect()->route('admin.tests.index')->with('status', 'test-published');
+    }
+
+    /**
+     * Reject and revert test to draft.
+     */
+    public function reject(Test $test): RedirectResponse
+    {
+        $test->update(['is_published' => false]);
+
+        return redirect()->route('admin.tests.index')->with('status', 'test-rejected');
     }
 
     /**

@@ -22,90 +22,74 @@ class NavigationService
     {
         $allMenu = [
             [
-                'label' => 'Dashboard',
-                'route' => 'dashboard',
-                'icon' => 'home',
+                'label' => 'System Observability',
+                'route' => 'admin.monitoring.index',
+                'icon' => 'activity',
                 'permission' => null,
-                'active_pattern' => 'dashboard',
-                'badge' => null,
+                'active_pattern' => 'admin/monitoring*',
+                'badge' => 'LIVE',
             ],
             [
-                'label' => 'Academic',
-                'route' => 'dashboard',
-                'icon' => 'academic-cap',
-                'permission' => 'academic.view',
-                'active_pattern' => 'academic*',
-                'badge' => null,
-            ],
-            [
-                'label' => 'Question Bank',
+                'label' => 'Question Banks',
                 'route' => 'admin.question-banks.index',
                 'icon' => 'folder',
-                'permission' => 'question-bank.view',
+                'permission' => null,
                 'active_pattern' => 'admin/question-banks*',
                 'badge' => null,
             ],
             [
-                'label' => 'Assessment',
+                'label' => 'Test Builder',
                 'route' => 'admin.tests.index',
                 'icon' => 'clipboard-check',
-                'permission' => 'assessment.view',
+                'permission' => null,
                 'active_pattern' => 'admin/tests*',
                 'badge' => null,
             ],
             [
-                'label' => 'Certificates',
+                'label' => 'User & Role Access',
+                'route' => 'admin.users.index',
+                'icon' => 'users',
+                'permission' => null,
+                'active_pattern' => 'admin/users*',
+                'badge' => null,
+            ],
+            [
+                'label' => 'Academic Curriculum',
+                'route' => 'admin.academic.index',
+                'icon' => 'academic-cap',
+                'permission' => null,
+                'active_pattern' => 'admin/academic*',
+                'badge' => null,
+            ],
+            [
+                'label' => 'Certificate Registry',
                 'route' => 'admin.certificates.index',
                 'icon' => 'badge-check',
-                'permission' => 'certificate.view',
+                'permission' => null,
                 'active_pattern' => 'admin/certificates*',
                 'badge' => null,
             ],
             [
                 'label' => 'Commerce & Billing',
-                'route' => 'dashboard',
+                'route' => 'admin.commerce.index',
                 'icon' => 'shopping-bag',
-                'permission' => 'commerce.view',
-                'active_pattern' => 'commerce*',
+                'permission' => null,
+                'active_pattern' => 'admin/commerce*',
                 'badge' => null,
             ],
             [
-                'label' => 'API & Integrations',
-                'route' => 'dashboard',
-                'icon' => 'code-bracket',
-                'permission' => 'api.manage',
-                'active_pattern' => 'api*',
-                'badge' => null,
-            ],
-            [
-                'label' => 'Finance',
-                'route' => 'dashboard',
-                'icon' => 'credit-card',
-                'permission' => 'finance.view',
-                'active_pattern' => 'finance*',
-                'badge' => null,
-            ],
-            [
-                'label' => 'CMS Pages',
-                'route' => 'dashboard',
-                'icon' => 'document-text',
-                'permission' => 'cms.view',
-                'active_pattern' => 'cms*',
-                'badge' => null,
-            ],
-            [
-                'label' => 'Reporting',
-                'route' => 'dashboard',
+                'label' => 'Reports & Analytics',
+                'route' => 'admin.reporting.index',
                 'icon' => 'chart-bar',
-                'permission' => 'reporting.view',
-                'active_pattern' => 'reporting*',
+                'permission' => null,
+                'active_pattern' => 'admin/reporting*',
                 'badge' => null,
             ],
             [
-                'label' => 'Settings',
+                'label' => 'System Settings',
                 'route' => 'admin.settings.index',
                 'icon' => 'cog',
-                'permission' => 'settings.view',
+                'permission' => null,
                 'active_pattern' => 'admin/settings*',
                 'badge' => null,
             ],
@@ -114,20 +98,23 @@ class NavigationService
         $user = Auth::user();
 
         return array_values(array_filter($allMenu, function ($item) use ($user) {
-            if ($item['permission'] === null) {
-                return true;
-            }
-
             if (!$user) {
                 return false;
             }
 
-            // Super Admin has access to all
-            if ($user->hasRole('super-admin')) {
+            if ($user->hasRole('super-admin') || $user->hasRole('admin')) {
                 return true;
             }
 
-            return $user->hasPermissionTo($item['permission']);
+            if ($user->hasRole('teacher')) {
+                return in_array($item['route'], ['admin.question-banks.index', 'admin.tests.index', 'admin.academic.index', 'admin.reporting.index']);
+            }
+
+            if ($user->hasRole('finance')) {
+                return in_array($item['route'], ['admin.commerce.index', 'admin.reporting.index']);
+            }
+
+            return false;
         }));
     }
 }

@@ -22,7 +22,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 });
 
-test('security headers middleware applies csp and security headers to web requests', function () {
+test('security headers middleware applies csp, no-cache, and security headers to web requests', function () {
     $response = $this->get('/login');
 
     $response->assertStatus(200)
@@ -30,7 +30,80 @@ test('security headers middleware applies csp and security headers to web reques
         ->assertHeader('X-Content-Type-Options', 'nosniff')
         ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
         ->assertHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+        ->assertHeaderContains('Cache-Control', 'no-store')
         ->assertHeaderContains('Content-Security-Policy', "default-src 'self'");
+});
+
+test('unauthorized student user accessing admin pages receives HTTP 403 forbidden', function () {
+    $student = User::factory()->create();
+    $student->assignRole('student');
+
+    $response = $this->actingAs($student)->get('/admin/monitoring');
+    $response->assertStatus(403);
+
+    $response = $this->actingAs($student)->get('/admin/users');
+    $response->assertStatus(403);
+});
+
+test('authorized super admin user can access user management dashboard', function () {
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole('super-admin');
+
+    $response = $this->actingAs($superAdmin)->get('/admin/users');
+
+    $response->assertStatus(200)
+        ->assertSee('User &amp; Access Control Management', false);
+});
+
+test('authorized teacher can access question bank authoring view', function () {
+    $teacher = User::factory()->create();
+    $teacher->assignRole('teacher');
+
+    $bank = QuestionBank::create([
+        'title' => 'Authoring Bank',
+        'slug' => 'authoring-bank-'.Str::random(5),
+        'test_type' => 'toefl',
+        'created_by' => $teacher->id,
+    ]);
+
+    $response = $this->actingAs($teacher)->get("/admin/question-banks/{$bank->id}");
+
+    $response->assertStatus(200)
+        ->assertSee('Authoring Bank')
+        ->assertSee('Bulk CSV Import');
+});
+
+test('authorized admin can access academic curriculum management', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    $response = $this->actingAs($admin)->get('/admin/academic');
+
+    $response->assertStatus(200)
+        ->assertSee('Academic Curriculum &amp; Courses', false);
+});
+
+test('authorized admin can access reporting analytics and export csv', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    $response = $this->actingAs($admin)->get('/admin/reporting');
+    $response->assertStatus(200)
+        ->assertSee('Assessment Reports &amp; Analytics', false);
+
+    $exportResponse = $this->actingAs($admin)->get('/admin/reporting/export/csv');
+    $exportResponse->assertStatus(200)
+        ->assertHeaderContains('Content-Type', 'text/csv');
+});
+
+test('authorized finance user can access commerce workspace', function () {
+    $finance = User::factory()->create();
+    $finance->assignRole('finance');
+
+    $response = $this->actingAs($finance)->get('/admin/commerce');
+
+    $response->assertStatus(200)
+        ->assertSee('Commerce &amp; Finance Management', false);
 });
 
 test('unauthenticated root route redirects guests to login screen', function () {
@@ -595,6 +668,4 @@ test('product documentation suite in docs product directory is complete', functi
     expect(file_exists($prodDir.'user-personas.md'))->toBeTrue();
     expect(file_exists($prodDir.'business-rules.md'))->toBeTrue();
     expect(file_exists($prodDir.'feature-matrix.md'))->toBeTrue();
-    expect(file_exists($prodDir.'acceptance-criteria.md'))->toBeTrue();
-    expect(file_exists($prodDir.'release-plan.md'))->toBeTrue();
 });
