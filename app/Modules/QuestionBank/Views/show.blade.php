@@ -28,7 +28,7 @@
             <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
                 <tr>
                     <th class="p-4">#</th>
-                    <th class="p-4">Question Prompt</th>
+                    <th class="p-4">Question Prompt &amp; Media</th>
                     <th class="p-4">Type</th>
                     <th class="p-4">Difficulty</th>
                     <th class="p-4">Points</th>
@@ -39,8 +39,18 @@
                 @forelse ($questionBank->questions as $idx => $q)
                     <tr>
                         <td class="p-4 font-bold text-slate-500">{{ $idx + 1 }}</td>
-                        <td class="p-4 font-semibold text-white max-w-md truncate">
+                        <td class="p-4 font-semibold text-white max-w-md">
                             {{ $q->prompt }}
+                            @if($q->audio_url)
+                                <div class="text-[10px] text-indigo-400 mt-1 flex items-center gap-1 font-mono">
+                                    <span>🎵 Audio:</span> {{ $q->audio_url }}
+                                </div>
+                            @endif
+                            @if($q->passage_text)
+                                <div class="text-[10px] text-slate-400 italic mt-1 line-clamp-1">
+                                    📖 Passage: {{ $q->passage_text }}
+                                </div>
+                            @endif
                             @if($q->choices->isNotEmpty())
                                 <div class="text-xs font-normal text-slate-400 mt-1 space-x-2">
                                     @foreach($q->choices as $c)
@@ -58,7 +68,7 @@
                             </span>
                         </td>
                         <td class="p-4 font-bold text-white">{{ $q->points }} pts</td>
-                        <td class="p-4 text-right">
+                        <td class="p-4 text-right space-x-2">
                             <form action="{{ route('admin.question-banks.destroy-question', $q->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete this question?')">
                                 @csrf
                                 @method('DELETE')
@@ -75,7 +85,7 @@
         </table>
     </div>
 
-    <!-- Create Question Modal -->
+    <!-- Author Question Modal -->
     <div id="create-question-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-2xl w-full shadow-2xl my-8">
             <h2 class="text-lg font-bold text-white mb-4">Author New Question</h2>
@@ -91,9 +101,12 @@
                         <label class="block text-xs font-medium text-slate-300 mb-1">Question Type</label>
                         <select name="question_type" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
                             <option value="multiple_choice">Multiple Choice</option>
+                            <option value="single_choice">Single Choice</option>
                             <option value="true_false">True / False</option>
                             <option value="short_answer">Short Answer</option>
                             <option value="essay">Essay</option>
+                            <option value="listening">Listening Prompt</option>
+                            <option value="reading">Reading Passage</option>
                         </select>
                     </div>
                     <div>
@@ -110,12 +123,23 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Attach Audio Media URL</label>
+                        <input type="text" name="audio_url" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs" placeholder="e.g. question-media/toeic_listening_part1.mp3">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Reading Passage Text</label>
+                        <input type="text" name="passage_text" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs" placeholder="Optional reading passage...">
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-medium text-slate-300 mb-1">Explanation / Rationale</label>
                     <input type="text" name="explanation" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs" placeholder="Provide answer rationale...">
                 </div>
 
-                <!-- Multiple Choice Options -->
+                <!-- Answer Choices -->
                 <div class="space-y-2 border-t border-slate-800 pt-4">
                     <label class="block text-xs font-bold text-white">Answer Choices &amp; Correct Answer</label>
                     @foreach(['A', 'B', 'C', 'D'] as $i => $lbl)

@@ -70,13 +70,33 @@ class TestBuilderController extends Controller
     }
 
     /**
+     * Duplicate an assessment test.
+     */
+    public function duplicate(Test $test): RedirectResponse
+    {
+        $newTest = $test->replicate();
+        $newTest->title = $test->title.' (Copy)';
+        $newTest->slug = Str::slug($newTest->title).'-'.Str::random(5);
+        $newTest->is_published = false;
+        $newTest->save();
+
+        foreach ($test->sections as $sec) {
+            $newSec = $sec->replicate();
+            $newSec->test_id = (string) $newTest->id;
+            $newSec->save();
+        }
+
+        return redirect()->route('admin.tests.index')->with('status', 'test-duplicated');
+    }
+
+    /**
      * Submit draft test for approval.
      */
     public function submitForApproval(Test $test): RedirectResponse
     {
         $test->update(['is_published' => false]);
 
-        return redirect()->route('admin.tests.index')->with('status', 'test-submitted-for-approval');
+        return redirect()->route('admin.tests.index')->with('status', 'Test submitted for Super Admin review & approval successfully.');
     }
 
     /**
