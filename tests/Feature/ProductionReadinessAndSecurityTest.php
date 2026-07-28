@@ -45,6 +45,37 @@ test('unauthorized student user accessing admin pages receives HTTP 403 forbidde
     $response->assertStatus(403);
 });
 
+test('super admin approval center renders pending submissions queue', function () {
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole('super-admin');
+
+    $response = $this->actingAs($superAdmin)->get('/admin/approvals');
+
+    $response->assertStatus(200)
+        ->assertSee('Super Admin Content Approval Center', false);
+});
+
+test('super admin audit logs workspace renders system activity logs', function () {
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole('super-admin');
+
+    $response = $this->actingAs($superAdmin)->get('/admin/audit-logs');
+
+    $response->assertStatus(200)
+        ->assertSee('System Audit &amp; Activity Logs', false);
+});
+
+test('notifications api endpoint returns json payload for header bell dropdown', function () {
+    $user = User::factory()->create();
+    $user->assignRole('admin');
+
+    $response = $this->actingAs($user)->getJson('/notifications');
+
+    $response->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonStructure(['success', 'unread_count', 'data']);
+});
+
 test('authorized super admin user can access user management dashboard', function () {
     $superAdmin = User::factory()->create();
     $superAdmin->assignRole('super-admin');

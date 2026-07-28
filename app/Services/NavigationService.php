@@ -30,6 +30,14 @@ class NavigationService
                 'badge' => 'LIVE',
             ],
             [
+                'label' => 'Approval Center',
+                'route' => 'admin.approvals.index',
+                'icon' => 'shield-check',
+                'permission' => null,
+                'active_pattern' => 'admin/approvals*',
+                'badge' => 'NEW',
+            ],
+            [
                 'label' => 'Question Banks',
                 'route' => 'admin.question-banks.index',
                 'icon' => 'folder',
@@ -83,6 +91,14 @@ class NavigationService
                 'icon' => 'chart-bar',
                 'permission' => null,
                 'active_pattern' => 'admin/reporting*',
+                'badge' => null,
+            ],
+            [
+                'label' => 'Audit & Activity Logs',
+                'route' => 'admin.audit-logs.index',
+                'icon' => 'document-text',
+                'permission' => null,
+                'active_pattern' => 'admin/audit-logs*',
                 'badge' => null,
             ],
             [

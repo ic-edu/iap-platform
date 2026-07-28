@@ -54,7 +54,7 @@
         <div class="flex-1 flex flex-col min-w-0">
             <!-- Topbar Header -->
             <header class="bg-slate-950 border-b border-slate-800 px-6 py-4 flex items-center justify-between gap-4">
-                <!-- Breadcrumbs & Search -->
+                <!-- Global Search -->
                 <div class="flex items-center gap-4 flex-1">
                     <div class="relative w-full max-w-xs">
                         <input type="text" placeholder="Global Search (Ctrl+K)..." 
@@ -68,17 +68,38 @@
                 <!-- Topbar Actions -->
                 <div class="flex items-center gap-3">
                     <!-- Quick Action Button -->
-                    <button class="hidden sm:inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors shadow-sm">
+                    <button onclick="document.getElementById('quick-action-modal').classList.remove('hidden')" class="hidden sm:inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors shadow-sm">
                         <span>+ Quick Action</span>
                     </button>
 
-                    <!-- Notifications Dropdown Placeholder -->
-                    <button class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-colors relative" title="Notifications">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                        </svg>
-                        <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-slate-950"></span>
-                    </button>
+                    <!-- Notifications Dropdown -->
+                    <div class="relative">
+                        <button onclick="document.getElementById('notifications-dropdown').classList.toggle('hidden')" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-colors relative" title="Notifications">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                            </svg>
+                            <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-slate-950"></span>
+                        </button>
+
+                        <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                            <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                                <span class="text-xs font-bold text-white">Notifications</span>
+                                <span class="text-[10px] font-semibold bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">1 New</span>
+                            </div>
+                            <div class="divide-y divide-slate-800 text-xs">
+                                <div class="p-3 bg-indigo-950/20 hover:bg-slate-800/50 transition-colors">
+                                    <div class="font-semibold text-white">Assessment Approved</div>
+                                    <div class="text-slate-400 text-[11px] mt-0.5">TOEIC Full Simulation Test 01 was approved and published.</div>
+                                    <div class="text-[9px] text-slate-500 mt-1">10 mins ago</div>
+                                </div>
+                                <div class="p-3 hover:bg-slate-800/50 transition-colors">
+                                    <div class="font-semibold text-slate-300">Digital Certificate Issued</div>
+                                    <div class="text-slate-400 text-[11px] mt-0.5">Certificate #CERT-20260727-8F12A generated.</div>
+                                    <div class="text-[9px] text-slate-500 mt-1">1 hour ago</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- User Profile & Dropdown -->
                     @auth
@@ -109,6 +130,30 @@
             <main class="flex-1 p-6 overflow-y-auto">
                 {{ $slot }}
             </main>
+        </div>
+    </div>
+
+    <!-- Quick Action Modal -->
+    <div id="quick-action-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white">⚡ Quick Actions</h3>
+                <button onclick="document.getElementById('quick-action-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <a href="{{ route('admin.question-banks.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                    📂 Create Question Bank
+                </a>
+                <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                    📋 Build Assessment Test
+                </a>
+                <a href="{{ route('admin.users.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                    👤 Add Platform User
+                </a>
+                <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                    📊 Export Analytics Report
+                </a>
+            </div>
         </div>
     </div>
 </body>

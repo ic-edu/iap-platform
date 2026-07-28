@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\ApprovalController;
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\MonitoringDashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\HealthCheckController;
+use App\Http\Controllers\NotificationController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -39,10 +42,20 @@ Route::get('/health', [HealthCheckController::class, 'health']);
 Route::get('/ready', [HealthCheckController::class, 'ready']);
 Route::get('/live', [HealthCheckController::class, 'live']);
 
-// Admin Monitoring Dashboard & User Management (Protected with role middleware)
+// Admin Workspaces (Protected with role middleware)
 Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
     Route::get('/admin/monitoring', [MonitoringDashboardController::class, 'index'])
         ->name('admin.monitoring.index');
+
+    Route::prefix('admin/approvals')->group(function () {
+        Route::get('/', [ApprovalController::class, 'index'])->name('admin.approvals.index');
+        Route::post('/{test}/approve', [ApprovalController::class, 'approve'])->name('admin.approvals.approve');
+        Route::post('/{test}/reject', [ApprovalController::class, 'reject'])->name('admin.approvals.reject');
+    });
+
+    Route::prefix('admin/audit-logs')->group(function () {
+        Route::get('/', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
+    });
 
     Route::prefix('admin/users')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('admin.users.index');
@@ -50,4 +63,8 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::put('/{user}', [UserController::class, 'update'])->name('admin.users.update');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
+});
+
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 });

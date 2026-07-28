@@ -11,8 +11,8 @@
         .subtitle { font-size: 15px; color: #64748b; margin-top: 6px; font-style: italic; }
         .recipient { font-size: 34px; font-weight: 800; color: #1e1b4b; margin: 30px 0 10px; border-bottom: 3px solid #6366f1; display: inline-block; padding-bottom: 8px; }
         .course { font-size: 22px; color: #334155; margin-bottom: 35px; margin-top: 10px; }
-        .qr-box { border: 2px solid #6366f1; padding: 12px 20px; background: #eef2ff; border-radius: 8px; display: inline-block; text-align: center; margin-bottom: 30px; }
-        .qr-title { font-size: 11px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .qr-box { border: 2px solid #6366f1; padding: 16px 24px; background: #eef2ff; border-radius: 10px; display: inline-block; text-align: center; margin-bottom: 30px; }
+        .qr-title { font-size: 11px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
         .details { margin-top: 30px; display: flex; justify-content: space-between; font-size: 13px; color: #475569; text-align: left; border-t: 1px solid #e2e8f0; pt-20px; }
     </style>
 </head>
@@ -29,11 +29,14 @@
 
         <div class="qr-box">
             <div class="qr-title">Official Verification QR Code</div>
+            <div style="margin-bottom: 8px;">
+                {!! $qrSvg ?? '' !!}
+            </div>
             <div style="font-family: monospace; font-size: 13px; font-weight: bold; color: #1e1b4b;">
                 VERIFICATION CODE: {{ $certificate->verification_code }}
             </div>
             <div style="font-size: 10px; color: #475569; margin-top: 4px;">
-                Scan or visit: {{ route('public.verify.code', $certificate->verification_code) }}
+                Scan QR or visit: {{ $verifyUrl ?? route('public.verify.code', $certificate->verification_code) }}
             </div>
         </div>
 
