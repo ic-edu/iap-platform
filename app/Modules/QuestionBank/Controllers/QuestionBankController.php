@@ -75,7 +75,7 @@ class QuestionBankController extends Controller
             'description' => $validated['description'] ?? null,
         ]);
 
-        return redirect()->route('admin.question-banks.index')->with('status', 'question-bank-created');
+        return redirect()->route('admin.question-banks.index')->with('status', 'Question bank created successfully.');
     }
 
     /**
@@ -92,35 +92,82 @@ class QuestionBankController extends Controller
             'passage_text' => ['nullable', 'string'],
             'audio_url' => ['nullable', 'string'],
             'choices' => ['nullable', 'array'],
-            'choices.*.label' => ['required_with:choices', 'string'],
-            'choices.*.content' => ['required_with:choices', 'string'],
+            'choices.*.label' => ['nullable', 'string'],
+            'choices.*.content' => ['nullable', 'string'],
             'correct_choice' => ['nullable'],
+            'correct_choices' => ['nullable', 'array'],
+            'tf_correct_choice' => ['nullable', 'string'],
+            'short_answer_text' => ['nullable', 'string'],
+            'reference_answer_text' => ['nullable', 'string'],
         ]);
+
+        $qType = $validated['question_type'];
 
         $question = Question::create([
             'question_bank_id' => $questionBank->id,
             'prompt' => $validated['prompt'],
-            'question_type' => $validated['question_type'],
+            'question_type' => $qType,
             'difficulty' => $validated['difficulty'],
             'points' => $validated['points'],
-            'explanation' => $validated['explanation'] ?? null,
+            'explanation' => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
             'passage_text' => $validated['passage_text'] ?? null,
             'audio_url' => $validated['audio_url'] ?? null,
         ]);
 
-        if (!empty($validated['choices'])) {
-            $correctIdx = (int) ($validated['correct_choice'] ?? 0);
-            foreach ($validated['choices'] as $idx => $choiceData) {
-                QuestionChoice::create([
-                    'question_id' => $question->id,
-                    'label' => $choiceData['label'],
-                    'content' => $choiceData['content'],
-                    'is_correct' => ($idx === $correctIdx),
-                ]);
+        if (in_array($qType, ['single_choice', 'listening', 'reading'])) {
+            if (!empty($validated['choices'])) {
+                $correctIdx = (int) ($validated['correct_choice'] ?? 0);
+                foreach ($validated['choices'] as $idx => $choiceData) {
+                    if (!empty($choiceData['content'])) {
+                        QuestionChoice::create([
+                            'question_id' => $question->id,
+                            'label' => $choiceData['label'] ?? chr(65 + $idx),
+                            'content' => $choiceData['content'],
+                            'is_correct' => ($idx === $correctIdx),
+                        ]);
+                    }
+                }
             }
+        } elseif ($qType === 'multiple_choice') {
+            if (!empty($validated['choices'])) {
+                $correctIndices = array_map('intval', $validated['correct_choices'] ?? []);
+                foreach ($validated['choices'] as $idx => $choiceData) {
+                    if (!empty($choiceData['content'])) {
+                        QuestionChoice::create([
+                            'question_id' => $question->id,
+                            'label' => $choiceData['label'] ?? chr(65 + $idx),
+                            'content' => $choiceData['content'],
+                            'is_correct' => in_array($idx, $correctIndices, true),
+                        ]);
+                    }
+                }
+            }
+        } elseif ($qType === 'true_false') {
+            $tfCorrect = strtolower($validated['tf_correct_choice'] ?? 'true');
+            QuestionChoice::create([
+                'question_id' => $question->id,
+                'label' => 'A',
+                'content' => 'True',
+                'is_correct' => ($tfCorrect === 'true'),
+            ]);
+            QuestionChoice::create([
+                'question_id' => $question->id,
+                'label' => 'B',
+                'content' => 'False',
+                'is_correct' => ($tfCorrect === 'false'),
+            ]);
+        } elseif ($qType === 'short_answer') {
+            $answerText = $validated['short_answer_text'] ?? 'Correct Answer';
+            QuestionChoice::create([
+                'question_id' => $question->id,
+                'label' => 'A',
+                'content' => $answerText,
+                'is_correct' => true,
+            ]);
         }
 
-        return redirect()->route('admin.question-banks.show', $questionBank->id)->with('status', 'question-created');
+        return redirect()->route('admin.question-banks.show', $questionBank->id)
+            ->with('status', "Question successfully authored and saved. Total questions in bank: {$questionBank->questions()->count()}.");
     }
 
     /**
@@ -190,7 +237,7 @@ class QuestionBankController extends Controller
             }
         }
 
-        return redirect()->route('admin.question-banks.index')->with('status', 'question-bank-duplicated');
+        return redirect()->route('admin.question-banks.index')->with('status', 'Question bank duplicated successfully.');
     }
 
     /**
@@ -201,7 +248,7 @@ class QuestionBankController extends Controller
         $bankId = $question->question_bank_id;
         $question->delete();
 
-        return redirect()->route('admin.question-banks.show', $bankId)->with('status', 'question-deleted');
+        return redirect()->route('admin.question-banks.show', $bankId)->with('status', 'Question deleted successfully.');
     }
 
     /**
@@ -211,6 +258,6 @@ class QuestionBankController extends Controller
     {
         $questionBank->delete();
 
-        return redirect()->route('admin.question-banks.index')->with('status', 'question-bank-deleted');
+        return redirect()->route('admin.question-banks.index')->with('status', 'Question bank deleted successfully.');
     }
 }

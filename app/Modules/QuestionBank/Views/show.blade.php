@@ -102,10 +102,10 @@
 
                 <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Question Type</label>
-                        <select id="q_question_type" name="question_type" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Question Type *</label>
+                        <select id="q_question_type" name="question_type" onchange="updateAnswerOptionsUI()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                            <option value="single_choice" selected>Single Choice</option>
                             <option value="multiple_choice">Multiple Choice</option>
-                            <option value="single_choice">Single Choice</option>
                             <option value="true_false">True / False</option>
                             <option value="short_answer">Short Answer</option>
                             <option value="essay">Essay</option>
@@ -159,17 +159,9 @@
                     <input type="text" name="explanation" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Provide answer rationale...">
                 </div>
 
-                <!-- Answer Choices -->
-                <div class="space-y-2 border-t border-slate-800 pt-4">
-                    <label class="block text-xs font-bold text-white">Answer Choices &amp; Correct Answer</label>
-                    @foreach(['A', 'B', 'C', 'D'] as $i => $lbl)
-                        <div class="flex items-center gap-3">
-                            <input type="radio" name="correct_choice" value="{{ $i }}" {{ $i === 0 ? 'checked' : '' }} title="Select as correct answer">
-                            <span class="font-bold text-xs text-indigo-400 w-4">{{ $lbl }}</span>
-                            <input type="hidden" name="choices[{{ $i }}][label]" value="{{ $lbl }}">
-                            <input type="text" name="choices[{{ $i }}][content]" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Choice {{ $lbl }} content">
-                        </div>
-                    @endforeach
+                <!-- Dynamic Answer Options Section -->
+                <div id="dynamic_answer_container" class="space-y-3 border-t border-slate-800 pt-4">
+                    <!-- Populated dynamically by updateAnswerOptionsUI() -->
                 </div>
 
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
@@ -229,12 +221,70 @@
         </div>
     </div>
 
-    <!-- JavaScript Media Attachment & Modal Handler -->
+    <!-- JavaScript Dynamic UI & Media Attachment Handlers -->
     <script>
         let allMediaItems = [];
 
+        document.addEventListener('DOMContentLoaded', function() {
+            updateAnswerOptionsUI();
+        });
+
+        function updateAnswerOptionsUI() {
+            const type = document.getElementById('q_question_type').value;
+            const container = document.getElementById('dynamic_answer_container');
+
+            if (['single_choice', 'listening', 'reading'].includes(type)) {
+                container.innerHTML = `
+                    <label class="block text-xs font-bold text-white mb-2">Single Choice Answer Options (Select 1 Correct Answer)</label>
+                    ${['A', 'B', 'C', 'D'].map((lbl, i) => `
+                        <div class="flex items-center gap-3">
+                            <input type="radio" name="correct_choice" value="${i}" ${i === 0 ? 'checked' : ''} title="Select as correct answer">
+                            <span class="font-bold text-xs text-indigo-400 w-4">${lbl}</span>
+                            <input type="hidden" name="choices[${i}][label]" value="${lbl}">
+                            <input type="text" name="choices[${i}][content]" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${lbl} content" required>
+                        </div>
+                    `).join('')}
+                `;
+            } else if (type === 'multiple_choice') {
+                container.innerHTML = `
+                    <label class="block text-xs font-bold text-white mb-2">Multiple Choice Answer Options (Check all correct choices)</label>
+                    ${['A', 'B', 'C', 'D'].map((lbl, i) => `
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="correct_choices[]" value="${i}" ${i === 0 ? 'checked' : ''} title="Check if correct">
+                            <span class="font-bold text-xs text-indigo-400 w-4">${lbl}</span>
+                            <input type="hidden" name="choices[${i}][label]" value="${lbl}">
+                            <input type="text" name="choices[${i}][content]" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${lbl} content" required>
+                        </div>
+                    `).join('')}
+                `;
+            } else if (type === 'true_false') {
+                container.innerHTML = `
+                    <label class="block text-xs font-bold text-white mb-2">True / False Correct Answer</label>
+                    <div class="flex items-center gap-6">
+                        <label class="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                            <input type="radio" name="tf_correct_choice" value="true" checked class="text-indigo-600 focus:ring-0"> True
+                        </label>
+                        <label class="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                            <input type="radio" name="tf_correct_choice" value="false" class="text-indigo-600 focus:ring-0"> False
+                        </label>
+                    </div>
+                `;
+            } else if (type === 'short_answer') {
+                container.innerHTML = `
+                    <label class="block text-xs font-bold text-white mb-1">Exact Correct Answer String *</label>
+                    <input type="text" name="short_answer_text" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter expected exact string answer...">
+                `;
+            } else if (type === 'essay') {
+                container.innerHTML = `
+                    <label class="block text-xs font-bold text-white mb-1">Reference Answer &amp; Grading Guidelines (Optional)</label>
+                    <textarea name="reference_answer_text" rows="3" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter model reference answer or grading rubric..."></textarea>
+                `;
+            }
+        }
+
         function openCreateQuestionModal() {
             document.getElementById('create-question-modal').classList.remove('hidden');
+            updateAnswerOptionsUI();
         }
 
         function closeCreateQuestionModal() {
@@ -330,10 +380,12 @@
             if (item.type === 'audio') {
                 document.getElementById('q_audio_url').value = item.url || item.name;
                 document.getElementById('q_question_type').value = 'listening';
+                updateAnswerOptionsUI();
                 showAttachedBadge('🎵 Audio Attached: ' + item.name);
             } else if (item.type === 'passage') {
                 document.getElementById('q_passage_text').value = item.text || item.name;
                 document.getElementById('q_question_type').value = 'reading';
+                updateAnswerOptionsUI();
                 showAttachedBadge('📖 Reading Passage Attached: ' + item.name);
             } else {
                 document.getElementById('q_audio_url').value = item.url || item.name;
@@ -361,6 +413,7 @@
                     if (res.type === 'audio') {
                         document.getElementById('q_audio_url').value = res.url;
                         document.getElementById('q_question_type').value = 'listening';
+                        updateAnswerOptionsUI();
                     }
                     showAttachedBadge('✓ File Uploaded & Attached: ' + res.filename);
                 }
