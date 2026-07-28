@@ -81,6 +81,8 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::get('/', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/', [UserController::class, 'store'])->name('admin.users.store');
         Route::put('/{user}', [UserController::class, 'update'])->name('admin.users.update');
+        Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
+        Route::post('/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
 });
