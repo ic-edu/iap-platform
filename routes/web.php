@@ -44,10 +44,11 @@ Route::get('/health', [HealthCheckController::class, 'health']);
 Route::get('/ready', [HealthCheckController::class, 'ready']);
 Route::get('/live', [HealthCheckController::class, 'live']);
 
-// Teacher & Admin Shared Workspaces
+// Teacher & Admin Shared Workspaces & Media Selector API
 Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(function () {
     Route::prefix('admin/media')->group(function () {
         Route::get('/', [MediaController::class, 'index'])->name('admin.media.index');
+        Route::get('/list', [MediaController::class, 'list'])->name('admin.media.list');
         Route::post('/', [MediaController::class, 'store'])->name('admin.media.store');
     });
 });

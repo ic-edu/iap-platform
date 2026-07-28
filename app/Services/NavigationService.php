@@ -131,7 +131,8 @@ class NavigationService
             }
 
             if ($user->hasRole('teacher')) {
-                return in_array($item['route'], ['admin.question-banks.index', 'admin.media.index', 'admin.tests.index', 'admin.academic.index', 'admin.reporting.index']);
+                // Media Library is opened inside Question Authoring Editor modal, not in sidebar
+                return in_array($item['route'], ['admin.question-banks.index', 'admin.tests.index', 'admin.academic.index', 'admin.reporting.index']);
             }
 
             if ($user->hasRole('finance')) {
