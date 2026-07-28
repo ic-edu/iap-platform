@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\Admin\ApprovalController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\MonitoringDashboardController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\NotificationController;
@@ -42,7 +44,15 @@ Route::get('/health', [HealthCheckController::class, 'health']);
 Route::get('/ready', [HealthCheckController::class, 'ready']);
 Route::get('/live', [HealthCheckController::class, 'live']);
 
-// Admin Workspaces (Protected with role middleware)
+// Teacher & Admin Shared Workspaces
+Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(function () {
+    Route::prefix('admin/media')->group(function () {
+        Route::get('/', [MediaController::class, 'index'])->name('admin.media.index');
+        Route::post('/', [MediaController::class, 'store'])->name('admin.media.store');
+    });
+});
+
+// Admin & Super Admin Workspaces
 Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
     Route::get('/admin/monitoring', [MonitoringDashboardController::class, 'index'])
         ->name('admin.monitoring.index');
@@ -55,6 +65,11 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
 
     Route::prefix('admin/audit-logs')->group(function () {
         Route::get('/', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
+    });
+
+    Route::prefix('admin/settings')->group(function () {
+        Route::get('/', [SettingsController::class, 'index'])->name('admin.settings.index');
+        Route::post('/', [SettingsController::class, 'update'])->name('admin.settings.update');
     });
 
     Route::prefix('admin/users')->group(function () {

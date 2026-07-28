@@ -65,6 +65,26 @@ test('super admin audit logs workspace renders system activity logs', function (
         ->assertSee('System Audit &amp; Activity Logs', false);
 });
 
+test('authorized teacher can access question media library view', function () {
+    $teacher = User::factory()->create();
+    $teacher->assignRole('teacher');
+
+    $response = $this->actingAs($teacher)->get('/admin/media');
+
+    $response->assertStatus(200)
+        ->assertSee('Question Media Library', false);
+});
+
+test('authorized super admin can access platform settings workspace view', function () {
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole('super-admin');
+
+    $response = $this->actingAs($superAdmin)->get('/admin/settings');
+
+    $response->assertStatus(200)
+        ->assertSee('Super Admin Platform Settings', false);
+});
+
 test('notifications api endpoint returns json payload for header bell dropdown', function () {
     $user = User::factory()->create();
     $user->assignRole('admin');

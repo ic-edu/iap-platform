@@ -46,6 +46,14 @@ class NavigationService
                 'badge' => null,
             ],
             [
+                'label' => 'Question Media Library',
+                'route' => 'admin.media.index',
+                'icon' => 'film',
+                'permission' => null,
+                'active_pattern' => 'admin/media*',
+                'badge' => null,
+            ],
+            [
                 'label' => 'Test Builder',
                 'route' => 'admin.tests.index',
                 'icon' => 'clipboard-check',
@@ -123,7 +131,7 @@ class NavigationService
             }
 
             if ($user->hasRole('teacher')) {
-                return in_array($item['route'], ['admin.question-banks.index', 'admin.tests.index', 'admin.academic.index', 'admin.reporting.index']);
+                return in_array($item['route'], ['admin.question-banks.index', 'admin.media.index', 'admin.tests.index', 'admin.academic.index', 'admin.reporting.index']);
             }
 
             if ($user->hasRole('finance')) {

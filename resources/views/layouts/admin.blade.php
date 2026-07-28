@@ -133,26 +133,56 @@
         </div>
     </div>
 
-    <!-- Quick Action Modal -->
+    <!-- Role-Aware Quick Action Modal -->
     <div id="quick-action-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-white">⚡ Quick Actions</h3>
+                <h3 class="text-lg font-bold text-white">⚡ Permitted Quick Actions</h3>
                 <button onclick="document.getElementById('quick-action-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
             </div>
             <div class="grid grid-cols-2 gap-3 text-xs">
-                <a href="{{ route('admin.question-banks.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                    📂 Create Question Bank
-                </a>
-                <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                    📋 Build Assessment Test
-                </a>
-                <a href="{{ route('admin.users.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                    👤 Add Platform User
-                </a>
-                <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                    📊 Export Analytics Report
-                </a>
+                @auth
+                    @if (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin'))
+                        <a href="{{ route('admin.question-banks.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📂 Manage Question Banks
+                        </a>
+                        <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📋 Build Assessment Test
+                        </a>
+                        <a href="{{ route('admin.users.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            👤 Add Platform User
+                        </a>
+                        <a href="{{ route('admin.approvals.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            🛡️ Review Content Approvals
+                        </a>
+                        <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📊 Export Analytics Report
+                        </a>
+                        <a href="{{ route('admin.settings.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            ⚙️ System Settings
+                        </a>
+                    @elseif (Auth::user()->hasRole('teacher'))
+                        <a href="{{ route('admin.question-banks.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📂 Author Question Bank
+                        </a>
+                        <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📋 Create Test Draft
+                        </a>
+                        <a href="{{ route('admin.academic.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            🎓 Curriculum Courses
+                        </a>
+                        <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📊 Student Reports
+                        </a>
+                    @elseif (Auth::user()->hasRole('finance'))
+                        <a href="{{ route('admin.commerce.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            🛍️ Billing &amp; Packages
+                        </a>
+                        <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📊 Commerce Reports
+                        </a>
+                    @endif
+                @endauth
             </div>
         </div>
     </div>
