@@ -7,8 +7,10 @@ use App\Http\Controllers\Admin\MonitoringDashboardController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuperAdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Finance\FinanceDashboardController;
 use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Teacher\TeacherDashboardController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -21,29 +23,70 @@ Route::get('/', function () {
     /** @var User $user */
     $user = Auth::user();
 
-    if ($user->hasRole('student')) {
-        return redirect()->route('candidate.portal');
+    if ($user->hasRole('super-admin')) {
+        return redirect()->route('super-admin.dashboard');
+    }
+
+    if ($user->hasRole('admin')) {
+        return redirect()->route('admin.dashboard');
     }
 
     if ($user->hasRole('teacher')) {
-        return redirect()->route('admin.question-banks.index');
+        return redirect()->route('teacher.dashboard');
     }
 
     if ($user->hasRole('finance')) {
-        return redirect()->route('admin.commerce.index');
-    }
-
-    if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
-        return redirect()->route('admin.dashboard');
+        return redirect()->route('finance.dashboard');
     }
 
     return redirect()->route('candidate.portal');
 });
 
+Route::get('/dashboard', function () {
+    /** @var User|null $user */
+    $user = Auth::user();
+
+    if ($user?->hasRole('super-admin')) {
+        return redirect()->route('super-admin.dashboard');
+    }
+
+    if ($user?->hasRole('admin')) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    if ($user?->hasRole('teacher')) {
+        return redirect()->route('teacher.dashboard');
+    }
+
+    if ($user?->hasRole('finance')) {
+        return redirect()->route('finance.dashboard');
+    }
+
+    return redirect()->route('candidate.portal');
+})->middleware(['web', 'auth'])->name('dashboard');
+
 // Observability Probes
 Route::get('/health', [HealthCheckController::class, 'health']);
 Route::get('/ready', [HealthCheckController::class, 'ready']);
 Route::get('/live', [HealthCheckController::class, 'live']);
+
+// Super Admin Dedicated Landing Workspace
+Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
+    Route::get('/super-admin/dashboard', [SuperAdminDashboardController::class, 'superAdminIndex'])
+        ->name('super-admin.dashboard');
+});
+
+// Teacher Dedicated Landing Workspace
+Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
+    Route::get('/teacher/dashboard', [TeacherDashboardController::class, 'index'])
+        ->name('teacher.dashboard');
+});
+
+// Finance Dedicated Landing Workspace
+Route::middleware(['web', 'auth', 'role:finance'])->group(function () {
+    Route::get('/finance/dashboard', [FinanceDashboardController::class, 'index'])
+        ->name('finance.dashboard');
+});
 
 // Teacher & Admin Shared Workspaces & Media Selector API
 Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(function () {
@@ -56,7 +99,7 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(func
 
 // Admin & Super Admin Workspaces
 Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
-    Route::get('/admin/dashboard', [SuperAdminDashboardController::class, 'index'])
+    Route::get('/admin/dashboard', [SuperAdminDashboardController::class, 'adminIndex'])
         ->name('admin.dashboard');
 
     Route::get('/admin/monitoring', [MonitoringDashboardController::class, 'index'])

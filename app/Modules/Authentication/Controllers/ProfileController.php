@@ -18,19 +18,23 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        if ($user?->hasRole('super-admin') || $user?->hasRole('admin')) {
+        if ($user?->hasRole('super-admin')) {
+            return redirect()->route('super-admin.dashboard', ['open_profile' => 1]);
+        }
+
+        if ($user?->hasRole('admin')) {
             return redirect()->route('admin.dashboard', ['open_profile' => 1]);
         }
 
         if ($user?->hasRole('teacher')) {
-            return redirect()->route('admin.question-banks.index', ['open_profile' => 1]);
+            return redirect()->route('teacher.dashboard', ['open_profile' => 1]);
         }
 
         if ($user?->hasRole('finance')) {
-            return redirect()->route('admin.commerce.index', ['open_profile' => 1]);
+            return redirect()->route('finance.dashboard', ['open_profile' => 1]);
         }
 
-        return redirect()->route('candidate.portal');
+        return redirect()->route('candidate.portal', ['open_profile' => 1]);
     }
 
     /**

@@ -172,13 +172,13 @@ test('authenticated student user accessing root route redirects to candidate por
     $response->assertRedirect(route('candidate.portal'));
 });
 
-test('authenticated teacher user accessing root route redirects to question banks index', function () {
+test('authenticated teacher user accessing root route redirects to teacher dashboard', function () {
     $teacher = User::factory()->create();
     $teacher->assignRole('teacher');
 
     $response = $this->actingAs($teacher)->get('/');
 
-    $response->assertRedirect(route('admin.question-banks.index'));
+    $response->assertRedirect(route('teacher.dashboard'));
 });
 
 test('authenticated admin user accessing root route redirects to platform overview dashboard', function () {

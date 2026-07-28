@@ -17,9 +17,9 @@ class SuperAdminDashboardController extends Controller
     ) {}
 
     /**
-     * Display Super Admin Platform Overview Landing Dashboard.
+     * Display Super Admin Platform Overview Landing Dashboard (/super-admin/dashboard).
      */
-    public function index(): View
+    public function superAdminIndex(): View
     {
         $totalUsers = User::count();
         $teachersCount = User::role('teacher')->count();
@@ -50,5 +50,39 @@ class SuperAdminDashboardController extends Controller
             'recentUsers',
             'recentCertificates'
         ));
+    }
+
+    /**
+     * Display Admin Operational Landing Dashboard (/admin/dashboard).
+     */
+    public function adminIndex(): View
+    {
+        $totalUsers = User::count();
+        $teachersCount = User::role('teacher')->count();
+        $studentsCount = User::role('student')->count();
+
+        $questionBanksCount = QuestionBank::count();
+        $publishedTestsCount = AssessmentTest::where('is_published', true)->count();
+        $pendingApprovalsCount = AssessmentTest::where('is_published', false)->count();
+
+        $recentUsers = User::latest()->take(5)->get();
+
+        return view('admin.admin_dashboard', compact(
+            'totalUsers',
+            'teachersCount',
+            'studentsCount',
+            'questionBanksCount',
+            'publishedTestsCount',
+            'pendingApprovalsCount',
+            'recentUsers'
+        ));
+    }
+
+    /**
+     * Default index method fallback.
+     */
+    public function index(): View
+    {
+        return $this->superAdminIndex();
     }
 }

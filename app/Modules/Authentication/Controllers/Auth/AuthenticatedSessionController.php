@@ -46,20 +46,24 @@ class AuthenticatedSessionController extends Controller
         }
 
         // Redirect strictly based on active role
-        if ($user?->hasRole('student')) {
-            return redirect()->route('candidate.portal');
+        if ($user?->hasRole('super-admin')) {
+            return redirect()->route('super-admin.dashboard');
+        }
+
+        if ($user?->hasRole('admin')) {
+            return redirect()->route('admin.dashboard');
         }
 
         if ($user?->hasRole('teacher')) {
-            return redirect()->route('admin.question-banks.index');
+            return redirect()->route('teacher.dashboard');
         }
 
         if ($user?->hasRole('finance')) {
-            return redirect()->route('admin.commerce.index');
+            return redirect()->route('finance.dashboard');
         }
 
-        if ($user?->hasRole('admin') || $user?->hasRole('super-admin')) {
-            return redirect()->route('admin.dashboard');
+        if ($user?->hasRole('student')) {
+            return redirect()->route('candidate.portal');
         }
 
         return redirect()->route('candidate.portal');
