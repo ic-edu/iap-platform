@@ -28,7 +28,7 @@ Route::get('/dashboard', function (DashboardMetricsService $metricsService) {
     }
 
     if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
-        return redirect()->route('admin.monitoring.index');
+        return redirect()->route('admin.dashboard');
     }
 
     $metrics = $metricsService->getMetricsSummary();

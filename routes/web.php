@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\MonitoringDashboardController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SuperAdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\NotificationController;
@@ -33,7 +34,7 @@ Route::get('/', function () {
     }
 
     if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
-        return redirect()->route('admin.monitoring.index');
+        return redirect()->route('admin.dashboard');
     }
 
     return redirect()->route('candidate.portal');
@@ -55,6 +56,9 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(func
 
 // Admin & Super Admin Workspaces
 Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
+    Route::get('/admin/dashboard', [SuperAdminDashboardController::class, 'index'])
+        ->name('admin.dashboard');
+
     Route::get('/admin/monitoring', [MonitoringDashboardController::class, 'index'])
         ->name('admin.monitoring.index');
 

@@ -181,13 +181,13 @@ test('authenticated teacher user accessing root route redirects to question bank
     $response->assertRedirect(route('admin.question-banks.index'));
 });
 
-test('authenticated admin user accessing root route redirects to monitoring dashboard', function () {
+test('authenticated admin user accessing root route redirects to platform overview dashboard', function () {
     $admin = User::factory()->create();
     $admin->assignRole('admin');
 
     $response = $this->actingAs($admin)->get('/');
 
-    $response->assertRedirect(route('admin.monitoring.index'));
+    $response->assertRedirect(route('admin.dashboard'));
 });
 
 test('authenticated teacher can render question bank index modular view', function () {

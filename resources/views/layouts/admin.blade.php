@@ -18,7 +18,7 @@
     <div class="min-h-screen flex flex-col md:flex-row">
         <!-- Sidebar Navigation -->
         <aside class="w-full md:w-64 bg-slate-950 border-b md:border-b-0 md:border-r border-slate-800 flex-shrink-0">
-            <div class="p-6 flex items-center justify-between">
+            <div class="p-6 flex items-center justify-between border-b border-slate-900">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                     <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white shadow-lg shadow-indigo-500/30">IAP</span>
                     <div>
@@ -28,24 +28,39 @@
                 </a>
             </div>
 
-            <!-- Navigation Links (Modular & Permission-based) -->
-            <nav class="px-4 py-2 space-y-1">
-                @foreach (\App\Services\NavigationService::getMenuItems() as $item)
-                    @php
-                        $isActive = request()->is($item['active_pattern']);
-                    @endphp
-                    <a href="{{ route($item['route']) }}"
-                       class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors {{ $isActive ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-900' }}">
-                        <span class="flex items-center gap-3">
-                            <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                            {{ $item['label'] }}
-                        </span>
-                        @if ($item['badge'])
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/20 text-indigo-300">{{ $item['badge'] }}</span>
-                        @endif
-                    </a>
+            <!-- Navigation Links Grouped by Section -->
+            <nav class="px-3 py-4 space-y-4 overflow-y-auto max-h-[calc(100vh-80px)]">
+                @php
+                    $menuItems = \App\Services\NavigationService::getMenuItems();
+                    $groupedMenu = [];
+                    foreach ($menuItems as $item) {
+                        $groupedMenu[$item['section']][] = $item;
+                    }
+                @endphp
+
+                @foreach ($groupedMenu as $sectionName => $items)
+                    <div>
+                        <span class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">{{ $sectionName }}</span>
+                        <div class="space-y-1">
+                            @foreach ($items as $item)
+                                @php
+                                    $isActive = request()->is($item['active_pattern']);
+                                @endphp
+                                <a href="{{ route($item['route']) }}"
+                                   class="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors {{ $isActive ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-900' }}">
+                                    <span class="flex items-center gap-2.5">
+                                        <svg class="w-4 h-4 text-current flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                        </svg>
+                                        {{ $item['label'] }}
+                                    </span>
+                                    @if ($item['badge'])
+                                        <span class="px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-500/20 text-indigo-300">{{ $item['badge'] }}</span>
+                                    @endif
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
                 @endforeach
             </nav>
         </aside>
