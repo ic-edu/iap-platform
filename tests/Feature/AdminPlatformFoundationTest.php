@@ -52,7 +52,7 @@ test('user login event triggers activity logging listener', function () {
 
     event(new UserLoggedIn($user));
 
-    $log = ActivityLog::where('action', 'auth.login')->first();
+    $log = ActivityLog::whereIn('action', ['LOGIN', 'auth.login'])->first();
 
     expect($log)->not()->toBeNull();
     expect($log->user_id)->toBe($user->id);

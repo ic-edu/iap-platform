@@ -2,6 +2,7 @@
 
 namespace App\Modules\Authentication\Requests\Auth;
 
+use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -45,6 +46,11 @@ class LoginRequest extends FormRequest
         if (!Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
+            ActivityLogger::log(
+                action: 'LOGIN_FAILED',
+                description: "Failed login attempt for email {$this->string('email')}"
+            );
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
@@ -53,6 +59,14 @@ class LoginRequest extends FormRequest
         $user = Auth::user();
         if ($user && isset($user->status) && $user->status === 'inactive') {
             Auth::logout();
+
+            ActivityLogger::log(
+                action: 'LOGIN_FAILED',
+                description: "Failed login attempt for deactivated account {$user->email}",
+                subject: $user,
+                userId: $user->id
+            );
+
             throw ValidationException::withMessages([
                 'email' => 'Your account has been deactivated. Please contact administrator.',
             ]);

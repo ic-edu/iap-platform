@@ -10,8 +10,8 @@ class LogUserLogin
     public function handle(UserLoggedIn $event): void
     {
         ActivityLogger::log(
-            action: 'auth.login',
-            description: "User {$event->user->email} logged in.",
+            action: 'LOGIN',
+            description: "User {$event->user->name} ({$event->user->email}) logged in successfully.",
             subject: $event->user,
             userId: $event->user->id
         );

@@ -66,8 +66,14 @@ class UserController extends Controller
         $user->assignRole($validated['role']);
 
         ActivityLogger::log(
-            'user.created',
+            'USER_CREATED',
             "Created user account {$user->name} ({$user->email}) with role {$validated['role']}",
+            $user
+        );
+
+        ActivityLogger::log(
+            'ROLE_ASSIGNED',
+            "Assigned role {$validated['role']} to user {$user->email}",
             $user
         );
 
@@ -91,6 +97,8 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'Cannot deactivate your own active session.');
         }
 
+        $oldRole = $user->roles->first()?->name;
+
         $user->update([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -98,11 +106,27 @@ class UserController extends Controller
             'phone_number' => $validated['phone_number'] ?? null,
         ]);
 
-        $user->syncRoles([$validated['role']]);
+        if ($oldRole !== $validated['role']) {
+            $user->syncRoles([$validated['role']]);
+
+            if ($oldRole) {
+                ActivityLogger::log(
+                    'ROLE_REMOVED',
+                    "Removed role {$oldRole} from user {$user->email}",
+                    $user
+                );
+            }
+
+            ActivityLogger::log(
+                'ROLE_ASSIGNED',
+                "Assigned role {$validated['role']} to user {$user->email}",
+                $user
+            );
+        }
 
         ActivityLogger::log(
-            'user.updated',
-            "Updated user account {$user->name} ({$user->email})",
+            'USER_UPDATED',
+            "Updated user account profile for {$user->name} ({$user->email})",
             $user
         );
 
@@ -123,7 +147,7 @@ class UserController extends Controller
         ]);
 
         ActivityLogger::log(
-            'user.password_reset',
+            'PASSWORD_RESET',
             "Reset password for user account {$user->name} ({$user->email})",
             $user
         );
@@ -143,8 +167,10 @@ class UserController extends Controller
         $newStatus = ($user->status === 'inactive') ? 'active' : 'inactive';
         $user->update(['status' => $newStatus]);
 
+        $actionCode = ($newStatus === 'active') ? 'USER_ACTIVATED' : 'USER_DEACTIVATED';
+
         ActivityLogger::log(
-            'user.status_toggled',
+            $actionCode,
             "Changed account status of {$user->name} ({$user->email}) to {$newStatus}",
             $user
         );
@@ -169,9 +195,8 @@ class UserController extends Controller
         $email = $user->email;
 
         ActivityLogger::log(
-            'user.deleted',
-            "Deleted user account {$name} ({$email})",
-            $user
+            'USER_DELETED',
+            "Deleted user account {$name} ({$email})"
         );
 
         $user->delete();

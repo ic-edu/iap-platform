@@ -57,11 +57,15 @@ class UserManagementTest extends TestCase
         $this->assertTrue($user->hasRole('finance'));
 
         $this->assertDatabaseHas('activity_logs', [
-            'action' => 'user.created',
+            'action' => 'USER_CREATED',
+        ]);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'ROLE_ASSIGNED',
         ]);
     }
 
-    public function test_admin_can_update_user_details_and_role(): void
+    public function test_admin_can_update_user_details_and_role_with_audit_logs(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole('super-admin');
@@ -90,11 +94,15 @@ class UserManagementTest extends TestCase
         $this->assertTrue($target->hasRole('teacher'));
 
         $this->assertDatabaseHas('activity_logs', [
-            'action' => 'user.updated',
+            'action' => 'USER_UPDATED',
+        ]);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'ROLE_REMOVED',
         ]);
     }
 
-    public function test_admin_can_reset_user_password(): void
+    public function test_admin_can_reset_user_password_with_audit_log(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole('super-admin');
@@ -110,7 +118,7 @@ class UserManagementTest extends TestCase
         $response->assertRedirect(route('admin.users.index'));
 
         $this->assertDatabaseHas('activity_logs', [
-            'action' => 'user.password_reset',
+            'action' => 'PASSWORD_RESET',
         ]);
     }
 
@@ -129,6 +137,10 @@ class UserManagementTest extends TestCase
         $response->assertRedirect(route('admin.users.index'));
         $this->assertDatabaseHas('users', ['id' => $user->id, 'status' => 'inactive']);
 
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'USER_DEACTIVATED',
+        ]);
+
         // Logout admin before attempting guest login as inactive user
         Auth::logout();
 
@@ -139,6 +151,10 @@ class UserManagementTest extends TestCase
 
         $loginResponse->assertSessionHasErrors('email');
         $this->assertGuest();
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'LOGIN_FAILED',
+        ]);
     }
 
     public function test_admin_cannot_delete_self(): void
@@ -154,7 +170,7 @@ class UserManagementTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
     }
 
-    public function test_admin_can_delete_other_user(): void
+    public function test_admin_can_delete_other_user_with_audit_log(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole('super-admin');
@@ -170,7 +186,20 @@ class UserManagementTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $target->id]);
 
         $this->assertDatabaseHas('activity_logs', [
-            'action' => 'user.deleted',
+            'action' => 'USER_DELETED',
         ]);
+    }
+
+    public function test_audit_logs_workspace_renders_live_database_activity(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('super-admin');
+
+        $response = $this
+            ->actingAs($admin)
+            ->get(route('admin.audit-logs.index'));
+
+        $response->assertOk();
+        $response->assertSee('System Audit &amp; Activity Logs', false);
     }
 }
