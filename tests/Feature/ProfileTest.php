@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -10,23 +11,31 @@ class ProfileTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_profile_page_is_displayed(): void
+    protected function setUp(): void
     {
-        $user = User::factory()->create();
+        parent::setUp();
+        $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
+    public function test_profile_page_redirects_to_in_dashboard_profile_drawer(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($admin)
             ->get('/profile');
 
-        $response->assertOk();
+        $response->assertRedirect(route('admin.dashboard', ['open_profile' => 1]));
     }
 
     public function test_profile_information_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($admin)
             ->patch('/profile', [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
@@ -34,31 +43,32 @@ class ProfileTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect();
 
-        $user->refresh();
+        $admin->refresh();
 
-        $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertSame('Test User', $admin->name);
+        $this->assertSame('test@example.com', $admin->email);
+        $this->assertNull($admin->email_verified_at);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
     {
-        $user = User::factory()->create();
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($admin)
             ->patch('/profile', [
                 'name' => 'Test User',
-                'email' => $user->email,
+                'email' => $admin->email,
             ]);
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect();
 
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $this->assertNotNull($admin->refresh()->email_verified_at);
     }
 
     public function test_user_can_delete_their_account(): void
@@ -85,14 +95,14 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->from('/profile')
+            ->from('/admin/dashboard')
             ->delete('/profile', [
                 'password' => 'wrong-password',
             ]);
 
         $response
             ->assertSessionHasErrorsIn('userDeletion', 'password')
-            ->assertRedirect('/profile');
+            ->assertRedirect('/admin/dashboard');
 
         $this->assertNotNull($user->fresh());
     }

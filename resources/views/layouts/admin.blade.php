@@ -116,19 +116,18 @@
                         </div>
                     </div>
 
-                    <!-- User Profile & Dropdown -->
+                    <!-- User Profile Drawer Trigger -->
                     @auth
                         <div class="flex items-center gap-3 border-l border-slate-800 pl-4">
-                            <div class="text-right hidden sm:block">
-                                <span class="block text-xs font-semibold text-slate-200 leading-tight">{{ Auth::user()->name }}</span>
-                                <span class="block text-[10px] text-indigo-400 font-medium">{{ Auth::user()->roles->first()?->name ?? 'User' }}</span>
-                            </div>
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="text-xs text-rose-400 hover:text-rose-300 font-medium px-2 py-1 rounded bg-rose-500/10 transition-colors">
-                                    Logout
-                                </button>
-                            </form>
+                            <button type="button" onclick="openMyProfileDrawer()" class="flex items-center gap-2.5 text-left hover:opacity-80 transition-opacity">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-md">
+                                    {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
+                                </div>
+                                <div class="hidden sm:block">
+                                    <span class="block text-xs font-semibold text-slate-200 leading-tight">{{ Auth::user()->name }}</span>
+                                    <span class="block text-[10px] text-indigo-400 font-medium">{{ Auth::user()->roles->first()?->name ?? 'User' }}</span>
+                                </div>
+                            </button>
                         </div>
                     @endauth
                 </div>
@@ -145,6 +144,84 @@
             <main class="flex-1 p-6 overflow-y-auto">
                 {{ $slot }}
             </main>
+        </div>
+    </div>
+
+    <!-- Slide-Over "My Profile" Right Drawer -->
+    <div id="my-profile-drawer" class="hidden fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" onclick="closeMyProfileDrawer()"></div>
+        <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div class="w-screen max-w-md bg-slate-900 border-l border-slate-800 text-white shadow-2xl flex flex-col justify-between p-6 overflow-y-auto">
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <span>👤 My Profile &amp; Account Context</span>
+                        </h2>
+                        <button type="button" onclick="closeMyProfileDrawer()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+                    </div>
+
+                    @auth
+                        <!-- Authenticated User Overview Card -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-6 space-y-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-indigo-600 font-extrabold text-white text-base flex items-center justify-center shadow-lg">
+                                    {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white text-sm">{{ Auth::user()->name }}</h3>
+                                    <p class="text-slate-400 text-xs font-mono">{{ Auth::user()->email }}</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">
+                                <div>
+                                    <span class="text-[10px] text-slate-500 uppercase font-bold block">Active Role</span>
+                                    <span class="font-bold text-indigo-400 uppercase">{{ Auth::user()->roles->first()?->name ?? 'student' }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-500 uppercase font-bold block">Account Status</span>
+                                    <span class="font-bold text-emerald-400">ACTIVE</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password Update Form -->
+                        <form method="POST" action="{{ route('password.update') }}" class="space-y-4 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                            @csrf
+                            @method('PUT')
+                            <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2">🔒 Update Security Credentials</h4>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Current Password</label>
+                                <input type="password" name="current_password" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none" required placeholder="••••••••">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">New Password</label>
+                                <input type="password" name="password" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none" required placeholder="••••••••">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Confirm New Password</label>
+                                <input type="password" name="password_confirmation" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none" required placeholder="••••••••">
+                            </div>
+
+                            <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
+                                Update Password
+                            </button>
+                        </form>
+                    @endauth
+                </div>
+
+                <div class="pt-6 border-t border-slate-800 mt-6">
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold rounded-lg transition-colors">
+                            Logout of Session
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -201,5 +278,22 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function openMyProfileDrawer() {
+            document.getElementById('my-profile-drawer').classList.remove('hidden');
+        }
+
+        function closeMyProfileDrawer() {
+            document.getElementById('my-profile-drawer').classList.add('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('open_profile') === '1') {
+                openMyProfileDrawer();
+            }
+        });
+    </script>
 </body>
 </html>

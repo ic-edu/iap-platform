@@ -8,18 +8,29 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
     /**
-     * Display the user's profile form.
+     * Redirect standalone profile view requests to the in-dashboard Profile Drawer.
      */
-    public function edit(Request $request): View
+    public function edit(Request $request): RedirectResponse
     {
-        return view('authentication::profile.edit', [
-            'user' => $request->user(),
-        ]);
+        $user = $request->user();
+
+        if ($user?->hasRole('super-admin') || $user?->hasRole('admin')) {
+            return redirect()->route('admin.dashboard', ['open_profile' => 1]);
+        }
+
+        if ($user?->hasRole('teacher')) {
+            return redirect()->route('admin.question-banks.index', ['open_profile' => 1]);
+        }
+
+        if ($user?->hasRole('finance')) {
+            return redirect()->route('admin.commerce.index', ['open_profile' => 1]);
+        }
+
+        return redirect()->route('candidate.portal');
     }
 
     /**
@@ -35,7 +46,7 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return Redirect::back()->with('status', 'profile-updated');
     }
 
     /**
