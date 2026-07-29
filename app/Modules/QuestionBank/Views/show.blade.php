@@ -14,19 +14,67 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <a href="{{ route('admin.question-banks.index') }}" class="text-xs text-slate-400 hover:text-white transition-colors">&larr; Back to Question Banks</a>
-            <h1 class="text-2xl font-bold text-white mt-1">{{ $questionBank->title }}</h1>
+            <div class="flex items-center gap-3 mt-1">
+                <h1 class="text-2xl font-bold text-white">{{ $questionBank->title }}</h1>
+                @php
+                    $statusBadge = match($questionBank->status) {
+                        'published' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                        'approved' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                        'pending_approval' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                        'rejected' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                        default => 'bg-slate-800 text-slate-400 border-slate-700',
+                    };
+                @endphp
+                <span class="px-2.5 py-0.5 text-xs font-bold rounded border uppercase {{ $statusBadge }}">
+                    {{ $questionBank->status ?? 'draft' }}
+                </span>
+            </div>
             <p class="text-xs text-slate-400 mt-0.5">Test Type: <span class="uppercase font-bold text-indigo-400">{{ $questionBank->test_type }}</span> | Total Questions: <span class="font-bold text-white">{{ $questionBank->questions->count() }}</span></p>
         </div>
-        @if (!Auth::user()?->hasRole('super-admin'))
-            <div class="flex items-center gap-3">
-                <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
-                    📥 Bulk CSV Import
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Edit Details Button (Teacher, Admin, Super Admin) -->
+            <button onclick="document.getElementById('edit-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                ✏ Edit Bank Details
+            </button>
+
+            <!-- Submit for Approval (Teacher / Admin when draft or rejected) -->
+            @if (in_array($questionBank->status, ['draft', 'rejected', null]) && !Auth::user()?->hasRole('super-admin'))
+                <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline">
+                    @csrf
+                    <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
+                        🚀 Submit for Approval
+                    </button>
+                </form>
+            @endif
+
+            <!-- Publish / Unpublish (Admin Only) -->
+            @if (Auth::user()?->hasRole('admin') && !Auth::user()?->hasRole('super-admin'))
+                @if ($questionBank->status === 'approved')
+                    <form action="{{ route('admin.question-banks.publish', $questionBank->id) }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
+                            🌐 Publish Live
+                        </button>
+                    </form>
+                @elseif ($questionBank->status === 'published')
+                    <form action="{{ route('admin.question-banks.unpublish', $questionBank->id) }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 text-xs font-semibold rounded-lg border border-rose-500/30 transition-colors">
+                            🔒 Unpublish
+                        </button>
+                    </form>
+                @endif
+            @endif
+
+            @if (!Auth::user()?->hasRole('super-admin'))
+                <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                    📥 Bulk Import
                 </button>
-                <button onclick="openCreateQuestionModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
+                <button onclick="openCreateQuestionModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
                     + Add Question
                 </button>
-            </div>
-        @endif
+            @endif
+        </div>
     </div>
 
     <!-- Status Alert -->
@@ -680,4 +728,39 @@
             document.getElementById(badgeId).classList.add('hidden');
         }
     </script>
+    <!-- Edit Question Bank Modal (QB-001 Issue 1 Fix) -->
+    <div id="edit-bank-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-lg w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-base font-bold text-white">Edit Question Bank Details</h2>
+                <button type="button" onclick="document.getElementById('edit-bank-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <form action="{{ route('admin.question-banks.update', $questionBank->id) }}" method="POST" class="space-y-4">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Bank Title *</label>
+                    <input type="text" name="title" value="{{ old('title', $questionBank->title) }}" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Test Type *</label>
+                    @php $typeVal = is_object($questionBank->test_type) ? $questionBank->test_type->value : (string)$questionBank->test_type; @endphp
+                    <select name="test_type" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <option value="toeic" {{ $typeVal === 'toeic' ? 'selected' : '' }}>TOEIC</option>
+                        <option value="toefl" {{ $typeVal === 'toefl' ? 'selected' : '' }}>TOEFL iBT</option>
+                        <option value="ielts" {{ $typeVal === 'ielts' ? 'selected' : '' }}>IELTS</option>
+                        <option value="general" {{ $typeVal === 'general' ? 'selected' : '' }}>General</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
+                    <textarea name="description" rows="3" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">{{ old('description', $questionBank->description) }}</textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="document.getElementById('edit-bank-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </x-admin-layout>

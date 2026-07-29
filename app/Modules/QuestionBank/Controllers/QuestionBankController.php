@@ -3,10 +3,12 @@
 namespace App\Modules\QuestionBank\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionBank\Models\QuestionChoice;
+use App\Notifications\SystemAlertNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +18,7 @@ use Illuminate\View\View;
 class QuestionBankController extends Controller
 {
     /**
-     * Display a listing of question banks.
+     * Display a listing of question banks with search & filtering.
      */
     public function index(Request $request): View
     {
@@ -31,6 +33,10 @@ class QuestionBankController extends Controller
 
         if ($type = $request->input('test_type')) {
             $query->where('test_type', $type);
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
         }
 
         $banks = $query->latest()->paginate(10)->withQueryString();
@@ -73,21 +79,145 @@ class QuestionBankController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
-        QuestionBank::create([
+        $bank = QuestionBank::create([
             'title' => $validated['title'],
             'slug' => Str::slug($validated['title']).'-'.Str::random(5),
             'category_id' => $validated['category_id'] ?? null,
             'created_by' => $user ? $user->id : 1,
             'test_type' => $validated['test_type'],
             'description' => $validated['description'] ?? null,
+            'status' => 'draft',
+            'is_published' => false,
         ]);
 
-        return redirect()->route('admin.question-banks.index')->with('status', 'Question bank created successfully.');
+        ActivityLogger::log(
+            'QUESTION_BANK_CREATED',
+            "Created Question Bank '{$bank->title}'",
+            $bank
+        );
+
+        return redirect()->route('admin.question-banks.index')->with('status', 'Question bank created successfully as Draft.');
+    }
+
+    /**
+     * Update Question Bank details (QB-001 Issue 1 Fix).
+     */
+    public function update(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        if ($user && $user->hasRole('teacher') && $questionBank->status === 'published') {
+            abort(403, 'Teachers cannot modify a published Question Bank.');
+        }
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'category_id' => ['nullable', 'exists:course_categories,id'],
+            'test_type' => ['required', 'string'],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        $questionBank->update([
+            'title' => $validated['title'],
+            'category_id' => $validated['category_id'] ?? null,
+            'test_type' => $validated['test_type'],
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        ActivityLogger::log(
+            'QUESTION_BANK_EDITED',
+            "Updated Question Bank details for '{$questionBank->title}'",
+            $questionBank
+        );
+
+        return redirect()->route('admin.question-banks.show', $questionBank->id)->with('status', "Question Bank '{$questionBank->title}' updated successfully.");
+    }
+
+    /**
+     * Submit Question Bank for Super Admin approval (QB-001 Issue 3).
+     */
+    public function submitForApproval(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+
+        $questionBank->update(['status' => 'pending_approval']);
+
+        ActivityLogger::log(
+            'QUESTION_BANK_SUBMITTED',
+            "Submitted Question Bank '{$questionBank->title}' for Super Admin approval",
+            $questionBank
+        );
+
+        // Notify Super Admins
+        $superAdmins = User::role('super-admin')->get();
+        foreach ($superAdmins as $sa) {
+            try {
+                $sa->notify(new SystemAlertNotification(
+                    'New Question Bank Approval Pending',
+                    "Author {$user?->name} submitted Question Bank '{$questionBank->title}' for approval."
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
+        return redirect()->route('admin.question-banks.index')->with('status', "Question Bank '{$questionBank->title}' submitted for Super Admin approval.");
+    }
+
+    /**
+     * Publish approved Question Bank (Admin Only - QB-001 Issue 3).
+     * Teacher MUST NOT publish. Super Admin MUST NOT publish.
+     */
+    public function publish(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('admin') || $user->hasRole('super-admin')) {
+            abort(403, 'Publishing Question Banks is strictly reserved for Operational Admins.');
+        }
+
+        if ($questionBank->status !== 'approved') {
+            abort(403, 'Cannot publish: Question Bank must be approved by Super Admin first.');
+        }
+
+        $questionBank->update([
+            'status' => 'published',
+            'is_published' => true,
+        ]);
+
+        ActivityLogger::log(
+            'QUESTION_BANK_PUBLISHED',
+            "Published Question Bank '{$questionBank->title}' live",
+            $questionBank
+        );
+
+        return redirect()->route('admin.question-banks.index')->with('status', "Question Bank '{$questionBank->title}' published live successfully.");
+    }
+
+    /**
+     * Unpublish a Question Bank (Admin Only).
+     */
+    public function unpublish(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('admin') || $user->hasRole('super-admin')) {
+            abort(403, 'Unpublishing Question Banks is strictly reserved for Operational Admins.');
+        }
+
+        $questionBank->update([
+            'status' => 'approved',
+            'is_published' => false,
+        ]);
+
+        ActivityLogger::log(
+            'QUESTION_BANK_UNPUBLISHED',
+            "Unpublished Question Bank '{$questionBank->title}'",
+            $questionBank
+        );
+
+        return redirect()->route('admin.question-banks.index')->with('status', "Question Bank '{$questionBank->title}' unpublished.");
     }
 
     /**
      * Author a new question into a question bank.
-     * Teacher & Admin MAY create questions. Super Admin MUST NOT.
      */
     public function storeQuestion(Request $request, QuestionBank $questionBank): RedirectResponse
     {
@@ -168,7 +298,6 @@ class QuestionBankController extends Controller
             'audio_url' => $validated['audio_url'] ?? null,
         ]);
 
-        // Rebuild choices for updated question while preserving Question ID
         $question->choices()->delete();
         $this->saveChoicesForQuestion($question, $qType, $validated);
 

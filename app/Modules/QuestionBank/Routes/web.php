@@ -7,6 +7,11 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin'])->prefix('ad
     Route::get('/', [QuestionBankController::class, 'index'])->name('admin.question-banks.index');
     Route::post('/', [QuestionBankController::class, 'store'])->name('admin.question-banks.store');
     Route::get('/{questionBank}', [QuestionBankController::class, 'show'])->name('admin.question-banks.show');
+    Route::put('/{questionBank}', [QuestionBankController::class, 'update'])->name('admin.question-banks.update');
+    Route::post('/{questionBank}/submit', [QuestionBankController::class, 'submitForApproval'])->name('admin.question-banks.submit');
+    Route::post('/{questionBank}/publish', [QuestionBankController::class, 'publish'])->name('admin.question-banks.publish');
+    Route::post('/{questionBank}/unpublish', [QuestionBankController::class, 'unpublish'])->name('admin.question-banks.unpublish');
+
     Route::post('/{questionBank}/questions', [QuestionBankController::class, 'storeQuestion'])->name('admin.question-banks.store-question');
     Route::put('/questions/{question}', [QuestionBankController::class, 'updateQuestion'])->name('admin.question-banks.update-question');
     Route::post('/questions/{question}/duplicate', [QuestionBankController::class, 'duplicateQuestion'])->name('admin.question-banks.duplicate-question');

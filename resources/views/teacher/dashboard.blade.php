@@ -16,27 +16,27 @@
         </div>
     </x-slot>
 
-    <!-- Teacher KPI Cards -->
+    <!-- Teacher Question Bank KPI Cards (QB-001 Issue 2) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Question Banks</span>
             <span class="text-3xl font-black text-indigo-400 mt-1 block">{{ $totalQuestionBanks }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Authoring pools</span>
+            <span class="text-xs text-slate-500 mt-1 block">Total authoring pools</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Authored Questions</span>
-            <span class="text-3xl font-black text-white mt-1 block">{{ $totalQuestions }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Total question items</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Draft</span>
+            <span class="text-3xl font-black text-slate-300 mt-1 block">{{ $draftQuestionBanks }}</span>
+            <span class="text-xs text-slate-500 mt-1 block">In authoring draft</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Draft Tests</span>
-            <span class="text-3xl font-black text-amber-400 mt-1 block">{{ $draftTests }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Pending approval submit</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Pending Approval</span>
+            <span class="text-3xl font-black text-amber-400 mt-1 block">{{ $pendingApprovalQuestionBanks }}</span>
+            <span class="text-xs text-slate-500 mt-1 block">Awaiting Super Admin</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Curriculum Courses</span>
-            <span class="text-3xl font-black text-emerald-400 mt-1 block">{{ $totalCourses }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Active academic modules</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Published</span>
+            <span class="text-3xl font-black text-emerald-400 mt-1 block">{{ $publishedQuestionBanks }}</span>
+            <span class="text-xs text-slate-500 mt-1 block">Published live by Admin</span>
         </div>
     </div>
 
@@ -52,15 +52,30 @@
                     <th class="p-4">Bank Title</th>
                     <th class="p-4">Category / Type</th>
                     <th class="p-4">Questions</th>
+                    <th class="p-4">Status</th>
                     <th class="p-4 text-right">Action</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-800/60 font-mono text-xs">
                 @foreach ($recentQuestionBanks as $bank)
+                    @php
+                        $statusBadge = match($bank->status) {
+                            'published' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                            'approved' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                            'pending_approval' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                            'rejected' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                            default => 'bg-slate-800 text-slate-400 border-slate-700',
+                        };
+                    @endphp
                     <tr>
                         <td class="p-4 font-semibold text-white font-sans text-xs">{{ $bank->title }}</td>
                         <td class="p-4 text-slate-400 font-sans text-xs">{{ $bank->category?->name ?? strtoupper($bank->test_type?->value ?? 'General') }}</td>
                         <td class="p-4 font-bold text-indigo-400">{{ $bank->questions->count() }} items</td>
+                        <td class="p-4 font-sans text-xs">
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded border uppercase {{ $statusBadge }}">
+                                {{ $bank->status ?? 'draft' }}
+                            </span>
+                        </td>
                         <td class="p-4 text-right font-sans text-xs">
                             <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="text-indigo-400 font-bold hover:underline">Author Items →</a>
                         </td>

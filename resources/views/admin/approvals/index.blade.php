@@ -4,7 +4,7 @@
             <h1 class="text-2xl font-bold text-white flex items-center gap-2">
                 <span>🛡️</span> Super Admin Content Approval Center
             </h1>
-            <p class="text-xs text-slate-400 mt-1">Review, approve, and authorize assessment tests, staff user creations, and enterprise deletion requests.</p>
+            <p class="text-xs text-slate-400 mt-1">Review, approve, and authorize assessment tests, question banks, staff user creations, and enterprise deletion requests.</p>
         </div>
     </div>
 
@@ -31,8 +31,15 @@
         </div>
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
+                <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Question Banks</span>
+                <span class="text-2xl font-extrabold text-indigo-400 mt-0.5 block">{{ $pendingQuestionBankCount ?? 0 }}</span>
+            </div>
+            <span class="text-2xl">📂</span>
+        </div>
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+            <div>
                 <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Staff Creations</span>
-                <span class="text-2xl font-extrabold text-indigo-400 mt-0.5 block">{{ $pendingUserCreationCount ?? 0 }}</span>
+                <span class="text-2xl font-extrabold text-purple-400 mt-0.5 block">{{ $pendingUserCreationCount ?? 0 }}</span>
             </div>
             <span class="text-2xl">👤</span>
         </div>
@@ -43,13 +50,70 @@
             </div>
             <span class="text-2xl">📩</span>
         </div>
-        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+    </div>
+
+    <!-- Pending Question Banks Table (QB-001) -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
             <div>
-                <span class="text-[10px] text-slate-400 font-medium uppercase block">Live Assessments</span>
-                <span class="text-2xl font-extrabold text-emerald-400 mt-0.5 block">{{ $publishedCount }}</span>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span>📂</span> Question Bank Approval Queue
+                </h2>
+                <p class="text-xs text-slate-400">Review pending question bank submissions submitted by Teachers for Super Admin authorization.</p>
             </div>
-            <span class="text-2xl">🚀</span>
+            <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                {{ $pendingQuestionBankCount ?? 0 }} Pending Banks
+            </span>
         </div>
+        <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
+                <tr>
+                    <th class="p-4">Title</th>
+                    <th class="p-4">Author</th>
+                    <th class="p-4">Test Type</th>
+                    <th class="p-4">Submitted Date</th>
+                    <th class="p-4 text-right">Approval Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+                @forelse ($pendingQuestionBanks ?? [] as $bank)
+                    <tr>
+                        <td class="p-4 font-semibold text-white">
+                            {{ $bank->title }}
+                            <div class="text-xs text-slate-400 font-normal">Category: {{ $bank->category?->name ?? 'General' }} | Items: {{ $bank->questions->count() }}</div>
+                        </td>
+                        <td class="p-4 text-xs text-slate-300">
+                            {{ $bank->creator?->name ?? 'Teacher Author' }}
+                            <div class="text-slate-500 font-mono">{{ $bank->creator?->email }}</div>
+                        </td>
+                        <td class="p-4 text-xs font-bold text-indigo-400 uppercase">
+                            {{ $bank->test_type?->value ?? 'General' }}
+                        </td>
+                        <td class="p-4 text-xs text-slate-400">{{ $bank->updated_at?->format('Y-m-d H:i') }}</td>
+                        <td class="p-4 text-right space-x-2">
+                            <form action="{{ route('admin.approvals.question-banks.approve', $bank->id) }}" method="POST" class="inline"
+                                  onsubmit="return confirm('Approve Question Bank {{ $bank->title }}?')">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
+                                    ✓ Approve
+                                </button>
+                            </form>
+                            <form action="{{ route('admin.approvals.question-banks.reject', $bank->id) }}" method="POST" class="inline"
+                                  onsubmit="return confirm('Reject Question Bank {{ $bank->title }}?')">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
+                                    ✗ Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-slate-500">No pending Question Banks in approval queue. All submitted question banks have been reviewed.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 
     <!-- Pending Staff Creation Requests Table (UAC-003) -->

@@ -21,8 +21,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $category_id
  * @property int $created_by
  * @property TestType $test_type
+ * @property string $status
+ * @property bool $is_published
  * @property string|null $description
- * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -38,6 +39,8 @@ class QuestionBank extends Model
         'category_id',
         'created_by',
         'test_type',
+        'status',
+        'is_published',
         'description',
     ];
 
@@ -45,7 +48,28 @@ class QuestionBank extends Model
     {
         return [
             'test_type' => TestType::class,
+            'is_published' => 'boolean',
         ];
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->status === 'pending_approval';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
+
+    public function isPublished(): bool
+    {
+        return $this->status === 'published' || (bool) $this->is_published;
     }
 
     /**

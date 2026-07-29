@@ -94,12 +94,22 @@
                         <tr>
                             <th class="p-3">Title</th>
                             <th class="p-3">Type</th>
+                            <th class="p-3">Status</th>
                             <th class="p-3">Questions</th>
                             <th class="p-3 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-800/60">
                         @forelse ($banks as $bank)
+                            @php
+                                $statusBadge = match($bank->status) {
+                                    'published' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                                    'approved' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                                    'pending_approval' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                    'rejected' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                                    default => 'bg-slate-800 text-slate-400 border-slate-700',
+                                };
+                            @endphp
                             <tr>
                                 <td class="p-3">
                                     <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="font-semibold text-indigo-400 hover:underline block">
@@ -112,16 +122,34 @@
                                         {{ strtoupper($bank->test_type?->value ?? 'General') }}
                                     </span>
                                 </td>
+                                <td class="p-3">
+                                    <span class="px-2 py-0.5 text-xs font-bold rounded border uppercase {{ $statusBadge }}">
+                                        {{ $bank->status ?? 'draft' }}
+                                    </span>
+                                </td>
                                 <td class="p-3 font-semibold text-white">{{ $bank->questions->count() }} items</td>
                                 <td class="p-3 text-right space-x-2">
                                     <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="text-xs text-indigo-400 font-semibold hover:underline">
                                         Author Items
                                     </a>
-                                    @if (!Auth::user()?->hasRole('super-admin'))
-                                        <form method="POST" action="{{ route('admin.question-banks.duplicate', $bank->id) }}" class="inline">
+                                    @if (in_array($bank->status, ['draft', 'rejected', null]) && !Auth::user()?->hasRole('super-admin'))
+                                        <form method="POST" action="{{ route('admin.question-banks.submit', $bank->id) }}" class="inline">
                                             @csrf
-                                            <button type="submit" class="text-xs text-slate-400 hover:text-white hover:underline">Duplicate</button>
+                                            <button type="submit" class="text-xs text-amber-400 hover:underline font-semibold">Submit</button>
                                         </form>
+                                    @endif
+                                    @if (Auth::user()?->hasRole('admin') && !Auth::user()?->hasRole('super-admin'))
+                                        @if ($bank->status === 'approved')
+                                            <form method="POST" action="{{ route('admin.question-banks.publish', $bank->id) }}" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-xs text-emerald-400 hover:underline font-semibold">Publish</button>
+                                            </form>
+                                        @elseif ($bank->status === 'published')
+                                            <form method="POST" action="{{ route('admin.question-banks.unpublish', $bank->id) }}" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-xs text-rose-400 hover:underline font-semibold">Unpublish</button>
+                                            </form>
+                                        @endif
                                     @endif
                                     @if (!Auth::user()?->hasRole('teacher'))
                                         <form method="POST" action="{{ route('admin.question-banks.destroy', $bank->id) }}" class="inline">
@@ -134,7 +162,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="p-4 text-center text-slate-500">No question banks found. Create a bank to begin authoring questions.</td>
+                                <td colspan="5" class="p-4 text-center text-slate-500">No question banks found. Create a bank to begin authoring questions.</td>
                             </tr>
                         @endforelse
                     </tbody>

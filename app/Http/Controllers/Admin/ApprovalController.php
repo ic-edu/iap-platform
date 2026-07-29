@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Notifications\SystemAlertNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +16,7 @@ use Illuminate\View\View;
 class ApprovalController extends Controller
 {
     /**
-     * Display Super Admin Approval Center for tests, user creation & deletion requests.
+     * Display Super Admin Approval Center for tests, question banks, user creation & deletion requests.
      */
     public function index(): View
     {
@@ -24,6 +25,11 @@ class ApprovalController extends Controller
             ->orWhereNull('status')
             ->latest()
             ->paginate(10);
+
+        $pendingQuestionBanks = QuestionBank::with(['creator', 'category'])
+            ->where('status', 'pending_approval')
+            ->latest()
+            ->get();
 
         $userCreationRequests = UserCreationRequest::with(['targetUser', 'requester'])
             ->where('status', 'pending')
@@ -37,6 +43,7 @@ class ApprovalController extends Controller
 
         $publishedCount = Test::where('is_published', true)->count();
         $pendingCount = Test::where('status', 'pending_approval')->count();
+        $pendingQuestionBankCount = $pendingQuestionBanks->count();
         $pendingUserCreationCount = $userCreationRequests->count();
         $pendingUserDeletionCount = $userDeletionRequests->count();
 
@@ -44,11 +51,85 @@ class ApprovalController extends Controller
             'pendingTests',
             'publishedCount',
             'pendingCount',
+            'pendingQuestionBanks',
+            'pendingQuestionBankCount',
             'userCreationRequests',
             'pendingUserCreationCount',
             'userDeletionRequests',
             'pendingUserDeletionCount'
         ));
+    }
+
+    /**
+     * Approve a Question Bank (Super Admin Only - QB-001 Issue 3).
+     */
+    public function approveQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $actor = $request->user();
+        if (!$actor || !$actor->hasRole('super-admin')) {
+            abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
+        }
+
+        $questionBank->update([
+            'status' => 'approved',
+            'is_published' => false,
+        ]);
+
+        ActivityLogger::log(
+            'QUESTION_BANK_APPROVED',
+            "Approved Question Bank '{$questionBank->title}'",
+            $questionBank
+        );
+
+        if ($questionBank->creator) {
+            try {
+                $questionBank->creator->notify(new SystemAlertNotification(
+                    'Question Bank Approved',
+                    "Your Question Bank '{$questionBank->title}' was approved by Super Admin {$actor->name}. It is now ready for Admin publication."
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle notification errors in dev
+            }
+        }
+
+        return redirect()->route('admin.approvals.index')->with('status', "Question Bank '{$questionBank->title}' approved successfully.");
+    }
+
+    /**
+     * Reject a Question Bank (Super Admin Only - QB-001 Issue 3).
+     */
+    public function rejectQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $actor = $request->user();
+        if (!$actor || !$actor->hasRole('super-admin')) {
+            abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
+        }
+
+        $reason = $request->input('reason', 'Requires revisions before approval.');
+
+        $questionBank->update([
+            'status' => 'rejected',
+            'is_published' => false,
+        ]);
+
+        ActivityLogger::log(
+            'QUESTION_BANK_REJECTED',
+            "Rejected Question Bank '{$questionBank->title}'. Reason: {$reason}",
+            $questionBank
+        );
+
+        if ($questionBank->creator) {
+            try {
+                $questionBank->creator->notify(new SystemAlertNotification(
+                    'Question Bank Rejected',
+                    "Your Question Bank '{$questionBank->title}' was rejected by Super Admin {$actor->name}. Reason: {$reason}"
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle notification errors in dev
+            }
+        }
+
+        return redirect()->route('admin.approvals.index')->with('status', "Question Bank '{$questionBank->title}' rejected. Reason: {$reason}");
     }
 
     /**
