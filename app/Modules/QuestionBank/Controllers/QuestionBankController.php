@@ -57,9 +57,15 @@ class QuestionBankController extends Controller
 
     /**
      * Store a newly created question bank.
+     * Teacher & Admin MAY create question banks. Super Admin MUST NOT.
      */
     public function store(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && $user->hasRole('super-admin')) {
+            abort(403, 'Super Admin is an auditor/approver and cannot create question banks directly.');
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'category_id' => ['nullable', 'exists:course_categories,id'],
@@ -71,7 +77,7 @@ class QuestionBankController extends Controller
             'title' => $validated['title'],
             'slug' => Str::slug($validated['title']).'-'.Str::random(5),
             'category_id' => $validated['category_id'] ?? null,
-            'created_by' => $request->user() ? $request->user()->id : 1,
+            'created_by' => $user ? $user->id : 1,
             'test_type' => $validated['test_type'],
             'description' => $validated['description'] ?? null,
         ]);
@@ -81,9 +87,15 @@ class QuestionBankController extends Controller
 
     /**
      * Author a new question into a question bank.
+     * Teacher & Admin MAY create questions. Super Admin MUST NOT.
      */
     public function storeQuestion(Request $request, QuestionBank $questionBank): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && $user->hasRole('super-admin')) {
+            abort(403, 'Super Admin is an auditor/approver and cannot create questions directly.');
+        }
+
         $validated = $request->validate([
             'prompt' => ['required', 'string'],
             'question_type' => ['required', 'string'],
@@ -167,8 +179,13 @@ class QuestionBankController extends Controller
     /**
      * Duplicate a question inside a question bank.
      */
-    public function duplicateQuestion(Question $question): RedirectResponse
+    public function duplicateQuestion(Request $request, Question $question): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && $user->hasRole('super-admin')) {
+            abort(403, 'Super Admin is an auditor/approver and cannot duplicate/create questions directly.');
+        }
+
         $newQ = $question->replicate();
         $newQ->prompt = 'Copy of '.$question->prompt;
         $newQ->save();
@@ -181,134 +198,6 @@ class QuestionBankController extends Controller
 
         return redirect()->route('admin.question-banks.show', $question->question_bank_id)
             ->with('status', 'Question duplicated successfully.');
-    }
-
-    /**
-     * Helper to save choices for a question based on its question_type.
-     */
-    private function saveChoicesForQuestion(Question $question, string $qType, array $validated): void
-    {
-        if (in_array($qType, ['single_choice', 'listening', 'reading'])) {
-            if (!empty($validated['choices'])) {
-                $correctIdx = (int) ($validated['correct_choice'] ?? 0);
-                foreach ($validated['choices'] as $idx => $choiceData) {
-                    if (!empty($choiceData['content'])) {
-                        QuestionChoice::create([
-                            'question_id' => $question->id,
-                            'label' => $choiceData['label'] ?? chr(65 + $idx),
-                            'content' => $choiceData['content'],
-                            'is_correct' => ($idx === $correctIdx),
-                        ]);
-                    }
-                }
-            }
-        } elseif ($qType === 'multiple_choice') {
-            if (!empty($validated['choices'])) {
-                $correctIndices = array_map('intval', $validated['correct_choices'] ?? []);
-                foreach ($validated['choices'] as $idx => $choiceData) {
-                    if (!empty($choiceData['content'])) {
-                        QuestionChoice::create([
-                            'question_id' => $question->id,
-                            'label' => $choiceData['label'] ?? chr(65 + $idx),
-                            'content' => $choiceData['content'],
-                            'is_correct' => in_array($idx, $correctIndices, true),
-                        ]);
-                    }
-                }
-            }
-        } elseif ($qType === 'true_false') {
-            $tfCorrect = strtolower($validated['tf_correct_choice'] ?? 'true');
-            QuestionChoice::create([
-                'question_id' => $question->id,
-                'label' => 'A',
-                'content' => 'True',
-                'is_correct' => ($tfCorrect === 'true'),
-            ]);
-            QuestionChoice::create([
-                'question_id' => $question->id,
-                'label' => 'B',
-                'content' => 'False',
-                'is_correct' => ($tfCorrect === 'false'),
-            ]);
-        } elseif ($qType === 'short_answer') {
-            $answerText = $validated['short_answer_text'] ?? 'Correct Answer';
-            QuestionChoice::create([
-                'question_id' => $question->id,
-                'label' => 'A',
-                'content' => $answerText,
-                'is_correct' => true,
-            ]);
-        }
-    }
-
-    /**
-     * Import questions in bulk from CSV data.
-     */
-    public function importQuestions(Request $request, QuestionBank $questionBank): RedirectResponse
-    {
-        $validated = $request->validate([
-            'csv_content' => ['required', 'string'],
-        ]);
-
-        $lines = explode("\n", trim($validated['csv_content']));
-        $importedCount = 0;
-
-        foreach ($lines as $line) {
-            $cols = str_getcsv(trim($line));
-            if (count($cols) >= 6) {
-                // Prompt, Choice A, Choice B, Choice C, Choice D, Correct Index (0-3)
-                $prompt = $cols[0];
-                $q = Question::create([
-                    'question_bank_id' => $questionBank->id,
-                    'prompt' => $prompt,
-                    'question_type' => 'multiple_choice',
-                    'difficulty' => 'medium',
-                    'points' => 5,
-                    'explanation' => 'Imported via CSV batch processor.',
-                ]);
-
-                $correctIdx = (int) ($cols[5] ?? 0);
-                $labels = ['A', 'B', 'C', 'D'];
-                for ($i = 0; $i < 4; $i++) {
-                    if (isset($cols[$i + 1])) {
-                        QuestionChoice::create([
-                            'question_id' => $q->id,
-                            'label' => $labels[$i],
-                            'content' => $cols[$i + 1],
-                            'is_correct' => ($i === $correctIdx),
-                        ]);
-                    }
-                }
-                $importedCount++;
-            }
-        }
-
-        return redirect()->route('admin.question-banks.show', $questionBank->id)->with('status', "Imported {$importedCount} questions successfully.");
-    }
-
-    /**
-     * Duplicate an existing question bank.
-     */
-    public function duplicate(QuestionBank $questionBank): RedirectResponse
-    {
-        $newBank = $questionBank->replicate();
-        $newBank->title = $questionBank->title.' (Copy)';
-        $newBank->slug = Str::slug($newBank->title).'-'.Str::random(5);
-        $newBank->save();
-
-        foreach ($questionBank->questions as $question) {
-            $newQ = $question->replicate();
-            $newQ->question_bank_id = (string) $newBank->id;
-            $newQ->save();
-
-            foreach ($question->choices as $choice) {
-                $newC = $choice->replicate();
-                $newC->question_id = (string) $newQ->id;
-                $newC->save();
-            }
-        }
-
-        return redirect()->route('admin.question-banks.index')->with('status', 'Question bank duplicated successfully.');
     }
 
     /**
@@ -350,5 +239,64 @@ class QuestionBankController extends Controller
         $questionBank->delete();
 
         return redirect()->route('admin.question-banks.index')->with('status', 'Question bank deleted successfully.');
+    }
+
+    /**
+     * Helper to save choices for a question based on its question_type.
+     */
+    private function saveChoicesForQuestion(Question $question, string $qType, array $validated): void
+    {
+        if (in_array($qType, ['single_choice', 'listening', 'reading'])) {
+            if (!empty($validated['choices'])) {
+                $correctIdx = (int) ($validated['correct_choice'] ?? 0);
+                foreach ($validated['choices'] as $idx => $choiceData) {
+                    if (!empty($choiceData['content'])) {
+                        QuestionChoice::create([
+                            'question_id' => $question->id,
+                            'label' => $choiceData['label'] ?? chr(65 + $idx),
+                            'content' => $choiceData['content'],
+                            'is_correct' => ($idx === $correctIdx),
+                        ]);
+                    }
+                }
+            }
+        } elseif ($qType === 'multiple_response') {
+            if (!empty($validated['choices'])) {
+                $correctIndices = array_map('intval', $validated['correct_choices'] ?? []);
+                foreach ($validated['choices'] as $idx => $choiceData) {
+                    if (!empty($choiceData['content'])) {
+                        QuestionChoice::create([
+                            'question_id' => $question->id,
+                            'label' => $choiceData['label'] ?? chr(65 + $idx),
+                            'content' => $choiceData['content'],
+                            'is_correct' => in_array($idx, $correctIndices, true),
+                        ]);
+                    }
+                }
+            }
+        } elseif ($qType === 'true_false') {
+            $tfCorrect = $validated['tf_correct_choice'] ?? 'true';
+            QuestionChoice::create([
+                'question_id' => $question->id,
+                'label' => 'A',
+                'content' => 'True',
+                'is_correct' => ($tfCorrect === 'true'),
+            ]);
+            QuestionChoice::create([
+                'question_id' => $question->id,
+                'label' => 'B',
+                'content' => 'False',
+                'is_correct' => ($tfCorrect === 'false'),
+            ]);
+        } elseif (in_array($qType, ['short_answer', 'essay', 'speaking', 'writing'])) {
+            if (!empty($validated['short_answer_text'])) {
+                QuestionChoice::create([
+                    'question_id' => $question->id,
+                    'label' => 'KEY',
+                    'content' => $validated['short_answer_text'],
+                    'is_correct' => true,
+                ]);
+            }
+        }
     }
 }

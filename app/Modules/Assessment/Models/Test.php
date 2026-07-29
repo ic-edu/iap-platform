@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property bool $shuffle_questions
  * @property bool $shuffle_choices
  * @property bool $is_published
+ * @property string $status
  * @property int $created_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -41,6 +42,7 @@ class Test extends Model
         'shuffle_questions',
         'shuffle_choices',
         'is_published',
+        'status',
         'created_by',
     ];
 
@@ -54,6 +56,30 @@ class Test extends Model
             'shuffle_choices' => 'boolean',
             'is_published' => 'boolean',
         ];
+    }
+
+    /**
+     * Check if test is approved.
+     */
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
+
+    /**
+     * Check if test is pending approval.
+     */
+    public function isPendingApproval(): bool
+    {
+        return $this->status === 'pending_approval';
+    }
+
+    /**
+     * Check if test is draft.
+     */
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft' || empty($this->status);
     }
 
     /**

@@ -17,14 +17,16 @@
             <h1 class="text-2xl font-bold text-white mt-1">{{ $questionBank->title }}</h1>
             <p class="text-xs text-slate-400 mt-0.5">Test Type: <span class="uppercase font-bold text-indigo-400">{{ $questionBank->test_type }}</span> | Total Questions: <span class="font-bold text-white">{{ $questionBank->questions->count() }}</span></p>
         </div>
-        <div class="flex items-center gap-3">
-            <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
-                📥 Bulk CSV Import
-            </button>
-            <button onclick="openCreateQuestionModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
-                + Add Question
-            </button>
-        </div>
+        @if (!Auth::user()?->hasRole('super-admin'))
+            <div class="flex items-center gap-3">
+                <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                    📥 Bulk CSV Import
+                </button>
+                <button onclick="openCreateQuestionModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
+                    + Add Question
+                </button>
+            </div>
+        @endif
     </div>
 
     <!-- Status Alert -->

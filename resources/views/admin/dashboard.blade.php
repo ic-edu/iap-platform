@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">{{ __('Super Admin Management Hub') }}</p>
+                <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">{{ __('Super Admin Executive Hub') }}</p>
                 <h1 class="text-2xl font-bold tracking-tight text-white mt-1">{{ __('Platform Overview Dashboard') }}</h1>
             </div>
             <div class="flex items-center gap-2">
@@ -13,27 +13,31 @@
         </div>
     </x-slot>
 
-    <!-- Platform User Breakdown KPIs -->
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+    <!-- Platform User Breakdown KPIs (Strictly Non-Overlapping Baseline v1.1 Counts) -->
+    <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
         <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Total Users</span>
+            <span class="text-[10px] font-extrabold uppercase text-slate-400">Total Users</span>
             <span class="text-2xl font-extrabold text-white block mt-1">{{ $totalUsers }}</span>
         </div>
         <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Students</span>
-            <span class="text-2xl font-extrabold text-indigo-400 block mt-1">{{ $studentsCount }}</span>
+            <span class="text-[10px] font-extrabold uppercase text-purple-400">Super Admin</span>
+            <span class="text-2xl font-extrabold text-purple-400 block mt-1">{{ $superAdminsCount }}</span>
         </div>
         <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Teachers</span>
+            <span class="text-[10px] font-extrabold uppercase text-rose-400">Admin</span>
+            <span class="text-2xl font-extrabold text-rose-400 block mt-1">{{ $adminsCount }}</span>
+        </div>
+        <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">
+            <span class="text-[10px] font-extrabold uppercase text-amber-400">Teachers</span>
             <span class="text-2xl font-extrabold text-amber-400 block mt-1">{{ $teachersCount }}</span>
         </div>
         <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Admins</span>
-            <span class="text-2xl font-extrabold text-rose-400 block mt-1">{{ $adminsCount }}</span>
-        </div>
-        <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl col-span-2 sm:col-span-1">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Finance Users</span>
+            <span class="text-[10px] font-extrabold uppercase text-emerald-400">Finance</span>
             <span class="text-2xl font-extrabold text-emerald-400 block mt-1">{{ $financeCount }}</span>
+        </div>
+        <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">
+            <span class="text-[10px] font-extrabold uppercase text-indigo-400">Students</span>
+            <span class="text-2xl font-extrabold text-indigo-400 block mt-1">{{ $studentsCount }}</span>
         </div>
     </div>
 

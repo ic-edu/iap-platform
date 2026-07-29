@@ -34,9 +34,15 @@ class TestBuilderController extends Controller
 
     /**
      * Store new test in draft mode.
+     * Teacher & Admin MAY create draft tests. Super Admin MUST NOT create tests.
      */
     public function store(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && $user->hasRole('super-admin')) {
+            abort(403, 'Super Admin is an auditor/approver and cannot create tests directly.');
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'test_type' => ['required', 'string'],
@@ -55,7 +61,8 @@ class TestBuilderController extends Controller
             'shuffle_questions' => $request->boolean('shuffle_questions'),
             'shuffle_choices' => $request->boolean('shuffle_choices'),
             'is_published' => false,
-            'created_by' => $request->user() ? $request->user()->id : 1,
+            'status' => 'draft',
+            'created_by' => $user ? $user->id : 1,
         ]);
 
         // Auto-create default section for rapid test building
@@ -72,12 +79,18 @@ class TestBuilderController extends Controller
     /**
      * Duplicate an assessment test.
      */
-    public function duplicate(Test $test): RedirectResponse
+    public function duplicate(Request $request, Test $test): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && $user->hasRole('super-admin')) {
+            abort(403, 'Super Admin is an auditor/approver and cannot duplicate/create tests directly.');
+        }
+
         $newTest = $test->replicate();
         $newTest->title = $test->title.' (Copy)';
         $newTest->slug = Str::slug($newTest->title).'-'.Str::random(5);
         $newTest->is_published = false;
+        $newTest->status = 'draft';
         $newTest->save();
 
         foreach ($test->sections as $sec) {
@@ -90,24 +103,37 @@ class TestBuilderController extends Controller
     }
 
     /**
-     * Submit draft test for approval.
+     * Submit draft test for Super Admin approval.
      */
     public function submitForApproval(Test $test): RedirectResponse
     {
-        $test->update(['is_published' => false]);
+        $test->update([
+            'status' => 'pending_approval',
+            'is_published' => false,
+        ]);
 
         return redirect()->route('admin.tests.index')->with('status', 'Test submitted for Super Admin review & approval successfully.');
     }
 
     /**
-     * Approve and publish test (Super Admin & Admin only).
+     * Publish an approved test (Operational Admin Only).
+     * Constraint: Test MUST have status === 'approved'.
      */
     public function publish(Test $test): RedirectResponse
     {
         $user = request()->user();
-        if ($user && $user->hasRole('teacher')) {
-            abort(403, 'Teachers are not permitted to publish tests.');
+        if (!$user || !$user->hasRole('admin')) {
+            abort(403, 'Only Operational Admin can publish approved tests.');
         }
+
+        if ($test->status !== 'approved') {
+            abort(403, 'Assessment tests can only be published after receiving Super Admin approval.');
+        }
+
+        $test->update([
+            'status' => 'published',
+            'is_published' => true,
+        ]);
 
         $this->builderService->publishTest($test);
 
@@ -119,7 +145,15 @@ class TestBuilderController extends Controller
      */
     public function reject(Test $test): RedirectResponse
     {
-        $test->update(['is_published' => false]);
+        $user = request()->user();
+        if (!$user || !$user->hasRole('super-admin')) {
+            abort(403, 'Only Super Admin can reject test approvals.');
+        }
+
+        $test->update([
+            'status' => 'rejected',
+            'is_published' => false,
+        ]);
 
         return redirect()->route('admin.tests.index')->with('status', 'test-rejected');
     }

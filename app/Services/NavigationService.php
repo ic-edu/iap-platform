@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Auth;
 class NavigationService
 {
     /**
-     * Get authorized modular navigation menu items grouped by section for each role.
+     * Get authorized modular navigation menu items grouped by section for each role according to Baseline v1.1.
      *
      * @return array<int, array{
      *     section: string,
@@ -224,8 +224,8 @@ class NavigationService
         if ($user->hasRole('finance')) {
             return [
                 [
-                    'section' => 'Dashboard',
-                    'label' => 'Finance Dashboard',
+                    'section' => 'Finance Core',
+                    'label' => 'Dashboard',
                     'route' => 'finance.dashboard',
                     'icon' => 'home',
                     'permission' => null,
@@ -233,7 +233,7 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
-                    'section' => 'Commerce & Finance',
+                    'section' => 'Finance Core',
                     'label' => 'Commerce & Billing',
                     'route' => 'admin.commerce.index',
                     'icon' => 'shopping-bag',

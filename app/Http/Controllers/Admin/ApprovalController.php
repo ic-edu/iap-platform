@@ -16,36 +16,50 @@ class ApprovalController extends Controller
     public function index(): View
     {
         $pendingTests = Test::with(['creator', 'sections'])
-            ->where('is_published', false)
+            ->whereIn('status', ['pending_approval', 'draft'])
+            ->orWhereNull('status')
             ->latest()
             ->paginate(10);
 
         $publishedCount = Test::where('is_published', true)->count();
-        $pendingCount = $pendingTests->total();
+        $pendingCount = Test::where('status', 'pending_approval')->count();
 
         return view('admin.approvals.index', compact('pendingTests', 'publishedCount', 'pendingCount'));
     }
 
     /**
-     * Approve & Publish an assessment test.
+     * Approve an assessment test (Super Admin Only).
+     * Changes status from pending_approval to approved.
      */
     public function approve(Request $request, Test $test): RedirectResponse
     {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('super-admin')) {
+            abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
+        }
+
         $test->update([
-            'is_published' => true,
+            'status' => 'approved',
+            'is_published' => false,
         ]);
 
-        return redirect()->route('admin.approvals.index')->with('status', "Assessment '{$test->title}' approved and published successfully.");
+        return redirect()->route('admin.approvals.index')->with('status', "Assessment '{$test->title}' approved successfully. It is now ready for Admin publication.");
     }
 
     /**
-     * Reject an assessment test back to draft.
+     * Reject an assessment test back to draft (Super Admin Only).
      */
     public function reject(Request $request, Test $test): RedirectResponse
     {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('super-admin')) {
+            abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
+        }
+
         $reason = $request->input('reason', 'Requires revisions before publication.');
 
         $test->update([
+            'status' => 'rejected',
             'is_published' => false,
         ]);
 

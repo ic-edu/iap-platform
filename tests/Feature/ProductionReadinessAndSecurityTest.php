@@ -199,13 +199,13 @@ test('authenticated teacher can render question bank index modular view', functi
     $response->assertStatus(200);
 });
 
-test('authenticated admin can render settings modular view', function () {
+test('authenticated admin cannot access settings modular view (super admin required)', function () {
     $admin = User::factory()->create();
     $admin->assignRole('admin');
 
     $response = $this->actingAs($admin)->get('/admin/settings');
 
-    $response->assertStatus(200);
+    $response->assertStatus(403);
 });
 
 test('submitting passing assessment attempt automatically generates digital certificate', function () {
@@ -595,9 +595,9 @@ test('monitoring dashboard requires authenticated user', function () {
     $response->assertRedirect('/login');
 });
 
-test('monitoring dashboard displays health metrics for authorized admin', function () {
+test('monitoring dashboard displays health metrics for authorized super admin', function () {
     $user = User::factory()->create();
-    $user->assignRole('admin');
+    $user->assignRole('super-admin');
 
     $response = $this->actingAs($user)->get('/admin/monitoring');
 

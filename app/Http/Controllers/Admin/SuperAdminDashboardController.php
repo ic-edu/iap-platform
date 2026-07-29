@@ -18,18 +18,26 @@ class SuperAdminDashboardController extends Controller
 
     /**
      * Display Super Admin Platform Overview Landing Dashboard (/super-admin/dashboard).
+     * Strictly computes non-overlapping role counters for Baseline v1.1 compliance.
      */
     public function superAdminIndex(): View
     {
         $totalUsers = User::count();
+        $superAdminsCount = User::role('super-admin')->count();
+        $adminsCount = User::role('admin')
+            ->whereDoesntHave('roles', function ($query) {
+                $query->where('name', 'super-admin');
+            })->count();
+
         $teachersCount = User::role('teacher')->count();
-        $studentsCount = User::role('student')->count();
-        $adminsCount = User::role(['admin', 'super-admin'])->count();
         $financeCount = User::role('finance')->count();
+        $studentsCount = User::role('student')->count();
 
         $questionBanksCount = QuestionBank::count();
         $publishedTestsCount = AssessmentTest::where('is_published', true)->count();
-        $pendingApprovalsCount = AssessmentTest::where('is_published', false)->count();
+        $pendingApprovalsCount = AssessmentTest::whereIn('status', ['pending_approval', 'draft'])
+            ->orWhereNull('status')
+            ->count();
         $certificatesCount = Certificate::count();
 
         $systemHealth = $this->healthService->checkHealth();
@@ -38,10 +46,11 @@ class SuperAdminDashboardController extends Controller
 
         return view('admin.dashboard', compact(
             'totalUsers',
-            'teachersCount',
-            'studentsCount',
+            'superAdminsCount',
             'adminsCount',
+            'teachersCount',
             'financeCount',
+            'studentsCount',
             'questionBanksCount',
             'publishedTestsCount',
             'pendingApprovalsCount',
@@ -63,7 +72,7 @@ class SuperAdminDashboardController extends Controller
 
         $questionBanksCount = QuestionBank::count();
         $publishedTestsCount = AssessmentTest::where('is_published', true)->count();
-        $pendingApprovalsCount = AssessmentTest::where('is_published', false)->count();
+        $pendingApprovalsCount = AssessmentTest::where('status', 'pending_approval')->count();
 
         $recentUsers = User::latest()->take(5)->get();
 

@@ -44,41 +44,43 @@
 
     <!-- Section 2: Quick Action Hub & Authoring Form -->
     <div class="grid gap-6 lg:grid-cols-3 mb-8">
-        <!-- New Question Bank Form -->
-        <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
-            <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
-                <span>📂</span> {{ __('Create Question Bank') }}
-            </h3>
-            <form method="POST" action="{{ route('admin.question-banks.store') }}" class="space-y-4">
-                @csrf
-                <div>
-                    <label for="title" class="block text-xs font-medium text-slate-300">{{ __('Bank Title') }}</label>
-                    <input type="text" id="title" name="title" required
-                           class="mt-1 block w-full rounded-lg bg-slate-900 border border-slate-800 text-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" placeholder="e.g. TOEIC Part 1 Listening Pool" />
-                </div>
-                <div>
-                    <label for="test_type" class="block text-xs font-medium text-slate-300">{{ __('Test Type') }}</label>
-                    <select id="test_type" name="test_type"
-                            class="mt-1 block w-full rounded-lg bg-slate-900 border border-slate-800 text-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
-                        <option value="toeic">TOEIC</option>
-                        <option value="toefl">TOEFL iBT</option>
-                        <option value="ielts">IELTS</option>
-                        <option value="general">General</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="description" class="block text-xs font-medium text-slate-300">{{ __('Description') }}</label>
-                    <textarea id="description" name="description" rows="3"
-                              class="mt-1 block w-full rounded-lg bg-slate-900 border border-slate-800 text-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" placeholder="Bank details..."></textarea>
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
-                    {{ __('Create Bank') }}
-                </button>
-            </form>
-        </div>
+        <!-- New Question Bank Form (Teacher & Admin Only) -->
+        @if (!Auth::user()?->hasRole('super-admin'))
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
+                <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                    <span>📂</span> {{ __('Create Question Bank') }}
+                </h3>
+                <form method="POST" action="{{ route('admin.question-banks.store') }}" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label for="title" class="block text-xs font-medium text-slate-300">{{ __('Bank Title') }}</label>
+                        <input type="text" id="title" name="title" required
+                               class="mt-1 block w-full rounded-lg bg-slate-900 border border-slate-800 text-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" placeholder="e.g. TOEIC Part 1 Listening Pool" />
+                    </div>
+                    <div>
+                        <label for="test_type" class="block text-xs font-medium text-slate-300">{{ __('Test Type') }}</label>
+                        <select id="test_type" name="test_type"
+                                class="mt-1 block w-full rounded-lg bg-slate-900 border border-slate-800 text-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                            <option value="toeic">TOEIC</option>
+                            <option value="toefl">TOEFL iBT</option>
+                            <option value="ielts">IELTS</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="description" class="block text-xs font-medium text-slate-300">{{ __('Description') }}</label>
+                        <textarea id="description" name="description" rows="3"
+                                  class="mt-1 block w-full rounded-lg bg-slate-900 border border-slate-800 text-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" placeholder="Bank details..."></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
+                        {{ __('Create Bank') }}
+                    </button>
+                </form>
+            </div>
+        @endif
 
         <!-- Question Banks Table -->
-        <div class="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
+        <div class="{{ Auth::user()?->hasRole('super-admin') ? 'lg:col-span-3' : 'lg:col-span-2' }} bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-base font-semibold text-white">{{ __('Question Banks Listing') }}</h3>
                 <form method="GET" action="{{ route('admin.question-banks.index') }}" class="flex gap-2">
@@ -115,10 +117,12 @@
                                     <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="text-xs text-indigo-400 font-semibold hover:underline">
                                         Author Items
                                     </a>
-                                    <form method="POST" action="{{ route('admin.question-banks.duplicate', $bank->id) }}" class="inline">
-                                        @csrf
-                                        <button type="submit" class="text-xs text-slate-400 hover:text-white hover:underline">Duplicate</button>
-                                    </form>
+                                    @if (!Auth::user()?->hasRole('super-admin'))
+                                        <form method="POST" action="{{ route('admin.question-banks.duplicate', $bank->id) }}" class="inline">
+                                            @csrf
+                                            <button type="submit" class="text-xs text-slate-400 hover:text-white hover:underline">Duplicate</button>
+                                        </form>
+                                    @endif
                                     @if (!Auth::user()?->hasRole('teacher'))
                                         <form method="POST" action="{{ route('admin.question-banks.destroy', $bank->id) }}" class="inline">
                                             @csrf

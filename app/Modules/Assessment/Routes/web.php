@@ -4,8 +4,8 @@ use App\Modules\Assessment\Controllers\CandidatePortalController;
 use App\Modules\Assessment\Controllers\TestBuilderController;
 use Illuminate\Support\Facades\Route;
 
-// Admin Test Builder Routes
-Route::middleware(['web', 'auth'])->prefix('admin/tests')->group(function () {
+// Admin & Teacher Test Builder Routes
+Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin'])->prefix('admin/tests')->group(function () {
     Route::get('/', [TestBuilderController::class, 'index'])->name('admin.tests.index');
     Route::post('/', [TestBuilderController::class, 'store'])->name('admin.tests.store');
     Route::post('/{test}/duplicate', [TestBuilderController::class, 'duplicate'])->name('admin.tests.duplicate');

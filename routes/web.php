@@ -88,20 +88,8 @@ Route::middleware(['web', 'auth', 'role:finance'])->group(function () {
         ->name('finance.dashboard');
 });
 
-// Teacher & Admin Shared Workspaces & Media Selector API
-Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(function () {
-    Route::prefix('admin/media')->group(function () {
-        Route::get('/', [MediaController::class, 'index'])->name('admin.media.index');
-        Route::get('/list', [MediaController::class, 'list'])->name('admin.media.list');
-        Route::post('/', [MediaController::class, 'store'])->name('admin.media.store');
-    });
-});
-
-// Admin & Super Admin Workspaces
-Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
-    Route::get('/admin/dashboard', [SuperAdminDashboardController::class, 'adminIndex'])
-        ->name('admin.dashboard');
-
+// Super Admin Only Governance & Audit Workspaces (Baseline v1.1 Rules)
+Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
     Route::get('/admin/monitoring', [MonitoringDashboardController::class, 'index'])
         ->name('admin.monitoring.index');
 
@@ -119,6 +107,12 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::get('/', [SettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/', [SettingsController::class, 'update'])->name('admin.settings.update');
     });
+});
+
+// Shared Admin & Super Admin Workspaces
+Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
+    Route::get('/admin/dashboard', [SuperAdminDashboardController::class, 'adminIndex'])
+        ->name('admin.dashboard');
 
     Route::prefix('admin/users')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('admin.users.index');
@@ -127,6 +121,15 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
         Route::post('/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+    });
+});
+
+// Shared Authoring Workspaces (Teacher, Admin, Super Admin)
+Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(function () {
+    Route::prefix('admin/media')->group(function () {
+        Route::get('/', [MediaController::class, 'index'])->name('admin.media.index');
+        Route::get('/list', [MediaController::class, 'list'])->name('admin.media.list');
+        Route::post('/', [MediaController::class, 'store'])->name('admin.media.store');
     });
 });
 
