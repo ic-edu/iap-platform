@@ -40,48 +40,77 @@
         </div>
     </div>
 
-    <!-- Question Banks Authoring Table -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h3 class="text-sm font-bold text-white">Recent Authoring Question Banks</h3>
-            <a href="{{ route('admin.question-banks.index') }}" class="text-xs text-indigo-400 font-semibold hover:underline">Manage All Banks →</a>
-        </div>
-        <table class="w-full text-left text-sm text-slate-300">
-            <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
-                <tr>
-                    <th class="p-4">Bank Title</th>
-                    <th class="p-4">Category / Type</th>
-                    <th class="p-4">Questions</th>
-                    <th class="p-4">Status</th>
-                    <th class="p-4 text-right">Action</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-800/60 font-mono text-xs">
-                @foreach ($recentQuestionBanks as $bank)
-                    @php
-                        $statusBadge = match($bank->status) {
-                            'published' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                            'approved' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-                            'pending_approval' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                            'rejected' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-                            default => 'bg-slate-800 text-slate-400 border-slate-700',
-                        };
-                    @endphp
+    <!-- Main Workspace Grid: Authoring Banks & Notification Alerts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Question Banks Authoring Table -->
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Recent Authoring Question Banks</h3>
+                <a href="{{ route('admin.question-banks.index') }}" class="text-xs text-indigo-400 font-semibold hover:underline">Manage All Banks →</a>
+            </div>
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
                     <tr>
-                        <td class="p-4 font-semibold text-white font-sans text-xs">{{ $bank->title }}</td>
-                        <td class="p-4 text-slate-400 font-sans text-xs">{{ $bank->category?->name ?? strtoupper($bank->test_type?->value ?? 'General') }}</td>
-                        <td class="p-4 font-bold text-indigo-400">{{ $bank->questions->count() }} items</td>
-                        <td class="p-4 font-sans text-xs">
-                            <span class="px-2 py-0.5 text-[10px] font-bold rounded border uppercase {{ $statusBadge }}">
-                                {{ $bank->status ?? 'draft' }}
-                            </span>
-                        </td>
-                        <td class="p-4 text-right font-sans text-xs">
-                            <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="text-indigo-400 font-bold hover:underline">Author Items →</a>
-                        </td>
+                        <th class="p-4">Bank Title</th>
+                        <th class="p-4">Category / Type</th>
+                        <th class="p-4">Questions</th>
+                        <th class="p-4">Status</th>
+                        <th class="p-4 text-right">Action</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 font-mono text-xs">
+                    @foreach ($recentQuestionBanks as $bank)
+                        @php
+                            $statusBadge = match($bank->status) {
+                                'published' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                                'approved' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                                'pending_approval' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                'rejected' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                                default => 'bg-slate-800 text-slate-400 border-slate-700',
+                            };
+                        @endphp
+                        <tr>
+                            <td class="p-4 font-semibold text-white font-sans text-xs">{{ $bank->title }}</td>
+                            <td class="p-4 text-slate-400 font-sans text-xs">{{ $bank->category?->name ?? strtoupper($bank->test_type?->value ?? 'General') }}</td>
+                            <td class="p-4 font-bold text-indigo-400">{{ $bank->questions->count() }} items</td>
+                            <td class="p-4 font-sans text-xs">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded border uppercase {{ $statusBadge }}">
+                                    {{ $bank->status ?? 'draft' }}
+                                </span>
+                            </td>
+                            <td class="p-4 text-right font-sans text-xs">
+                                <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="text-indigo-400 font-bold hover:underline">Author Items →</a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Governance Notifications Widget (QB-002 Notification Center) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span>🔔</span> Author Governance Alerts
+                </h3>
+                <a href="{{ route('notifications.index') }}" class="text-xs text-indigo-400 hover:underline font-semibold">View All →</a>
+            </div>
+            <div class="space-y-3">
+                @forelse ($notifications as $n)
+                    @php $data = $n->data; @endphp
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg text-xs">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-indigo-300">{{ $data['title'] ?? 'Alert' }}</span>
+                            <span class="text-[10px] text-slate-500 font-mono">{{ $n->created_at?->diffForHumans() }}</span>
+                        </div>
+                        <p class="text-slate-300 text-[11px] leading-relaxed">{{ $data['message'] ?? '' }}</p>
+                    </div>
+                @empty
+                    <div class="p-6 text-center text-slate-500 text-xs">
+                        No governance notifications yet. Status updates for Approved, Rejected, Published, or Archived banks will appear here.
+                    </div>
+                @endforelse
+            </div>
+        </div>
     </div>
 </x-admin-layout>

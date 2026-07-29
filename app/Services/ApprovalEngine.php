@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\QuestionBankArchiveRequest;
 use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Modules\Assessment\Models\Test;
@@ -28,6 +29,7 @@ class ApprovalEngine
 
         self::$providers = [
             'question_banks' => fn (): int => QuestionBank::where('status', 'pending_approval')->count(),
+            'question_bank_archives' => fn (): int => QuestionBankArchiveRequest::where('status', 'pending')->count(),
             'tests' => fn (): int => Test::where('status', 'pending_approval')->count(),
             'user_creations' => fn (): int => UserCreationRequest::where('status', 'pending')->count(),
             'user_deletions' => fn (): int => UserDeletionRequest::where('status', 'pending')->count(),

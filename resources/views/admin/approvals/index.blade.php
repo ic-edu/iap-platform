@@ -21,7 +21,7 @@
     @endif
 
     <!-- Metrics Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
                 <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Assessments</span>
@@ -38,6 +38,13 @@
         </div>
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
+                <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Bank Archives</span>
+                <span class="text-2xl font-extrabold text-amber-500 mt-0.5 block">{{ $pendingQuestionBankArchiveCount ?? 0 }}</span>
+            </div>
+            <span class="text-2xl">📦</span>
+        </div>
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+            <div>
                 <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Staff Creations</span>
                 <span class="text-2xl font-extrabold text-purple-400 mt-0.5 block">{{ $pendingUserCreationCount ?? 0 }}</span>
             </div>
@@ -45,7 +52,7 @@
         </div>
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
-                <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Deletion Requests</span>
+                <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Deletions</span>
                 <span class="text-2xl font-extrabold text-rose-400 mt-0.5 block">{{ $pendingUserDeletionCount ?? 0 }}</span>
             </div>
             <span class="text-2xl">📩</span>
@@ -110,6 +117,71 @@
                 @empty
                     <tr>
                         <td colspan="5" class="p-8 text-center text-slate-500">No pending Question Banks in approval queue. All submitted question banks have been reviewed.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pending Question Bank Archive Requests Table (QB-002) -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+            <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span>📦</span> Question Bank Archive Approval Queue
+                </h2>
+                <p class="text-xs text-slate-400">Review pending question bank archive requests submitted by Operational Administrators.</p>
+            </div>
+            <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                {{ $pendingQuestionBankArchiveCount ?? 0 }} Pending Archive Requests
+            </span>
+        </div>
+        <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
+                <tr>
+                    <th class="p-4">Question Bank</th>
+                    <th class="p-4">Requested By (Admin)</th>
+                    <th class="p-4">Reason / Justification</th>
+                    <th class="p-4">Request Date</th>
+                    <th class="p-4 text-right">Approval Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+                @forelse ($pendingArchiveRequests ?? [] as $archReq)
+                    @php $bank = $archReq->questionBank; @endphp
+                    <tr>
+                        <td class="p-4">
+                            <div class="font-semibold text-white">{{ $bank?->title ?? 'Question Bank' }}</div>
+                            <div class="text-xs text-slate-400">Category: {{ $bank?->category?->name ?? 'General' }}</div>
+                        </td>
+                        <td class="p-4 text-xs text-slate-300">
+                            {{ $archReq->requester?->name ?? 'Admin' }}
+                            <div class="text-slate-500 font-mono">{{ $archReq->requester?->email }}</div>
+                        </td>
+                        <td class="p-4 text-xs text-slate-300 max-w-xs">
+                            <span class="italic bg-slate-950 p-2 rounded border border-slate-800 block">{{ $archReq->reason }}</span>
+                        </td>
+                        <td class="p-4 text-xs text-slate-400">{{ $archReq->created_at?->format('Y-m-d H:i') }}</td>
+                        <td class="p-4 text-right space-x-2">
+                            <form action="{{ route('admin.approvals.question-banks.archives.approve', $archReq->id) }}" method="POST" class="inline"
+                                  onsubmit="return confirm('Approve archive of Question Bank {{ $bank?->title }}?')">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
+                                    ✓ Approve Archive
+                                </button>
+                            </form>
+                            <form action="{{ route('admin.approvals.question-banks.archives.reject', $archReq->id) }}" method="POST" class="inline"
+                                  onsubmit="return confirm('Reject archive request for Question Bank {{ $bank?->title }}?')">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
+                                    ✗ Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-slate-500">No pending Question Bank archive requests in approval queue. All archive requests have been processed.</td>
                     </tr>
                 @endforelse
             </tbody>

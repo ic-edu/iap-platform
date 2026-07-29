@@ -3,6 +3,7 @@
 namespace App\Modules\QuestionBank\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\QuestionBankArchiveRequest;
 use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\QuestionBank\Models\Question;
@@ -22,7 +23,7 @@ class QuestionBankController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = QuestionBank::with(['category', 'creator', 'questions']);
+        $query = QuestionBank::with(['category', 'creator', 'questions', 'archiveRequests']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -53,7 +54,7 @@ class QuestionBankController extends Controller
      */
     public function show(QuestionBank $questionBank): View
     {
-        $questionBank->load(['questions.choices', 'category']);
+        $questionBank->load(['questions.choices', 'category', 'archiveRequests']);
 
         /** @var view-string $viewName */
         $viewName = 'question_bank::show';
@@ -62,14 +63,14 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Store a newly created question bank.
-     * Teacher & Admin MAY create question banks. Super Admin MUST NOT.
+     * Store a newly created question bank (QB-002: Teacher Only).
+     * Admin & Super Admin MUST NOT create question banks directly.
      */
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        if ($user && $user->hasRole('super-admin')) {
-            abort(403, 'Super Admin is an auditor/approver and cannot create question banks directly.');
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot author or create Question Banks directly.');
         }
 
         $validated = $request->validate([
@@ -100,11 +101,15 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Update Question Bank details (QB-001 Issue 1 Fix).
+     * Update Question Bank details (QB-002: Teacher Only).
      */
     public function update(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $user = $request->user();
+        if ($user && $user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            abort(403, 'Operational Admins cannot author or edit Question Banks.');
+        }
+
         if ($user && $user->hasRole('teacher') && $questionBank->status === 'published') {
             abort(403, 'Teachers cannot modify a published Question Bank.');
         }
@@ -133,7 +138,7 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Submit Question Bank for Super Admin approval (QB-001 Issue 3).
+     * Submit Question Bank for Super Admin approval (QB-001 / QB-002).
      */
     public function submitForApproval(Request $request, QuestionBank $questionBank): RedirectResponse
     {
@@ -164,8 +169,8 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Publish approved Question Bank (Admin Only - QB-001 Issue 3).
-     * Teacher MUST NOT publish. Super Admin MUST NOT publish.
+     * Publish approved Question Bank (Admin Only - QB-001 / QB-002).
+     * Dispatches notification to Teacher Author.
      */
     public function publish(Request $request, QuestionBank $questionBank): RedirectResponse
     {
@@ -188,6 +193,18 @@ class QuestionBankController extends Controller
             "Published Question Bank '{$questionBank->title}' live",
             $questionBank
         );
+
+        // Notify Teacher Author (QB-002 Requirement)
+        if ($questionBank->creator) {
+            try {
+                $questionBank->creator->notify(new SystemAlertNotification(
+                    'Question Bank Published',
+                    "Your Question Bank '{$questionBank->title}' has been published live by Operational Admin {$user->name}."
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
 
         return redirect()->route('admin.question-banks.index')->with('status', "Question Bank '{$questionBank->title}' published live successfully.");
     }
@@ -217,13 +234,63 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Author a new question into a question bank.
+     * Request Question Bank Archive (Admin Only - QB-002).
+     * Admin cannot archive directly; submits a request for Super Admin approval.
+     */
+    public function requestArchive(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('admin') || $user->hasRole('super-admin')) {
+            abort(403, 'Only Operational Admins can request archiving of Question Banks.');
+        }
+
+        if ($questionBank->hasPendingArchiveRequest()) {
+            return redirect()->back()->with('error', 'An archive request for this Question Bank is already pending Super Admin approval.');
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:1000'],
+        ]);
+
+        QuestionBankArchiveRequest::create([
+            'question_bank_id' => $questionBank->id,
+            'requested_by' => $user->id,
+            'reason' => $validated['reason'],
+            'status' => 'pending',
+        ]);
+
+        $questionBank->update(['status' => 'pending_archive_approval']);
+
+        ActivityLogger::log(
+            'ARCHIVE_REQUEST_SUBMITTED',
+            "Submitted archive request for Question Bank '{$questionBank->title}'. Reason: {$validated['reason']}",
+            $questionBank
+        );
+
+        // Notify Super Admins
+        $superAdmins = User::role('super-admin')->get();
+        foreach ($superAdmins as $sa) {
+            try {
+                $sa->notify(new SystemAlertNotification(
+                    'Question Bank Archive Request Pending',
+                    "Admin {$user->name} requested archiving Question Bank '{$questionBank->title}'. Reason: {$validated['reason']}"
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
+        return redirect()->route('admin.question-banks.index')->with('status', "Archive request for Question Bank '{$questionBank->title}' submitted for Super Admin approval.");
+    }
+
+    /**
+     * Author a new question into a question bank (QB-002: Teacher Only).
      */
     public function storeQuestion(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $user = $request->user();
-        if ($user && $user->hasRole('super-admin')) {
-            abort(403, 'Super Admin is an auditor/approver and cannot create questions directly.');
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot author questions directly.');
         }
 
         $validated = $request->validate([
@@ -264,10 +331,15 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Update an existing question.
+     * Update an existing question (QB-002: Teacher Only).
      */
     public function updateQuestion(Request $request, Question $question): RedirectResponse
     {
+        $user = $request->user();
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot edit questions directly.');
+        }
+
         $validated = $request->validate([
             'prompt' => ['required', 'string'],
             'question_type' => ['required', 'string'],
@@ -306,13 +378,13 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Duplicate a question inside a question bank.
+     * Duplicate a question inside a question bank (QB-002: Teacher Only).
      */
     public function duplicateQuestion(Request $request, Question $question): RedirectResponse
     {
         $user = $request->user();
-        if ($user && $user->hasRole('super-admin')) {
-            abort(403, 'Super Admin is an auditor/approver and cannot duplicate/create questions directly.');
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot duplicate/author questions directly.');
         }
 
         $newQ = $question->replicate();

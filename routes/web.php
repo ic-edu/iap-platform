@@ -99,6 +99,8 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
         Route::post('/{test}/reject', [ApprovalController::class, 'reject'])->name('admin.approvals.reject');
         Route::post('/question-banks/{questionBank}/approve', [ApprovalController::class, 'approveQuestionBank'])->name('admin.approvals.question-banks.approve');
         Route::post('/question-banks/{questionBank}/reject', [ApprovalController::class, 'rejectQuestionBank'])->name('admin.approvals.question-banks.reject');
+        Route::post('/question-banks/archives/{archiveRequest}/approve', [ApprovalController::class, 'approveQuestionBankArchive'])->name('admin.approvals.question-banks.archives.approve');
+        Route::post('/question-banks/archives/{archiveRequest}/reject', [ApprovalController::class, 'rejectQuestionBankArchive'])->name('admin.approvals.question-banks.archives.reject');
         Route::post('/users/creation/{creationRequest}/approve', [ApprovalController::class, 'approveUserCreation'])->name('admin.approvals.users.creation.approve');
         Route::post('/users/creation/{creationRequest}/reject', [ApprovalController::class, 'rejectUserCreation'])->name('admin.approvals.users.creation.reject');
         Route::post('/users/{deletionRequest}/approve', [ApprovalController::class, 'approveUserDeletion'])->name('admin.approvals.users.approve');

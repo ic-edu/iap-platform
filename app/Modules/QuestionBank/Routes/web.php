@@ -11,6 +11,7 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin'])->prefix('ad
     Route::post('/{questionBank}/submit', [QuestionBankController::class, 'submitForApproval'])->name('admin.question-banks.submit');
     Route::post('/{questionBank}/publish', [QuestionBankController::class, 'publish'])->name('admin.question-banks.publish');
     Route::post('/{questionBank}/unpublish', [QuestionBankController::class, 'unpublish'])->name('admin.question-banks.unpublish');
+    Route::post('/{questionBank}/request-archive', [QuestionBankController::class, 'requestArchive'])->name('admin.question-banks.request-archive');
 
     Route::post('/{questionBank}/questions', [QuestionBankController::class, 'storeQuestion'])->name('admin.question-banks.store-question');
     Route::put('/questions/{question}', [QuestionBankController::class, 'updateQuestion'])->name('admin.question-banks.update-question');

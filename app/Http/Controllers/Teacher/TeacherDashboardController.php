@@ -12,10 +12,12 @@ use Illuminate\View\View;
 class TeacherDashboardController extends Controller
 {
     /**
-     * Display Teacher Authoring & Academic Workspace Dashboard (QB-001 Issue 2).
+     * Display Teacher Authoring & Academic Workspace Dashboard (QB-001 / QB-002).
      */
     public function index(Request $request): View
     {
+        $user = $request->user();
+
         $totalQuestionBanks = QuestionBank::count();
         $draftQuestionBanks = QuestionBank::where('status', 'draft')->count();
         $pendingApprovalQuestionBanks = QuestionBank::where('status', 'pending_approval')->count();
@@ -31,6 +33,8 @@ class TeacherDashboardController extends Controller
             ->take(5)
             ->get();
 
+        $notifications = $user ? $user->notifications()->take(5)->get() : collect();
+
         return view('teacher.dashboard', compact(
             'totalQuestionBanks',
             'draftQuestionBanks',
@@ -38,7 +42,8 @@ class TeacherDashboardController extends Controller
             'publishedQuestionBanks',
             'totalQuestions',
             'totalCourses',
-            'recentQuestionBanks'
+            'recentQuestionBanks',
+            'notifications'
         ));
     }
 }

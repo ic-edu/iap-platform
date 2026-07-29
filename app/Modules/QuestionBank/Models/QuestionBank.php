@@ -2,6 +2,7 @@
 
 namespace App\Modules\QuestionBank\Models;
 
+use App\Models\QuestionBankArchiveRequest;
 use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\QuestionBank\Enums\TestType;
@@ -72,6 +73,16 @@ class QuestionBank extends Model
         return $this->status === 'published' || (bool) $this->is_published;
     }
 
+    public function isArchived(): bool
+    {
+        return $this->status === 'archived';
+    }
+
+    public function hasPendingArchiveRequest(): bool
+    {
+        return $this->archiveRequests()->where('status', 'pending')->exists();
+    }
+
     /**
      * Get the category of this bank.
      *
@@ -100,5 +111,15 @@ class QuestionBank extends Model
     public function questions(): HasMany
     {
         return $this->hasMany(Question::class, 'question_bank_id');
+    }
+
+    /**
+     * Get archive requests for this question bank.
+     *
+     * @return HasMany<QuestionBankArchiveRequest, $this>
+     */
+    public function archiveRequests(): HasMany
+    {
+        return $this->hasMany(QuestionBankArchiveRequest::class, 'question_bank_id');
     }
 }

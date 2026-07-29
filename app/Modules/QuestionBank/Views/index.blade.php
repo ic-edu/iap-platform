@@ -44,8 +44,8 @@
 
     <!-- Section 2: Quick Action Hub & Authoring Form -->
     <div class="grid gap-6 lg:grid-cols-3 mb-8">
-        <!-- New Question Bank Form (Teacher & Admin Only) -->
-        @if (!Auth::user()?->hasRole('super-admin'))
+        <!-- New Question Bank Form (Teacher Only - QB-002) -->
+        @if (Auth::user()?->hasRole('teacher'))
             <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
                 <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
                     <span>📂</span> {{ __('Create Question Bank') }}
@@ -80,7 +80,7 @@
         @endif
 
         <!-- Question Banks Table -->
-        <div class="{{ Auth::user()?->hasRole('super-admin') ? 'lg:col-span-3' : 'lg:col-span-2' }} bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
+        <div class="{{ Auth::user()?->hasRole('teacher') ? 'lg:col-span-2' : 'lg:col-span-3' }} bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-base font-semibold text-white">{{ __('Question Banks Listing') }}</h3>
                 <form method="GET" action="{{ route('admin.question-banks.index') }}" class="flex gap-2">
@@ -106,6 +106,8 @@
                                     'published' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
                                     'approved' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
                                     'pending_approval' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                    'pending_archive_approval' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                    'archived' => 'bg-slate-800 text-slate-400 border-slate-700',
                                     'rejected' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
                                     default => 'bg-slate-800 text-slate-400 border-slate-700',
                                 };
@@ -130,9 +132,9 @@
                                 <td class="p-3 font-semibold text-white">{{ $bank->questions->count() }} items</td>
                                 <td class="p-3 text-right space-x-2">
                                     <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="text-xs text-indigo-400 font-semibold hover:underline">
-                                        Author Items
+                                        {{ Auth::user()?->hasRole('teacher') ? 'Author Items' : 'View Items' }}
                                     </a>
-                                    @if (in_array($bank->status, ['draft', 'rejected', null]) && !Auth::user()?->hasRole('super-admin'))
+                                    @if (Auth::user()?->hasRole('teacher') && in_array($bank->status, ['draft', 'rejected', null]))
                                         <form method="POST" action="{{ route('admin.question-banks.submit', $bank->id) }}" class="inline">
                                             @csrf
                                             <button type="submit" class="text-xs text-amber-400 hover:underline font-semibold">Submit</button>

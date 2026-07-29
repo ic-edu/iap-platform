@@ -32,23 +32,31 @@
             <p class="text-xs text-slate-400 mt-0.5">Test Type: <span class="uppercase font-bold text-indigo-400">{{ $questionBank->test_type }}</span> | Total Questions: <span class="font-bold text-white">{{ $questionBank->questions->count() }}</span></p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <!-- Edit Details Button (Teacher, Admin, Super Admin) -->
-            <button onclick="document.getElementById('edit-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
-                ✏ Edit Bank Details
-            </button>
+            @if (Auth::user()?->hasRole('teacher'))
+                <!-- Teacher Content Creator Actions -->
+                <button onclick="document.getElementById('edit-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                    ✏ Edit Bank Details
+                </button>
 
-            <!-- Submit for Approval (Teacher / Admin when draft or rejected) -->
-            @if (in_array($questionBank->status, ['draft', 'rejected', null]) && !Auth::user()?->hasRole('super-admin'))
-                <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline">
-                    @csrf
-                    <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
-                        🚀 Submit for Approval
-                    </button>
-                </form>
+                @if (in_array($questionBank->status, ['draft', 'rejected', null]))
+                    <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
+                            🚀 Submit for Approval
+                        </button>
+                    </form>
+                @endif
+
+                <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                    📥 Bulk Import
+                </button>
+                <button onclick="openCreateQuestionModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
+                    + Add Question
+                </button>
             @endif
 
-            <!-- Publish / Unpublish (Admin Only) -->
             @if (Auth::user()?->hasRole('admin') && !Auth::user()?->hasRole('super-admin'))
+                <!-- Operational Admin Content Operator Actions -->
                 @if ($questionBank->status === 'approved')
                     <form action="{{ route('admin.question-banks.publish', $questionBank->id) }}" method="POST" class="inline">
                         @csrf
@@ -64,15 +72,12 @@
                         </button>
                     </form>
                 @endif
-            @endif
 
-            @if (!Auth::user()?->hasRole('super-admin'))
-                <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
-                    📥 Bulk Import
-                </button>
-                <button onclick="openCreateQuestionModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
-                    + Add Question
-                </button>
+                @if (!in_array($questionBank->status, ['archived', 'pending_archive_approval']))
+                    <button onclick="document.getElementById('archive-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 text-xs font-semibold rounded-lg border border-amber-500/30 transition-colors">
+                        📦 Request Archive
+                    </button>
+                @endif
             @endif
         </div>
     </div>
@@ -142,13 +147,15 @@
                             <button type="button" onclick='openViewQuestionModal({{ json_encode($q) }})' class="text-xs text-slate-300 hover:text-white font-semibold">
                                 👁 View
                             </button>
-                            <button type="button" onclick='openEditQuestionModal({{ json_encode($q) }})' class="text-xs text-indigo-400 hover:underline font-semibold">
-                                ✏ Edit
-                            </button>
-                            <form action="{{ route('admin.question-banks.duplicate-question', $q->id) }}" method="POST" class="inline">
-                                @csrf
-                                <button type="submit" class="text-xs text-amber-400 hover:underline font-semibold">📄 Duplicate</button>
-                            </form>
+                            @if (Auth::user()?->hasRole('teacher'))
+                                <button type="button" onclick='openEditQuestionModal({{ json_encode($q) }})' class="text-xs text-indigo-400 hover:underline font-semibold">
+                                    ✏ Edit
+                                </button>
+                                <form action="{{ route('admin.question-banks.duplicate-question', $q->id) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" class="text-xs text-amber-400 hover:underline font-semibold">📄 Duplicate</button>
+                                </form>
+                            @endif
                             @if (!Auth::user()?->hasRole('teacher'))
                                 <form action="{{ route('admin.question-banks.destroy-question', $q->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete this question?')">
                                     @csrf
@@ -759,6 +766,30 @@
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
                     <button type="button" onclick="document.getElementById('edit-bank-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
                     <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Request Archive Modal (QB-002) -->
+    <div id="archive-bank-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-base font-bold text-white flex items-center gap-2"><span>📦</span> Request Question Bank Archival</h2>
+                <button type="button" onclick="document.getElementById('archive-bank-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <form action="{{ route('admin.question-banks.request-archive', $questionBank->id) }}" method="POST" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Reason / Justification for Archiving *</label>
+                    <textarea name="reason" required rows="4" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-amber-500 focus:outline-none" placeholder="Provide justification for archiving this item pool..."></textarea>
+                </div>
+                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-300">
+                    💡 <strong>Governance Notice:</strong> Operational Admins cannot archive directly. Submitting this request sends it to the Super Admin Approval Center.
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="document.getElementById('archive-bank-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg shadow">Submit Archive Request</button>
                 </div>
             </form>
         </div>
