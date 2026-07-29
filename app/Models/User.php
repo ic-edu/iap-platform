@@ -49,6 +49,16 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Creation requests for this user.
+     *
+     * @return HasMany<UserCreationRequest, $this>
+     */
+    public function creationRequests(): HasMany
+    {
+        return $this->hasMany(UserCreationRequest::class, 'user_id');
+    }
+
+    /**
      * Deletion requests for this user.
      *
      * @return HasMany<UserDeletionRequest, $this>
@@ -56,6 +66,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function deletionRequests(): HasMany
     {
         return $this->hasMany(UserDeletionRequest::class, 'user_id');
+    }
+
+    /**
+     * Check if user has a pending creation approval request.
+     */
+    public function hasPendingCreationRequest(): bool
+    {
+        return $this->status === 'pending_approval' || $this->creationRequests()->where('status', 'pending')->exists();
     }
 
     /**

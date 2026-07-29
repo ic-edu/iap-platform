@@ -97,6 +97,8 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->name('admin.approvals.index');
         Route::post('/{test}/approve', [ApprovalController::class, 'approve'])->name('admin.approvals.approve');
         Route::post('/{test}/reject', [ApprovalController::class, 'reject'])->name('admin.approvals.reject');
+        Route::post('/users/creation/{creationRequest}/approve', [ApprovalController::class, 'approveUserCreation'])->name('admin.approvals.users.creation.approve');
+        Route::post('/users/creation/{creationRequest}/reject', [ApprovalController::class, 'rejectUserCreation'])->name('admin.approvals.users.creation.reject');
         Route::post('/users/{deletionRequest}/approve', [ApprovalController::class, 'approveUserDeletion'])->name('admin.approvals.users.approve');
         Route::post('/users/{deletionRequest}/reject', [ApprovalController::class, 'rejectUserDeletion'])->name('admin.approvals.users.reject');
     });

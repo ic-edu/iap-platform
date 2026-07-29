@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Notifications\SystemAlertNotification;
 use App\Services\ActivityLogger;
@@ -17,7 +18,7 @@ use Illuminate\View\View;
 class UserController extends Controller
 {
     /**
-     * Enforce hierarchical role protection (Baseline v1.1 UAC-001 / UAC-002).
+     * Enforce hierarchical role protection (Baseline v1.1 UAC-001 / UAC-002 / UAC-003).
      *
      * Hierarchy: Super Admin > Admin > Teacher > Student (Finance is independent)
      * Admin MUST NOT manage or request deletion of Super Admin accounts.
@@ -55,7 +56,7 @@ class UserController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = User::with(['roles', 'deletionRequests']);
+        $query = User::with(['roles', 'deletionRequests', 'creationRequests']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -78,7 +79,9 @@ class UserController extends Controller
     }
 
     /**
-     * Store a new user account with role, status, and audit log.
+     * Store a new user account with role-based workflow (UAC-003).
+     * Students = Immediate Active.
+     * Staff (Teacher, Finance, Admin) by Regular Admin = Pending Approval.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -89,10 +92,10 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', 'string', 'in:super-admin,admin,teacher,student,finance'],
-            'status' => ['nullable', 'string', 'in:active,inactive'],
             'phone_number' => ['nullable', 'string', 'max:50'],
         ]);
 
+        // Regular Admin assigning Super Admin is forbidden
         if ($actor && $actor->hasRole('admin') && !$actor->hasRole('super-admin') && $validated['role'] === 'super-admin') {
             ActivityLogger::log(
                 action: 'FORBIDDEN_USER_MANAGEMENT',
@@ -111,29 +114,78 @@ class UserController extends Controller
             abort(403, 'Hierarchical Role Protection: Admins are not permitted to assign the Super Admin role.');
         }
 
+        // Determine initial status based on UAC-003 rules
+        $role = $validated['role'];
+        $isStudent = ($role === 'student');
+        $isSuperAdminActor = ($actor && $actor->hasRole('super-admin'));
+
+        if ($isStudent || $isSuperAdminActor) {
+            $initialStatus = 'active';
+        } else {
+            // Regular Admin creating Staff requires Super Admin approval
+            $initialStatus = 'pending_approval';
+        }
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'status' => $validated['status'] ?? 'active',
+            'status' => $initialStatus,
             'phone_number' => $validated['phone_number'] ?? null,
         ]);
 
-        $user->assignRole($validated['role']);
+        $user->assignRole($role);
 
         ActivityLogger::log(
             'USER_CREATED',
-            "Created user account {$user->name} ({$user->email}) with role {$validated['role']}",
+            "Created user account {$user->name} ({$user->email}) with role {$role} and status {$initialStatus}",
             $user
         );
 
         ActivityLogger::log(
             'ROLE_ASSIGNED',
-            "Assigned role {$validated['role']} to user {$user->email}",
+            "Assigned role {$role} to user {$user->email}",
             $user
         );
 
-        return redirect()->route('admin.users.index')->with('status', "User {$user->name} created successfully.");
+        if ($initialStatus === 'active') {
+            ActivityLogger::log(
+                'ACCOUNT_ACTIVATED',
+                "Activated user account {$user->name} ({$user->email}) directly",
+                $user
+            );
+
+            return redirect()->route('admin.users.index')->with('status', "User {$user->name} created and activated successfully.");
+        }
+
+        // Handle Staff Creation Approval Request for Regular Admin
+        UserCreationRequest::create([
+            'user_id' => $user->id,
+            'requested_by' => $actor ? $actor->id : Auth::id(),
+            'requested_role' => $role,
+            'status' => 'pending',
+        ]);
+
+        ActivityLogger::log(
+            'APPROVAL_SUBMITTED',
+            "Submitted user creation approval request for {$user->name} ({$user->email}) with role {$role}",
+            $user
+        );
+
+        // Notify Super Admins of new user approval pending
+        $superAdmins = User::role('super-admin')->get();
+        foreach ($superAdmins as $sa) {
+            try {
+                $sa->notify(new SystemAlertNotification(
+                    'New User Creation Approval Pending',
+                    "Admin {$actor?->name} created a staff account for {$user->name} ({$user->email}) with role {$role}. Super Admin approval is required before login."
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle notification errors in dev
+            }
+        }
+
+        return redirect()->route('admin.users.index')->with('status', "Staff account for {$user->name} created successfully and is now Pending Approval by Super Admin.");
     }
 
     /**
@@ -147,7 +199,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'role' => ['required', 'string', 'in:super-admin,admin,teacher,student,finance'],
-            'status' => ['required', 'string', 'in:active,inactive,pending_delete_approval'],
+            'status' => ['required', 'string', 'in:active,inactive,pending_approval,pending_delete_approval,archived'],
             'phone_number' => ['nullable', 'string', 'max:50'],
         ]);
 

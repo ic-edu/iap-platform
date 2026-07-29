@@ -41,6 +41,18 @@ class AuthenticatedSessionController extends Controller
 
         /** @var User|null $user */
         $user = $request->user();
+
+        // Check if account status is pending approval (UAC-003)
+        if ($user && $user->status === 'pending_approval') {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'Your account is awaiting approval.',
+            ]);
+        }
+
         if ($user) {
             event(new UserLoggedIn($user));
         }

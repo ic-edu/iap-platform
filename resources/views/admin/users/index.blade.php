@@ -239,26 +239,20 @@
                     <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number (Optional)</label>
                     <input type="text" name="phone_number" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="+1234567890">
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Security Role *</label>
-                        <select name="role" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
-                            <option value="student">Student / Candidate</option>
-                            <option value="teacher">Teacher / Author</option>
-                            <option value="admin">Administrator</option>
-                            <option value="finance">Finance Admin</option>
-                            @if (Auth::user()?->hasRole('super-admin'))
-                                <option value="super-admin">Super Admin</option>
-                            @endif
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Initial Status *</label>
-                        <select name="status" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Security Role *</label>
+                    <select name="role" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <option value="student">Student / Candidate (Immediate Active)</option>
+                        <option value="teacher">Teacher / Author (Requires Super Admin Approval)</option>
+                        <option value="admin">Administrator (Requires Super Admin Approval)</option>
+                        <option value="finance">Finance Admin (Requires Super Admin Approval)</option>
+                        @if (Auth::user()?->hasRole('super-admin'))
+                            <option value="super-admin">Super Admin (Direct Active)</option>
+                        @endif
+                    </select>
+                </div>
+                <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[11px] text-indigo-300">
+                    💡 <strong>UAC Governance:</strong> Student accounts become active immediately upon creation. Internal staff accounts (Teacher, Admin, Finance) created by regular Admins enter <em>Pending Approval</em> status until reviewed by a Super Admin.
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
                     <button type="button" onclick="document.getElementById('create-user-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>

@@ -23,50 +23,44 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolesAndPermissionsSeeder::class);
 
+        // Helper to find or create user even if soft-deleted
+        $findOrCreate = function (string $email, string $name, string $role) {
+            $user = User::withTrashed()->where('email', $email)->first();
+            if (!$user) {
+                $user = User::create([
+                    'email' => $email,
+                    'name' => $name,
+                    'password' => Hash::make('password'),
+                    'status' => 'active',
+                ]);
+            } else {
+                if ($user->trashed()) {
+                    $user->restore();
+                }
+                $user->update(['status' => 'active']);
+            }
+            $user->syncRoles([$role]);
+
+            return $user;
+        };
+
         // 1. Super Admin Demo Account
-        $admin = User::firstOrCreate([
-            'email' => 'admin@icedu.org',
-        ], [
-            'name' => 'Super Admin',
-            'password' => Hash::make('password'),
-        ]);
-        $admin->assignRole('super-admin');
+        $findOrCreate('admin@icedu.org', 'Super Admin', 'super-admin');
 
-        // 2. Teacher Demo Account
-        $teacher = User::firstOrCreate([
-            'email' => 'teacher@icedu.org',
-        ], [
-            'name' => 'Teacher Instructor',
-            'password' => Hash::make('password'),
-        ]);
-        $teacher->assignRole('teacher');
+        // 2. Operational Admin Demo Account
+        $findOrCreate('opadmin@icedu.org', 'Operational Admin', 'admin');
 
-        // 3. Student Demo Account
-        $student = User::firstOrCreate([
-            'email' => 'student@icedu.org',
-        ], [
-            'name' => 'Candidate Student',
-            'password' => Hash::make('password'),
-        ]);
-        $student->assignRole('student');
+        // 3. Teacher Demo Account
+        $findOrCreate('teacher@icedu.org', 'Teacher Instructor', 'teacher');
 
-        // 4. Finance Demo Account
-        $finance = User::firstOrCreate([
-            'email' => 'finance@icedu.org',
-        ], [
-            'name' => 'Finance Manager',
-            'password' => Hash::make('password'),
-        ]);
-        $finance->assignRole('admin');
+        // 4. Student Demo Account
+        $findOrCreate('student@icedu.org', 'Candidate Student', 'student');
 
-        // General Test User
-        $testUser = User::firstOrCreate([
-            'email' => 'test@example.com',
-        ], [
-            'name' => 'Test User',
-            'password' => Hash::make('password'),
-        ]);
-        $testUser->assignRole('super-admin');
+        // 5. Finance Demo Account
+        $findOrCreate('finance@icedu.org', 'Finance Manager', 'finance');
+
+        // 6. General Test User
+        $findOrCreate('test@example.com', 'Test User', 'super-admin');
 
         $this->call([
             AcademicSeeder::class,

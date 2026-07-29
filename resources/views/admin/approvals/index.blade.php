@@ -4,7 +4,7 @@
             <h1 class="text-2xl font-bold text-white flex items-center gap-2">
                 <span>🛡️</span> Super Admin Content Approval Center
             </h1>
-            <p class="text-xs text-slate-400 mt-1">Review, approve, and authorize assessment tests and enterprise user deletion requests.</p>
+            <p class="text-xs text-slate-400 mt-1">Review, approve, and authorize assessment tests, staff user creations, and enterprise deletion requests.</p>
         </div>
     </div>
 
@@ -21,28 +21,111 @@
     @endif
 
     <!-- Metrics Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
-                <span class="text-xs text-slate-400 font-medium uppercase">Pending Assessment Submissions</span>
-                <span class="text-3xl font-extrabold text-amber-400 mt-1 block">{{ $pendingCount }}</span>
+                <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Assessments</span>
+                <span class="text-2xl font-extrabold text-amber-400 mt-0.5 block">{{ $pendingCount }}</span>
             </div>
-            <span class="text-3xl">⏳</span>
+            <span class="text-2xl">⏳</span>
         </div>
-        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
-                <span class="text-xs text-slate-400 font-medium uppercase">Pending User Deletion Requests</span>
-                <span class="text-3xl font-extrabold text-rose-400 mt-1 block">{{ $pendingUserDeletionCount ?? 0 }}</span>
+                <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Staff Creations</span>
+                <span class="text-2xl font-extrabold text-indigo-400 mt-0.5 block">{{ $pendingUserCreationCount ?? 0 }}</span>
             </div>
-            <span class="text-3xl">📩</span>
+            <span class="text-2xl">👤</span>
         </div>
-        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
-                <span class="text-xs text-slate-400 font-medium uppercase">Approved &amp; Live Assessments</span>
-                <span class="text-3xl font-extrabold text-emerald-400 mt-1 block">{{ $publishedCount }}</span>
+                <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Deletion Requests</span>
+                <span class="text-2xl font-extrabold text-rose-400 mt-0.5 block">{{ $pendingUserDeletionCount ?? 0 }}</span>
             </div>
-            <span class="text-3xl">🚀</span>
+            <span class="text-2xl">📩</span>
         </div>
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+            <div>
+                <span class="text-[10px] text-slate-400 font-medium uppercase block">Live Assessments</span>
+                <span class="text-2xl font-extrabold text-emerald-400 mt-0.5 block">{{ $publishedCount }}</span>
+            </div>
+            <span class="text-2xl">🚀</span>
+        </div>
+    </div>
+
+    <!-- Pending Staff Creation Requests Table (UAC-003) -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+            <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span>👤</span> Staff User Creation Approval Queue
+                </h2>
+                <p class="text-xs text-slate-400">Review pending internal staff user creations (Teachers, Finance, Admins) submitted by Administrators.</p>
+            </div>
+            <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                {{ $pendingUserCreationCount ?? 0 }} Pending Requests
+            </span>
+        </div>
+        <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
+                <tr>
+                    <th class="p-4">Staff User Details</th>
+                    <th class="p-4">Requested Role</th>
+                    <th class="p-4">Created By (Admin)</th>
+                    <th class="p-4">Request Date</th>
+                    <th class="p-4 text-right">Approval Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+                @forelse ($userCreationRequests ?? [] as $createReq)
+                    @php
+                        $target = $createReq->targetUser;
+                        $roleName = $createReq->requested_role;
+                        $roleBadge = match($roleName) {
+                            'admin' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                            'teacher' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                            'finance' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                            default => 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+                        };
+                    @endphp
+                    <tr>
+                        <td class="p-4">
+                            <div class="font-semibold text-white">{{ $target?->name ?? 'Staff Account' }}</div>
+                            <div class="text-xs font-mono text-indigo-400">{{ $target?->email ?? 'N/A' }}</div>
+                        </td>
+                        <td class="p-4">
+                            <span class="px-2.5 py-0.5 text-[10px] font-bold rounded border uppercase {{ $roleBadge }}">
+                                {{ $roleName }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-xs text-slate-300">
+                            {{ $createReq->requester?->name ?? 'Admin' }}
+                            <div class="text-slate-500 font-mono">{{ $createReq->requester?->email }}</div>
+                        </td>
+                        <td class="p-4 text-xs text-slate-400">{{ $createReq->created_at?->format('Y-m-d H:i') }}</td>
+                        <td class="p-4 text-right space-x-2">
+                            <form action="{{ route('admin.approvals.users.creation.approve', $createReq->id) }}" method="POST" class="inline"
+                                  onsubmit="return confirm('Approve and activate staff user account {{ $target?->email }}?')">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
+                                    ✓ Approve &amp; Activate
+                                </button>
+                            </form>
+                            <form action="{{ route('admin.approvals.users.creation.reject', $createReq->id) }}" method="POST" class="inline"
+                                  onsubmit="return confirm('Reject staff user creation request for {{ $target?->email }}?')">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
+                                    ✗ Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-slate-500">No pending staff creation requests in approval queue. All staff user creation workflows are up to date.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 
     <!-- Pending User Deletion Requests Table (UAC-002) -->
