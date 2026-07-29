@@ -183,10 +183,10 @@ class UserManagementTest extends TestCase
             ->delete(route('admin.users.destroy', $target));
 
         $response->assertRedirect(route('admin.users.index'));
-        $this->assertDatabaseMissing('users', ['id' => $target->id]);
+        $this->assertSoftDeleted('users', ['id' => $target->id]);
 
         $this->assertDatabaseHas('activity_logs', [
-            'action' => 'USER_DELETED',
+            'action' => 'USER_SOFT_DELETED',
         ]);
     }
 

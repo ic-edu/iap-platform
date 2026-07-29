@@ -45,6 +45,7 @@
                 <option value="">All Account Statuses</option>
                 <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                 <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                <option value="pending_delete_approval" {{ request('status') === 'pending_delete_approval' ? 'selected' : '' }}>Pending Delete Approval</option>
             </select>
 
             <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
@@ -84,9 +85,11 @@
                             default => 'bg-slate-800 text-slate-400 border-slate-700',
                         };
                         $isSelf = Auth::id() === $user->id;
-                        $actorIsRegularAdmin = Auth::user()?->hasRole('admin') && !Auth::user()?->hasRole('super-admin');
+                        $actorIsSuperAdmin = Auth::user()?->hasRole('super-admin');
+                        $actorIsRegularAdmin = Auth::user()?->hasRole('admin') && !$actorIsSuperAdmin;
                         $targetIsSuperAdmin = $user->hasRole('super-admin');
                         $isProtectedFromActor = $actorIsRegularAdmin && $targetIsSuperAdmin;
+                        $hasPendingDeletion = $user->status === 'pending_delete_approval' || $user->hasPendingDeletionRequest();
                     @endphp
                     <tr class="hover:bg-slate-950/40 transition-colors">
                         <td class="p-4">
@@ -109,7 +112,11 @@
                             </span>
                         </td>
                         <td class="p-4">
-                            @if ($user->status === 'inactive')
+                            @if ($hasPendingDeletion)
+                                <span class="px-2.5 py-0.5 text-[10px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase flex items-center gap-1 w-max">
+                                    ⏳ Pending Approval
+                                </span>
+                            @elseif ($user->status === 'inactive')
                                 <span class="px-2.5 py-0.5 text-[10px] font-bold rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase">
                                     INACTIVE
                                 </span>
@@ -161,16 +168,32 @@
                                         </form>
                                     @endif
 
-                                    <!-- Delete User (Disabled for self) -->
+                                    <!-- Deletion Workflow Buttons (UAC-002) -->
                                     @if (! $isSelf)
-                                        <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline" 
-                                              onsubmit="return confirm('⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE user {{ $user->email }}? This action cannot be undone.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="px-2 py-1 bg-rose-500/10 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 border border-rose-500/20 rounded transition-colors">
-                                                🗑 Delete
-                                            </button>
-                                        </form>
+                                        @if ($actorIsRegularAdmin)
+                                            <!-- Regular Admin: Must Request Delete -->
+                                            @if ($hasPendingDeletion)
+                                                <span class="px-2 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold rounded cursor-not-allowed" title="Deletion Request Pending Approval">
+                                                    ⏳ Pending Approval
+                                                </span>
+                                            @else
+                                                <button type="button" 
+                                                        onclick='openRequestDeleteModal({{ json_encode($user) }})'
+                                                        class="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded transition-colors" title="Request User Deletion">
+                                                    📩 Request Delete
+                                                </button>
+                                            @endif
+                                        @elseif ($actorIsSuperAdmin)
+                                            <!-- Super Admin: Direct Soft Delete or Request Delete -->
+                                            <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline" 
+                                                  onsubmit="return confirm('⚠️ WARNING: Soft delete user {{ $user->email }}?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="px-2 py-1 bg-rose-500/10 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 border border-rose-500/20 rounded transition-colors">
+                                                    🗑 Delete
+                                                </button>
+                                            </form>
+                                        @endif
                                     @else
                                         <span class="px-2 py-1 bg-slate-800 text-slate-500 text-[10px] font-bold rounded cursor-not-allowed" title="Current Active Session">
                                             Self
@@ -240,6 +263,38 @@
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
                     <button type="button" onclick="document.getElementById('create-user-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
                     <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Request User Deletion Modal (UAC-002) -->
+    <div id="request-delete-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-base font-bold text-white flex items-center gap-2">
+                    <span>📩 Request User Deletion Approval</span>
+                </h2>
+                <button type="button" onclick="document.getElementById('request-delete-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">
+                Submit user deletion request for <strong id="request-delete-user-name" class="text-white"></strong> (<span id="request-delete-user-email" class="text-indigo-400 font-mono"></span>).
+                This request will be sent to the Super Admin Approval Center.
+            </p>
+            
+            <form id="request-delete-form" method="POST" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Reason for Deletion Request *</label>
+                    <textarea name="reason" required minlength="5" rows="3" placeholder="Provide clear business or security justification for deleting this user account..." 
+                              class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-rose-500 focus:outline-none"></textarea>
+                </div>
+                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-300">
+                    ⚠️ <strong>Governance Notice:</strong> Permanent user deletion requires Super Admin approval. Account status will change to <em>Pending Delete Approval</em>.
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="document.getElementById('request-delete-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-lg shadow">Submit Request</button>
                 </div>
             </form>
         </div>
@@ -332,6 +387,7 @@
                         <select id="edit-user-status" name="status" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
+                            <option value="pending_delete_approval">Pending Delete Approval</option>
                         </select>
                     </div>
                 </div>
@@ -377,7 +433,7 @@
             document.getElementById('view-user-email').innerText = user.email;
             document.getElementById('view-user-role').innerText = role;
             document.getElementById('view-user-status').innerText = user.status || 'active';
-            document.getElementById('view-user-status').className = (user.status === 'inactive') ? 'font-bold uppercase text-rose-400' : 'font-bold uppercase text-emerald-400';
+            document.getElementById('view-user-status').className = (user.status === 'inactive') ? 'font-bold uppercase text-rose-400' : ((user.status === 'pending_delete_approval') ? 'font-bold uppercase text-amber-400' : 'font-bold uppercase text-emerald-400');
             document.getElementById('view-user-phone').innerText = user.phone_number || 'N/A';
             document.getElementById('view-user-created').innerText = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
             document.getElementById('view-user-updated').innerText = user.updated_at ? new Date(user.updated_at).toLocaleDateString() : 'N/A';
@@ -392,6 +448,13 @@
             document.getElementById('edit-user-role').value = role;
             document.getElementById('edit-user-status').value = user.status || 'active';
             document.getElementById('edit-user-modal').classList.remove('hidden');
+        }
+
+        function openRequestDeleteModal(user) {
+            document.getElementById('request-delete-form').action = "/admin/users/" + user.id + "/request-delete";
+            document.getElementById('request-delete-user-name').innerText = user.name;
+            document.getElementById('request-delete-user-email').innerText = user.email;
+            document.getElementById('request-delete-modal').classList.remove('hidden');
         }
 
         function openResetPasswordModal(user) {

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -23,6 +24,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $status
  * @property string|null $phone_number
  * @property Carbon|null $email_verified_at
+ * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -31,7 +33,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -44,6 +46,24 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Deletion requests for this user.
+     *
+     * @return HasMany<UserDeletionRequest, $this>
+     */
+    public function deletionRequests(): HasMany
+    {
+        return $this->hasMany(UserDeletionRequest::class, 'user_id');
+    }
+
+    /**
+     * Check if user has a pending deletion approval request.
+     */
+    public function hasPendingDeletionRequest(): bool
+    {
+        return $this->deletionRequests()->where('status', 'pending')->exists();
     }
 
     /**

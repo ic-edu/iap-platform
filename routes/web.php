@@ -97,6 +97,8 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->name('admin.approvals.index');
         Route::post('/{test}/approve', [ApprovalController::class, 'approve'])->name('admin.approvals.approve');
         Route::post('/{test}/reject', [ApprovalController::class, 'reject'])->name('admin.approvals.reject');
+        Route::post('/users/{deletionRequest}/approve', [ApprovalController::class, 'approveUserDeletion'])->name('admin.approvals.users.approve');
+        Route::post('/users/{deletionRequest}/reject', [ApprovalController::class, 'rejectUserDeletion'])->name('admin.approvals.users.reject');
     });
 
     Route::prefix('admin/audit-logs')->group(function () {
@@ -118,8 +120,10 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::get('/', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/', [UserController::class, 'store'])->name('admin.users.store');
         Route::put('/{user}', [UserController::class, 'update'])->name('admin.users.update');
+        Route::post('/{user}/request-delete', [UserController::class, 'requestDelete'])->name('admin.users.request-delete');
         Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
         Route::post('/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
+        Route::post('/{id}/restore', [UserController::class, 'restore'])->name('admin.users.restore');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
 });

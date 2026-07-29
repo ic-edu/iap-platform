@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserDeletionRequest;
+use App\Notifications\SystemAlertNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,10 +17,10 @@ use Illuminate\View\View;
 class UserController extends Controller
 {
     /**
-     * Enforce hierarchical role protection (Baseline v1.1 UAC-001).
+     * Enforce hierarchical role protection (Baseline v1.1 UAC-001 / UAC-002).
      *
      * Hierarchy: Super Admin > Admin > Teacher > Student (Finance is independent)
-     * Admin MUST NOT manage Super Admin accounts.
+     * Admin MUST NOT manage or request deletion of Super Admin accounts.
      */
     private function checkHierarchicalProtection(Request $request, User $targetUser, string $actionName): void
     {
@@ -44,7 +46,7 @@ class UserController extends Controller
                 ]
             );
 
-            abort(403, 'Hierarchical Role Protection: Admins are not permitted to manage or modify Super Admin accounts.');
+            abort(403, 'Hierarchical Role Protection: Admins are not permitted to manage, modify, or request deletion of Super Admin accounts.');
         }
     }
 
@@ -53,7 +55,7 @@ class UserController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = User::with('roles');
+        $query = User::with(['roles', 'deletionRequests']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -145,7 +147,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'role' => ['required', 'string', 'in:super-admin,admin,teacher,student,finance'],
-            'status' => ['required', 'string', 'in:active,inactive'],
+            'status' => ['required', 'string', 'in:active,inactive,pending_delete_approval'],
             'phone_number' => ['nullable', 'string', 'max:50'],
         ]);
 
@@ -194,6 +196,68 @@ class UserController extends Controller
         );
 
         return redirect()->route('admin.users.index')->with('status', "User {$user->name} updated successfully.");
+    }
+
+    /**
+     * Submit a user deletion request for Super Admin approval (UAC-002).
+     */
+    public function requestDelete(Request $request, User $user): RedirectResponse
+    {
+        $this->checkHierarchicalProtection($request, $user, 'request_delete');
+
+        if ($user->id === Auth::id()) {
+            return redirect()->back()->with('error', 'Cannot request deletion of your own active session.');
+        }
+
+        if ($user->hasRole('super-admin')) {
+            return redirect()->back()->with('error', 'Super Admin accounts are permanently protected from deletion requests.');
+        }
+
+        if ($user->hasPendingDeletionRequest()) {
+            return redirect()->back()->with('error', 'A deletion request for this user is already pending Super Admin approval.');
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:1000'],
+        ]);
+
+        $actor = $request->user();
+
+        UserDeletionRequest::create([
+            'user_id' => $user->id,
+            'requested_by' => $actor ? $actor->id : Auth::id(),
+            'reason' => $validated['reason'],
+            'status' => 'pending',
+        ]);
+
+        $user->update(['status' => 'pending_delete_approval']);
+
+        ActivityLogger::log(
+            'DELETE_REQUEST_SUBMITTED',
+            "Submitted user deletion request for {$user->name} ({$user->email}). Reason: {$validated['reason']}",
+            $user,
+            [
+                'target_user_id' => $user->id,
+                'target_user_email' => $user->email,
+                'reason' => $validated['reason'],
+                'result' => 'Success',
+            ]
+        );
+
+        // Notify Super Admins of new approval pending
+        $superAdmins = User::role('super-admin')->get();
+        foreach ($superAdmins as $sa) {
+            try {
+                $sa->notify(new SystemAlertNotification(
+                    'New User Deletion Approval Pending',
+                    "Admin {$actor?->name} requested deletion of user {$user->name} ({$user->email}). Reason: {$validated['reason']}"
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle notification errors in dev
+            }
+        }
+
+        return redirect()->route('admin.users.index')->with('status', "Deletion request for user {$user->name} submitted for Super Admin approval successfully.");
     }
 
     /**
@@ -246,11 +310,18 @@ class UserController extends Controller
     }
 
     /**
-     * Delete user account with audit log, hierarchical role protection, and self-deletion protection.
+     * Delete user account (Super Admin Only / Soft Delete according to UAC-002).
      */
     public function destroy(Request $request, User $user): RedirectResponse
     {
+        $actor = $request->user();
+
         $this->checkHierarchicalProtection($request, $user, 'delete');
+
+        // Regular Admin MUST NOT delete user directly (Must use Request Delete)
+        if ($actor && $actor->hasRole('admin') && !$actor->hasRole('super-admin')) {
+            abort(403, 'Regular Admins cannot directly delete users. Please submit a deletion request for Super Admin approval.');
+        }
 
         if ($user->id === Auth::id()) {
             return redirect()->back()->with('error', 'Cannot delete your own active session.');
@@ -264,12 +335,37 @@ class UserController extends Controller
         $email = $user->email;
 
         ActivityLogger::log(
-            'USER_DELETED',
-            "Deleted user account {$name} ({$email})"
+            'USER_SOFT_DELETED',
+            "Soft deleted user account {$name} ({$email})",
+            $user
         );
 
+        $user->update(['status' => 'deleted']);
         $user->delete();
 
-        return redirect()->route('admin.users.index')->with('status', "User {$name} deleted successfully.");
+        return redirect()->route('admin.users.index')->with('status', "User {$name} soft-deleted successfully.");
+    }
+
+    /**
+     * Restore soft deleted user account (Super Admin Only).
+     */
+    public function restore(Request $request, string $id): RedirectResponse
+    {
+        $actor = $request->user();
+        if (!$actor || !$actor->hasRole('super-admin')) {
+            abort(403, 'Only Super Admin can restore soft-deleted users.');
+        }
+
+        $user = User::withTrashed()->findOrFail($id);
+        $user->restore();
+        $user->update(['status' => 'active']);
+
+        ActivityLogger::log(
+            'USER_RESTORED',
+            "Restored soft deleted user account {$user->name} ({$user->email})",
+            $user
+        );
+
+        return redirect()->route('admin.users.index')->with('status', "User {$user->name} restored successfully.");
     }
 }
