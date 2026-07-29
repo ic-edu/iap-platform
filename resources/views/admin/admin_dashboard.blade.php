@@ -16,7 +16,7 @@
         </div>
     </x-slot>
 
-    <!-- Operational KPI Metrics Cards -->
+    <!-- Operational KPI Metrics Cards (SA-006 Synchronization) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Active Users</span>
@@ -24,9 +24,9 @@
             <span class="text-xs text-slate-500 mt-1 block">{{ $teachersCount }} Teachers | {{ $studentsCount }} Candidates</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Question Banks</span>
-            <span class="text-3xl font-black text-indigo-400 mt-1 block">{{ $questionBanksCount }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Authoring pools &amp; items</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Published Question Banks</span>
+            <span class="text-3xl font-black text-indigo-400 mt-1 block">{{ $publishedQuestionBanksCount }}</span>
+            <span class="text-xs text-slate-500 mt-1 block">Live item pools</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Published Assessments</span>
@@ -34,9 +34,9 @@
             <span class="text-xs text-slate-500 mt-1 block">Live candidate exams</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Pending Approval</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Pending Approvals</span>
             <span class="text-3xl font-black text-amber-400 mt-1 block">{{ $pendingApprovalsCount }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Draft assessment tests</span>
+            <span class="text-xs text-slate-500 mt-1 block">Approval engine queue</span>
         </div>
     </div>
 

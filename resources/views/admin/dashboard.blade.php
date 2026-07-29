@@ -41,23 +41,29 @@
         </div>
     </div>
 
-    <!-- Assessment Platform Activity KPIs -->
+    <!-- Assessment Platform Activity KPIs (SA-006 Executive Dashboard Synchronization) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <div class="text-xs font-semibold text-slate-400 uppercase">Question Banks</div>
-            <div class="text-3xl font-extrabold text-white mt-1">{{ $questionBanksCount }}</div>
-            <div class="text-[11px] text-slate-500 mt-1">Item pools active</div>
+            <div class="text-xs font-semibold text-slate-400 uppercase">Published Question Banks</div>
+            <div class="text-3xl font-extrabold text-white mt-1">{{ $publishedQuestionBanksCount }}</div>
+            <div class="text-[11px] text-slate-500 mt-1">Live item pools</div>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
             <div class="text-xs font-semibold text-slate-400 uppercase">Published Tests</div>
             <div class="text-3xl font-extrabold text-emerald-400 mt-1">{{ $publishedTestsCount }}</div>
             <div class="text-[11px] text-slate-500 mt-1">Live CBT packages</div>
         </div>
-        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <div class="text-xs font-semibold text-slate-400 uppercase">Pending Approvals</div>
+
+        <!-- Clickable Pending Approvals Card (Navigates to Approval Center) -->
+        <a href="{{ route('admin.approvals.index') }}" class="p-5 bg-slate-900 border border-amber-500/30 hover:border-amber-500/70 bg-gradient-to-br from-amber-500/5 to-transparent rounded-xl transition-all block group shadow-sm">
+            <div class="flex items-center justify-between">
+                <div class="text-xs font-semibold text-amber-400 uppercase">Pending Approvals</div>
+                <span class="text-xs text-amber-400 group-hover:translate-x-1 transition-transform">→</span>
+            </div>
             <div class="text-3xl font-extrabold text-amber-400 mt-1">{{ $pendingApprovalsCount }}</div>
-            <div class="text-[11px] text-slate-500 mt-1">Awaiting review</div>
-        </div>
+            <div class="text-[11px] text-amber-300/70 mt-1 group-hover:underline">Approval Center queue &rarr;</div>
+        </a>
+
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
             <div class="text-xs font-semibold text-slate-400 uppercase">Certificates Issued</div>
             <div class="text-3xl font-extrabold text-indigo-400 mt-1">{{ $certificatesCount }}</div>

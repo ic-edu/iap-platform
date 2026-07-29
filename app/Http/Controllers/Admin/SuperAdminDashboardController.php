@@ -8,6 +8,7 @@ use App\Modules\Assessment\Models\Test as AssessmentTest;
 use App\Modules\Certificate\Models\Certificate;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\Reporting\Services\SystemHealthService;
+use App\Services\ApprovalEngine;
 use Illuminate\View\View;
 
 class SuperAdminDashboardController extends Controller
@@ -17,8 +18,8 @@ class SuperAdminDashboardController extends Controller
     ) {}
 
     /**
-     * Display Super Admin Platform Overview Landing Dashboard (/super-admin/dashboard).
-     * Strictly computes non-overlapping role counters for Baseline v1.1 compliance.
+     * Display Super Admin Executive Platform Overview Landing Dashboard (/super-admin/dashboard).
+     * Synchronized with Approval Engine (SA-006).
      */
     public function superAdminIndex(): View
     {
@@ -33,11 +34,15 @@ class SuperAdminDashboardController extends Controller
         $financeCount = User::role('finance')->count();
         $studentsCount = User::role('student')->count();
 
-        $questionBanksCount = QuestionBank::count();
-        $publishedTestsCount = AssessmentTest::where('is_published', true)->count();
-        $pendingApprovalsCount = AssessmentTest::whereIn('status', ['pending_approval', 'draft'])
-            ->orWhereNull('status')
+        // SA-006: Display Published Question Banks only (excluding Draft, Pending, Rejected, Archived)
+        $publishedQuestionBanksCount = QuestionBank::where('status', 'published')
+            ->orWhere('is_published', true)
             ->count();
+
+        $publishedTestsCount = AssessmentTest::where('is_published', true)->count();
+
+        // SA-006: Synchronized Approval Engine total pending approvals
+        $pendingApprovalsCount = ApprovalEngine::getTotalPendingCount();
         $certificatesCount = Certificate::count();
 
         $systemHealth = $this->healthService->checkHealth();
@@ -51,7 +56,7 @@ class SuperAdminDashboardController extends Controller
             'teachersCount',
             'financeCount',
             'studentsCount',
-            'questionBanksCount',
+            'publishedQuestionBanksCount',
             'publishedTestsCount',
             'pendingApprovalsCount',
             'certificatesCount',
@@ -70,9 +75,11 @@ class SuperAdminDashboardController extends Controller
         $teachersCount = User::role('teacher')->count();
         $studentsCount = User::role('student')->count();
 
-        $questionBanksCount = QuestionBank::count();
+        $publishedQuestionBanksCount = QuestionBank::where('status', 'published')
+            ->orWhere('is_published', true)
+            ->count();
         $publishedTestsCount = AssessmentTest::where('is_published', true)->count();
-        $pendingApprovalsCount = AssessmentTest::where('status', 'pending_approval')->count();
+        $pendingApprovalsCount = ApprovalEngine::getTotalPendingCount();
 
         $recentUsers = User::latest()->take(5)->get();
 
@@ -80,7 +87,7 @@ class SuperAdminDashboardController extends Controller
             'totalUsers',
             'teachersCount',
             'studentsCount',
-            'questionBanksCount',
+            'publishedQuestionBanksCount',
             'publishedTestsCount',
             'pendingApprovalsCount',
             'recentUsers'
