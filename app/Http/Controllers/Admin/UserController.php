@@ -15,6 +15,40 @@ use Illuminate\View\View;
 class UserController extends Controller
 {
     /**
+     * Enforce hierarchical role protection (Baseline v1.1 UAC-001).
+     *
+     * Hierarchy: Super Admin > Admin > Teacher > Student (Finance is independent)
+     * Admin MUST NOT manage Super Admin accounts.
+     */
+    private function checkHierarchicalProtection(Request $request, User $targetUser, string $actionName): void
+    {
+        $actor = $request->user();
+        if (!$actor) {
+            abort(401);
+        }
+
+        // Regular Admin attempting to manage Super Admin account
+        if ($actor->hasRole('admin') && !$actor->hasRole('super-admin') && $targetUser->hasRole('super-admin')) {
+            ActivityLogger::log(
+                action: 'FORBIDDEN_USER_MANAGEMENT',
+                description: "Hierarchical Role Protection: Admin {$actor->email} attempted forbidden action '{$actionName}' on Super Admin account {$targetUser->email}",
+                subject: $targetUser,
+                properties: [
+                    'action_attempted' => $actionName,
+                    'actor_id' => $actor->id,
+                    'actor_email' => $actor->email,
+                    'target_user_id' => $targetUser->id,
+                    'target_user_email' => $targetUser->email,
+                    'result' => 'Forbidden',
+                    'reason' => 'Hierarchical Role Protection',
+                ]
+            );
+
+            abort(403, 'Hierarchical Role Protection: Admins are not permitted to manage or modify Super Admin accounts.');
+        }
+    }
+
+    /**
      * Display listing of platform users with combined search and filtering.
      */
     public function index(Request $request): View
@@ -46,6 +80,8 @@ class UserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $actor = $request->user();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users'],
@@ -54,6 +90,24 @@ class UserController extends Controller
             'status' => ['nullable', 'string', 'in:active,inactive'],
             'phone_number' => ['nullable', 'string', 'max:50'],
         ]);
+
+        if ($actor && $actor->hasRole('admin') && !$actor->hasRole('super-admin') && $validated['role'] === 'super-admin') {
+            ActivityLogger::log(
+                action: 'FORBIDDEN_USER_MANAGEMENT',
+                description: "Hierarchical Role Protection: Admin {$actor->email} attempted to assign Super Admin role to new account {$validated['email']}",
+                subject: null,
+                properties: [
+                    'action_attempted' => 'create_super_admin',
+                    'actor_id' => $actor->id,
+                    'actor_email' => $actor->email,
+                    'target_email' => $validated['email'],
+                    'result' => 'Forbidden',
+                    'reason' => 'Hierarchical Role Protection',
+                ]
+            );
+
+            abort(403, 'Hierarchical Role Protection: Admins are not permitted to assign the Super Admin role.');
+        }
 
         $user = User::create([
             'name' => $validated['name'],
@@ -81,10 +135,12 @@ class UserController extends Controller
     }
 
     /**
-     * Update user details and role with audit log.
+     * Update user details and role with audit log and hierarchical role protection.
      */
     public function update(Request $request, User $user): RedirectResponse
     {
+        $this->checkHierarchicalProtection($request, $user, 'update');
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
@@ -93,8 +149,15 @@ class UserController extends Controller
             'phone_number' => ['nullable', 'string', 'max:50'],
         ]);
 
-        if ($user->id === Auth::id() && $validated['status'] === 'inactive') {
-            return redirect()->back()->with('error', 'Cannot deactivate your own active session.');
+        // Self protection
+        if ($user->id === Auth::id()) {
+            if ($validated['status'] === 'inactive') {
+                return redirect()->back()->with('error', 'Cannot deactivate your own active session.');
+            }
+            $oldRole = $user->roles->first()?->name;
+            if ($oldRole !== $validated['role']) {
+                return redirect()->back()->with('error', 'Cannot demote or change your own active role.');
+            }
         }
 
         $oldRole = $user->roles->first()?->name;
@@ -134,10 +197,12 @@ class UserController extends Controller
     }
 
     /**
-     * Reset user password with audit log.
+     * Reset user password with audit log and hierarchical role protection.
      */
     public function resetPassword(Request $request, User $user): RedirectResponse
     {
+        $this->checkHierarchicalProtection($request, $user, 'reset_password');
+
         $validated = $request->validate([
             'password' => ['required', 'string', 'min:8'],
         ]);
@@ -156,10 +221,12 @@ class UserController extends Controller
     }
 
     /**
-     * Toggle active/inactive status of a user with audit log.
+     * Toggle active/inactive status of a user with audit log and hierarchical role protection.
      */
-    public function toggleStatus(User $user): RedirectResponse
+    public function toggleStatus(Request $request, User $user): RedirectResponse
     {
+        $this->checkHierarchicalProtection($request, $user, 'toggle_status');
+
         if ($user->id === Auth::id()) {
             return redirect()->back()->with('error', 'Cannot deactivate your own active session.');
         }
@@ -179,10 +246,12 @@ class UserController extends Controller
     }
 
     /**
-     * Delete user account with audit log and self-deletion protection.
+     * Delete user account with audit log, hierarchical role protection, and self-deletion protection.
      */
-    public function destroy(User $user): RedirectResponse
+    public function destroy(Request $request, User $user): RedirectResponse
     {
+        $this->checkHierarchicalProtection($request, $user, 'delete');
+
         if ($user->id === Auth::id()) {
             return redirect()->back()->with('error', 'Cannot delete your own active session.');
         }

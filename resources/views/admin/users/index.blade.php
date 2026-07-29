@@ -77,13 +77,16 @@
                     @php
                         $roleName = $user->roles->first()?->name ?? 'student';
                         $roleBadge = match($roleName) {
-                            'super-admin' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                            'super-admin' => 'bg-purple-500/10 text-purple-400 border-purple-500/20',
                             'admin' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
                             'teacher' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
                             'finance' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
                             default => 'bg-slate-800 text-slate-400 border-slate-700',
                         };
-                        $isCurrentAdmin = Auth::id() === $user->id;
+                        $isSelf = Auth::id() === $user->id;
+                        $actorIsRegularAdmin = Auth::user()?->hasRole('admin') && !Auth::user()?->hasRole('super-admin');
+                        $targetIsSuperAdmin = $user->hasRole('super-admin');
+                        $isProtectedFromActor = $actorIsRegularAdmin && $targetIsSuperAdmin;
                     @endphp
                     <tr class="hover:bg-slate-950/40 transition-colors">
                         <td class="p-4">
@@ -120,52 +123,59 @@
                         <td class="p-4 text-slate-400 text-xs">{{ $user->updated_at?->diffForHumans() }}</td>
                         <td class="p-4 text-right">
                             <div class="flex items-center justify-end gap-2 text-xs">
-                                <!-- View User -->
+                                <!-- View User (Always Allowed) -->
                                 <button type="button" 
                                         onclick='openViewUserModal({{ json_encode($user) }}, "{{ $roleName }}")'
                                         class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors" title="View Details">
                                     👁 View
                                 </button>
 
-                                <!-- Edit User -->
-                                <button type="button" 
-                                        onclick='openEditUserModal({{ json_encode($user) }}, "{{ $roleName }}")'
-                                        class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded transition-colors" title="Edit User">
-                                    ✏ Edit
-                                </button>
-
-                                <!-- Reset Password -->
-                                <button type="button" 
-                                        onclick='openResetPasswordModal({{ json_encode($user) }})'
-                                        class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded transition-colors" title="Reset Password">
-                                    🔑 Reset
-                                </button>
-
-                                <!-- Toggle Status -->
-                                @if (! $isCurrentAdmin)
-                                    <form action="{{ route('admin.users.toggle-status', $user->id) }}" method="POST" class="inline" 
-                                          onsubmit="return confirm('Are you sure you want to {{ $user->status === 'inactive' ? 'ACTIVATE' : 'DEACTIVATE' }} {{ $user->name }}?')">
-                                        @csrf
-                                        <button type="submit" class="px-2 py-1 {{ $user->status === 'inactive' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30' }} rounded transition-colors">
-                                            {{ $user->status === 'inactive' ? '⚡ Activate' : '⏸ Deactivate' }}
-                                        </button>
-                                    </form>
-                                @endif
-
-                                <!-- Delete User -->
-                                @if (! $isCurrentAdmin)
-                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline" 
-                                          onsubmit="return confirm('⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE user {{ $user->email }}? This action cannot be undone.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="px-2 py-1 bg-rose-500/10 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 border border-rose-500/20 rounded transition-colors">
-                                            🗑 Delete
-                                        </button>
-                                    </form>
-                                @else
-                                    <span class="px-2 py-1 bg-slate-800 text-slate-500 text-[10px] font-bold rounded cursor-not-allowed" title="Current Active Session">
-                                        Protected
+                                @if ($isProtectedFromActor)
+                                    <!-- Hierarchical Protection Badge for Admin viewing Super Admin -->
+                                    <span class="px-2.5 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold rounded uppercase flex items-center gap-1" title="Protected Account (Hierarchical Role Protection)">
+                                        🔒 Protected Account
                                     </span>
+                                @else
+                                    <!-- Edit User -->
+                                    <button type="button" 
+                                            onclick='openEditUserModal({{ json_encode($user) }}, "{{ $roleName }}")'
+                                            class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded transition-colors" title="Edit User">
+                                        ✏ Edit
+                                    </button>
+
+                                    <!-- Reset Password -->
+                                    <button type="button" 
+                                            onclick='openResetPasswordModal({{ json_encode($user) }})'
+                                            class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded transition-colors" title="Reset Password">
+                                        🔑 Reset
+                                    </button>
+
+                                    <!-- Toggle Status (Disabled for self) -->
+                                    @if (! $isSelf)
+                                        <form action="{{ route('admin.users.toggle-status', $user->id) }}" method="POST" class="inline" 
+                                              onsubmit="return confirm('Are you sure you want to {{ $user->status === 'inactive' ? 'ACTIVATE' : 'DEACTIVATE' }} {{ $user->name }}?')">
+                                            @csrf
+                                            <button type="submit" class="px-2 py-1 {{ $user->status === 'inactive' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30' }} rounded transition-colors">
+                                                {{ $user->status === 'inactive' ? '⚡ Activate' : '⏸ Deactivate' }}
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                    <!-- Delete User (Disabled for self) -->
+                                    @if (! $isSelf)
+                                        <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline" 
+                                              onsubmit="return confirm('⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE user {{ $user->email }}? This action cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="px-2 py-1 bg-rose-500/10 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 border border-rose-500/20 rounded transition-colors">
+                                                🗑 Delete
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="px-2 py-1 bg-slate-800 text-slate-500 text-[10px] font-bold rounded cursor-not-allowed" title="Current Active Session">
+                                            Self
+                                        </span>
+                                    @endif
                                 @endif
                             </div>
                         </td>
@@ -214,7 +224,9 @@
                             <option value="teacher">Teacher / Author</option>
                             <option value="admin">Administrator</option>
                             <option value="finance">Finance Admin</option>
-                            <option value="super-admin">Super Admin</option>
+                            @if (Auth::user()?->hasRole('super-admin'))
+                                <option value="super-admin">Super Admin</option>
+                            @endif
                         </select>
                     </div>
                     <div>
@@ -310,7 +322,9 @@
                             <option value="teacher">Teacher / Author</option>
                             <option value="admin">Administrator</option>
                             <option value="finance">Finance Admin</option>
-                            <option value="super-admin">Super Admin</option>
+                            @if (Auth::user()?->hasRole('super-admin'))
+                                <option value="super-admin">Super Admin</option>
+                            @endif
                         </select>
                     </div>
                     <div>
