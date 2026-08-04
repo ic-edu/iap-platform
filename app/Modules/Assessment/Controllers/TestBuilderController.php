@@ -71,6 +71,9 @@ class TestBuilderController extends Controller
         $latestDraft = (clone $allMyTestsQuery)->where('status', 'draft')->latest('updated_at')->first();
 
         $questions = Question::all();
+        $publishedQuestionBanks = \App\Modules\QuestionBank\Models\QuestionBank::with(['questions', 'aclCategory'])
+            ->whereIn('status', ['published', 'approved'])
+            ->get();
 
         /** @var view-string $viewName */
         $viewName = 'assessment::index';
@@ -78,6 +81,7 @@ class TestBuilderController extends Controller
         return view($viewName, compact(
             'tests',
             'questions',
+            'publishedQuestionBanks',
             'totalTests',
             'draftTests',
             'pendingApprovalTests',
