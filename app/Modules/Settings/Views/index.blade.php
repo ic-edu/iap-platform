@@ -1,12 +1,10 @@
-<x-admin-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">{{ __('System Configuration') }}</p>
-                <h1 class="text-2xl font-bold tracking-tight text-white mt-1">{{ __('General Settings & Maintenance') }}</h1>
-            </div>
-        </div>
-    </x-slot>
+@extends('layouts.admin')
+
+@section('content')
+<div class="mb-6">
+    <h1 class="text-xl font-bold text-white">Super Admin Platform Settings</h1>
+</div>
+
 
     <div class="max-w-4xl bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
         @if (session('status') === 'settings-updated')
@@ -67,4 +65,4 @@
             </div>
         </form>
     </div>
-</x-admin-layout>
+@endsection

@@ -1,17 +1,6 @@
-<x-admin-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">{{ __('Super Admin Executive Hub') }}</p>
-                <h1 class="text-2xl font-bold tracking-tight text-white mt-1">{{ __('Platform Overview Dashboard') }}</h1>
-            </div>
-            <div class="flex items-center gap-2">
-                <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-lg flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> SYSTEM HEALTHY
-                </span>
-            </div>
-        </div>
-    </x-slot>
+@extends('layouts.admin')
+
+@section('content')
 
     <!-- Platform User Breakdown KPIs (Strictly Non-Overlapping Baseline v1.1 Counts) -->
     <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
@@ -119,4 +108,4 @@
             </div>
         </div>
     </div>
-</x-admin-layout>
+@endsection

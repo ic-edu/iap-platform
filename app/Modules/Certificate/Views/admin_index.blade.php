@@ -1,10 +1,6 @@
-<x-admin-layout>
-    <x-slot name="header">
-        <h1 class="font-bold text-2xl text-white">
-            {{ __('Official Certificate Registry') }}
-        </h1>
-        <p class="text-xs text-slate-400 mt-1">Manage, verify, download, reissue, and revoke issued digital certificates.</p>
-    </x-slot>
+@extends('layouts.admin')
+
+@section('content')
 
     <div class="bg-slate-900 border border-slate-800 shadow-sm rounded-xl p-6">
         <div class="flex justify-between items-center mb-6">
@@ -67,4 +63,4 @@
         </div>
         <div class="mt-4">{{ $certificates->links() }}</div>
     </div>
-</x-admin-layout>
+@endsection

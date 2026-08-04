@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ApprovalController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\MonitoringDashboardController;
+use App\Http\Controllers\Admin\PublicationOperationController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuperAdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
@@ -132,17 +133,65 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::post('/{id}/restore', [UserController::class, 'restore'])->name('admin.users.restore');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
+
+    // Admin Operations Publication Queues (ADMIN-OPS-001)
+    Route::prefix('admin/publications')->group(function () {
+        Route::get('/question-banks', [PublicationOperationController::class, 'questionBanksQueue'])->name('admin.publications.question-banks');
+        Route::get('/assessments', [PublicationOperationController::class, 'assessmentsQueue'])->name('admin.publications.assessments');
+        Route::get('/published', [PublicationOperationController::class, 'publishedContents'])->name('admin.publications.published');
+        Route::get('/archive-requests', [PublicationOperationController::class, 'archiveRequests'])->name('admin.publications.archive-requests');
+        Route::post('/question-banks/{questionBank}/publish', [PublicationOperationController::class, 'publishQuestionBank'])->name('admin.publications.question-banks.publish');
+        Route::post('/question-banks/{questionBank}/unpublish', [PublicationOperationController::class, 'unpublishQuestionBank'])->name('admin.publications.question-banks.unpublish');
+        Route::post('/assessments/{test}/publish', [PublicationOperationController::class, 'publishAssessment'])->name('admin.publications.assessments.publish');
+        Route::post('/assessments/{test}/unpublish', [PublicationOperationController::class, 'unpublishAssessment'])->name('admin.publications.assessments.unpublish');
+    });
+
+    // Admin Academic Operations Foundation
+    Route::prefix('admin/academic-operations')->group(function () {
+        Route::get('/applications', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'applications'])->name('admin.academic-operations.applications');
+        Route::patch('/applications/{application}/status', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'updateApplicationStatus'])->name('admin.academic-operations.applications.status');
+        Route::get('/courses', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'courses'])->name('admin.academic-operations.courses');
+        Route::post('/courses', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'storeMasterCourse'])->name('admin.academic-operations.courses.store');
+        Route::post('/courses/{course}/approve', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'approveCourse'])->name('admin.academic-operations.courses.approve');
+        Route::post('/courses/{course}/reject', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'rejectCourse'])->name('admin.academic-operations.courses.reject');
+        Route::get('/teacher-assignments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'teacherAssignments'])->name('admin.academic-operations.teacher-assignments');
+        Route::post('/teacher-assignments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'storeTeacherAssignment'])->name('admin.academic-operations.teacher-assignments.store');
+        Route::get('/enrollments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'enrollments'])->name('admin.academic-operations.enrollments');
+        Route::post('/enrollments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'storeEnrollment'])->name('admin.academic-operations.enrollments.store');
+        Route::get('/libraries', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'libraries'])->name('admin.academic-operations.libraries');
+        Route::get('/monitoring', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'monitoring'])->name('admin.academic-operations.monitoring');
+    });
 });
 
-// Shared Authoring Workspaces (Teacher, Admin, Super Admin)
+// Shared Media Library (Teacher + Admin + Super Admin)
 Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(function () {
     Route::prefix('admin/media')->group(function () {
         Route::get('/', [MediaController::class, 'index'])->name('admin.media.index');
         Route::get('/list', [MediaController::class, 'list'])->name('admin.media.list');
         Route::post('/', [MediaController::class, 'store'])->name('admin.media.store');
+        Route::post('/{media}/archive', [MediaController::class, 'archive'])->name('admin.media.archive');
+        Route::post('/{media}/request-archive', [MediaController::class, 'requestArchive'])->name('admin.media.request-archive');
+        Route::patch('/{media}/metadata', [MediaController::class, 'updateMetadata'])->name('admin.media.metadata');
+        Route::get('/{media}/usage', [MediaController::class, 'usage'])->name('admin.media.usage');
     });
 });
 
+// Admin & Super Admin Media Governance
+Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
+    Route::prefix('admin/media')->group(function () {
+        Route::get('/archive', [MediaController::class, 'archiveIndex'])->name('admin.media.archive-index');
+        Route::post('/{media}/restore', [MediaController::class, 'restore'])->name('admin.media.restore');
+        Route::post('/{media}/request-restore', [MediaController::class, 'requestRestore'])->name('admin.media.request-restore');
+        Route::post('/{media}/approve-archive', [MediaController::class, 'approveArchive'])->name('admin.media.approve-archive');
+        Route::post('/{media}/approve-restore', [MediaController::class, 'approveRestore'])->name('admin.media.approve-restore');
+        Route::post('/{media}/request-delete', [MediaController::class, 'requestDelete'])->name('admin.media.request-delete');
+    });
+});
+
+
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
 });

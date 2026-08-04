@@ -1,17 +1,10 @@
-<x-admin-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">{{ __('Platform Monitoring Subsystem') }}</p>
-                <h1 class="text-2xl font-bold tracking-tight text-white mt-1">{{ __('System Observability & Monitoring Dashboard') }}</h1>
-            </div>
-            <div class="flex items-center gap-2">
-                <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-lg flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> {{ strtoupper($health['status'] ?? 'healthy') }}
-                </span>
-            </div>
-        </div>
-    </x-slot>
+@extends('layouts.admin')
+
+@section('content')
+<div class="mb-6">
+    <h1 class="text-xl font-bold text-white">System Observability &amp; Monitoring Dashboard</h1>
+</div>
+
 
     <div class="space-y-6">
         <!-- Key Observability KPI Cards -->
@@ -86,4 +79,4 @@
             </div>
         </div>
     </div>
-</x-admin-layout>
+@endsection

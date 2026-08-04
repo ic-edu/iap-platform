@@ -9,9 +9,14 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin'])->prefix('ad
     Route::get('/{questionBank}', [QuestionBankController::class, 'show'])->name('admin.question-banks.show');
     Route::put('/{questionBank}', [QuestionBankController::class, 'update'])->name('admin.question-banks.update');
     Route::post('/{questionBank}/submit', [QuestionBankController::class, 'submitForApproval'])->name('admin.question-banks.submit');
+    Route::post('/{questionBank}/review', [QuestionBankController::class, 'review'])->name('admin.question-banks.review');
+    Route::post('/{questionBank}/request-revision', [QuestionBankController::class, 'requestRevision'])->name('admin.question-banks.request-revision');
     Route::post('/{questionBank}/publish', [QuestionBankController::class, 'publish'])->name('admin.question-banks.publish');
     Route::post('/{questionBank}/unpublish', [QuestionBankController::class, 'unpublish'])->name('admin.question-banks.unpublish');
     Route::post('/{questionBank}/request-archive', [QuestionBankController::class, 'requestArchive'])->name('admin.question-banks.request-archive');
+    Route::post('/{questionBank}/request-restore', [QuestionBankController::class, 'requestRestore'])->name('admin.question-banks.request-restore');
+    Route::post('/{questionBank}/approve-restore', [QuestionBankController::class, 'approveRestore'])->name('admin.question-banks.approve-restore');
+    Route::post('/versions/{version}/rollback', [QuestionBankController::class, 'rollbackVersion'])->name('admin.question-banks.rollback-version');
 
     Route::post('/{questionBank}/questions', [QuestionBankController::class, 'storeQuestion'])->name('admin.question-banks.store-question');
     Route::put('/questions/{question}', [QuestionBankController::class, 'updateQuestion'])->name('admin.question-banks.update-question');

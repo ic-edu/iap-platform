@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'iC.edu Assessment Platform') }} - Admin Platform</title>
+    <title>@yield('title', config('app.name', 'iC.edu Assessment Platform') . ' - Admin Platform')</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -13,6 +13,7 @@
 
     <!-- Scripts and Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('styles')
 </head>
 <body class="h-full font-sans antialiased bg-slate-900 text-slate-100">
     <div class="min-h-screen flex flex-col md:flex-row">
@@ -87,31 +88,25 @@
                         <span>+ Quick Action</span>
                     </button>
 
-                    <!-- Notifications Dropdown -->
-                    <div class="relative">
-                        <button onclick="document.getElementById('notifications-dropdown').classList.toggle('hidden')" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-colors relative" title="Notifications">
+                    <!-- Notifications Dropdown (NOTIFICATION-001) -->
+                    <div class="relative" id="notifications-bell-container">
+                        <button onclick="toggleNotificationsDropdown()" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-colors relative" title="Notifications">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                             </svg>
-                            <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-slate-950"></span>
+                            <span id="notif-badge-dot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-slate-950"></span>
                         </button>
 
                         <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden">
                             <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-950">
                                 <span class="text-xs font-bold text-white">Notifications</span>
-                                <span class="text-[10px] font-semibold bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">1 New</span>
+                                <span id="notif-dropdown-count" class="text-[10px] font-semibold bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">0 New</span>
                             </div>
-                            <div class="divide-y divide-slate-800 text-xs">
-                                <div class="p-3 bg-indigo-950/20 hover:bg-slate-800/50 transition-colors">
-                                    <div class="font-semibold text-white">Assessment Approved</div>
-                                    <div class="text-slate-400 text-[11px] mt-0.5">TOEIC Full Simulation Test 01 was approved and published.</div>
-                                    <div class="text-[9px] text-slate-500 mt-1">10 mins ago</div>
-                                </div>
-                                <div class="p-3 hover:bg-slate-800/50 transition-colors">
-                                    <div class="font-semibold text-slate-300">Digital Certificate Issued</div>
-                                    <div class="text-slate-400 text-[11px] mt-0.5">Certificate #CERT-20260727-8F12A generated.</div>
-                                    <div class="text-[9px] text-slate-500 mt-1">1 hour ago</div>
-                                </div>
+                            <div id="notif-dropdown-list" class="divide-y divide-slate-800 text-xs max-h-72 overflow-y-auto">
+                                <div class="p-4 text-center text-slate-500 text-xs">Loading alerts…</div>
+                            </div>
+                            <div class="p-2 border-t border-slate-800 bg-slate-950 text-center">
+                                <a href="{{ route('notifications.index') }}" class="text-[11px] font-bold text-indigo-400 hover:underline">View All History →</a>
                             </div>
                         </div>
                     </div>
@@ -133,16 +128,16 @@
                 </div>
             </header>
 
-            <!-- Page Header Slot -->
-            @if (isset($header))
+            <!-- Page Header Section -->
+            @hasSection('header')
                 <div class="bg-slate-950 border-b border-slate-800 px-6 py-4">
-                    {{ $header }}
+                    @yield('header')
                 </div>
             @endif
 
             <!-- Main Content Container -->
             <main class="flex-1 p-6 overflow-y-auto">
-                {{ $slot }}
+                @yield('content')
             </main>
         </div>
     </div>
@@ -260,8 +255,8 @@
                         <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             📋 Create Test Draft
                         </a>
-                        <a href="{{ route('admin.academic.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            🎓 Curriculum Courses
+                        <a href="{{ route('teacher.dashboard') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            🏡 Teacher Workspace
                         </a>
                         <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             📊 Student Reports
@@ -293,7 +288,66 @@
             if (urlParams.get('open_profile') === '1') {
                 openMyProfileDrawer();
             }
+            loadNotificationFeed();
         });
+
+        async function loadNotificationFeed() {
+            try {
+                const res = await fetch('{{ route('notifications.feed') }}', {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await res.json();
+                if (!json.success) return;
+
+                const countEl = document.getElementById('notif-dropdown-count');
+                const badgeDot = document.getElementById('notif-badge-dot');
+                const listEl = document.getElementById('notif-dropdown-list');
+
+                if (countEl) countEl.textContent = json.unread_count + ' New';
+                if (badgeDot) {
+                    if (json.unread_count > 0) badgeDot.classList.remove('hidden');
+                    else badgeDot.classList.add('hidden');
+                }
+
+                if (listEl) {
+                    if (!json.data || json.data.length === 0) {
+                        listEl.innerHTML = '<div class="p-4 text-center text-slate-500 text-xs">No notifications yet</div>';
+                        return;
+                    }
+
+                    const csrfToken = document.querySelector('meta[name=csrf-token]')?.content || '';
+                    listEl.innerHTML = json.data.map(item => `
+                        <form action="/notifications/${item.id}/read" method="POST" class="m-0 p-0 block">
+                            <input type="hidden" name="_token" value="${csrfToken}">
+                            <button type="submit" class="w-full text-left p-3 ${item.unread ? 'bg-indigo-950/20' : ''} hover:bg-slate-800/50 transition-colors block border-none cursor-pointer">
+                                <div class="font-semibold ${item.unread ? 'text-white' : 'text-slate-300'} flex items-center justify-between">
+                                    <span>${escapeHtml(item.title)}</span>
+                                    ${item.unread ? '<span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>' : ''}
+                                </div>
+                                <div class="text-slate-400 text-[11px] mt-0.5 line-clamp-2">${escapeHtml(item.message)}</div>
+                                <div class="text-[9px] text-slate-500 mt-1">${escapeHtml(item.time_ago || '')}</div>
+                            </button>
+                        </form>
+                    `).join('');
+                }
+            } catch(e) { /* silent */ }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function toggleNotificationsDropdown() {
+            const dropdown = document.getElementById('notifications-dropdown');
+            if (!dropdown) return;
+            const isHidden = dropdown.classList.contains('hidden');
+            dropdown.classList.toggle('hidden');
+            if (isHidden) {
+                loadNotificationFeed();
+            }
+        }
     </script>
+    @stack('scripts')
 </body>
 </html>

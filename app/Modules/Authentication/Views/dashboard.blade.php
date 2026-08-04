@@ -1,18 +1,6 @@
-<x-admin-layout>
-    <x-slot name="header">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">{{ __('Platform Overview') }}</p>
-                <h1 class="text-2xl font-bold tracking-tight text-white mt-1">{{ __('Enterprise Admin Dashboard') }}</h1>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    {{ __('Cache: 5 Min Active') }}
-                </span>
-            </div>
-        </div>
-    </x-slot>
+@extends('layouts.admin')
+
+@section('content')
 
     <!-- 10 Primary Metrics Cards -->
     <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-5 mb-8">
@@ -123,4 +111,4 @@
             </div>
         </div>
     </div>
-</x-admin-layout>
+@endsection

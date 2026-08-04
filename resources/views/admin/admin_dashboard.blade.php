@@ -1,20 +1,6 @@
-<x-admin-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Administrator Operations Workspace</p>
-                <h1 class="text-2xl font-bold tracking-tight text-white mt-1">Operational Admin Dashboard</h1>
-            </div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('admin.question-banks.index') }}" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
-                    📂 Question Banks
-                </a>
-                <a href="{{ route('admin.tests.index') }}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
-                    📋 Test Builder
-                </a>
-            </div>
-        </div>
-    </x-slot>
+@extends('layouts.admin')
+
+@section('content')
 
     <!-- Operational KPI Metrics Cards (SA-006 Synchronization) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -71,4 +57,4 @@
             </tbody>
         </table>
     </div>
-</x-admin-layout>
+@endsection

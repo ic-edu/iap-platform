@@ -9,7 +9,7 @@
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between shadow-sm hover:border-slate-700 transition-colors">
                 <div>
                     <span class="px-2.5 py-1 text-xs font-semibold rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-wider">
-                        {{ strtoupper($test->test_type->value) }}
+                        {{ is_object($test->test_type) ? $test->test_type->label() : strtoupper($test->test_type) }}
                     </span>
                     <h3 class="text-lg font-bold text-white mt-3">{{ $test->title }}</h3>
                     <div class="mt-4 space-y-1.5 text-xs text-slate-400">

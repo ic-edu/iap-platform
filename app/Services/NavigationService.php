@@ -8,6 +8,7 @@ class NavigationService
 {
     /**
      * Get authorized modular navigation menu items grouped by section for each role according to Baseline v1.1.
+     * ADMIN-OPS-001: Admin sidebar replaced with operational menus.
      *
      * @return array<int, array{
      *     section: string,
@@ -22,7 +23,7 @@ class NavigationService
     public static function getMenuItems(): array
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return [];
         }
 
@@ -47,7 +48,7 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
-                    'section' => 'Assessment Management',
+                    'section' => 'Governance',
                     'label' => 'Approval Center',
                     'route' => 'admin.approvals.index',
                     'icon' => 'shield-check',
@@ -66,7 +67,7 @@ class NavigationService
                 ],
                 [
                     'section' => 'Security',
-                    'label' => 'Audit & Activity Logs',
+                    'label' => 'System Audit & Activity Logs',
                     'route' => 'admin.audit-logs.index',
                     'icon' => 'document-text',
                     'permission' => null,
@@ -112,10 +113,12 @@ class NavigationService
             ];
         }
 
+        // ADMIN-OPS-001 Section 2: Admin Operational Sidebar
+        // Replaced Question Banks + Test Builder with Question Publications + Assessment Publications
         if ($user->hasRole('admin')) {
             return [
                 [
-                    'section' => 'Dashboard',
+                    'section' => 'Operations',
                     'label' => 'Operational Dashboard',
                     'route' => 'admin.dashboard',
                     'icon' => 'home',
@@ -133,21 +136,93 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
-                    'section' => 'Assessment Management',
-                    'label' => 'Question Banks',
-                    'route' => 'admin.question-banks.index',
-                    'icon' => 'folder',
+                    'section' => 'Academic Operations',
+                    'label' => 'Student Applications',
+                    'route' => 'admin.academic-operations.applications',
+                    'icon' => 'document-text',
                     'permission' => null,
-                    'active_pattern' => 'admin/question-banks*',
+                    'active_pattern' => 'admin/academic-operations/applications*',
                     'badge' => null,
                 ],
                 [
-                    'section' => 'Assessment Management',
-                    'label' => 'Test Builder',
-                    'route' => 'admin.tests.index',
+                    'section' => 'Academic Operations',
+                    'label' => 'Course Management',
+                    'route' => 'admin.academic-operations.courses',
+                    'icon' => 'academic-cap',
+                    'permission' => null,
+                    'active_pattern' => 'admin/academic-operations/courses*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Academic Operations',
+                    'label' => 'Student Enrolments',
+                    'route' => 'admin.academic-operations.enrollments',
+                    'icon' => 'user-group',
+                    'permission' => null,
+                    'active_pattern' => 'admin/academic-operations/enrollments*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Academic Operations',
+                    'label' => 'Teacher Assignments',
+                    'route' => 'admin.academic-operations.teacher-assignments',
+                    'icon' => 'user-check',
+                    'permission' => null,
+                    'active_pattern' => 'admin/academic-operations/teacher-assignments*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Academic Operations',
+                    'label' => 'Academic Libraries',
+                    'route' => 'admin.academic-operations.libraries',
+                    'icon' => 'book-open',
+                    'permission' => null,
+                    'active_pattern' => 'admin/academic-operations/libraries*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Academic Operations',
+                    'label' => 'Course Monitoring',
+                    'route' => 'admin.academic-operations.monitoring',
+                    'icon' => 'chart-bar',
+                    'permission' => null,
+                    'active_pattern' => 'admin/academic-operations/monitoring*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Publication Queues',
+                    'label' => 'Question Publications',
+                    'route' => 'admin.publications.question-banks',
+                    'icon' => 'folder',
+                    'permission' => null,
+                    'active_pattern' => 'admin/publications/question-banks*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Publication Queues',
+                    'label' => 'Assessment Publications',
+                    'route' => 'admin.publications.assessments',
                     'icon' => 'clipboard-check',
                     'permission' => null,
-                    'active_pattern' => 'admin/tests*',
+                    'active_pattern' => 'admin/publications/assessments*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Publication Queues',
+                    'label' => 'Published Contents',
+                    'route' => 'admin.publications.published',
+                    'icon' => 'check-circle',
+                    'permission' => null,
+                    'active_pattern' => 'admin/publications/published*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Publication Queues',
+                    'label' => 'Archive Requests',
+                    'route' => 'admin.publications.archive-requests',
+                    'icon' => 'archive',
+                    'permission' => null,
+                    'active_pattern' => 'admin/publications/archive-requests*',
                     'badge' => null,
                 ],
                 [
@@ -166,6 +241,33 @@ class NavigationService
                     'icon' => 'shopping-bag',
                     'permission' => null,
                     'active_pattern' => 'admin/commerce*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Candidate Management',
+                    'label' => 'Certificate Registry',
+                    'route' => 'admin.certificates.index',
+                    'icon' => 'badge-check',
+                    'permission' => null,
+                    'active_pattern' => 'admin/certificates*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Media Management',
+                    'label' => 'Media Library',
+                    'route' => 'admin.media.index',
+                    'icon' => 'folder',
+                    'permission' => null,
+                    'active_pattern' => 'admin/media',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Media Management',
+                    'label' => 'Media Archive',
+                    'route' => 'admin.media.archive-index',
+                    'icon' => 'archive',
+                    'permission' => null,
+                    'active_pattern' => 'admin/media/archive*',
                     'badge' => null,
                 ],
             ];
@@ -200,15 +302,7 @@ class NavigationService
                     'active_pattern' => 'admin/tests*',
                     'badge' => null,
                 ],
-                [
-                    'section' => 'Curriculum',
-                    'label' => 'Academic Curriculum',
-                    'route' => 'admin.academic.index',
-                    'icon' => 'academic-cap',
-                    'permission' => null,
-                    'active_pattern' => 'admin/academic*',
-                    'badge' => null,
-                ],
+
                 [
                     'section' => 'Media',
                     'label' => 'Media Library',

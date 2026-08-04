@@ -1,4 +1,6 @@
-<x-admin-layout>
+@extends('layouts.admin')
+
+@section('content')
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-white">Enterprise User &amp; Access Control Management Workspace</h1>
@@ -470,4 +472,4 @@
             input.value = pass;
         }
     </script>
-</x-admin-layout>
+@endsection

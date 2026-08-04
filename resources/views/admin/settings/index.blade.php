@@ -1,4 +1,6 @@
-<x-admin-layout>
+@extends('layouts.admin')
+
+@section('content')
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-white flex items-center gap-2">
@@ -49,4 +51,4 @@
             </div>
         </form>
     </div>
-</x-admin-layout>
+@endsection

@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\QuestionBankArchiveRequest;
+use App\Models\User;
 use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\QuestionBank\Models\QuestionBank;
-use App\Notifications\SystemAlertNotification;
+use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Illuminate\View\View;
 class ApprovalController extends Controller
 {
     /**
-     * Display Super Admin Approval Center for tests, question banks, user creation & deletion requests.
+     * Display Super Admin Approval Center.
      */
     public function index(): View
     {
@@ -70,13 +71,14 @@ class ApprovalController extends Controller
     }
 
     /**
-     * Approve a Question Bank (Super Admin Only - QB-001 / QB-002).
-     * Dispatches notification to Teacher Author.
+     * Approve a Question Bank (Super Admin Only).
+     * Notifies Teacher Author (approved) and all Admins (ready for publication).
+     * ADMIN-OPS-001 Section 8: Admin receives "Question Bank Approved – Ready for Publication".
      */
     public function approveQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $actor = $request->user();
-        if (!$actor || !$actor->hasRole('super-admin')) {
+        if (! $actor || ! $actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -91,28 +93,51 @@ class ApprovalController extends Controller
             $questionBank
         );
 
+        // Notify Teacher Author
         if ($questionBank->creator) {
             try {
-                $questionBank->creator->notify(new SystemAlertNotification(
-                    'Question Bank Approved',
-                    "Your Question Bank '{$questionBank->title}' was approved by Super Admin {$actor->name}. It is now ready for Admin publication."
+                $questionBank->creator->notify(new EnterpriseSystemNotification(
+                    title: 'Question Bank Approved',
+                    message: "Your Question Bank '{$questionBank->title}' was approved by Super Admin {$actor->name}. It is now ready for Admin publication.",
+                    type: 'QUESTION_BANK_APPROVED',
+                    priority: 'HIGH',
+                    entityType: 'question_bank',
+                    entityId: (string) $questionBank->id,
+                    targetUrl: route('admin.question-banks.show', $questionBank->id)
                 ));
             } catch (\Throwable $e) {
-                // Silently handle notification errors in dev
+                // Silently handle in dev
             }
         }
 
-        return redirect()->route('admin.approvals.index')->with('status', "Question Bank '{$questionBank->title}' approved successfully.");
+        // Notify all Admins: Ready for Publication (ADMIN-OPS-001 Section 8)
+        $admins = User::role('admin')->get();
+        foreach ($admins as $admin) {
+            try {
+                $admin->notify(new EnterpriseSystemNotification(
+                    title: 'Question Bank Ready for Publication',
+                    message: "Question Bank '{$questionBank->title}' was approved by Super Admin {$actor->name} and is ready for publication.",
+                    type: 'QUESTION_BANK_APPROVED',
+                    priority: 'HIGH',
+                    entityType: 'question_bank',
+                    entityId: (string) $questionBank->id,
+                    targetUrl: route('admin.publications.question-banks', ['status' => 'approved', 'highlight' => $questionBank->id])
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
+        return redirect()->route('admin.approvals.index')->with('status', "Question Bank '{$questionBank->title}' approved successfully. Admins notified.");
     }
 
     /**
-     * Reject a Question Bank (Super Admin Only - QB-001 / QB-002).
-     * Dispatches notification to Teacher Author.
+     * Reject a Question Bank (Super Admin Only).
      */
     public function rejectQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $actor = $request->user();
-        if (!$actor || !$actor->hasRole('super-admin')) {
+        if (! $actor || ! $actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -131,12 +156,17 @@ class ApprovalController extends Controller
 
         if ($questionBank->creator) {
             try {
-                $questionBank->creator->notify(new SystemAlertNotification(
-                    'Question Bank Rejected',
-                    "Your Question Bank '{$questionBank->title}' was rejected by Super Admin {$actor->name}. Reason: {$reason}"
+                $questionBank->creator->notify(new EnterpriseSystemNotification(
+                    title: 'Question Bank Rejected',
+                    message: "Your Question Bank '{$questionBank->title}' was rejected by Super Admin {$actor->name}. Reason: {$reason}",
+                    type: 'QUESTION_BANK_REJECTED',
+                    priority: 'HIGH',
+                    entityType: 'question_bank',
+                    entityId: (string) $questionBank->id,
+                    targetUrl: route('admin.question-banks.show', $questionBank->id)
                 ));
             } catch (\Throwable $e) {
-                // Silently handle notification errors in dev
+                // Silently handle in dev
             }
         }
 
@@ -144,13 +174,13 @@ class ApprovalController extends Controller
     }
 
     /**
-     * Approve Question Bank Archive Request (Super Admin Only - QB-002).
-     * Dispatches notification to Teacher Author & requesting Admin.
+     * Approve Question Bank Archive Request (Super Admin Only).
+     * Notifies Teacher and requesting Admin (ADMIN-OPS-001 Section 8 & 12).
      */
     public function approveQuestionBankArchive(Request $request, QuestionBankArchiveRequest $archiveRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (!$actor || !$actor->hasRole('super-admin')) {
+        if (! $actor || ! $actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -177,9 +207,14 @@ class ApprovalController extends Controller
             // Notify Teacher Author
             if ($questionBank->creator) {
                 try {
-                    $questionBank->creator->notify(new SystemAlertNotification(
-                        'Question Bank Archived',
-                        "Your Question Bank '{$questionBank->title}' has been archived by Super Admin {$actor->name}."
+                    $questionBank->creator->notify(new EnterpriseSystemNotification(
+                        title: 'Question Bank Archived',
+                        message: "Your Question Bank '{$questionBank->title}' has been archived by Super Admin {$actor->name}.",
+                        type: 'ARCHIVE_COMPLETED',
+                        priority: 'NORMAL',
+                        entityType: 'question_bank',
+                        entityId: (string) $questionBank->id,
+                        targetUrl: route('admin.question-banks.show', $questionBank->id)
                     ));
                 } catch (\Throwable $e) {
                     // Silently handle in dev
@@ -187,12 +222,17 @@ class ApprovalController extends Controller
             }
         }
 
-        // Notify Requesting Admin
+        // Notify Requesting Admin: Archive Approved (ADMIN-OPS-001 Section 8)
         if ($archiveRequest->requester) {
             try {
-                $archiveRequest->requester->notify(new SystemAlertNotification(
-                    'Question Bank Archive Approved',
-                    "Your archive request for Question Bank '{$questionBank?->title}' was approved by Super Admin {$actor->name}."
+                $archiveRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'Question Bank Archive Approved',
+                    message: "Your archive request for Question Bank '{$questionBank?->title}' was approved by Super Admin {$actor->name}.",
+                    type: 'ARCHIVE_APPROVED',
+                    priority: 'NORMAL',
+                    entityType: 'archive_request',
+                    entityId: (string) $archiveRequest->id,
+                    targetUrl: route('admin.publications.archive-requests')
                 ));
             } catch (\Throwable $e) {
                 // Silently handle in dev
@@ -203,12 +243,12 @@ class ApprovalController extends Controller
     }
 
     /**
-     * Reject Question Bank Archive Request (Super Admin Only - QB-002).
+     * Reject Question Bank Archive Request (Super Admin Only).
      */
     public function rejectQuestionBankArchive(Request $request, QuestionBankArchiveRequest $archiveRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (!$actor || !$actor->hasRole('super-admin')) {
+        if (! $actor || ! $actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -231,12 +271,16 @@ class ApprovalController extends Controller
             );
         }
 
-        // Notify Requesting Admin
         if ($archiveRequest->requester) {
             try {
-                $archiveRequest->requester->notify(new SystemAlertNotification(
-                    'Question Bank Archive Rejected',
-                    "Your archive request for Question Bank '{$questionBank?->title}' was rejected by Super Admin {$actor->name}. Reason: {$reason}"
+                $archiveRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'Archive Request Rejected',
+                    message: "Your archive request for Question Bank '{$questionBank?->title}' was rejected by Super Admin {$actor->name}. Reason: {$reason}",
+                    type: 'ARCHIVE_REJECTED',
+                    priority: 'NORMAL',
+                    entityType: 'archive_request',
+                    entityId: (string) $archiveRequest->id,
+                    targetUrl: route('admin.publications.archive-requests')
                 ));
             } catch (\Throwable $e) {
                 // Silently handle in dev
@@ -248,11 +292,12 @@ class ApprovalController extends Controller
 
     /**
      * Approve an assessment test (Super Admin Only).
+     * Notifies Admins: ready for publication (ADMIN-OPS-001 Section 11).
      */
     public function approve(Request $request, Test $test): RedirectResponse
     {
         $user = $request->user();
-        if (!$user || !$user->hasRole('super-admin')) {
+        if (! $user || ! $user->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -261,16 +306,53 @@ class ApprovalController extends Controller
             'is_published' => false,
         ]);
 
-        return redirect()->route('admin.approvals.index')->with('status', "Assessment '{$test->title}' approved successfully. It is now ready for Admin publication.");
+        ActivityLogger::log('ASSESSMENT_APPROVED', "Approved Assessment Test '{$test->title}'", $test);
+
+        // Notify Teacher Author
+        if ($test->creator) {
+            try {
+                $test->creator->notify(new EnterpriseSystemNotification(
+                    title: 'Assessment Approved',
+                    message: "Your Assessment Test '{$test->title}' was approved by Super Admin {$user->name} and is ready for Admin publication.",
+                    type: 'ASSESSMENT_APPROVED',
+                    priority: 'HIGH',
+                    entityType: 'assessment',
+                    entityId: (string) $test->id,
+                    targetUrl: route('admin.tests.show', $test->id)
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
+        // Notify all Admins: ready for publication
+        $admins = User::role('admin')->get();
+        foreach ($admins as $admin) {
+            try {
+                $admin->notify(new EnterpriseSystemNotification(
+                    title: 'Assessment Ready for Publication',
+                    message: "Assessment Test '{$test->title}' was approved by Super Admin {$user->name} and is ready for publication.",
+                    type: 'ASSESSMENT_APPROVED',
+                    priority: 'HIGH',
+                    entityType: 'assessment',
+                    entityId: (string) $test->id,
+                    targetUrl: route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id])
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
+        return redirect()->route('admin.approvals.index')->with('status', "Assessment '{$test->title}' approved. Admins notified.");
     }
 
     /**
-     * Reject an assessment test back to draft (Super Admin Only).
+     * Reject an assessment test (Super Admin Only).
      */
     public function reject(Request $request, Test $test): RedirectResponse
     {
         $user = $request->user();
-        if (!$user || !$user->hasRole('super-admin')) {
+        if (! $user || ! $user->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -281,6 +363,24 @@ class ApprovalController extends Controller
             'is_published' => false,
         ]);
 
+        ActivityLogger::log('ASSESSMENT_REJECTED', "Rejected Assessment '{$test->title}'. Reason: {$reason}", $test);
+
+        if ($test->creator) {
+            try {
+                $test->creator->notify(new EnterpriseSystemNotification(
+                    title: 'Assessment Rejected',
+                    message: "Your Assessment Test '{$test->title}' was rejected by Super Admin {$user->name}. Reason: {$reason}",
+                    type: 'ASSESSMENT_REJECTED',
+                    priority: 'HIGH',
+                    entityType: 'assessment',
+                    entityId: (string) $test->id,
+                    targetUrl: route('admin.tests.show', $test->id)
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
         return redirect()->route('admin.approvals.index')->with('status', "Assessment '{$test->title}' rejected. Reason: {$reason}");
     }
 
@@ -290,7 +390,7 @@ class ApprovalController extends Controller
     public function approveUserCreation(Request $request, UserCreationRequest $creationRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (!$actor || !$actor->hasRole('super-admin')) {
+        if (! $actor || ! $actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -305,28 +405,23 @@ class ApprovalController extends Controller
         if ($targetUser) {
             $targetUser->update(['status' => 'active']);
 
-            ActivityLogger::log(
-                'APPROVAL_APPROVED',
-                "Approved creation request for user account {$targetUser->name} ({$targetUser->email})",
-                $targetUser
-            );
-
-            ActivityLogger::log(
-                'ACCOUNT_ACTIVATED',
-                "Activated staff account for {$targetUser->name} ({$targetUser->email})",
-                $targetUser
-            );
+            ActivityLogger::log('APPROVAL_APPROVED', "Approved creation request for user account {$targetUser->name} ({$targetUser->email})", $targetUser);
+            ActivityLogger::log('ACCOUNT_ACTIVATED', "Activated staff account for {$targetUser->name} ({$targetUser->email})", $targetUser);
         }
 
-        // Notify requesting Admin
         if ($creationRequest->requester) {
             try {
-                $creationRequest->requester->notify(new SystemAlertNotification(
-                    'User Creation Approved',
-                    "Your creation request for staff account '{$targetUser?->name}' ({$targetUser?->email}) was approved by Super Admin {$actor->name}. The account is now active."
+                $creationRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'User Creation Approved',
+                    message: "Your creation request for staff account '{$targetUser?->name}' ({$targetUser?->email}) was approved by Super Admin {$actor->name}. The account is now active.",
+                    type: 'STAFF_ACCOUNT_APPROVED',
+                    priority: 'HIGH',
+                    entityType: 'user',
+                    entityId: (string) $targetUser?->id,
+                    targetUrl: route('admin.users.index')
                 ));
             } catch (\Throwable $e) {
-                // Silently handle notification in dev
+                // Silently handle in dev
             }
         }
 
@@ -339,7 +434,7 @@ class ApprovalController extends Controller
     public function rejectUserCreation(Request $request, UserCreationRequest $creationRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (!$actor || !$actor->hasRole('super-admin')) {
+        if (! $actor || ! $actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -354,36 +449,35 @@ class ApprovalController extends Controller
 
         if ($targetUser) {
             $targetUser->update(['status' => 'inactive']);
-
-            ActivityLogger::log(
-                'APPROVAL_REJECTED',
-                "Rejected creation request for user account {$targetUser->name} ({$targetUser->email}). Reason: {$reason}",
-                $targetUser
-            );
+            ActivityLogger::log('APPROVAL_REJECTED', "Rejected creation request for user account {$targetUser->name} ({$targetUser->email}). Reason: {$reason}", $targetUser);
         }
 
-        // Notify requesting Admin
         if ($creationRequest->requester) {
             try {
-                $creationRequest->requester->notify(new SystemAlertNotification(
-                    'User Creation Rejected',
-                    "Your creation request for staff account '{$targetUser?->name}' ({$targetUser?->email}) was rejected by Super Admin {$actor->name}. Reason: {$reason}"
+                $creationRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'User Creation Rejected',
+                    message: "Your creation request for staff account '{$targetUser?->name}' ({$targetUser?->email}) was rejected. Reason: {$reason}",
+                    type: 'STAFF_ACCOUNT_REJECTED',
+                    priority: 'NORMAL',
+                    entityType: 'user',
+                    entityId: (string) $targetUser?->id,
+                    targetUrl: route('admin.users.index')
                 ));
             } catch (\Throwable $e) {
-                // Silently handle notification in dev
+                // Silently handle in dev
             }
         }
 
-        return redirect()->route('admin.approvals.index')->with('status', "User creation request for '{$targetUser?->name}' rejected. Account set to Inactive.");
+        return redirect()->route('admin.approvals.index')->with('status', "User creation request for '{$targetUser?->name}' rejected.");
     }
 
     /**
-     * Approve user deletion request (Super Admin Only / Soft Delete).
+     * Approve user deletion request (Super Admin Only).
      */
     public function approveUserDeletion(Request $request, UserDeletionRequest $deletionRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (!$actor || !$actor->hasRole('super-admin')) {
+        if (! $actor || ! $actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -397,30 +491,24 @@ class ApprovalController extends Controller
 
         if ($targetUser) {
             $targetUser->update(['status' => 'deleted']);
-            $targetUser->delete(); // Soft delete user
-
-            ActivityLogger::log(
-                'DELETE_REQUEST_APPROVED',
-                "Approved deletion request for user account {$targetUser->name} ({$targetUser->email})",
-                $targetUser
-            );
-
-            ActivityLogger::log(
-                'USER_SOFT_DELETED',
-                "Soft deleted user account {$targetUser->name} ({$targetUser->email})",
-                $targetUser
-            );
+            $targetUser->delete();
+            ActivityLogger::log('DELETE_REQUEST_APPROVED', "Approved deletion request for user account {$targetUser->name} ({$targetUser->email})", $targetUser);
+            ActivityLogger::log('USER_SOFT_DELETED', "Soft deleted user account {$targetUser->name} ({$targetUser->email})", $targetUser);
         }
 
-        // Notify requesting Admin
         if ($deletionRequest->requester) {
             try {
-                $deletionRequest->requester->notify(new SystemAlertNotification(
-                    'User Deletion Request Approved',
-                    "Your deletion request for user account '{$targetUser?->name}' ({$targetUser?->email}) was approved by Super Admin {$actor->name}."
+                $deletionRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'User Deletion Request Approved',
+                    message: "Your deletion request for user account '{$targetUser?->name}' ({$targetUser?->email}) was approved by Super Admin {$actor->name}.",
+                    type: 'USER_DELETION_APPROVED',
+                    priority: 'NORMAL',
+                    entityType: 'user',
+                    entityId: (string) $targetUser?->id,
+                    targetUrl: route('admin.users.index')
                 ));
             } catch (\Throwable $e) {
-                // Silently handle notification in dev
+                // Silently handle in dev
             }
         }
 
@@ -433,7 +521,7 @@ class ApprovalController extends Controller
     public function rejectUserDeletion(Request $request, UserDeletionRequest $deletionRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (!$actor || !$actor->hasRole('super-admin')) {
+        if (! $actor || ! $actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -448,23 +536,22 @@ class ApprovalController extends Controller
 
         if ($targetUser) {
             $targetUser->update(['status' => 'active']);
-
-            ActivityLogger::log(
-                'DELETE_REQUEST_REJECTED',
-                "Rejected deletion request for user account {$targetUser->name} ({$targetUser->email}). Reason: {$reason}",
-                $targetUser
-            );
+            ActivityLogger::log('DELETE_REQUEST_REJECTED', "Rejected deletion request for user account {$targetUser->name} ({$targetUser->email}). Reason: {$reason}", $targetUser);
         }
 
-        // Notify requesting Admin
         if ($deletionRequest->requester) {
             try {
-                $deletionRequest->requester->notify(new SystemAlertNotification(
-                    'User Deletion Request Rejected',
-                    "Your deletion request for user account '{$targetUser?->name}' ({$targetUser?->email}) was rejected by Super Admin {$actor->name}. Reason: {$reason}"
+                $deletionRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'User Deletion Request Rejected',
+                    message: "Your deletion request for user account '{$targetUser?->name}' ({$targetUser?->email}) was rejected. Reason: {$reason}",
+                    type: 'USER_DELETION_REJECTED',
+                    priority: 'NORMAL',
+                    entityType: 'user',
+                    entityId: (string) $targetUser?->id,
+                    targetUrl: route('admin.users.index')
                 ));
             } catch (\Throwable $e) {
-                // Silently handle notification in dev
+                // Silently handle in dev
             }
         }
 

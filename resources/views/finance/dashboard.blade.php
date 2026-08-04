@@ -1,17 +1,6 @@
-<x-admin-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Financial &amp; Revenue Analytics</p>
-                <h1 class="text-2xl font-bold tracking-tight text-white mt-1">Finance Workspace Dashboard</h1>
-            </div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('admin.commerce.index') }}" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
-                    🛍️ Commerce &amp; Billing
-                </a>
-            </div>
-        </div>
-    </x-slot>
+@extends('layouts.admin')
+
+@section('content')
 
     <!-- Financial KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
@@ -72,4 +61,4 @@
             </tbody>
         </table>
     </div>
-</x-admin-layout>
+@endsection

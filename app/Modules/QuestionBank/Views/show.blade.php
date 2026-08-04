@@ -1,4 +1,6 @@
-<x-admin-layout>
+@extends('layouts.admin')
+
+@section('content')
     @php
         $typeLabels = [
             'single_choice' => 'Single Choice',
@@ -794,4 +796,4 @@
             </form>
         </div>
     </div>
-</x-admin-layout>
+@endsection

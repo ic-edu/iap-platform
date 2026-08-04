@@ -19,17 +19,73 @@ class TestBuilderController extends Controller
     ) {}
 
     /**
-     * Display listing of tests.
+     * Display listing of tests with search, filters, and metrics (TEACHER-002 Workspace).
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $tests = Test::with(['sections', 'creator'])->latest()->paginate(10);
+        $user  = $request->user();
+        $query = Test::with(['sections.testQuestions', 'creator']);
+
+        // Search by Assessment Title or Test Type (Section 9)
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('test_type', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by Workflow Status (Section 10)
+        if ($status = $request->input('status')) {
+            if ($status === 'published') {
+                $query->where(function ($q) {
+                    $q->where('status', 'published')->orWhere('is_published', true);
+                });
+            } else {
+                $query->where('status', $status);
+            }
+        }
+
+        // Filter by Test Type
+        if ($type = $request->input('type')) {
+            $query->where('test_type', $type);
+        }
+
+        $tests = $query->latest('updated_at')->paginate(10)->withQueryString();
+
+        // Calculate workspace KPI statistics for Teacher (Section 2 & 7)
+        $allMyTestsQuery = Test::query();
+        if ($user && $user->hasRole('teacher')) {
+            $allMyTestsQuery->where('created_by', $user->id);
+        }
+
+        $totalTests           = (clone $allMyTestsQuery)->count();
+        $draftTests           = (clone $allMyTestsQuery)->where('status', 'draft')->count();
+        $pendingApprovalTests = (clone $allMyTestsQuery)->where('status', 'pending_approval')->count();
+        $approvedTests        = (clone $allMyTestsQuery)->where('status', 'approved')->count();
+        $publishedTests       = (clone $allMyTestsQuery)->where(function ($q) {
+            $q->where('status', 'published')->orWhere('is_published', true);
+        })->count();
+        $rejectedTests        = (clone $allMyTestsQuery)->where('status', 'rejected')->count();
+
+        // Latest active draft for "Continue Draft" Quick Action
+        $latestDraft = (clone $allMyTestsQuery)->where('status', 'draft')->latest('updated_at')->first();
+
         $questions = Question::all();
 
         /** @var view-string $viewName */
         $viewName = 'assessment::index';
 
-        return view($viewName, compact('tests', 'questions'));
+        return view($viewName, compact(
+            'tests',
+            'questions',
+            'totalTests',
+            'draftTests',
+            'pendingApprovalTests',
+            'approvedTests',
+            'publishedTests',
+            'rejectedTests',
+            'latestDraft'
+        ));
     }
 
     /**
@@ -58,122 +114,91 @@ class TestBuilderController extends Controller
             'test_type' => $validated['test_type'],
             'duration_minutes' => $validated['duration_minutes'],
             'pass_score' => $validated['pass_score'],
-            'shuffle_questions' => $request->boolean('shuffle_questions'),
-            'shuffle_choices' => $request->boolean('shuffle_choices'),
-            'is_published' => false,
+            'shuffle_questions' => $request->has('shuffle_questions'),
+            'shuffle_choices' => $request->has('shuffle_choices'),
+            'created_by' => $user?->id,
             'status' => 'draft',
-            'created_by' => $user ? $user->id : 1,
+            'is_published' => false,
         ]);
 
-        // Auto-create default section for rapid test building
+        // Default section 1
         TestSection::create([
             'test_id' => $test->id,
-            'title' => 'Main Section',
-            'duration_minutes' => $test->duration_minutes,
+            'title' => 'Section 1: General Core',
             'order' => 1,
         ]);
 
-        return redirect()->route('admin.tests.index')->with('status', 'test-created');
+        return redirect()->route('admin.tests.index')
+            ->with('status', "Assessment test '{$test->title}' created successfully in Draft mode.");
     }
 
     /**
-     * Duplicate an assessment test.
+     * Duplicate test.
      */
-    public function duplicate(Request $request, Test $test): RedirectResponse
+    public function duplicate(Test $test): RedirectResponse
     {
-        $user = $request->user();
-        if ($user && $user->hasRole('super-admin')) {
-            abort(403, 'Super Admin is an auditor/approver and cannot duplicate/create tests directly.');
-        }
-
-        $newTest = $test->replicate();
+        $newTest = $test->replicate(['slug', 'status', 'is_published']);
         $newTest->title = $test->title.' (Copy)';
         $newTest->slug = Str::slug($newTest->title).'-'.Str::random(5);
-        $newTest->is_published = false;
         $newTest->status = 'draft';
+        $newTest->is_published = false;
+        $newTest->created_by = request()->user()?->id;
         $newTest->save();
 
-        foreach ($test->sections as $sec) {
-            $newSec = $sec->replicate();
-            $newSec->test_id = (string) $newTest->id;
-            $newSec->save();
+        foreach ($test->sections as $section) {
+            $newSection = $section->replicate();
+            $newSection->test_id = $newTest->id;
+            $newSection->save();
         }
 
-        return redirect()->route('admin.tests.index')->with('status', 'test-duplicated');
+        return redirect()->route('admin.tests.index')
+            ->with('status', "Assessment test '{$test->title}' duplicated.");
     }
 
     /**
-     * Submit draft test for Super Admin approval.
+     * Submit test for Super Admin approval.
      */
     public function submitForApproval(Test $test): RedirectResponse
     {
-        $test->update([
-            'status' => 'pending_approval',
-            'is_published' => false,
-        ]);
+        $test->update(['status' => 'pending_approval']);
 
-        return redirect()->route('admin.tests.index')->with('status', 'Test submitted for Super Admin review & approval successfully.');
+        return redirect()->route('admin.tests.index')
+            ->with('status', "Assessment '{$test->title}' submitted for Super Admin approval.");
     }
 
     /**
-     * Publish an approved test (Operational Admin Only).
-     * Constraint: Test MUST have status === 'approved'.
+     * Admin publishes approved test.
      */
     public function publish(Test $test): RedirectResponse
     {
         $user = request()->user();
-        if (!$user || !$user->hasRole('admin')) {
-            abort(403, 'Only Operational Admin can publish approved tests.');
+        if ($user && $user->hasRole('teacher')) {
+            abort(403, 'Teachers cannot publish assessments. Admin publication queue required.');
         }
 
         if ($test->status !== 'approved') {
-            abort(403, 'Assessment tests can only be published after receiving Super Admin approval.');
+            abort(403, 'Only approved assessments can be published.');
         }
 
-        $test->update([
-            'status' => 'published',
-            'is_published' => true,
-        ]);
+        $test->update(['status' => 'published', 'is_published' => true]);
 
-        $this->builderService->publishTest($test);
-
-        return redirect()->route('admin.tests.index')->with('status', 'test-published');
+        return redirect()->route('admin.tests.index')
+            ->with('status', "Assessment '{$test->title}' published live.");
     }
 
     /**
-     * Reject and revert test to draft.
-     */
-    public function reject(Test $test): RedirectResponse
-    {
-        $user = request()->user();
-        if (!$user || !$user->hasRole('super-admin')) {
-            abort(403, 'Only Super Admin can reject test approvals.');
-        }
-
-        $test->update([
-            'status' => 'rejected',
-            'is_published' => false,
-        ]);
-
-        return redirect()->route('admin.tests.index')->with('status', 'test-rejected');
-    }
-
-    /**
-     * Delete a test.
+     * Delete test.
      */
     public function destroy(Test $test): RedirectResponse
     {
         $user = request()->user();
         if ($user && $user->hasRole('teacher')) {
-            abort(403, 'Teachers are not permitted to delete tests.');
-        }
-
-        if ($test->is_published && !$user?->hasRole('super-admin')) {
-            abort(403, 'Published tests cannot be deleted except by Super Admin.');
+            abort(403, 'Teachers cannot delete assessment tests.');
         }
 
         $test->delete();
 
-        return redirect()->route('admin.tests.index')->with('status', 'test-deleted');
+        return redirect()->route('admin.tests.index')
+            ->with('status', "Assessment '{$test->title}' deleted.");
     }
 }

@@ -128,10 +128,10 @@ test('authorized admin can access academic curriculum management', function () {
     $admin = User::factory()->create();
     $admin->assignRole('admin');
 
-    $response = $this->actingAs($admin)->get('/admin/academic');
+    $response = $this->actingAs($admin)->get('/admin/academic-operations/courses');
 
     $response->assertStatus(200)
-        ->assertSee('Academic Curriculum &amp; Courses', false);
+        ->assertSee('Master Course Management', false);
 });
 
 test('authorized admin can access reporting analytics and export csv', function () {
