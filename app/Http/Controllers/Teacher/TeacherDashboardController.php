@@ -57,10 +57,10 @@ class TeacherDashboardController extends Controller
             ? $user->unreadNotifications()->count()
             : 0;
 
-        // Latest unfinished draft for "Continue Working" section
+        // Latest unfinished draft for "Continue Working" section (PART 6)
         $latestDraftBank = QuestionBank::with(['questions'])
             ->where('created_by', $user->id)
-            ->where('status', 'draft')
+            ->whereIn('status', ['draft', 'rejected', 'revision_requested'])
             ->latest('updated_at')
             ->first();
 

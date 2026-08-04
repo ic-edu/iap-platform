@@ -440,15 +440,25 @@
     @endif
 
     {{-- ══════════════════════════════════════════════
-         SECTION 2 — SMART KPI CARDS
+         SECTION 2 — SMART KPI CARDS (PART 1)
          ══════════════════════════════════════════════ --}}
     <div class="tw-kpi-grid">
+        @if($totalQuestionBanks > 0)
         <a href="{{ route('admin.question-banks.index', ['my' => 1]) }}" class="tw-kpi tw-kpi--indigo">
             <div class="tw-kpi__icon">📂</div>
             <div class="tw-kpi__count">{{ $totalQuestionBanks }}</div>
             <div class="tw-kpi__label">My Question Banks</div>
             <div class="tw-kpi__desc">Total banks authored by me</div>
         </a>
+        @else
+        <a href="javascript:void(0)" onclick="openTwNothingModal()" class="tw-kpi tw-kpi--indigo">
+            <div class="tw-kpi__icon">📂</div>
+            <div class="tw-kpi__count">0</div>
+            <div class="tw-kpi__label">My Question Banks</div>
+            <div class="tw-kpi__desc">No authored banks yet</div>
+        </a>
+        @endif
+
         @if($pendingApprovalQuestionBanks > 0)
         <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⏳</div>
@@ -457,25 +467,45 @@
             <div class="tw-kpi__desc">Submitted, pending Super Admin</div>
         </a>
         @else
-        <a href="{{ route('admin.question-banks.index') }}" class="tw-kpi tw-kpi--amber">
+        <a href="javascript:void(0)" onclick="openTwNothingModal()" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⏳</div>
             <div class="tw-kpi__count">0</div>
             <div class="tw-kpi__label">Awaiting Approval</div>
             <div class="tw-kpi__desc">All reviewed</div>
         </a>
         @endif
+
+        @if($publishedQuestionBanks > 0)
         <a href="{{ route('admin.question-banks.index', ['status' => 'published']) }}" class="tw-kpi tw-kpi--emerald">
             <div class="tw-kpi__icon">🟢</div>
             <div class="tw-kpi__count">{{ $publishedQuestionBanks }}</div>
             <div class="tw-kpi__label">Published</div>
             <div class="tw-kpi__desc">Live and accessible to candidates</div>
         </a>
+        @else
+        <a href="javascript:void(0)" onclick="openTwNothingModal()" class="tw-kpi tw-kpi--emerald">
+            <div class="tw-kpi__icon">🟢</div>
+            <div class="tw-kpi__count">0</div>
+            <div class="tw-kpi__label">Published</div>
+            <div class="tw-kpi__desc">No published banks</div>
+        </a>
+        @endif
+
+        @if($draftQuestionBanks > 0)
         <a href="{{ route('admin.question-banks.index', ['status' => 'draft']) }}" class="tw-kpi tw-kpi--slate">
             <div class="tw-kpi__icon">✏️</div>
             <div class="tw-kpi__count">{{ $draftQuestionBanks }}</div>
             <div class="tw-kpi__label">Drafts</div>
             <div class="tw-kpi__desc">In progress, not yet submitted</div>
         </a>
+        @else
+        <a href="javascript:void(0)" onclick="openTwNothingModal()" class="tw-kpi tw-kpi--slate">
+            <div class="tw-kpi__icon">✏️</div>
+            <div class="tw-kpi__count">0</div>
+            <div class="tw-kpi__label">Drafts</div>
+            <div class="tw-kpi__desc">No active drafts</div>
+        </a>
+        @endif
     </div>
 
     {{-- Coming Soon Section Placeholder (PART 6) --}}
@@ -836,6 +866,16 @@
     </div>
 </div>
 
+{{-- Floating Modal for Zero Results (PART 1) --}}
+<div id="tw-nothing-modal" class="tw-modal-backdrop" style="display:none;" onclick="closeTwNothingModal(event)">
+    <div class="tw-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:440px;">
+        <div style="font-size:2.75rem;margin-bottom:.5rem;">📭</div>
+        <div style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">Nothing Here Yet</div>
+        <p style="font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem;line-height:1.5;">There are currently no items in this category.</p>
+        <button type="button" onclick="closeTwNothingModal()" class="tw-form-submit" style="margin-top:0;">Close</button>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -849,8 +889,21 @@ function closeCreateModal(e) {
         document.getElementById('tw-create-modal').style.display = 'none';
     }
 }
+
+function openTwNothingModal() {
+    document.getElementById('tw-nothing-modal').style.display = 'flex';
+}
+function closeTwNothingModal(e) {
+    if (!e || e.target === document.getElementById('tw-nothing-modal')) {
+        document.getElementById('tw-nothing-modal').style.display = 'none';
+    }
+}
+
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeCreateModal();
+    if (e.key === 'Escape') {
+        closeCreateModal();
+        closeTwNothingModal();
+    }
 });
 
 // Auto-open modal if redirected back with a validation error

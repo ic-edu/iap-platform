@@ -15,7 +15,7 @@ class AclCoverageService
     /**
      * Calculate coverage for all active ACL categories.
      *
-     * @return Collection<int, array{category: AclCategory, total_questions: int, approved_questions: int, target: int, percentage: int}>
+     * @return Collection<int, array{category: AclCategory, total_questions: int, approved_questions: int, approved_banks: int, target: int, percentage: int}>
      */
     public function getCategoryCoverageReport(): Collection
     {
@@ -24,7 +24,10 @@ class AclCoverageService
         return $categories->map(function (AclCategory $category) {
             // Find all question banks in this category
             $bankIds = QuestionBank::where('acl_category_id', $category->id)
-                ->orWhere('test_type', $category->test_type)
+                ->orWhere(function ($q) use ($category) {
+                    $q->where('test_type', $category->test_type)
+                      ->where('slug', 'like', "%{$category->slug}%");
+                })
                 ->pluck('id');
 
             $totalQuestions = Question::whereIn('question_bank_id', $bankIds)->count();
@@ -33,6 +36,7 @@ class AclCoverageService
                 ->whereIn('status', ['approved', 'published'])
                 ->pluck('id');
 
+            $approvedBanks = $approvedBankIds->count();
             $approvedQuestions = Question::whereIn('question_bank_id', $approvedBankIds)->count();
 
             $target = max(1, $category->target_questions);
@@ -42,6 +46,7 @@ class AclCoverageService
                 'category'           => $category,
                 'total_questions'    => $totalQuestions,
                 'approved_questions' => $approvedQuestions,
+                'approved_banks'     => $approvedBanks,
                 'target'             => $target,
                 'percentage'         => $percentage,
             ];

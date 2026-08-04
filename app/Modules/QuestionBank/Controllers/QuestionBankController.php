@@ -62,6 +62,19 @@ class QuestionBankController extends Controller
             $query->where('test_type', $type);
         }
 
+        if ($cat = $request->input('category')) {
+            $aclCategory = AclCategory::where('id', $cat)
+                ->orWhere('slug', $cat)
+                ->orWhere('name', 'like', "%{$cat}%")
+                ->first();
+            if ($aclCategory) {
+                $query->where(function ($q) use ($aclCategory) {
+                    $q->where('acl_category_id', $aclCategory->id)
+                      ->orWhere('slug', 'like', "%{$aclCategory->slug}%");
+                });
+            }
+        }
+
         if ($aclCatId = $request->input('acl_category_id')) {
             $query->where('acl_category_id', $aclCatId);
         }

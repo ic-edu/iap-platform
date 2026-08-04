@@ -437,7 +437,7 @@
         </div>
     </div>
 
-    {{-- Coverage Indicators Panel (Every Card Clickable) --}}
+    {{-- Coverage Indicators Panel (Every Card Clickable - PART 3 & 4) --}}
     <div class="acl-coverage-panel">
         <div class="acl-cov-head">
             <span>📊 Academic Library Coverage Indicators (Click to filter)</span>
@@ -445,7 +445,8 @@
         </div>
         <div class="acl-cov-grid">
             @foreach($coverageReport as $cov)
-            <a href="{{ route('admin.question-banks.index', ['test_type' => $cov['category']->test_type ?? 'general']) }}" class="acl-cov-card" style="text-decoration:none;transition:border-color .2s;cursor:pointer;" title="Filter {{ $cov['category']->name }} Question Banks">
+            @if(($cov['approved_banks'] ?? 0) > 0 || ($cov['approved_questions'] ?? 0) > 0)
+            <a href="{{ route('admin.question-banks.index', ['category' => $cov['category']->slug]) }}" class="acl-cov-card" style="text-decoration:none;transition:border-color .2s;cursor:pointer;" title="Filter {{ $cov['category']->name }} Question Banks">
                 <div class="acl-cov-card__head">
                     <span class="acl-cov-card__title">{{ $cov['category']->icon }} {{ $cov['category']->name }}</span>
                     <span class="acl-cov-card__pct">{{ $cov['percentage'] }}%</span>
@@ -458,6 +459,21 @@
                     <span>Target: {{ $cov['target'] }}</span>
                 </div>
             </a>
+            @else
+            <div onclick="openCovEmptyModal('{{ $cov['category']->slug }}', '{{ addslashes($cov['category']->name) }}', '{{ $cov['category']->id }}')" class="acl-cov-card" style="cursor:pointer;transition:border-color .2s;border-color:rgba(251,113,133,.2);" title="No approved banks yet (Click for action)">
+                <div class="acl-cov-card__head">
+                    <span class="acl-cov-card__title">{{ $cov['category']->icon }} {{ $cov['category']->name }}</span>
+                    <span class="acl-cov-card__pct" style="color:#64748b;">0%</span>
+                </div>
+                <div class="acl-cov-card__bar-bg">
+                    <div class="acl-cov-card__bar-fill" style="width: 0%;"></div>
+                </div>
+                <div class="acl-cov-card__sub">
+                    <span style="color:#fb7185;font-weight:700;">No approved banks</span>
+                    <span>Target: {{ $cov['target'] }}</span>
+                </div>
+            </div>
+            @endif
             @endforeach
         </div>
     </div>
@@ -732,10 +748,27 @@
     </div>
 </div>
 
+{{-- Coverage Empty State Modal (PART 4) --}}
+<div id="cov-empty-modal" class="acl-modal-bg" style="display:none;" onclick="closeCovEmptyModal(event)">
+    <div class="acl-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:460px;">
+        <div style="font-size:2.75rem;margin-bottom:.5rem;">📭</div>
+        <div style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">No Question Banks Found</div>
+        <p style="font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem;line-height:1.5;">
+            There are no published question banks inside this academic library (<strong id="cov-empty-category-name" style="color:#818cf8;">Category</strong>) yet.
+        </p>
+        <div style="display:flex;gap:.75rem;">
+            <button type="button" onclick="closeCovEmptyModal()" class="acl-btn acl-btn--secondary" style="flex:1;padding:.75rem;">Close</button>
+            <button type="button" onclick="createFromCovEmptyModal()" class="acl-btn acl-btn--primary" style="flex:1.5;padding:.75rem;">＋ Create Question Bank</button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
+let pendingCatIdForCreate = null;
+
 function openCreateQbModal() {
     const modal = document.getElementById('create-qb-modal');
     if (modal) {
@@ -772,11 +805,34 @@ function closeLibraryHealthModal(e) {
     }
 }
 
+function openCovEmptyModal(slug, name, catId) {
+    pendingCatIdForCreate = catId;
+    const nameSpan = document.getElementById('cov-empty-category-name');
+    if (nameSpan) nameSpan.innerText = name;
+    const modal = document.getElementById('cov-empty-modal');
+    if (modal) modal.style.display = 'flex';
+}
+function closeCovEmptyModal(e) {
+    if (!e || e.target === document.getElementById('cov-empty-modal')) {
+        const modal = document.getElementById('cov-empty-modal');
+        if (modal) modal.style.display = 'none';
+    }
+}
+function createFromCovEmptyModal() {
+    closeCovEmptyModal();
+    if (pendingCatIdForCreate) {
+        const select = document.getElementById('modal-acl-cat');
+        if (select) select.value = pendingCatIdForCreate;
+    }
+    openCreateQbModal();
+}
+
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeCreateQbModal();
         closeNoPendingModal();
         closeLibraryHealthModal();
+        closeCovEmptyModal();
     }
 });
 @if($errors->any())

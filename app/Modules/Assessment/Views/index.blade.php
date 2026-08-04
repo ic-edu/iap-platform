@@ -292,18 +292,36 @@
             <p class="tb-hero__sub">Author, structure sections, configure duration, and manage assessment tests.</p>
         </div>
         @if(!Auth::user()?->hasRole('super-admin'))
-           {{-- SECTION 2 & 7: Smart KPI Cards --}}
+    {{-- SECTION 2 & 7: Smart KPI Cards (PART 2) --}}
     <div class="tb-kpi-grid">
+        @if(($totalTests ?? 0) > 0)
         <a href="{{ route('admin.tests.index') }}" class="tb-kpi tb-kpi--indigo">
             <div class="tb-kpi__count">{{ $totalTests ?? $tests->total() }}</div>
             <div class="tb-kpi__label">My Assessments</div>
             <div class="tb-kpi__desc">Total tests registered</div>
         </a>
+        @else
+        <a href="javascript:void(0)" onclick="openTbNothingModal()" class="tb-kpi tb-kpi--indigo">
+            <div class="tb-kpi__count">0</div>
+            <div class="tb-kpi__label">My Assessments</div>
+            <div class="tb-kpi__desc">No tests created yet</div>
+        </a>
+        @endif
+
+        @if(($draftTests ?? 0) > 0)
         <a href="{{ route('admin.tests.index', ['status' => 'draft']) }}" class="tb-kpi tb-kpi--slate">
-            <div class="tb-kpi__count">{{ $draftTests ?? 0 }}</div>
+            <div class="tb-kpi__count">{{ $draftTests }}</div>
             <div class="tb-kpi__label">Drafts</div>
             <div class="tb-kpi__desc">Work in progress</div>
         </a>
+        @else
+        <a href="javascript:void(0)" onclick="openTbNothingModal()" class="tb-kpi tb-kpi--slate">
+            <div class="tb-kpi__count">0</div>
+            <div class="tb-kpi__label">Drafts</div>
+            <div class="tb-kpi__desc">No active drafts</div>
+        </a>
+        @endif
+
         @if(($pendingApprovalTests ?? 0) > 0)
         <a href="{{ route('admin.tests.index', ['status' => 'pending_approval']) }}" class="tb-kpi tb-kpi--amber">
             <div class="tb-kpi__count">{{ $pendingApprovalTests }}</div>
@@ -311,17 +329,26 @@
             <div class="tb-kpi__desc">Awaiting Super Admin review</div>
         </a>
         @else
-        <a href="javascript:void(0)" onclick="openNoPendingTestModal()" class="tb-kpi tb-kpi--amber">
+        <a href="javascript:void(0)" onclick="openTbNothingModal()" class="tb-kpi tb-kpi--amber">
             <div class="tb-kpi__count">0</div>
             <div class="tb-kpi__label">Pending Approval</div>
-            <div class="tb-kpi__desc">All reviewed (Click for status)</div>
+            <div class="tb-kpi__desc">All reviewed</div>
         </a>
         @endif
+
+        @if(($publishedTests ?? 0) > 0)
         <a href="{{ route('admin.tests.index', ['status' => 'published']) }}" class="tb-kpi tb-kpi--emerald">
-            <div class="tb-kpi__count">{{ $publishedTests ?? 0 }}</div>
+            <div class="tb-kpi__count">{{ $publishedTests }}</div>
             <div class="tb-kpi__label">Approved &amp; Live</div>
             <div class="tb-kpi__desc">Active for candidates</div>
         </a>
+        @else
+        <a href="javascript:void(0)" onclick="openTbNothingModal()" class="tb-kpi tb-kpi--emerald">
+            <div class="tb-kpi__count">0</div>
+            <div class="tb-kpi__label">Approved &amp; Live</div>
+            <div class="tb-kpi__desc">No live assessments</div>
+        </a>
+        @endif
     </div>
         <div>
             <button type="button" onclick="openCreateTestModal()" class="tb-qa-btn tb-qa-btn--primary" style="font-size:.88rem;padding:.65rem 1.35rem;">
@@ -579,13 +606,13 @@
 </div>
 @endif
 
-{{-- No Pending Test Modal --}}
-<div id="no-pending-test-modal" class="tb-modal-bg" style="display:none;" onclick="closeNoPendingTestModal(event)">
+{{-- Floating Modal for Zero Results (PART 2) --}}
+<div id="tb-nothing-modal" class="tb-modal-bg" style="display:none;" onclick="closeTbNothingModal(event)">
     <div class="tb-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:440px;">
-        <div style="font-size:2.75rem;margin-bottom:.5rem;">🎉</div>
-        <div style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">No Assessments Awaiting Approval</div>
-        <p style="font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem;line-height:1.5;">Everything you submitted has already been reviewed.</p>
-        <button type="button" onclick="closeNoPendingTestModal()" class="tb-form-submit" style="margin-top:0;">Close</button>
+        <div style="font-size:2.75rem;margin-bottom:.5rem;">📭</div>
+        <div style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">Nothing Here Yet</div>
+        <p style="font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem;line-height:1.5;">There are currently no items in this category.</p>
+        <button type="button" onclick="closeTbNothingModal()" class="tb-form-submit" style="margin-top:0;">Close</button>
     </div>
 </div>
 
@@ -607,13 +634,13 @@ function closeCreateTestModal(e) {
     }
 }
 
-function openNoPendingTestModal() {
-    const modal = document.getElementById('no-pending-test-modal');
+function openTbNothingModal() {
+    const modal = document.getElementById('tb-nothing-modal');
     if (modal) modal.style.display = 'flex';
 }
-function closeNoPendingTestModal(e) {
-    if (!e || e.target === document.getElementById('no-pending-test-modal')) {
-        const modal = document.getElementById('no-pending-test-modal');
+function closeTbNothingModal(e) {
+    if (!e || e.target === document.getElementById('tb-nothing-modal')) {
+        const modal = document.getElementById('tb-nothing-modal');
         if (modal) modal.style.display = 'none';
     }
 }
@@ -621,7 +648,7 @@ function closeNoPendingTestModal(e) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeCreateTestModal();
-        closeNoPendingTestModal();
+        closeTbNothingModal();
     }
 });
 @if($errors->any())
