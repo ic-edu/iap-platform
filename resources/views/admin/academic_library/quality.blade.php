@@ -153,7 +153,7 @@
                             <a href="{{ route('admin.question-banks.show', $audit['bank_id']) }}" style="font-weight:800;color:#818cf8;text-decoration:none;">
                                 {{ $audit['title'] }}
                             </a>
-                            <div style="font-size:.7rem;color:#64748b;margin-top:2px;">{{ $audit['governance']['current_version'] }} • {{ strtoupper($audit['test_type']) }}</div>
+                            <div style="font-size:.7rem;color:#64748b;margin-top:2px;">{{ $audit['governance']['current_version'] }} • {{ is_object($audit['test_type']) ? $audit['test_type']->label() : strtoupper((string) ($audit['test_type_label'] ?? $audit['test_type'] ?? 'GENERAL')) }}</div>
                         </td>
                         <td>
                             <div style="font-size:1.15rem;font-weight:900;color:#f1f5f9;">

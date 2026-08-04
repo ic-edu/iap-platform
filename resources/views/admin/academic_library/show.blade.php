@@ -152,7 +152,7 @@
     <div class="al-repo-grid">
         @foreach($banks as $bank)
         @php
-            $st = $bank->status ?? 'draft';
+            $st = is_object($bank->status) ? $bank->status->value : (string) ($bank->status ?? 'draft');
             $badgeColor = match($st) {
                 'published', 'approved' => '#34d399',
                 'pending_approval'      => '#fbbf24',
