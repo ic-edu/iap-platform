@@ -362,8 +362,8 @@
     {{-- Hero Header --}}
     <div class="acl-hero">
         <div>
-            <h1 class="acl-hero__title">🏛 Academic Content Library (ACL)</h1>
-            <p class="acl-hero__sub">Single institutional repository for TOEFL, TOEIC, IELTS, Placement, Grammar &amp; Vocabulary.</p>
+            <h1 class="acl-hero__title">✏️ Question Bank Authoring Workspace</h1>
+            <p class="acl-hero__sub">Author, edit, duplicate, manage questions, and submit repositories for institutional approval.</p>
         </div>
         @if(Auth::user()?->hasRole('teacher'))
         <div>
@@ -372,112 +372,6 @@
             </button>
         </div>
         @endif
-    </div>
-
-    {{-- Content Health Score & Summary KPI Grid --}}
-    <div class="acl-top-grid">
-        {{-- Health Score Card (Informational Only - UAT Revision #02) --}}
-        <div class="acl-health-card">
-            <div class="acl-health-head">
-                <span class="acl-health-label">Content Health Score</span>
-                <span class="acl-health-badge">Grade {{ $healthData['grade'] }}</span>
-            </div>
-            <div class="acl-health-body">
-                <span class="acl-health-num">{{ $healthData['score'] }}</span>
-                <span class="acl-health-max">/ 100</span>
-            </div>
-            <div class="acl-health-metrics">
-                <div class="acl-hm-item">
-                    <span>Category Coverage</span>
-                    <span class="acl-hm-val">{{ $healthData['breakdown']['coverage'] }}%</span>
-                </div>
-                <div class="acl-hm-item">
-                    <span>Approved &amp; Live Ratio</span>
-                    <span class="acl-hm-val">{{ $healthData['breakdown']['approved_ratio'] }}%</span>
-                </div>
-                <div class="acl-hm-item">
-                    <span>Controlled Draft Volume</span>
-                    <span class="acl-hm-val">{{ $healthData['breakdown']['draft_ratio'] }}%</span>
-                </div>
-                <div class="acl-hm-item">
-                    <span>Maintenance Recency (30d)</span>
-                    <span class="acl-hm-val">{{ $healthData['breakdown']['recency_score'] }}%</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- KPI Cards (Clickable Shortcuts) --}}
-        <div class="acl-kpi-grid">
-            <a href="{{ route('admin.question-banks.index', ['my' => 1]) }}" class="acl-kpi acl-kpi--indigo" title="Filter My Question Banks">
-                <div class="acl-kpi__count">{{ $totalBanks ?? $banks->total() }}</div>
-                <div class="acl-kpi__label">My Question Banks</div>
-                <div class="acl-kpi__desc">Total authored pools</div>
-            </a>
-            <a href="{{ route('admin.question-banks.index', ['status' => 'draft']) }}" class="acl-kpi acl-kpi--slate" title="Filter Draft Banks">
-                <div class="acl-kpi__count">{{ $draftBanks ?? 0 }}</div>
-                <div class="acl-kpi__label">Draft Banks</div>
-                <div class="acl-kpi__desc">In progress</div>
-            </a>
-            @if(($pendingApprovalBanks ?? 0) > 0)
-            <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="acl-kpi acl-kpi--amber" title="Filter Pending Approval Banks">
-                <div class="acl-kpi__count">{{ $pendingApprovalBanks }}</div>
-                <div class="acl-kpi__label">Pending Approval</div>
-                <div class="acl-kpi__desc">Awaiting Super Admin</div>
-            </a>
-            @else
-            <a href="javascript:void(0)" onclick="openNoPendingModal()" class="acl-kpi acl-kpi--amber" title="No Pending Banks">
-                <div class="acl-kpi__count">0</div>
-                <div class="acl-kpi__label">Pending Approval</div>
-                <div class="acl-kpi__desc">All reviewed (Click for status)</div>
-            </a>
-            @endif
-            <a href="{{ route('admin.question-banks.index', ['status' => 'published']) }}" class="acl-kpi acl-kpi--emerald" title="Filter Published Banks">
-                <div class="acl-kpi__count">{{ $approvedBanks ?? 0 }}</div>
-                <div class="acl-kpi__label">Approved &amp; Live</div>
-                <div class="acl-kpi__desc">Ready for Test Builder</div>
-            </a>
-        </div>
-    </div>
-
-    {{-- Coverage Indicators Panel (Every Card Clickable - PART 3 & 4) --}}
-    <div class="acl-coverage-panel">
-        <div class="acl-cov-head">
-            <span>📊 Academic Library Coverage Indicators (Click to filter)</span>
-            <span style="font-size:.72rem;color:#475569;font-weight:600;">Overall Coverage: {{ $healthData['breakdown']['coverage'] }}%</span>
-        </div>
-        <div class="acl-cov-grid">
-            @foreach($coverageReport as $cov)
-            @if(($cov['approved_banks'] ?? 0) > 0 || ($cov['approved_questions'] ?? 0) > 0)
-            <a href="{{ route('admin.academic-library.show', $cov['category']->slug) }}" class="acl-cov-card" style="text-decoration:none;transition:border-color .2s;cursor:pointer;" title="Open {{ $cov['category']->name }} Dedicated Library">
-                <div class="acl-cov-card__head">
-                    <span class="acl-cov-card__title">{{ $cov['category']->icon }} {{ $cov['category']->name }}</span>
-                    <span class="acl-cov-card__pct">{{ $cov['percentage'] }}%</span>
-                </div>
-                <div class="acl-cov-card__bar-bg">
-                    <div class="acl-cov-card__bar-fill" style="width: {{ $cov['percentage'] }}%;"></div>
-                </div>
-                <div class="acl-cov-card__sub">
-                    <span>Approved: {{ $cov['approved_questions'] }} items</span>
-                    <span>Target: {{ $cov['target'] }}</span>
-                </div>
-            </a>
-            @else
-            <div onclick="openCovEmptyModal('{{ $cov['category']->slug }}', '{{ addslashes($cov['category']->name) }}', '{{ $cov['category']->id }}')" class="acl-cov-card" style="cursor:pointer;transition:border-color .2s;border-color:rgba(251,113,133,.2);" title="No approved banks yet (Click for action)">
-                <div class="acl-cov-card__head">
-                    <span class="acl-cov-card__title">{{ $cov['category']->icon }} {{ $cov['category']->name }}</span>
-                    <span class="acl-cov-card__pct" style="color:#64748b;">0%</span>
-                </div>
-                <div class="acl-cov-card__bar-bg">
-                    <div class="acl-cov-card__bar-fill" style="width: 0%;"></div>
-                </div>
-                <div class="acl-cov-card__sub">
-                    <span style="color:#fb7185;font-weight:700;">No approved banks</span>
-                    <span>Target: {{ $cov['target'] }}</span>
-                </div>
-            </div>
-            @endif
-            @endforeach
-        </div>
     </div>
 
     {{-- Main Question Banks Table Panel (PART 5) --}}

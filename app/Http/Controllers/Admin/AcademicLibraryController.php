@@ -18,47 +18,46 @@ class AcademicLibraryController extends Controller
     ) {}
 
     /**
-     * Display main Academic Library Index (overview of all categories).
+     * Display main Academic Library Index (Institutional Overview ONLY).
+     * Responsibility: Overall repository health, category coverage, repository navigation.
+     * NO repository tables, NO author items, NO draft/pending/published counters here.
      */
     public function index(Request $request): View
     {
-        $user = $request->user();
         $coverageReport = $this->coverageService->getCategoryCoverageReport();
-        $healthData = $this->healthScoreService->calculateHealthScore();
-        $categories = AclCategory::where('is_active', true)->get();
+        $healthData     = $this->healthScoreService->calculateHealthScore();
+        $reportArray    = is_array($coverageReport) ? $coverageReport : (method_exists($coverageReport, 'all') ? $coverageReport->all() : (array) $coverageReport);
 
-        // Total institutional banks summary
-        $myBanksQuery = QuestionBank::query();
-        if ($user && $user->hasRole('teacher')) {
-            $myBanksQuery->where('created_by', $user->id);
-        }
-
-        $totalBanks     = (clone $myBanksQuery)->count();
-        $publishedBanks = (clone $myBanksQuery)->whereIn('status', ['published', 'approved'])->count();
-        $draftBanks     = (clone $myBanksQuery)->where('status', 'draft')->count();
-        $pendingBanks   = (clone $myBanksQuery)->whereIn('status', ['pending_approval', 'submitted', 'pending_archive_approval'])->count();
+        // Group coverage items into formal academic program sections:
+        // 1. TOEFL (Listening, Structure, Reading)
+        // 2. TOEIC (Part 1 to Part 7)
+        // 3. IELTS (Listening, Reading, Writing, Speaking)
+        // 4. Institutional Foundation (Placement Test, Grammar, Vocabulary)
+        $groupedCoverage = [
+            'TOEFL' => array_filter($reportArray, fn($c) => str_contains(strtolower($c['category']->slug ?? ''), 'toefl')),
+            'TOEIC' => array_filter($reportArray, fn($c) => str_contains(strtolower($c['category']->slug ?? ''), 'toeic')),
+            'IELTS' => array_filter($reportArray, fn($c) => str_contains(strtolower($c['category']->slug ?? ''), 'ielts')),
+            'Institutional Foundation' => array_filter($reportArray, fn($c) => !str_contains(strtolower($c['category']->slug ?? ''), 'toefl') && !str_contains(strtolower($c['category']->slug ?? ''), 'toeic') && !str_contains(strtolower($c['category']->slug ?? ''), 'ielts')),
+        ];
 
         return view('admin.academic_library.index', compact(
             'coverageReport',
-            'healthData',
-            'categories',
-            'totalBanks',
-            'publishedBanks',
-            'draftBanks',
-            'pendingBanks'
+            'groupedCoverage',
+            'healthData'
         ));
     }
 
     /**
-     * Display a dedicated Library Category Page (PART 2 & 3).
+     * Display a dedicated Library Category Page (PAGE 2).
      * e.g. /admin/academic-library/toefl-listening
+     * Responsibility: Display ONLY repositories belonging to that specific category.
      */
     public function show(Request $request, string $slug): View
     {
         $user = $request->user();
         $category = AclCategory::where('slug', $slug)->firstOrFail();
 
-        // Query banks belonging ONLY to this specific category
+        // Query repositories belonging ONLY to this specific category
         $query = QuestionBank::with(['aclCategory', 'creator', 'questions'])
             ->where(function ($q) use ($category) {
                 $q->where('acl_category_id', $category->id)
@@ -68,11 +67,6 @@ class AcademicLibraryController extends Controller
                   });
             });
 
-        // Filter by author if requested
-        if ($request->input('author') === 'me' || $request->has('my')) {
-            $query->where('created_by', $user->id);
-        }
-
         // Search by Title or Description
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -81,7 +75,7 @@ class AcademicLibraryController extends Controller
             });
         }
 
-        // Workflow status filter
+        // Filter by workflow status
         if ($status = $request->input('status')) {
             if ($status === 'published') {
                 $query->whereIn('status', ['published', 'approved']);
