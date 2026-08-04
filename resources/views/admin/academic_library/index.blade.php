@@ -90,7 +90,10 @@
             <h1 class="al-hero__title">🏛 Institutional Academic Library</h1>
             <p class="al-hero__sub">Institutional repository overview, coverage tracking, and academic library navigation.</p>
         </div>
-        <div>
+        <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
+            <a href="{{ route('admin.academic-library.quality') }}" class="acl-btn" style="font-size:.85rem;padding:.65rem 1.25rem;background:#1e1b4b;border:1px solid #6366f140;color:#818cf8;text-decoration:none;border-radius:.6rem;font-weight:700;">
+                🛡 IRQA Quality Audit
+            </a>
             <a href="{{ route('admin.question-banks.index') }}" class="acl-btn" style="font-size:.85rem;padding:.65rem 1.25rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;text-decoration:none;border-radius:.6rem;font-weight:700;">
                 ✏️ Authoring Workspace
             </a>

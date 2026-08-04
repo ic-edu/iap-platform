@@ -150,6 +150,10 @@ test('authorized teacher can access academic library and dedicated library categ
     $catResponse = $this->actingAs($teacher)->get('/admin/academic-library/toefl-listening');
     $catResponse->assertStatus(200)
         ->assertSee('TOEFL Listening Library', false);
+
+    $qualityResponse = $this->actingAs($teacher)->get('/admin/academic-library/quality');
+    $qualityResponse->assertStatus(200)
+        ->assertSee('IRQA', false);
 });
 
 test('authorized admin can access reporting analytics and export csv', function () {

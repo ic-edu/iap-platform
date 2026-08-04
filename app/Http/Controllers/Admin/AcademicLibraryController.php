@@ -116,4 +116,15 @@ class AcademicLibraryController extends Controller
             'allCategories'
         ));
     }
+
+    /**
+     * Display Institution Repository Quality Dashboard (PART 11).
+     */
+    public function quality(Request $request): View
+    {
+        $qualityService = app(\App\Services\RepositoryQualityService::class);
+        $summary = $qualityService->getGlobalQualitySummary();
+
+        return view('admin.academic_library.quality', compact('summary'));
+    }
 }
