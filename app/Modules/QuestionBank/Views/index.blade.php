@@ -321,6 +321,8 @@
     border: 1px solid #1e293b;
     border-radius: 1.25rem;
     max-width: 520px;
+    max-height: 80vh;
+    overflow-y: auto;
     width: 100%;
     padding: 2rem;
     box-shadow: 0 24px 64px rgba(0,0,0,.6);
@@ -374,10 +376,10 @@
 
     {{-- Content Health Score & Summary KPI Grid --}}
     <div class="acl-top-grid">
-        {{-- Health Score Card (Clickable) --}}
-        <div onclick="openLibraryHealthModal()" class="acl-health-card" style="cursor:pointer;transition:border-color .2s, transform .15s;" title="Click to view detailed Institutional Library Health">
+        {{-- Health Score Card (Informational Only - UAT Revision #02) --}}
+        <div class="acl-health-card">
             <div class="acl-health-head">
-                <span class="acl-health-label">Content Health Score 🔍</span>
+                <span class="acl-health-label">Content Health Score</span>
                 <span class="acl-health-badge">Grade {{ $healthData['grade'] }}</span>
             </div>
             <div class="acl-health-body">
@@ -711,43 +713,6 @@
     </div>
 </div>
 
-{{-- Library Health Modal --}}
-<div id="library-health-modal" class="acl-modal-bg" style="display:none;" onclick="closeLibraryHealthModal(event)">
-    <div class="acl-modal" onclick="event.stopPropagation()" style="max-width:640px;">
-        <div class="acl-modal__head">
-            <div class="acl-modal__title">🏛 Institutional Library Health Details</div>
-            <button type="button" class="acl-modal__close" onclick="closeLibraryHealthModal()">×</button>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:1rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;background:#080f1d;padding:1rem;border-radius:.85rem;border:1px solid #1e293b;">
-                <div>
-                    <div style="font-size:.72rem;color:#64748b;font-weight:700;text-transform:uppercase;">Overall Institutional Score</div>
-                    <div style="font-size:2.25rem;font-weight:900;color:#f1f5f9;">{{ $healthData['score'] }} <span style="font-size:.85rem;color:#64748b;">/ 100</span></div>
-                </div>
-                <span style="padding:.35rem .85rem;border-radius:99px;font-size:.82rem;font-weight:900;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);">
-                    GRADE {{ $healthData['grade'] }}
-                </span>
-            </div>
-
-            <div style="display:flex;flex-direction:column;gap:.75rem;">
-                <div style="font-size:.82rem;font-weight:800;color:#e2e8f0;">Category Coverage Progress</div>
-                @foreach($coverageReport as $cov)
-                <div style="background:#080f1d;padding:.75rem 1rem;border-radius:.65rem;border:1px solid #1e293b;">
-                    <div style="display:flex;justify-content:space-between;font-size:.78rem;font-weight:700;color:#f1f5f9;margin-bottom:.35rem;">
-                        <span>{{ $cov['category']->icon }} {{ $cov['category']->name }}</span>
-                        <span style="color:#818cf8;">{{ $cov['percentage'] }}%</span>
-                    </div>
-                    <div style="width:100%;height:6px;background:#1e293b;border-radius:99px;overflow:hidden;">
-                        <div style="height:100%;background:linear-gradient(90deg, #6366f1 0%, #34d399 100%);width:{{ $cov['percentage'] }}%;"></div>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-            <button type="button" onclick="closeLibraryHealthModal()" class="acl-form-submit" style="margin-top:.5rem;">Close</button>
-        </div>
-    </div>
-</div>
-
 {{-- Coverage Empty State Modal (PART 4) --}}
 <div id="cov-empty-modal" class="acl-modal-bg" style="display:none;" onclick="closeCovEmptyModal(event)">
     <div class="acl-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:460px;">
@@ -794,17 +759,6 @@ function closeNoPendingModal(e) {
     }
 }
 
-function openLibraryHealthModal() {
-    const modal = document.getElementById('library-health-modal');
-    if (modal) modal.style.display = 'flex';
-}
-function closeLibraryHealthModal(e) {
-    if (!e || e.target === document.getElementById('library-health-modal')) {
-        const modal = document.getElementById('library-health-modal');
-        if (modal) modal.style.display = 'none';
-    }
-}
-
 function openCovEmptyModal(slug, name, catId) {
     pendingCatIdForCreate = catId;
     const nameSpan = document.getElementById('cov-empty-category-name');
@@ -831,7 +785,6 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeCreateQbModal();
         closeNoPendingModal();
-        closeLibraryHealthModal();
         closeCovEmptyModal();
     }
 });

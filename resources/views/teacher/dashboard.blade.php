@@ -311,6 +311,8 @@
     border-radius: 1.25rem;
     width: 100%;
     max-width: 520px;
+    max-height: 80vh;
+    overflow-y: auto;
     padding: 2rem;
     box-shadow: 0 24px 64px rgba(0,0,0,.6);
 }
