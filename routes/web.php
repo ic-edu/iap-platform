@@ -161,10 +161,17 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::get('/libraries', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'libraries'])->name('admin.academic-operations.libraries');
         Route::get('/monitoring', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'monitoring'])->name('admin.academic-operations.monitoring');
     });
+
 });
 
-// Shared Media Library (Teacher + Admin + Super Admin)
+// Shared Media Library & Academic Library (Teacher + Admin + Super Admin)
 Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(function () {
+    // Academic Library Architecture (Sprint: Academic Library Architecture)
+    Route::prefix('admin/academic-library')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'index'])->name('admin.academic-library.index');
+        Route::get('/{slug}', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'show'])->name('admin.academic-library.show');
+    });
+
     Route::prefix('admin/media')->group(function () {
         Route::get('/', [MediaController::class, 'index'])->name('admin.media.index');
         Route::get('/list', [MediaController::class, 'list'])->name('admin.media.list');

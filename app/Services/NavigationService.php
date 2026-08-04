@@ -286,6 +286,15 @@ class NavigationService
                 ],
                 [
                     'section' => 'Authoring',
+                    'label' => 'Academic Library',
+                    'route' => 'admin.academic-library.index',
+                    'icon' => 'academic-cap',
+                    'permission' => null,
+                    'active_pattern' => 'admin/academic-library*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Authoring',
                     'label' => 'Question Banks',
                     'route' => 'admin.question-banks.index',
                     'icon' => 'folder',

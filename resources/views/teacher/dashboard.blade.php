@@ -442,7 +442,7 @@
     @endif
 
     {{-- ══════════════════════════════════════════════
-         SECTION 2 — SMART KPI CARDS (PART 1)
+         SECTION 2 — SMART KPI CARDS (PART 6, 7, 8, 9)
          ══════════════════════════════════════════════ --}}
     <div class="tw-kpi-grid">
         @if($totalQuestionBanks > 0)
@@ -453,7 +453,7 @@
             <div class="tw-kpi__desc">Total banks authored by me</div>
         </a>
         @else
-        <a href="javascript:void(0)" onclick="openTwNothingModal()" class="tw-kpi tw-kpi--indigo">
+        <a href="javascript:void(0)" onclick="openTwNothingModal('My Question Banks')" class="tw-kpi tw-kpi--indigo">
             <div class="tw-kpi__icon">📂</div>
             <div class="tw-kpi__count">0</div>
             <div class="tw-kpi__label">My Question Banks</div>
@@ -469,11 +469,11 @@
             <div class="tw-kpi__desc">Submitted, pending Super Admin</div>
         </a>
         @else
-        <a href="javascript:void(0)" onclick="openTwNothingModal()" class="tw-kpi tw-kpi--amber">
+        <a href="javascript:void(0)" onclick="openNoPendingApprovalModal()" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⏳</div>
             <div class="tw-kpi__count">0</div>
             <div class="tw-kpi__label">Awaiting Approval</div>
-            <div class="tw-kpi__desc">All reviewed</div>
+            <div class="tw-kpi__desc">No banks awaiting approval</div>
         </a>
         @endif
 
@@ -485,7 +485,7 @@
             <div class="tw-kpi__desc">Live and accessible to candidates</div>
         </a>
         @else
-        <a href="javascript:void(0)" onclick="openTwNothingModal()" class="tw-kpi tw-kpi--emerald">
+        <a href="javascript:void(0)" onclick="openTwNothingModal('Published')" class="tw-kpi tw-kpi--emerald">
             <div class="tw-kpi__icon">🟢</div>
             <div class="tw-kpi__count">0</div>
             <div class="tw-kpi__label">Published</div>
@@ -501,7 +501,7 @@
             <div class="tw-kpi__desc">In progress, not yet submitted</div>
         </a>
         @else
-        <a href="javascript:void(0)" onclick="openTwNothingModal()" class="tw-kpi tw-kpi--slate">
+        <a href="javascript:void(0)" onclick="openNoDraftModal()" class="tw-kpi tw-kpi--slate">
             <div class="tw-kpi__icon">✏️</div>
             <div class="tw-kpi__count">0</div>
             <div class="tw-kpi__label">Drafts</div>
@@ -868,13 +868,36 @@
     </div>
 </div>
 
-{{-- Floating Modal for Zero Results (PART 1) --}}
+{{-- Floating Modal for Zero Results --}}
 <div id="tw-nothing-modal" class="tw-modal-backdrop" style="display:none;" onclick="closeTwNothingModal(event)">
     <div class="tw-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:440px;">
         <div style="font-size:2.75rem;margin-bottom:.5rem;">📭</div>
         <div style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">Nothing Here Yet</div>
         <p style="font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem;line-height:1.5;">There are currently no items in this category.</p>
         <button type="button" onclick="closeTwNothingModal()" class="tw-form-submit" style="margin-top:0;">Close</button>
+    </div>
+</div>
+
+{{-- No Draft Modal (PART 8) --}}
+<div id="tw-no-draft-modal" class="tw-modal-backdrop" style="display:none;" onclick="closeNoDraftModal(event)">
+    <div class="tw-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:440px;">
+        <div style="font-size:2.75rem;margin-bottom:.5rem;">📝</div>
+        <div style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">No draft Question Banks.</div>
+        <p style="font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem;line-height:1.5;">You currently have no active drafts in progress.</p>
+        <div style="display:flex;gap:.75rem;">
+            <button type="button" onclick="closeNoDraftModal()" class="tw-qa-btn tw-qa-btn--secondary" style="flex:1;">Close</button>
+            <button type="button" onclick="closeNoDraftModal();openCreateModal();" class="tw-form-submit" style="flex:1.5;margin-top:0;">Create Draft</button>
+        </div>
+    </div>
+</div>
+
+{{-- No Pending Approval Modal (PART 9) --}}
+<div id="tw-no-pending-approval-modal" class="tw-modal-backdrop" style="display:none;" onclick="closeNoPendingApprovalModal(event)">
+    <div class="tw-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:440px;">
+        <div style="font-size:2.75rem;margin-bottom:.5rem;">🎉</div>
+        <div style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">No Question Banks are awaiting approval.</div>
+        <p style="font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem;line-height:1.5;">Everything you submitted has already been reviewed by Super Admin.</p>
+        <button type="button" onclick="closeNoPendingApprovalModal()" class="tw-form-submit" style="margin-top:0;">Close</button>
     </div>
 </div>
 
@@ -901,10 +924,30 @@ function closeTwNothingModal(e) {
     }
 }
 
+function openNoDraftModal() {
+    document.getElementById('tw-no-draft-modal').style.display = 'flex';
+}
+function closeNoDraftModal(e) {
+    if (!e || e.target === document.getElementById('tw-no-draft-modal')) {
+        document.getElementById('tw-no-draft-modal').style.display = 'none';
+    }
+}
+
+function openNoPendingApprovalModal() {
+    document.getElementById('tw-no-pending-approval-modal').style.display = 'flex';
+}
+function closeNoPendingApprovalModal(e) {
+    if (!e || e.target === document.getElementById('tw-no-pending-approval-modal')) {
+        document.getElementById('tw-no-pending-approval-modal').style.display = 'none';
+    }
+}
+
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeCreateModal();
         closeTwNothingModal();
+        closeNoDraftModal();
+        closeNoPendingApprovalModal();
     }
 });
 

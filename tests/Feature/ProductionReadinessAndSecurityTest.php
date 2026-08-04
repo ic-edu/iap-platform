@@ -134,6 +134,24 @@ test('authorized admin can access academic curriculum management', function () {
         ->assertSee('Master Course Management', false);
 });
 
+test('authorized teacher can access academic library and dedicated library category pages', function () {
+    $teacher = User::factory()->create();
+    $teacher->assignRole('teacher');
+
+    \App\Models\AclCategory::updateOrCreate(
+        ['slug' => 'toefl-listening'],
+        ['name' => 'TOEFL Listening Library', 'test_type' => 'toefl', 'section_code' => 'listening', 'target_questions' => 50, 'icon' => '🎧', 'is_active' => true]
+    );
+
+    $response = $this->actingAs($teacher)->get('/admin/academic-library');
+    $response->assertStatus(200)
+        ->assertSee('Institutional Academic Library', false);
+
+    $catResponse = $this->actingAs($teacher)->get('/admin/academic-library/toefl-listening');
+    $catResponse->assertStatus(200)
+        ->assertSee('TOEFL Listening Library', false);
+});
+
 test('authorized admin can access reporting analytics and export csv', function () {
     $admin = User::factory()->create();
     $admin->assignRole('admin');

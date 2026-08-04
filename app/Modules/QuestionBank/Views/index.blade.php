@@ -448,7 +448,7 @@
         <div class="acl-cov-grid">
             @foreach($coverageReport as $cov)
             @if(($cov['approved_banks'] ?? 0) > 0 || ($cov['approved_questions'] ?? 0) > 0)
-            <a href="{{ route('admin.question-banks.index', ['category' => $cov['category']->slug]) }}" class="acl-cov-card" style="text-decoration:none;transition:border-color .2s;cursor:pointer;" title="Filter {{ $cov['category']->name }} Question Banks">
+            <a href="{{ route('admin.academic-library.show', $cov['category']->slug) }}" class="acl-cov-card" style="text-decoration:none;transition:border-color .2s;cursor:pointer;" title="Open {{ $cov['category']->name }} Dedicated Library">
                 <div class="acl-cov-card__head">
                     <span class="acl-cov-card__title">{{ $cov['category']->icon }} {{ $cov['category']->name }}</span>
                     <span class="acl-cov-card__pct">{{ $cov['percentage'] }}%</span>
@@ -480,10 +480,15 @@
         </div>
     </div>
 
-    {{-- Main Question Banks Table Panel --}}
+    {{-- Main Question Banks Table Panel (PART 5) --}}
     <div class="acl-panel">
         <div class="acl-panel__head">
-            <span class="acl-panel__title">📂 Institutional Question Banks</span>
+            <div>
+                <span class="acl-panel__title">📂 Institutional Question Bank Repository</span>
+                <p style="font-size:.75rem;color:#64748b;margin:.2rem 0 0;">
+                    Official institutional repositories approved by Super Admin. These repositories belong to iC.edu and serve as reusable academic assets for assessments. Teachers may contribute through the institutional workflow.
+                </p>
+            </div>
             <span style="font-size:.75rem;color:#475569;">{{ $banks->total() }} total</span>
         </div>
 
