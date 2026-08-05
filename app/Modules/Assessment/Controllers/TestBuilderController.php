@@ -254,7 +254,9 @@ class TestBuilderController extends Controller
             ],
         ];
 
-        return view('teacher.assessment_detail', compact('test', 'latestFeedbackLog', 'workflowTimeline'));
+        $validationResult = $this->validateAssessment($test);
+
+        return view('teacher.assessment_detail', compact('test', 'latestFeedbackLog', 'workflowTimeline', 'validationResult'));
     }
 
     /**
@@ -287,7 +289,67 @@ class TestBuilderController extends Controller
     }
 
     /**
-     * Resubmit assessment to Repository Manager Approval Queue (TASK 7).
+     * Update an individual question linked to the assessment (TASK 3, TASK 9).
+     */
+    public function updateQuestion(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to update question.');
+        }
+
+        $validated = $request->validate([
+            'prompt'         => ['required', 'string'],
+            'question_type'  => ['nullable', 'string'],
+            'difficulty'     => ['nullable', 'string'],
+            'explanation'    => ['nullable', 'string'],
+            'choices'        => ['nullable', 'array'],
+            'correct_choice' => ['nullable'],
+        ]);
+
+        // Reuse existing Question ID (TASK 3 & TASK 9)
+        $question->prompt = $validated['prompt'];
+        if (isset($validated['question_type'])) $question->question_type = $validated['question_type'];
+        if (isset($validated['difficulty'])) $question->difficulty = $validated['difficulty'];
+        if (isset($validated['explanation'])) $question->explanation = $validated['explanation'];
+        $question->save();
+
+        if ($request->has('choices')) {
+            $choicesData = $request->input('choices', []);
+            $correctChoiceIndex = $request->input('correct_choice');
+
+            foreach ($choicesData as $idx => $choiceText) {
+                if (empty(trim($choiceText))) continue;
+
+                $choice = $question->choices()->skip($idx)->first();
+                $isCorrect = ((string)$idx === (string)$correctChoiceIndex);
+
+                if ($choice) {
+                    $choice->update([
+                        'label'       => chr(65 + $idx),
+                        'content'     => $choiceText,
+                        'choice_text' => $choiceText,
+                        'is_correct'  => $isCorrect,
+                    ]);
+                } else {
+                    $question->choices()->create([
+                        'label'       => chr(65 + $idx),
+                        'content'     => $choiceText,
+                        'choice_text' => $choiceText,
+                        'is_correct'  => $isCorrect,
+                        'order'       => $idx + 1,
+                    ]);
+                }
+            }
+        }
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Question #{$question->id} updated successfully.");
+    }
+
+    /**
+     * Resubmit assessment to Repository Manager Approval Queue with Validation Panel check (TASK 5, TASK 7).
      */
     public function resubmit(Request $request, Test $test): RedirectResponse
     {
@@ -295,6 +357,13 @@ class TestBuilderController extends Controller
 
         if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
             abort(403, 'Unauthorized access to resubmit assessment test.');
+        }
+
+        // TASK 5: Validation Panel Check before submission
+        $validationResult = $this->validateAssessment($test);
+        if (!$validationResult['is_valid']) {
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->with('error', "Cannot submit invalid assessment test. Please fix the following errors: " . implode(' | ', $validationResult['errors']));
         }
 
         $test->update([
@@ -307,10 +376,74 @@ class TestBuilderController extends Controller
             'resource_id'   => (string) $test->id,
             'actor_id'      => $user->id,
             'action'        => 'resubmitted',
-            'approval_note' => 'Teacher resubmitted assessment test after completing requested revisions.',
+            'approval_note' => 'Teacher resubmitted assessment test after completing requested revisions and passing validation.',
         ]);
 
         return redirect()->route('teacher.tests.show', $test->id)
             ->with('status', "Assessment '{$test->title}' resubmitted successfully to Repository Manager Approval Queue.");
+    }
+
+    /**
+     * Automated Question & Structure Validation (TASK 5).
+     */
+    public function validateAssessment(Test $test): array
+    {
+        $test->load(['sections.testQuestions.question.choices']);
+        $errors = [];
+        $allQuestions = [];
+        $questionIndex = 1;
+
+        foreach ($test->sections as $section) {
+            foreach ($section->testQuestions as $tq) {
+                $q = $tq->question;
+                if (!$q) {
+                    $errors[] = "Question #{$questionIndex} in Section '{$section->title}' is missing or unlinked.";
+                    $questionIndex++;
+                    continue;
+                }
+
+                $qErrors = [];
+                if (empty(trim($q->prompt ?? ''))) {
+                    $qErrors[] = "Stem / Prompt text is empty.";
+                }
+
+                if (in_array($q->question_type, ['multiple_choice', 'single_choice', 'true_false', 'select_one'])) {
+                    $choices = $q->choices ?? collect();
+                    if ($choices->isEmpty()) {
+                        $qErrors[] = "No options/choices provided.";
+                    } else {
+                        $hasCorrect = $choices->contains('is_correct', true);
+                        if (!$hasCorrect) {
+                            $qErrors[] = "No correct answer option selected.";
+                        }
+                    }
+                }
+
+                if (!empty($qErrors)) {
+                    $snippet = \Illuminate\Support\Str::limit($q->prompt ?? 'Question #'.$q->id, 25);
+                    foreach ($qErrors as $err) {
+                        $errors[] = "Q#{$questionIndex} ({$snippet}): {$err}";
+                    }
+                    $q->validation_warning = implode(' ', $qErrors);
+                } else {
+                    $q->validation_warning = null;
+                }
+
+                $allQuestions[] = [
+                    'number'   => $questionIndex,
+                    'question' => $q,
+                    'section'  => $section,
+                    'warnings' => $qErrors,
+                ];
+
+                $questionIndex++;
+            }
+        }
+
+        return [
+            'is_valid'  => empty($errors),
+            'errors'    => $errors,
+            'questions' => $allQuestions,
+        ];
     }
 }

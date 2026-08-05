@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Assessment Authoring Detail — ' . $test->title)
+@section('title', 'Assessment Authoring Workspace — ' . $test->title)
 
 @section('content')
 <div style="padding: 1.5rem 0;">
@@ -47,10 +47,41 @@
     </div>
     @endif
 
+    @if(session('error'))
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+        ⚠️ {{ session('error') }}
+    </div>
+    @endif
+
+    {{-- TASK 5: Validation Panel Summary Box --}}
+    @if(isset($validationResult))
+    <div style="background:{{ $validationResult['is_valid'] ? 'rgba(52,211,153,.08)' : 'rgba(239,68,68,.08)' }};border:1px solid {{ $validationResult['is_valid'] ? 'rgba(52,211,153,.25)' : 'rgba(239,68,68,.25)' }};border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h4 style="font-size:.95rem;font-weight:800;color:{{ $validationResult['is_valid'] ? '#34d399' : '#f87171' }};margin:0;display:flex;align-items:center;gap:.5rem;">
+                {{ $validationResult['is_valid'] ? '✅ Validation Panel Passed' : '⚠️ Assessment Validation Errors Detected' }}
+            </h4>
+            <span style="font-size:.78rem;font-weight:700;color:#94a3b8;">
+                {{ count($validationResult['questions']) }} Total Linked Questions
+            </span>
+        </div>
+        @if(!$validationResult['is_valid'])
+        <div style="margin-top:.75rem;font-size:.82rem;color:#cbd5e1;display:flex;flex-direction:column;gap:.35rem;">
+            @foreach($validationResult['errors'] as $err)
+            <div>• {{ $err }}</div>
+            @endforeach
+        </div>
+        @else
+        <div style="margin-top:.35rem;font-size:.8rem;color:#94a3b8;">
+            All questions contain valid prompt stems, choice options, and correct answer selections. Ready for submission.
+        </div>
+        @endif
+    </div>
+    @endif
+
     {{-- Main 2-Column Grid Layout --}}
     <div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;">
 
-        {{-- Left Primary Column: Details & Editor --}}
+        {{-- Left Primary Column: Details, Section Explorer & Question Editor --}}
         <div>
             {{-- Repository Manager Feedback Callout (TASK 5) --}}
             @if(in_array($test->status, ['needs_revision', 'revision_requested']) || $latestFeedbackLog)
@@ -72,13 +103,13 @@
             </div>
             @endif
 
-            {{-- Assessment Editor Form (TASK 4, 6, 7) --}}
+            {{-- Assessment Metadata Editor (TASK 4, 6) --}}
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.5rem;margin-bottom:1.5rem;">
                 <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0 0 1.25rem;display:flex;align-items:center;gap:.5rem;">
                     ✏️ Assessment Authoring Editor
                 </h3>
 
-                <form method="POST" action="{{ route('teacher.tests.update', $test->id) }}" style="display:flex;flex-direction:column;gap:1.25rem;">
+                <form id="assessment-settings-form" method="POST" action="{{ route('teacher.tests.update', $test->id) }}" style="display:flex;flex-direction:column;gap:1.25rem;">
                     @csrf
                     @method('PUT')
 
@@ -109,9 +140,9 @@
                     </div>
 
                     <div style="display:flex;gap:1rem;margin-top:.5rem;flex-wrap:wrap;">
-                        {{-- Save Draft Button (TASK 6) --}}
+                        {{-- Save Draft Button --}}
                         <button type="submit" style="padding:.75rem 1.5rem;background:#334155;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;">
-                            💾 Save Draft
+                            💾 Save Settings Draft
                         </button>
                     </form>
 
@@ -127,20 +158,149 @@
                     </div>
             </div>
 
-            {{-- Assessment Test Sections & Questions Breakdown --}}
+            {{-- TASK 1 & TASK 2: Section Explorer & Question Inspector --}}
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.5rem;">
-                <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem;">
-                    🧩 Test Structure & Linked Sections ({{ $test->sections->count() }})
-                </h3>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
+                    <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:.5rem;">
+                        🧩 Section Explorer & Question Authoring Engine
+                    </h3>
+                    <div style="font-size:.8rem;color:#94a3b8;font-weight:700;">
+                        Click any question to inspect or edit prompt stem and options.
+                    </div>
+                </div>
 
-                @foreach($test->sections as $section)
-                <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1rem;margin-bottom:1rem;">
-                    <div style="font-size:.92rem;font-weight:800;color:#fff;margin-bottom:.4rem;">
-                        Section {{ $section->order }}: {{ $section->title }}
-                    </div>
-                    <div style="font-size:.8rem;color:#94a3b8;">
-                        📝 {{ $section->testQuestions->count() }} Questions linked in this section
-                    </div>
+                @php $qGlobalIndex = 1; @endphp
+                @foreach($test->sections as $sIdx => $section)
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:1rem;overflow:hidden;margin-bottom:1.25rem;">
+                    <details open style="outline:none;">
+                        <summary style="padding:1rem 1.25rem;background:#1e293b;cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;font-weight:800;color:#fff;font-size:.95rem;">
+                            <span>
+                                ▼ Section {{ $section->order }}: {{ $section->title }}
+                            </span>
+                            <span style="font-size:.78rem;color:#818cf8;background:rgba(99,102,241,.15);padding:.2rem .6rem;border-radius:.4rem;">
+                                {{ $section->testQuestions->count() }} Linked Questions
+                            </span>
+                        </summary>
+
+                        <div style="padding:1rem;border-top:1px solid #334155;display:flex;flex-direction:column;gap:.75rem;background:#0f172a;">
+                            @if($section->testQuestions->isEmpty())
+                            <div style="font-size:.8rem;color:#64748b;padding:.5rem;">No questions linked to this section yet.</div>
+                            @endif
+
+                            @foreach($section->testQuestions as $tq)
+                            @php
+                                $q = $tq->question;
+                                $hasWarning = isset($q->validation_warning) && !empty($q->validation_warning);
+                            @endphp
+                            @if($q)
+                            <div style="background:#1e293b;border:1px solid {{ $hasWarning ? 'rgba(245,158,11,.4)' : '#334155' }};border-radius:.75rem;padding:1rem;">
+                                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+                                    <div style="flex:1;">
+                                        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;">
+                                            <span style="font-size:.75rem;font-weight:800;color:#818cf8;">Question #{{ $qGlobalIndex }}</span>
+                                            <span style="font-size:.7rem;font-weight:700;color:#94a3b8;background:#0f172a;padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">{{ $q->question_type }}</span>
+                                            <span style="font-size:.7rem;font-weight:700;color:#94a3b8;background:#0f172a;padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">{{ $q->difficulty }}</span>
+                                            
+                                            {{-- TASK 4: Revision Warning Badge --}}
+                                            @if($hasWarning)
+                                            <span style="font-size:.7rem;font-weight:800;color:#fbbf24;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);padding:.15rem .55rem;border-radius:.3rem;">
+                                                ⚠️ {{ $q->validation_warning }}
+                                            </span>
+                                            @endif
+                                        </div>
+                                        <div style="font-size:.9rem;font-weight:700;color:#fff;margin-bottom:.5rem;">
+                                            {{ $q->prompt ?? '(Empty Prompt Stem)' }}
+                                        </div>
+
+                                        {{-- Choices Display --}}
+                                        @if($q->choices && $q->choices->isNotEmpty())
+                                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.78rem;color:#cbd5e1;">
+                                            @foreach($q->choices as $cIdx => $choice)
+                                            <div style="padding:.3rem .6rem;background:#0f172a;border-radius:.35rem;border:1px solid {{ $choice->is_correct ? '#34d399' : '#1e293b' }};color:{{ $choice->is_correct ? '#34d399' : '#cbd5e1' }};font-weight:{{ $choice->is_correct ? '700' : '400' }};">
+                                                {{ chr(65 + $cIdx) }}. {{ $choice->content ?? $choice->choice_text }} {{ $choice->is_correct ? '✓ (Correct)' : '' }}
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <button type="button" onclick="document.getElementById('q-modal-{{ $q->id }}').classList.remove('hidden')" style="padding:.45rem .85rem;background:#6366f1;color:#fff;border:none;border-radius:.5rem;font-size:.78rem;font-weight:700;cursor:pointer;">
+                                            ✏️ Edit Question
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Inline Question Editor Modal (TASK 3 & TASK 6) --}}
+                            <div id="q-modal-{{ $q->id }}" class="hidden" style="position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1.5rem;">
+                                <div style="background:#0f172a;border:1px solid #334155;border-radius:1.25rem;max-width:650px;width:100%;max-height:90vh;overflow-y:auto;padding:1.75rem;box-shadow:0 25px 50px -12px rgba(0,0,0,.7);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;border-bottom:1px solid #1e293b;padding-bottom:.85rem;">
+                                        <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;">
+                                            ✏️ Edit Question #{{ $qGlobalIndex }} (ID: {{ $q->id }})
+                                        </h3>
+                                        <button type="button" onclick="document.getElementById('q-modal-{{ $q->id }}').classList.add('hidden')" style="background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;">✕</button>
+                                    </div>
+
+                                    <form method="POST" action="{{ route('teacher.tests.update-question', ['test' => $test->id, 'question' => $q->id]) }}" style="display:flex;flex-direction:column;gap:1rem;">
+                                        @csrf
+                                        @method('PUT')
+
+                                        <div>
+                                            <label style="display:block;font-size:.8rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;">Prompt Stem Text</label>
+                                            <textarea name="prompt" rows="3" required style="width:100%;padding:.65rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.85rem;">{{ $q->prompt }}</textarea>
+                                        </div>
+
+                                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                                            <div>
+                                                <label style="display:block;font-size:.8rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;">Question Type</label>
+                                                <select name="question_type" style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+                                                    <option value="multiple_choice" {{ $q->question_type === 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
+                                                    <option value="single_choice" {{ $q->question_type === 'single_choice' ? 'selected' : '' }}>Single Choice</option>
+                                                    <option value="true_false" {{ $q->question_type === 'true_false' ? 'selected' : '' }}>True / False</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label style="display:block;font-size:.8rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;">Difficulty</label>
+                                                <select name="difficulty" style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+                                                    <option value="easy" {{ $q->difficulty === 'easy' ? 'selected' : '' }}>Easy</option>
+                                                    <option value="medium" {{ $q->difficulty === 'medium' ? 'selected' : '' }}>Medium</option>
+                                                    <option value="hard" {{ $q->difficulty === 'hard' ? 'selected' : '' }}>Hard</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {{-- Choice Options --}}
+                                        <div>
+                                            <label style="display:block;font-size:.8rem;font-weight:700;color:#cbd5e1;margin-bottom:.5rem;">Options & Correct Answer Selection</label>
+                                            <div style="display:flex;flex-direction:column;gap:.5rem;">
+                                                @php $choicesList = $q->choices && $q->choices->isNotEmpty() ? $q->choices : collect([1,2,3,4]); @endphp
+                                                @foreach($choicesList as $cIdx => $cObj)
+                                                <div style="display:flex;align-items:center;gap:.6rem;background:#1e293b;padding:.5rem .75rem;border-radius:.5rem;">
+                                                    <input type="radio" name="correct_choice" value="{{ $cIdx }}" {{ is_object($cObj) && $cObj->is_correct ? 'checked' : '' }} style="accent-color:#34d399;">
+                                                    <span style="font-weight:700;color:#818cf8;font-size:.8rem;">{{ chr(65 + $cIdx) }}.</span>
+                                                    <input type="text" name="choices[{{ $cIdx }}]" value="{{ is_object($cObj) ? ($cObj->content ?? $cObj->choice_text) : '' }}" placeholder="Option {{ chr(65 + $cIdx) }} text" style="flex:1;padding:.4rem .6rem;background:#0f172a;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.82rem;">
+                                                </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label style="display:block;font-size:.8rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;">Explanation / Rationale</label>
+                                            <textarea name="explanation" rows="2" style="width:100%;padding:.65rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.85rem;">{{ $q->explanation }}</textarea>
+                                        </div>
+
+                                        <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1rem;border-top:1px solid #1e293b;padding-top:1rem;">
+                                            <button type="button" onclick="document.getElementById('q-modal-{{ $q->id }}').classList.add('hidden')" style="padding:.6rem 1.1rem;background:#334155;color:#fff;border:none;border-radius:.5rem;font-size:.8rem;font-weight:700;cursor:pointer;">Cancel</button>
+                                            <button type="submit" style="padding:.6rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.5rem;font-size:.8rem;font-weight:800;cursor:pointer;">💾 Save Question Edits</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            @php $qGlobalIndex++; @endphp
+                            @endif
+                            @endforeach
+                        </div>
+                    </details>
                 </div>
                 @endforeach
             </div>
@@ -207,4 +367,22 @@
         </div>
     </div>
 </div>
+
+{{-- TASK 7: Unsaved Changes Warning Script --}}
+<script>
+    let isFormDirty = false;
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('change', () => { isFormDirty = true; });
+            form.addEventListener('submit', () => { isFormDirty = false; });
+        });
+        window.addEventListener('beforeunload', function(e) {
+            if (isFormDirty) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved edits in your question authoring workspace.';
+            }
+        });
+    });
+</script>
 @endsection

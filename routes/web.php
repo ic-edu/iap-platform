@@ -99,6 +99,8 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.tests.show');
     Route::put('/teacher/assessments/{test}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'update'])
         ->name('teacher.tests.update');
+    Route::put('/teacher/assessments/{test}/questions/{question}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'updateQuestion'])
+        ->name('teacher.tests.update-question');
     Route::post('/teacher/assessments/{test}/resubmit', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'resubmit'])
         ->name('teacher.tests.resubmit');
 });
