@@ -196,7 +196,7 @@
                                             </div>
                                         @endif
 
-                                        {{-- TASK 2: Review Decision Panel --}}
+                                        {{-- TASK 2 & 4: Review Decision Panel --}}
                                         <div style="background:#1e293b;border:1px solid #334155;border-radius:.65rem;padding:.85rem;margin-top:1rem;">
                                             <div style="font-size:.78rem;font-weight:800;color:#cbd5e1;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">
                                                 📋 Question Governance Review Decision
@@ -210,16 +210,22 @@
                                                     🟢 Reviewed OK
                                                 </label>
 
-                                                {{-- Radio Option: Needs Revision (TASK 3 Conditional Trigger) --}}
+                                                {{-- Radio Option: Needs Revision (MANDATORY STEP 5 Conditional Trigger) --}}
                                                 <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:700;color:#fbbf24;cursor:pointer;background:#0f172a;padding:.4rem .75rem;border-radius:.4rem;border:1px solid {{ $qStatus === 'needs_revision' ? '#fbbf24' : '#334155' }};">
                                                     <input type="radio" name="q_decision_{{ $q->id }}" value="revision" {{ $qStatus === 'needs_revision' ? 'checked' : '' }}
                                                            onchange="document.getElementById('q-rev-modal-{{ $q->id }}').classList.remove('hidden');" style="accent-color:#fbbf24;">
                                                     🟡 Needs Revision
                                                 </label>
+
+                                                {{-- Radio Option: Skip for now (MANDATORY STEP 4) --}}
+                                                <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:700;color:#94a3b8;cursor:pointer;background:#0f172a;padding:.4rem .75rem;border-radius:.4rem;border:1px solid {{ $qStatus === 'not_reviewed' ? '#94a3b8' : '#334155' }};">
+                                                    <input type="radio" name="q_decision_{{ $q->id }}" value="skip" {{ $qStatus === 'not_reviewed' ? 'checked' : '' }} style="accent-color:#94a3b8;">
+                                                    ⚪ Skip for now
+                                                </label>
                                             </div>
                                             
                                             <div style="font-size:.72rem;color:#64748b;margin-top:.4rem;">
-                                                Reviewed OK = Academic quality verified. Needs Revision = Opens structured feedback for author.
+                                                Reviewed OK = Academic quality verified. Needs Revision = Triggers structured feedback for author.
                                             </div>
 
                                             {{-- Hidden form to post Reviewed OK --}}
