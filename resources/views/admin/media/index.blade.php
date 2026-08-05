@@ -261,7 +261,7 @@
                 @elseif($asset->type === 'audio')
                     <div style="width:90%;padding:.75rem;text-align:center;">
                         <div style="font-size:1.6rem;margin-bottom:.2rem;">🎵</div>
-                        <audio controls style="width:100%;height:32px;">
+                        <audio controls controlsList="nodownload noplaybackrate" style="width:100%;height:32px;">
                             <source src="{{ $asset->publicUrl() }}" type="{{ $asset->mime_type }}">
                         </audio>
                         @if($asset->content_text)
@@ -276,7 +276,7 @@
 
                 @elseif($asset->type === 'video')
                     <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#000;">
-                        <video controls style="width:100%;height:100%;object-fit:cover;">
+                        <video controls controlsList="nodownload noplaybackrate" style="width:100%;height:100%;object-fit:cover;">
                             <source src="{{ $asset->publicUrl() }}" type="video/mp4">
                         </video>
                     </div>

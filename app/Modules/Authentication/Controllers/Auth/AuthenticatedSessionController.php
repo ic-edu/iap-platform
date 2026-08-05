@@ -66,6 +66,10 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
+        if ($user?->hasRole('repository-manager')) {
+            return redirect()->route('admin.repository-manager.dashboard');
+        }
+
         if ($user?->hasRole('teacher')) {
             return redirect()->route('teacher.dashboard');
         }

@@ -140,3 +140,29 @@ test('repository manager can approve revision request and increment version', fu
         'reviewer_id'   => $repoManager->id,
     ]);
 });
+
+test('repository manager login redirects to repository manager dashboard', function () {
+    $repoManager = User::factory()->create([
+        'email'    => 'repomanager_test@icedu.com',
+        'password' => Hash::make('password'),
+        'status'   => 'active',
+    ]);
+    $repoManager->assignRole('repository-manager');
+
+    $response = $this->post('/login', [
+        'email'    => 'repomanager_test@icedu.com',
+        'password' => 'password',
+    ]);
+
+    $response->assertRedirect('/admin/repository-manager/dashboard');
+});
+
+test('teacher cannot see IRQA Quality Audit button in academic library', function () {
+    $teacher = User::factory()->create();
+    $teacher->assignRole('teacher');
+
+    $response = $this->actingAs($teacher)->get('/admin/academic-library');
+    $response->assertStatus(200)
+        ->assertDontSee('IRQA Quality Audit', false)
+        ->assertSee('Authoring Workspace', false);
+});
