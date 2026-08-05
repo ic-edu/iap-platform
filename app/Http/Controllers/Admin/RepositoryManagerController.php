@@ -463,7 +463,13 @@ class RepositoryManagerController extends Controller
      */
     public function assessmentReview(Test $test): View
     {
-        $test->load(['creator', 'sections.testQuestions.questionBank']);
+        $test->load([
+            'creator',
+            'sections.testQuestions.question.questionBank',
+            'sections.testQuestions.question.choices',
+            'sections.testQuestions.question.mediaAsset',
+            'sections.testQuestions.question.passage',
+        ]);
 
         $logs = RepositoryActivityLog::where('resource_type', 'Test')
             ->where('resource_id', (string) $test->id)

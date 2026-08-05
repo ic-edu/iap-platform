@@ -70,13 +70,58 @@
                     <div style="color:#64748b;font-size:.85rem;text-align:center;padding:2rem;">No test sections created yet.</div>
                 @else
                     @foreach($test->sections as $sec)
-                    <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1rem;margin-bottom:.75rem;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <div style="font-weight:800;color:#fff;font-size:.9rem;">{{ $sec->title ?? 'Section' }}</div>
+                    <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1rem;margin-bottom:1rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                            <div style="font-weight:800;color:#fff;font-size:.95rem;">{{ $sec->title ?? 'Section' }}</div>
                             <span style="font-size:.75rem;color:#a5b4fc;font-weight:700;">{{ $sec->testQuestions->count() }} Questions</span>
                         </div>
                         @if($sec->description)
-                            <div style="font-size:.78rem;color:#94a3b8;margin-top:.3rem;">{{ $sec->description }}</div>
+                            <div style="font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;">{{ $sec->description }}</div>
+                        @endif
+
+                        @if($sec->testQuestions->isNotEmpty())
+                            <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:.75rem;">
+                                @foreach($sec->testQuestions as $idx => $tq)
+                                    @php
+                                        $q = $tq->question;
+                                    @endphp
+                                    <div style="background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.85rem;">
+                                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+                                            <div>
+                                                <span style="font-size:.72rem;font-weight:800;color:#cbd5e1;background:#334155;padding:.15rem .45rem;border-radius:.3rem;margin-right:.4rem;">
+                                                    Q{{ $tq->order ?? ($idx + 1) }}
+                                                </span>
+                                                <span style="font-weight:700;color:#fff;font-size:.88rem;">
+                                                    {{ $q?->prompt ?? $q?->question_text ?? 'Item Prompt' }}
+                                                </span>
+                                            </div>
+                                            @if($q?->questionBank)
+                                                <span style="font-size:.68rem;color:#a78bfa;font-weight:700;white-space:nowrap;background:rgba(167,139,250,.12);padding:.15rem .45rem;border-radius:.3rem;border:1px solid rgba(167,139,250,.3);">
+                                                    🏛 {{ $q->questionBank->title }}
+                                                </span>
+                                            @endif
+                                        </div>
+
+                                        {{-- Optional Media Preview --}}
+                                        @if($q?->mediaAsset)
+                                            <div style="margin-top:.5rem;">
+                                                <x-media-preview :media="$q->mediaAsset" />
+                                            </div>
+                                        @endif
+
+                                        {{-- Choices list if available --}}
+                                        @if($q?->choices && $q->choices->isNotEmpty())
+                                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.6rem;">
+                                                @foreach($q->choices as $choice)
+                                                    <div style="font-size:.75rem;padding:.35rem .6rem;background:#1e293b;border:1px solid {{ $choice->is_correct ? '#10b981' : '#334155' }};border-radius:.35rem;color:{{ $choice->is_correct ? '#34d399' : '#cbd5e1' }};font-weight:{{ $choice->is_correct ? '800' : '400' }};">
+                                                        {{ $choice->is_correct ? '✓ ' : '' }}{{ $choice->text ?? $choice->choice_text }}
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
                         @endif
                     </div>
                     @endforeach
