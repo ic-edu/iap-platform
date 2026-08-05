@@ -106,7 +106,7 @@ class AssessmentQuestionAuthoringEngineTest extends TestCase
         $res->assertStatus(200);
         $res->assertSee('Listening Part 1');
         $res->assertSee('What is the person in the photograph doing?');
-        $res->assertSee('He is operating a laptop.');
+        $res->assertSee('Open Question');
     }
 
     /**

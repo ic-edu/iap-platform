@@ -289,6 +289,29 @@ class TestBuilderController extends Controller
     }
 
     /**
+     * Lazy Load Single Question for Editing (TASK 4 - Progressive Disclosure).
+     */
+    public function editQuestion(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question)
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to question.');
+        }
+
+        $question->load(['choices']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success'  => true,
+                'question' => $question,
+            ]);
+        }
+
+        return view('teacher.question_editor', compact('test', 'question'));
+    }
+
+    /**
      * Update an individual question linked to the assessment (TASK 3, TASK 9).
      */
     public function updateQuestion(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse
