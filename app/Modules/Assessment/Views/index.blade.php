@@ -446,18 +446,18 @@
                         $qCount = $test->sections->sum(fn($s) => $s->testQuestions->count());
                         $status = $test->status ?? ($test->is_published ? 'published' : 'draft');
                         $badgeClass = match($status) {
-                            'published'        => 'tb-badge--published',
-                            'approved'         => 'tb-badge--approved',
-                            'pending_approval' => 'tb-badge--pending',
-                            'rejected'         => 'tb-badge--rejected',
-                            default            => 'tb-badge--draft',
+                            'published'                                        => 'tb-badge--published',
+                            'approved'                                         => 'tb-badge--approved',
+                            'pending', 'pending_approval'                        => 'tb-badge--pending',
+                            'needs_revision', 'revision_requested', 'rejected' => 'tb-badge--rejected',
+                            default                                            => 'tb-badge--draft',
                         };
                         $statusLabel = match($status) {
-                            'published'        => 'Published',
-                            'approved'         => 'Approved',
-                            'pending_approval' => 'Pending Approval',
-                            'rejected'         => 'Needs Revision',
-                            default            => 'Draft',
+                            'published'                                        => 'Published',
+                            'approved'                                         => 'Approved',
+                            'pending', 'pending_approval'                        => 'Pending Approval',
+                            'needs_revision', 'revision_requested', 'rejected' => 'Needs Revision',
+                            default                                            => 'Draft',
                         };
                     @endphp
                     <tr>

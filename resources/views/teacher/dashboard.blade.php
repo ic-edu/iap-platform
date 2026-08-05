@@ -503,7 +503,7 @@ a.tw-hero__pill:hover { opacity: .8; }
         @endif
 
         @if($needsRevisionAssessments > 0)
-        <a href="{{ route('admin.publications.assessments', ['status' => 'needs_revision']) }}" class="tw-kpi tw-kpi--amber" style="border-color:#f59e0b;">
+        <a href="{{ route('admin.question-banks.index', ['status' => 'needs_revision']) }}" class="tw-kpi tw-kpi--amber" style="border-color:#f59e0b;">
             <div class="tw-kpi__icon">⚠️</div>
             <div class="tw-kpi__count" style="color:#fbbf24;">{{ $needsRevisionAssessments }}</div>
             <div class="tw-kpi__label">Needs Revision</div>

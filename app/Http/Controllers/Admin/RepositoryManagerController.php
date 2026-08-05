@@ -384,7 +384,8 @@ class RepositoryManagerController extends Controller
         $user = $request->user();
         $note = $request->input('notes', 'Revision requested. Please fix specified items.');
 
-        $questionBank->status = 'revision_requested';
+        $previousBankStatus = $questionBank->status;
+        $questionBank->status = 'needs_revision';
         $questionBank->save();
 
         RepositoryActivityLog::create([
@@ -396,8 +397,69 @@ class RepositoryManagerController extends Controller
             'approval_note' => $note,
         ]);
 
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'QuestionBank',
+                'resource_id'   => (string) $questionBank->id,
+                'action'        => 'question_bank_revision_requested',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'created_by'    => $questionBank->created_by,
+                'version'       => '1.0',
+                'reason'        => $note,
+                'ip_address'    => $request->ip(),
+                'metadata'      => [
+                    'previous_status' => $previousBankStatus,
+                    'new_status'      => 'needs_revision',
+                    'reviewer'        => $user->name,
+                ],
+            ]);
+        }
+
+        // BUG #2 FIX: Synchronize all linked Assessments containing questions from this QuestionBank
+        $questionIds = \App\Modules\QuestionBank\Models\Question::where('question_bank_id', $questionBank->id)->pluck('id');
+        $sectionIds  = \App\Modules\Assessment\Models\TestQuestion::whereIn('question_id', $questionIds)->pluck('test_section_id');
+        $testIds     = \App\Modules\Assessment\Models\TestSection::whereIn('id', $sectionIds)->pluck('test_id')->unique();
+
+        $linkedTests = Test::whereIn('id', $testIds)->get();
+        foreach ($linkedTests as $test) {
+            $previousTestStatus = $test->status;
+            $test->status = 'needs_revision';
+            $test->is_published = false;
+            $test->save();
+
+            RepositoryActivityLog::create([
+                'resource_type' => 'Test',
+                'resource_id'   => (string) $test->id,
+                'actor_id'      => $test->created_by,
+                'reviewer_id'   => $user->id,
+                'action'        => 'revision_requested',
+                'approval_note' => "Cascade revision request due to linked Question Bank '{$questionBank->title}' returning for revision.",
+            ]);
+
+            if (Schema::hasTable('acl_audit_trails')) {
+                \App\Models\AclAuditTrail::create([
+                    'resource_type' => 'Test',
+                    'resource_id'   => (string) $test->id,
+                    'action'        => 'assessment_revision_requested',
+                    'actor_id'      => $user->id,
+                    'reviewer_id'   => $user->id,
+                    'created_by'    => $test->created_by,
+                    'version'       => '1.0',
+                    'reason'        => "Cascade revision request from Question Bank '{$questionBank->title}'",
+                    'ip_address'    => $request->ip(),
+                    'metadata'      => [
+                        'previous_status'   => $previousTestStatus,
+                        'new_status'        => 'needs_revision',
+                        'parent_bank_id'    => $questionBank->id,
+                        'parent_bank_title' => $questionBank->title,
+                    ],
+                ]);
+            }
+        }
+
         return redirect()->route('admin.repository-manager.questions-approval')
-            ->with('warning', 'Revision requested from author.');
+            ->with('warning', 'Revision requested from author for Question Bank and linked Assessments.');
     }
 
     public function rejectQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse

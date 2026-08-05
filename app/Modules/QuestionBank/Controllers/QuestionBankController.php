@@ -148,8 +148,14 @@ class QuestionBankController extends Controller
     /**
      * Show detailed question bank authoring workspace.
      */
-    public function show(QuestionBank $questionBank): View
+    public function show(Request $request, QuestionBank $questionBank): View
     {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $questionBank->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to question bank.');
+        }
+
         $questionBank->load(['questions.choices', 'category', 'aclCategory', 'archiveRequests', 'versions.creator', 'auditTrails.actor']);
 
         /** @var view-string $viewName */
