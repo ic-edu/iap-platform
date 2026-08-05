@@ -97,7 +97,7 @@ class TeacherRevisionCenterTest extends TestCase
             'created_by' => $this->teacherA->id,
         ]);
 
-        $res = $this->actingAs($this->teacherA)->get(route('admin.question-banks.show', $bank->id));
+        $res = $this->actingAs($this->teacherA)->get(route('teacher.question-banks.show', $bank->id));
         $res->assertStatus(200);
         $res->assertSee('IELTS Academic Writing Pool');
     }
@@ -121,7 +121,7 @@ class TeacherRevisionCenterTest extends TestCase
         $resB->assertDontSee('Teacher A Confidential Bank');
 
         // Teacher B trying to access Teacher A's bank editor gets 403
-        $resEditor = $this->actingAs($this->teacherB)->get(route('admin.question-banks.show', $bankA->id));
+        $resEditor = $this->actingAs($this->teacherB)->get(route('teacher.question-banks.show', $bankA->id));
         $resEditor->assertStatus(403);
     }
 

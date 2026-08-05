@@ -87,6 +87,16 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.dashboard');
     Route::get('/teacher/revision-center', [TeacherDashboardController::class, 'revisionCenter'])
         ->name('teacher.revision-center');
+
+    // Teacher Workspace Authoring Aliases (HOTFIX)
+    Route::get('/teacher/question-banks', [\App\Modules\QuestionBank\Controllers\QuestionBankController::class, 'index'])
+        ->name('teacher.question-banks.index');
+    Route::get('/teacher/question-banks/{questionBank}', [\App\Modules\QuestionBank\Controllers\QuestionBankController::class, 'show'])
+        ->name('teacher.question-banks.show');
+    Route::get('/teacher/assessments', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'index'])
+        ->name('teacher.tests.index');
+    Route::get('/teacher/assessments/{test}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'show'])
+        ->name('teacher.tests.show');
 });
 
 // Finance Dedicated Landing Workspace

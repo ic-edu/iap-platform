@@ -51,7 +51,7 @@
                             </div>
                         </div>
                         <div>
-                            <a href="{{ route('admin.question-banks.show', $bank->id) }}" style="padding:.65rem 1.25rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 12px rgba(99,102,241,.3);">
+                            <a href="{{ route('teacher.question-banks.show', $bank->id) }}" style="padding:.65rem 1.25rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 12px rgba(99,102,241,.3);">
                                 ✏️ Continue Revision
                             </a>
                         </div>
@@ -99,7 +99,7 @@
                         </div>
                     </div>
                     <div>
-                        <a href="{{ route('admin.tests.show', $test->id) }}" style="padding:.65rem 1.25rem;background:#4338ca;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+                        <a href="{{ route('teacher.tests.show', $test->id) }}" style="padding:.65rem 1.25rem;background:#4338ca;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
                             ✏️ Revise Assessment
                         </a>
                     </div>

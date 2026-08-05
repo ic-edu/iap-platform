@@ -205,4 +205,18 @@ class TestBuilderController extends Controller
         return redirect()->route('admin.tests.index')
             ->with('status', "Assessment '{$test->title}' deleted.");
     }
+
+    /**
+     * Display or edit specific assessment test in Assessment Builder workspace.
+     */
+    public function show(Request $request, Test $test): View
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        return $this->index($request);
+    }
 }

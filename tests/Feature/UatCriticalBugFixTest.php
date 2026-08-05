@@ -68,7 +68,7 @@ class UatCriticalBugFixTest extends TestCase
             'created_by' => $this->teacherA->id,
         ]);
 
-        $res = $this->actingAs($this->teacherA)->get(route('admin.question-banks.index', ['status' => 'needs_revision']));
+        $res = $this->actingAs($this->teacherA)->get(route('teacher.question-banks.index', ['status' => 'needs_revision']));
         $res->assertStatus(200);
         $res->assertSee('Teacher A Bank Needs Revision');
     }
@@ -86,7 +86,7 @@ class UatCriticalBugFixTest extends TestCase
             'created_by' => $this->teacherA->id,
         ]);
 
-        $res = $this->actingAs($this->teacherB)->get(route('admin.question-banks.show', $bankA->id));
+        $res = $this->actingAs($this->teacherB)->get(route('teacher.question-banks.show', $bankA->id));
         $res->assertStatus(403);
     }
 
