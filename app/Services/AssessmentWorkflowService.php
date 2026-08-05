@@ -17,9 +17,9 @@ class AssessmentWorkflowService
         $baseQuery = Test::where('created_by', $user->id);
 
         $draft         = (clone $baseQuery)->where('status', 'draft')->count();
-        $pending       = (clone $baseQuery)->where('status', 'pending')->count();
+        $pending       = (clone $baseQuery)->whereIn('status', ['pending', 'pending_approval'])->count();
         $approved      = (clone $baseQuery)->where('status', 'approved')->count();
-        $needsRevision = (clone $baseQuery)->where('status', 'needs_revision')->count();
+        $needsRevision = (clone $baseQuery)->whereIn('status', ['needs_revision', 'revision_requested'])->count();
         $archived      = (clone $baseQuery)->where('status', 'archived')->count();
 
         return [
@@ -36,11 +36,11 @@ class AssessmentWorkflowService
      */
     public function getRepositoryManagerMetrics(): array
     {
-        $pendingAssessmentsCount  = Test::where('status', 'pending')->count();
+        $pendingAssessmentsCount  = Test::whereIn('status', ['pending', 'pending_approval'])->count();
         $approvedAssessmentsToday = Test::where('status', 'approved')
             ->whereDate('updated_at', Carbon::today())
             ->count();
-        $needsRevisionCount       = Test::where('status', 'needs_revision')->count();
+        $needsRevisionCount       = Test::whereIn('status', ['needs_revision', 'revision_requested'])->count();
         $totalApproved            = Test::where('status', 'approved')->count();
 
         return [

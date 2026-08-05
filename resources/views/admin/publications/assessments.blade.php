@@ -87,14 +87,16 @@
                     <td>
                         @if($test->status === 'approved')
                         <span class="status-badge status-badge--approved">✅ Approved</span>
-                        @elseif($test->status === 'pending_approval')
-                        <span class="status-badge status-badge--pending">⏳ Pending</span>
+                        @elseif(in_array($test->status, ['pending', 'pending_approval']))
+                        <span class="status-badge status-badge--pending">⏳ Pending Approval</span>
+                        @elseif(in_array($test->status, ['needs_revision', 'revision_requested']))
+                        <span class="status-badge status-badge--warning" style="background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);padding:.2rem .5rem;border-radius:.3rem;font-size:.75rem;font-weight:700;">⚠️ Needs Revision</span>
                         @elseif($test->status === 'archived')
                         <span class="status-badge status-badge--archived">📦 Archived</span>
-                        @elseif($test->status === 'published')
-                        <span class="status-badge status-badge--approved">✅ Approved & Published</span>
+                        @elseif($test->status === 'draft')
+                        <span class="status-badge status-badge--neutral">📝 Draft</span>
                         @else
-                        <span class="status-badge status-badge--neutral">{{ ucfirst($test->status ?? 'draft') }}</span>
+                        <span class="status-badge status-badge--neutral">{{ ucfirst($test->status ?? 'Draft') }}</span>
                         @endif
                     </td>
                     {{-- Publication Status --}}

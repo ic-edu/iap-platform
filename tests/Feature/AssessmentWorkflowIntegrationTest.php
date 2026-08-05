@@ -201,7 +201,33 @@ class AssessmentWorkflowIntegrationTest extends TestCase
         $this->assertEquals(1, $workflowService->getRepositoryManagerMetrics()['pendingAssessmentsCount']);
         $this->assertEquals(1, $workflowService->getTeacherMetrics($this->teacher)['pending']);
 
-        // 3. Repository Manager approves assessment -> status = approved, is_published = true
+        // 3. Repository Manager requests revision -> status = needs_revision, is_published = false
+        $this->actingAs($this->repoManager)
+            ->post(route('admin.repository-manager.assessment-revision', $test->id), [
+                'notes' => 'Please add passage transcript.',
+            ]);
+
+        $test->refresh();
+        $this->assertEquals('needs_revision', $test->status);
+        $this->assertFalse($test->is_published);
+
+        // Teacher Dashboard updates (Needs Revision +1, Pending -1)
+        $this->assertEquals(0, $workflowService->getTeacherMetrics($this->teacher)['pending']);
+        $this->assertEquals(1, $workflowService->getTeacherMetrics($this->teacher)['needs_revision']);
+
+        // Repository Manager sees non-clickable badge "Awaiting Teacher Resubmission"
+        $resQueue = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval', ['status' => 'needs_revision']));
+        $resQueue->assertSee('Awaiting Teacher Resubmission');
+
+        // 4. Teacher edits & resubmits -> status = pending, is_published = false
+        $this->actingAs($this->teacher)
+            ->from(route('teacher.dashboard'))
+            ->post(route('admin.tests.submit', $test->id));
+
+        $test->refresh();
+        $this->assertEquals('pending', $test->status);
+
+        // 5. Repository Manager approves assessment -> status = approved, is_published = true
         $this->actingAs($this->repoManager)
             ->post(route('admin.repository-manager.assessment-approve', $test->id), [
                 'notes' => 'E2E test approval.',
@@ -215,5 +241,9 @@ class AssessmentWorkflowIntegrationTest extends TestCase
         $this->assertEquals(0, $workflowService->getTeacherMetrics($this->teacher)['pending']);
         $this->assertEquals(1, $workflowService->getTeacherMetrics($this->teacher)['approved']);
         $this->assertEquals(0, $workflowService->getRepositoryManagerMetrics()['pendingAssessmentsCount']);
+
+        // Repository Manager sees non-clickable badge "Governance Complete"
+        $resApprovedQueue = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval', ['status' => 'approved']));
+        $resApprovedQueue->assertSee('Governance Complete');
     }
 }

@@ -100,9 +100,23 @@
                             {{ $item->updated_at?->diffForHumans() ?? 'Recently' }}
                         </td>
                         <td style="padding:1rem 1.25rem;text-align:right;">
-                            <a href="{{ route('admin.repository-manager.assessment-review', $item->id) }}" style="padding:.45rem .85rem;background:#4338ca;color:#fff;border-radius:.5rem;font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
-                                🔍 Review & Governance
-                            </a>
+                            @if(in_array($item->status, ['pending', 'pending_approval']))
+                                <a href="{{ route('admin.repository-manager.assessment-review', $item->id) }}" style="padding:.45rem .85rem;background:#4338ca;color:#fff;border-radius:.5rem;font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
+                                    🔍 Review & Governance
+                                </a>
+                            @elseif(in_array($item->status, ['needs_revision', 'revision_requested']))
+                                <span style="padding:.45rem .85rem;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:.5rem;font-size:.78rem;font-weight:800;display:inline-flex;align-items:center;gap:.3rem;">
+                                    📝 Awaiting Teacher Resubmission
+                                </span>
+                            @elseif($item->status === 'approved')
+                                <span style="padding:.45rem .85rem;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);border-radius:.5rem;font-size:.78rem;font-weight:800;display:inline-flex;align-items:center;gap:.3rem;">
+                                    ✓ Governance Complete
+                                </span>
+                            @else
+                                <span style="padding:.45rem .85rem;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:.5rem;font-size:.78rem;font-weight:700;">
+                                    {{ ucfirst($item->status) }}
+                                </span>
+                            @endif
                         </td>
                     </tr>
                     @endforeach
