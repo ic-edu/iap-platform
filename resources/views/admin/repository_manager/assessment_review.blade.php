@@ -7,8 +7,8 @@
     {{-- Header --}}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
         <div>
-            <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin:0 0 .3rem;">🔍 Assessment Governance Review</h1>
-            <p style="font-size:.88rem;color:#94a3b8;margin:0;">Validate test structure, sections, questions, choices, and answer keys before approving for institutional use.</p>
+            <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin:0 0 .3rem;">🔍 Assessment Question Review Workspace</h1>
+            <p style="font-size:.88rem;color:#94a3b8;margin:0;">Inspect test questions, verify answer keys & explanations, and make academic review decisions.</p>
         </div>
         <div>
             <a href="{{ route('admin.repository-manager.assessment-approval') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
@@ -35,7 +35,7 @@
     </div>
     @endif
 
-    {{-- TASK 4: Question Review Progress Bar & Counters --}}
+    {{-- TASK 5: Question Review Progress Bar & Counters --}}
     @if(isset($reviewProgress))
     <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.35rem;margin-bottom:1.5rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;flex-wrap:wrap;gap:1rem;">
@@ -112,9 +112,9 @@
                 </div>
             </div>
 
-            {{-- Sections Breakdown & Question-Level Structured Review --}}
+            {{-- Sections Breakdown & Question-Level Workspace --}}
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
-                <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Section & Question Governance Review</h3>
+                <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Question Review Workspace</h3>
 
                 @if($test->sections->isEmpty())
                     <div style="color:#64748b;font-size:.85rem;text-align:center;padding:2rem;">No test sections created yet.</div>
@@ -138,7 +138,7 @@
                                         $qStatus = $qRev?->status ?? 'not_reviewed';
                                     @endphp
                                     @if($q)
-                                    <div style="background:#0f172a;border:1px solid {{ $qStatus === 'needs_revision' ? 'rgba(245,158,11,.5)' : ($qStatus === 'reviewed_ok' ? 'rgba(52,211,153,.3)' : '#334155') }};border-radius:.75rem;padding:1.1rem;">
+                                    <div id="question-card-{{ $q->id }}" style="background:#0f172a;border:1px solid {{ $qStatus === 'needs_revision' ? 'rgba(245,158,11,.5)' : ($qStatus === 'reviewed_ok' ? 'rgba(52,211,153,.3)' : '#334155') }};border-radius:.75rem;padding:1.1rem;">
                                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.5rem;">
                                             <div>
                                                 <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">
@@ -196,7 +196,7 @@
                                             </div>
                                         @endif
 
-                                        {{-- TASK 2 & 4: Review Decision Panel --}}
+                                        {{-- TASK 2: Review Decision Panel --}}
                                         <div style="background:#1e293b;border:1px solid #334155;border-radius:.65rem;padding:.85rem;margin-top:1rem;">
                                             <div style="font-size:.78rem;font-weight:800;color:#cbd5e1;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">
                                                 📋 Question Governance Review Decision
@@ -210,14 +210,14 @@
                                                     🟢 Reviewed OK
                                                 </label>
 
-                                                {{-- Radio Option: Needs Revision (MANDATORY STEP 5 Conditional Trigger) --}}
+                                                {{-- Radio Option: Needs Revision (TASK 3 Conditional Trigger) --}}
                                                 <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:700;color:#fbbf24;cursor:pointer;background:#0f172a;padding:.4rem .75rem;border-radius:.4rem;border:1px solid {{ $qStatus === 'needs_revision' ? '#fbbf24' : '#334155' }};">
                                                     <input type="radio" name="q_decision_{{ $q->id }}" value="revision" {{ $qStatus === 'needs_revision' ? 'checked' : '' }}
                                                            onchange="document.getElementById('q-rev-modal-{{ $q->id }}').classList.remove('hidden');" style="accent-color:#fbbf24;">
                                                     🟡 Needs Revision
                                                 </label>
 
-                                                {{-- Radio Option: Skip for now (MANDATORY STEP 4) --}}
+                                                {{-- Radio Option: Skip for now --}}
                                                 <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:700;color:#94a3b8;cursor:pointer;background:#0f172a;padding:.4rem .75rem;border-radius:.4rem;border:1px solid {{ $qStatus === 'not_reviewed' ? '#94a3b8' : '#334155' }};">
                                                     <input type="radio" name="q_decision_{{ $q->id }}" value="skip" {{ $qStatus === 'not_reviewed' ? 'checked' : '' }} style="accent-color:#94a3b8;">
                                                     ⚪ Skip for now
@@ -290,12 +290,41 @@
             </div>
         </div>
 
-        {{-- Right: Repository Governance Action Form & Audit Log (TASK 5) --}}
+        {{-- Right: Question Navigator, Governance Decision Form & Audit Log (TASK 4 & TASK 6) --}}
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
+            
+            {{-- TASK 4: Question Navigator Sidebar Widget --}}
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.25rem;">
+                <div style="font-size:.85rem;font-weight:800;color:#fff;margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+                    <span>🧭 Question Navigator</span>
+                    <span style="font-size:.72rem;color:#94a3b8;font-weight:600;">Jump to question</span>
+                </div>
+                
+                <div style="display:flex;flex-wrap:wrap;gap:.45rem;max-height:180px;overflow-y:auto;padding-right:.25rem;">
+                    @php $navQIdx = 1; @endphp
+                    @foreach($test->sections as $sec)
+                        @foreach($sec->testQuestions as $tq)
+                            @if($tq->question)
+                            @php
+                                $qNavRev = $questionReviews[$tq->question->id] ?? null;
+                                $qNavStatus = $qNavRev?->status ?? 'not_reviewed';
+                                $badgeSymbol = $qNavStatus === 'reviewed_ok' ? '🟢' : ($qNavStatus === 'needs_revision' ? '🟡' : '⚪');
+                                $bgBorder = $qNavStatus === 'reviewed_ok' ? 'background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;' : ($qNavStatus === 'needs_revision' ? 'background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);color:#fbbf24;' : 'background:#1e293b;border:1px solid #334155;color:#94a3b8;');
+                            @endphp
+                            <a href="#question-card-{{ $tq->question->id }}" onclick="document.getElementById('question-card-{{ $tq->question->id }}').scrollIntoView({behavior:'smooth'});return false;" style="padding:.3rem .6rem;border-radius:.4rem;font-size:.75rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;{{ $bgBorder }}">
+                                {{ $badgeSymbol }} Q{{ $navQIdx }}
+                            </a>
+                            @php $navQIdx++; @endphp
+                            @endif
+                        @endforeach
+                    @endforeach
+                </div>
+            </div>
+
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
                 <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Governance Decision</h3>
 
-                {{-- TASK 5: Approve Form with Completion Guard --}}
+                {{-- TASK 6: Approve Form with Completion Guard --}}
                 <form action="{{ route('admin.repository-manager.assessment-approve', $test->id) }}" method="POST" style="margin-bottom:1rem;">
                     @csrf
                     <div style="margin-bottom:.75rem;">
@@ -319,7 +348,7 @@
 
                 <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
 
-                {{-- TASK 5: Return Revision Form --}}
+                {{-- TASK 6: Return Revision Form --}}
                 <form action="{{ route('admin.repository-manager.assessment-revision', $test->id) }}" method="POST" style="margin-bottom:1rem;">
                     @csrf
                     <div style="margin-bottom:.75rem;">
