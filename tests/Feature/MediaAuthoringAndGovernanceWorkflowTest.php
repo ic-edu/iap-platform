@@ -354,4 +354,36 @@ class MediaAuthoringAndGovernanceWorkflowTest extends TestCase
             'action'      => 'approve_download',
         ]);
     }
+
+    public function test_role_governance_matrix_buttons_visibility()
+    {
+        $media = MediaAsset::create([
+            'title'           => 'Governance Matrix Test Asset',
+            'original_name'   => 'gov.pdf',
+            'filename'        => 'gov.pdf',
+            'mime_type'       => 'application/pdf',
+            'type'            => 'pdf',
+            'path'            => 'media/gov.pdf',
+            'size'            => 2048,
+            'status'          => 'active',
+            'approval_status' => 'approved',
+            'version'         => '1.0',
+            'uploaded_by'     => $this->teacher->id,
+        ]);
+
+        // Super Admin sees Download Asset (Super Admin)
+        $resSuperAdmin = $this->actingAs($this->superAdmin)->get(route('admin.media.show', $media->id));
+        $resSuperAdmin->assertSee('Download Asset (Super Admin)');
+        $resSuperAdmin->assertDontSee('Request Download');
+
+        // Repository Manager sees Request Download
+        $resRepoManager = $this->actingAs($this->repoManager)->get(route('admin.media.show', $media->id));
+        $resRepoManager->assertSee('Request Download');
+        $resRepoManager->assertDontSee('Download Asset (Super Admin)');
+
+        // Teacher sees NO download and NO request download
+        $resTeacher = $this->actingAs($this->teacher)->get(route('admin.media.show', $media->id));
+        $resTeacher->assertDontSee('Download Asset');
+        $resTeacher->assertDontSee('Request Download');
+    }
 }

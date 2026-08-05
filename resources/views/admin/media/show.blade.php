@@ -111,12 +111,12 @@
                     📋 Copy URL
                 </button>
 
-                {{-- TASK 1 & TASK 8: Secure Download Access Control (Defensive) --}}
-                @if(Auth::user()?->canDownloadRepositoryAsset())
+                {{-- ROLE GOVERNANCE MATRIX: Super Admin gets Download, Repository Manager gets Request Download, Teachers & Students get NO download/request buttons --}}
+                @if(Auth::user()?->hasRole('super-admin'))
                 <a href="{{ route('admin.media.download', $media->id) }}" style="padding:.6rem 1.1rem;background:#10b981;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
                     ⬇ Download Asset (Super Admin)
                 </a>
-                @else
+                @elseif(Auth::user()?->hasRole('repository-manager'))
                 <button type="button" onclick="openDownloadRequestModal()" style="padding:.6rem 1.1rem;background:#312e81;border:1px solid #4338ca;color:#a5b4fc;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
                     📥 Request Download
                 </button>
@@ -149,17 +149,17 @@
 
                 <div class="imd-preview-box">
 
-                    {{-- Image Lightbox Preview --}}
+                    {{-- Image Lightbox Preview (No Download) --}}
                     @if($media->type === 'image')
                         <div style="text-align:center;width:100%;">
-                            <img id="mainPreviewImg" src="{{ $media->publicUrl() }}" alt="{{ $media->title }}" style="max-width:100%;max-height:400px;border-radius:.75rem;cursor:pointer;" onclick="openLightboxModal()">
+                            <img id="mainPreviewImg" src="{{ route('admin.media.stream', $media->id) }}" alt="{{ $media->title }}" style="max-width:100%;max-height:400px;border-radius:.75rem;cursor:pointer;" onclick="openLightboxModal()">
                         </div>
 
-                    {{-- ITEM 3: CUSTOM AUDIO PLAYER (NO NATIVE DOWNLOAD/SPEED CONTROLS) --}}
+                    {{-- CUSTOM AUDIO PLAYER (SECURE INLINE STREAMING, NO DOWNLOAD) --}}
                     @elseif($media->type === 'audio')
                         <div style="width:100%;max-width:550px;background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.5rem;text-align:center;">
                             <div style="font-size:3rem;margin-bottom:.5rem;">🎵</div>
-                            <audio id="customAudioElement" src="{{ $media->publicUrl() }}" preload="metadata"></audio>
+                            <audio id="customAudioElement" src="{{ route('admin.media.stream', $media->id) }}" controlsList="nodownload noplaybackrate" preload="metadata"></audio>
 
                             {{-- Custom Player Bar --}}
                             <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;background:#1e293b;padding:.75rem 1rem;border-radius:.75rem;">
@@ -192,18 +192,18 @@
                             @endif
                         </div>
 
-                    {{-- HTML5 Video Player --}}
+                    {{-- HTML5 Video Player (SECURE NO DOWNLOAD) --}}
                     @elseif($media->type === 'video')
                         <div style="width:100%;max-width:640px;text-align:center;">
-                            <video id="html5Video" controls controlsList="nodownload" style="width:100%;border-radius:.75rem;max-height:400px;background:#000;">
-                                <source src="{{ $media->publicUrl() }}" type="video/mp4">
+                            <video id="html5Video" controls controlsList="nodownload noplaybackrate" style="width:100%;border-radius:.75rem;max-height:400px;background:#000;">
+                                <source src="{{ route('admin.media.stream', $media->id) }}" type="{{ $media->mime_type ?? 'video/mp4' }}">
                             </video>
                         </div>
 
-                    {{-- Embedded PDF Viewer --}}
+                    {{-- SECURE READONLY EMBEDDED PDF VIEWER (TOOLBAR DISABLED) --}}
                     @elseif($media->type === 'pdf')
-                        <div style="width:100%;height:450px;">
-                            <iframe id="pdfIframe" src="{{ $media->publicUrl() }}" style="width:100%;height:100%;border:none;border-radius:.75rem;background:#fff;"></iframe>
+                        <div style="width:100%;height:480px;background:#1e293b;border-radius:.75rem;overflow:hidden;">
+                            <iframe id="pdfIframe" src="{{ route('admin.media.stream', $media->id) }}#toolbar=0&navpanes=0&scrollbar=1" style="width:100%;height:100%;border:none;border-radius:.75rem;background:#fff;"></iframe>
                         </div>
 
                     {{-- Passage Excerpt Preview --}}
@@ -479,7 +479,8 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-    {{-- TASK 8: Download Request Modal --}}
+    {{-- TASK 8: Download Request Modal (Rendered ONLY for Repository Manager) --}}
+    @if(Auth::user()?->hasRole('repository-manager'))
     <div id="downloadRequestModal" class="imd-lightbox-bg" style="display:none;">
         <div style="background:#0f172a;border:1px solid #334155;border-radius:1.25rem;max-width:550px;width:100%;padding:2rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
@@ -516,6 +517,7 @@ document.addEventListener('keydown', function(e) {
             </form>
         </div>
     </div>
+    @endif
 
 <script>
 function openDownloadRequestModal() { document.getElementById('downloadRequestModal').style.display = 'flex'; }

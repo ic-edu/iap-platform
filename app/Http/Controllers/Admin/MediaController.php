@@ -474,6 +474,40 @@ class MediaController extends Controller
     }
 
     /**
+     * Stream media file securely with inline disposition (Never forces attachment download).
+     */
+    public function stream(Request $request, MediaAsset $media)
+    {
+        if ($media->type === 'passage' || empty($media->path)) {
+            $content = $media->content_text ?? $media->description ?? 'Reading passage text content.';
+            return response($content, 200, [
+                'Content-Type'        => 'text/plain; charset=UTF-8',
+                'Content-Disposition' => 'inline',
+                'Cache-Control'       => 'no-cache, private',
+            ]);
+        }
+
+        $fullPath = storage_path('app/public/' . $media->path);
+        if (!file_exists($fullPath)) {
+            $fullPath = public_path($media->path);
+        }
+
+        if (file_exists($fullPath)) {
+            return response()->file($fullPath, [
+                'Content-Type'        => $media->mime_type ?? 'application/octet-stream',
+                'Content-Disposition' => 'inline; filename="' . basename($fullPath) . '"',
+                'Cache-Control'       => 'no-cache, private',
+            ]);
+        }
+
+        $content = $media->content_text ?? $media->description ?? 'Institutional asset media content.';
+        return response($content, 200, [
+            'Content-Type'        => $media->mime_type ?? 'text/plain',
+            'Content-Disposition' => 'inline',
+        ]);
+    }
+
+    /**
      * Download original media asset file (TASK 1 & TASK 10: SECURE DOWNLOAD POLICY).
      * Requires Super Admin / repository.download.asset permission OR a valid temporary signed URL.
      */

@@ -184,6 +184,7 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher|repository-man
         Route::post('/{media}/submit-review', [MediaController::class, 'submitForReview'])->name('admin.media.submit-review');
         Route::get('/{media}/versions', [MediaController::class, 'versions'])->name('admin.media.versions');
         Route::get('/{media}', [MediaController::class, 'show'])->name('admin.media.show');
+        Route::get('/{media}/stream', [MediaController::class, 'stream'])->name('admin.media.stream');
         Route::get('/{media}/download', [MediaController::class, 'download'])->name('admin.media.download');
         Route::post('/{media}/archive', [MediaController::class, 'archive'])->name('admin.media.archive');
         Route::post('/{media}/request-archive', [MediaController::class, 'requestArchive'])->name('admin.media.request-archive');
