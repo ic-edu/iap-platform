@@ -23,8 +23,7 @@ class ApprovalController extends Controller
     public function index(): View
     {
         $pendingTests = Test::with(['creator', 'sections'])
-            ->whereIn('status', ['pending_approval', 'draft'])
-            ->orWhereNull('status')
+            ->where('status', 'pending')
             ->latest()
             ->paginate(10);
 

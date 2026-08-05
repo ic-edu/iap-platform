@@ -167,4 +167,53 @@ class AssessmentWorkflowIntegrationTest extends TestCase
         $resTeacherDash = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
         $resTeacherDash->assertStatus(200);
     }
+
+    public function test_full_assessment_workflow_lifecycle_and_metric_synchronization()
+    {
+        $workflowService = app(\App\Services\AssessmentWorkflowService::class);
+
+        // 1. Teacher creates draft assessment
+        $test = AssessmentTest::create([
+            'title'            => 'E2E Lifecycle Assessment',
+            'slug'             => 'e2e-lifecycle-assessment',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'status'           => 'draft',
+            'is_published'     => false,
+            'created_by'       => $this->teacher->id,
+        ]);
+
+        $this->assertEquals(1, $workflowService->getTeacherMetrics($this->teacher)['draft']);
+        $this->assertEquals(0, $workflowService->getTeacherMetrics($this->teacher)['pending']);
+        $this->assertEquals(0, $workflowService->getRepositoryManagerMetrics()['pendingAssessmentsCount']);
+
+        // 2. Teacher submits assessment -> status = pending, is_published = false
+        $this->actingAs($this->teacher)
+            ->from(route('teacher.dashboard'))
+            ->post(route('admin.tests.submit', $test->id));
+
+        $test->refresh();
+        $this->assertEquals('pending', $test->status);
+        $this->assertFalse($test->is_published);
+
+        // Repository Manager Dashboard pending count increases
+        $this->assertEquals(1, $workflowService->getRepositoryManagerMetrics()['pendingAssessmentsCount']);
+        $this->assertEquals(1, $workflowService->getTeacherMetrics($this->teacher)['pending']);
+
+        // 3. Repository Manager approves assessment -> status = approved, is_published = true
+        $this->actingAs($this->repoManager)
+            ->post(route('admin.repository-manager.assessment-approve', $test->id), [
+                'notes' => 'E2E test approval.',
+            ]);
+
+        $test->refresh();
+        $this->assertEquals('approved', $test->status);
+        $this->assertTrue($test->is_published);
+
+        // Teacher Pending decreases, Teacher Approved increases, Repository Dashboard pending decreases
+        $this->assertEquals(0, $workflowService->getTeacherMetrics($this->teacher)['pending']);
+        $this->assertEquals(1, $workflowService->getTeacherMetrics($this->teacher)['approved']);
+        $this->assertEquals(0, $workflowService->getRepositoryManagerMetrics()['pendingAssessmentsCount']);
+    }
 }

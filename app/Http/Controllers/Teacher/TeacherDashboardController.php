@@ -8,6 +8,8 @@ use App\Modules\QuestionBank\Models\QuestionBank;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+use App\Services\AssessmentWorkflowService;
+
 class TeacherDashboardController extends Controller
 {
     /**
@@ -15,7 +17,7 @@ class TeacherDashboardController extends Controller
      *
      * All counts are scoped to the authenticated teacher's own question banks and assessments.
      */
-    public function index(Request $request): View
+    public function index(Request $request, AssessmentWorkflowService $workflowService): View
     {
         $user = $request->user();
 
@@ -34,14 +36,13 @@ class TeacherDashboardController extends Controller
         $archivedQuestionBanks    = (clone $myBanksQuery)->where('status', 'archived')->count();
         $rejectedQuestionBanks    = (clone $myBanksQuery)->where('status', 'rejected')->count();
 
-        // SPRINT 10.2: Synchronized Assessment Test Metrics
-        $myTestsQuery = Test::where('created_by', $user->id);
-
-        $draftAssessments       = (clone $myTestsQuery)->whereIn('status', ['draft'])->count();
-        $pendingAssessments     = (clone $myTestsQuery)->whereIn('status', ['pending', 'pending_approval'])->count();
-        $approvedAssessments    = (clone $myTestsQuery)->where('status', 'approved')->count();
-        $needsRevisionAssessments = (clone $myTestsQuery)->whereIn('status', ['needs_revision', 'revision_requested', 'rejected'])->count();
-        $archivedAssessments    = (clone $myTestsQuery)->where('status', 'archived')->count();
+        // PART E: Synchronized Assessment Test Metrics from AssessmentWorkflowService
+        $testMetrics              = $workflowService->getTeacherMetrics($user);
+        $draftAssessments         = $testMetrics['draft'];
+        $pendingAssessments       = $testMetrics['pending'];
+        $approvedAssessments      = $testMetrics['approved'];
+        $needsRevisionAssessments = $testMetrics['needs_revision'];
+        $archivedAssessments      = $testMetrics['archived'];
 
         // Combined Single Source of Truth Metrics for Teacher Dashboard
         $draftTotal     = $draftQuestionBanks + $draftAssessments;

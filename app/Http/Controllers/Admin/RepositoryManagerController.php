@@ -16,9 +16,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
+use App\Services\AssessmentWorkflowService;
+
 class RepositoryManagerController extends Controller
 {
-    public function dashboard(): View
+    public function dashboard(AssessmentWorkflowService $workflowService): View
     {
         $pendingQuestionsCount = Schema::hasTable('question_banks')
             ? QuestionBank::where('status', 'draft')->orWhere('is_published', false)->count()
@@ -28,6 +30,12 @@ class RepositoryManagerController extends Controller
         $pendingRepositoriesCount = Schema::hasTable('question_banks')
             ? QuestionBank::where('status', 'draft')->count()
             : 0;
+
+        // PART A & PART E: Shared AssessmentWorkflowService Metrics (Single Source of Truth)
+        $assessmentMetrics        = $workflowService->getRepositoryManagerMetrics();
+        $pendingAssessmentsCount  = $assessmentMetrics['pendingAssessmentsCount'];
+        $approvedAssessmentsToday = $assessmentMetrics['approvedAssessmentsToday'];
+        $needsRevisionCount       = $assessmentMetrics['needsRevisionCount'];
 
         $duplicatesCount = 3; // Duplicate detection scan results
         $metadataCompleteness = 96.5;
@@ -39,9 +47,9 @@ class RepositoryManagerController extends Controller
             ->get();
 
         $urgentAlerts = [
+            ['title' => 'Pending Assessment Queue', 'count' => $pendingAssessmentsCount, 'type' => 'urgent', 'link' => route('admin.repository-manager.assessment-approval')],
             ['title' => 'Pending Media Revisions', 'count' => $pendingMediaCount, 'type' => 'warning', 'link' => route('admin.repository-manager.media-approval')],
             ['title' => 'Question Banks Awaiting Review', 'count' => $pendingQuestionsCount, 'type' => 'urgent', 'link' => route('admin.repository-manager.questions-approval')],
-            ['title' => 'Metadata Validation Failures', 'count' => 2, 'type' => 'info', 'link' => route('admin.academic-library.quality')],
         ];
 
         $teacherSubmissionsQueue = RepositoryReviewRequest::with(['submitter'])
@@ -64,6 +72,9 @@ class RepositoryManagerController extends Controller
             'pendingQuestionsCount',
             'pendingMediaCount',
             'pendingRepositoriesCount',
+            'pendingAssessmentsCount',
+            'approvedAssessmentsToday',
+            'needsRevisionCount',
             'duplicatesCount',
             'metadataCompleteness',
             'repositoryHealthScore',

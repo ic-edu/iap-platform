@@ -106,9 +106,9 @@ class RoleDashboardRoutingAndWorkspaceIsolationTest extends TestCase
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $question->id, 'order' => 1, 'points' => 10]);
 
         // 2. Teacher submits test for approval
-        $this->actingAs($teacher)->post(route('admin.tests.submit-approval', $test))->assertRedirect(route('admin.tests.index'));
+        $this->actingAs($teacher)->post(route('admin.tests.submit', $test))->assertRedirect();
         $test->refresh();
-        $this->assertEquals('pending_approval', $test->status);
+        $this->assertEquals('pending', $test->status);
 
         // Admin CANNOT approve test (Only Super Admin can approve)
         $this->actingAs($admin)->post(route('admin.approvals.approve', $test))->assertStatus(403);

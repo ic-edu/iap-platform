@@ -167,6 +167,16 @@
     {{-- TASK 2 & 3: CLICKABLE KPI CARDS (7 CARDS FULL WIDTH GRID) --}}
     <div class="rm-kpi-grid">
         
+        {{-- Card 0: Pending Assessment Reviews (PART B - SPRINT 10.2) --}}
+        <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="rm-kpi-card" style="border-color:#6366f1;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="rm-kpi-lbl">Pending Assessments</span>
+                <span style="font-size:1.5rem;">📋</span>
+            </div>
+            <div class="rm-kpi-val" style="color:#6366f1;">{{ $pendingAssessmentsCount }}</div>
+            <div class="rm-kpi-sub">Assessment Approval Queue →</div>
+        </a>
+
         {{-- Card 1: Pending Question Reviews --}}
         <a href="{{ route('admin.repository-manager.questions-approval') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">

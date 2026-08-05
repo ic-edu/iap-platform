@@ -35,7 +35,7 @@ class ExecutiveDashboardApprovalSynchronizationTest extends TestCase
         QuestionBank::create(['title' => 'QB 2', 'slug' => 'qb-2', 'created_by' => $teacher->id, 'test_type' => 'toefl', 'status' => 'pending_approval']);
 
         // Create 1 pending test
-        AssessmentTest::create(['title' => 'Test 1', 'slug' => 'test-1', 'created_by' => $teacher->id, 'test_type' => 'ielts', 'status' => 'pending_approval']);
+        AssessmentTest::create(['title' => 'Test 1', 'slug' => 'test-1', 'created_by' => $teacher->id, 'test_type' => 'ielts', 'status' => 'pending']);
 
         // Create 1 pending staff creation request
         $staff = User::factory()->create(['status' => 'pending_approval']);
