@@ -177,23 +177,31 @@
 
                 @if(isset($validationResult) && count($validationResult['questions']) > 0)
                 <div style="display:flex;flex-direction:column;gap:1rem;">
-                    @foreach($validationResult['questions'] as $qItem)
+                    @php
+                        $revisionQuestions = in_array($test->status, ['needs_revision', 'revision_requested']) 
+                            ? array_filter($validationResult['questions'], fn($item) => !empty($item['warnings']))
+                            : $validationResult['questions'];
+                        if (empty($revisionQuestions)) {
+                            $revisionQuestions = $validationResult['questions'];
+                        }
+                    @endphp
+                    @foreach($revisionQuestions as $qItem)
                     @php
                         $q = $qItem['question'];
                         $hasWarning = !empty($qItem['warnings']);
                     @endphp
-                    <div style="background:#1e293b;border:1px solid {{ $hasWarning ? 'rgba(245,158,11,.35)' : '#334155' }};border-radius:.85rem;padding:1.1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+                    <div style="background:#1e293b;border:1px solid {{ $hasWarning ? 'rgba(245,158,11,.45)' : '#334155' }};border-radius:.85rem;padding:1.1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
                         <div>
                             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">
                                 <span style="font-size:.78rem;font-weight:800;color:#818cf8;">Question #{{ $qItem['number'] }}</span>
                                 <span style="font-size:.72rem;color:#cbd5e1;background:#0f172a;padding:.15rem .45rem;border-radius:.3rem;">Section: {{ $qItem['section']->title }}</span>
                                 @if($hasWarning)
-                                <span style="font-size:.72rem;font-weight:800;color:#fbbf24;background:rgba(245,158,11,.15);padding:.15rem .45rem;border-radius:.3rem;">
-                                    ⚠️ {{ implode(' | ', $qItem['warnings']) }}
+                                <span style="font-size:.72rem;font-weight:800;color:#fbbf24;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);padding:.15rem .45rem;border-radius:.3rem;">
+                                    🟡 {{ implode(' | ', $qItem['warnings']) }}
                                 </span>
                                 @else
                                 <span style="font-size:.72rem;font-weight:700;color:#34d399;background:rgba(52,211,153,.15);padding:.15rem .45rem;border-radius:.3rem;">
-                                    ✓ Valid
+                                    🟢 Valid
                                 </span>
                                 @endif
                             </div>
@@ -202,9 +210,9 @@
                             </div>
                         </div>
                         <div>
-                            {{-- TASK 4: Open Question Lazy Loading Button --}}
-                            <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" style="padding:.5rem 1rem;background:#6366f1;color:#fff;border-radius:.55rem;font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 2px 8px rgba(99,102,241,.25);">
-                                🔍 Open Question
+                            {{-- TASK 6: Direct Jump to Question Editor --}}
+                            <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" style="padding:.5rem 1rem;background:{{ $hasWarning ? '#f59e0b' : '#6366f1' }};color:#fff;border-radius:.55rem;font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 2px 8px rgba(0,0,0,.25);">
+                                {{ $hasWarning ? '✏️ Edit Question' : '🔍 Open Question' }}
                             </a>
                         </div>
                     </div>
