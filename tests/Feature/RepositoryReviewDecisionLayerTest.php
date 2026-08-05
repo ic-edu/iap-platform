@@ -9,7 +9,6 @@ use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
-use App\Modules\QuestionBank\Models\QuestionChoice;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -51,7 +50,7 @@ class RepositoryReviewDecisionLayerTest extends TestCase
     }
 
     /**
-     * TEST 1: Decision Panel selection separates Review from Revision.
+     * TEST 1: Assessment Review is pure read-only Question Viewer without inline popups.
      */
     public function test_1_decision_panel_separates_review_from_revision()
     {
@@ -74,20 +73,12 @@ class RepositoryReviewDecisionLayerTest extends TestCase
         ]);
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
 
-        // Open review page -> Decision panel rendered
+        // Open review page -> Pure Read-Only Question Viewer (HOTFIX S11.3.1)
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
         $res->assertStatus(200);
-        $res->assertSee('Question Governance Review Decision');
-        $res->assertSee('🟢 Reviewed OK');
-        $res->assertSee('🟡 Needs Revision');
-
-        // Select Reviewed OK -> saves status without dialog
-        $okRes = $this->actingAs($this->repoManager)->post(route('admin.repository-manager.question-review-ok', ['test' => $test->id, 'question' => $q1->id]));
-        $okRes->assertRedirect();
-
-        $review = TestQuestionReview::where('test_id', $test->id)->where('question_id', $q1->id)->first();
-        $this->assertNotNull($review);
-        $this->assertEquals('reviewed_ok', $review->status);
+        $res->assertDontSee('q-rev-modal');
+        $res->assertDontSee('Request Revision on Q#');
+        $res->assertDontSee('Submit Question Revision');
     }
 
     /**

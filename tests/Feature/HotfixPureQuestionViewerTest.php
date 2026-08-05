@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\TestQuestionReview;
 use App\Models\User;
 use App\Modules\Assessment\Models\Test as AssessmentTest;
 use App\Modules\Assessment\Models\TestQuestion;
@@ -13,7 +12,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class QuestionReviewWorkspaceRefactorTest extends TestCase
+class HotfixPureQuestionViewerTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -28,21 +27,21 @@ class QuestionReviewWorkspaceRefactorTest extends TestCase
 
         $this->teacherA = User::factory()->create([
             'name'   => 'Dr. Eleanor Vance',
-            'email'  => 'vance_s11_3@icedu.org',
+            'email'  => 'vance_s11_3_1@icedu.org',
             'status' => 'active',
         ]);
         $this->teacherA->assignRole('teacher');
 
         $this->repoManager = User::factory()->create([
-            'name'   => 'Repository Manager S11_3',
-            'email'  => 'repomanager_s11_3@icedu.org',
+            'name'   => 'Repository Manager S11_3_1',
+            'email'  => 'repomanager_s11_3_1@icedu.org',
             'status' => 'active',
         ]);
         $this->repoManager->assignRole('repository-manager');
 
         $this->bankA = QuestionBank::create([
-            'title'      => 'Workspace Refactor Bank',
-            'slug'       => 'workspace-refactor-bank',
+            'title'      => 'Hotfix Pure Question Viewer Bank',
+            'slug'       => 'hotfix-pure-question-viewer-bank',
             'test_type'  => 'toeic',
             'status'     => 'draft',
             'created_by' => $this->teacherA->id,
@@ -50,13 +49,13 @@ class QuestionReviewWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * TEST 1: Question Review Workspace prioritizes pure read-only inspection and Question Navigator.
+     * HOTFIX TEST: Assessment Review page is a pure read-only Question Viewer with ZERO revision popups.
      */
-    public function test_1_workspace_renders_question_navigator_and_pure_read_only_viewer()
+    public function test_assessment_review_is_pure_read_only_question_viewer_without_modals()
     {
         $test = AssessmentTest::create([
-            'title'            => 'TOEIC Workspace Refactor 01',
-            'slug'             => 'toeic-workspace-refactor-01',
+            'title'            => 'TOEIC Pure Viewer Test 01',
+            'slug'             => 'toeic-pure-viewer-test-01',
             'test_type'        => 'toeic',
             'duration_minutes' => 60,
             'pass_score'       => 70,
@@ -68,21 +67,21 @@ class QuestionReviewWorkspaceRefactorTest extends TestCase
 
         $q1 = Question::create([
             'question_bank_id' => $this->bankA->id,
-            'prompt'           => 'Question 1 Workspace Stem',
+            'prompt'           => 'Pure Question Viewer Stem Q1',
             'question_type'    => 'multiple_choice',
         ]);
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
 
-        $workspaceRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
-        $workspaceRes->assertStatus(200);
+        $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
+        $res->assertStatus(200);
 
-        // Verify Question Navigator widget presence
-        $workspaceRes->assertSee('Question Navigator');
-        $workspaceRes->assertSee('Jump to question');
+        // Pure Question Viewer assertions (HOTFIX S11.3.1 Deliverables)
+        $res->assertDontSee('Request Revision on Q#');
+        $res->assertDontSee('q-rev-modal');
+        $res->assertDontSee('Submit Question Revision');
 
-        // Pure Question Viewer Assertions (HOTFIX S11.3.1)
-        $workspaceRes->assertDontSee('Request Revision on Q#');
-        $workspaceRes->assertDontSee('q-rev-modal');
-        $workspaceRes->assertDontSee('Submit Question Revision');
+        // Confirm Read-Only Question Content is present
+        $res->assertSee('Pure Question Viewer Stem Q1');
+        $res->assertSee('Pure Read-Only Question Viewer');
     }
 }

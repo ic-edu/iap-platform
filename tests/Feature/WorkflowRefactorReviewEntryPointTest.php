@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\TestQuestionReview;
 use App\Models\User;
 use App\Modules\Assessment\Models\Test as AssessmentTest;
 use App\Modules\Assessment\Models\TestQuestion;
@@ -50,7 +49,7 @@ class WorkflowRefactorReviewEntryPointTest extends TestCase
     }
 
     /**
-     * TEST 1: Review & Governance entry point opens Question Review Workspace, NOT Revision dialog.
+     * TEST 1: Review & Governance entry point opens pure read-only Question Viewer.
      */
     public function test_1_review_and_governance_opens_workspace_not_revision_dialog()
     {
@@ -77,14 +76,15 @@ class WorkflowRefactorReviewEntryPointTest extends TestCase
         $queueRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval'));
         $queueRes->assertStatus(200);
         $queueRes->assertSee(route('admin.repository-manager.assessment-review', $test->id));
-        $queueRes->assertDontSee('openRevisionModal');
 
-        // Review & Governance target route opens workspace
+        // Review & Governance target route opens pure read-only Question Viewer
         $workspaceRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
         $workspaceRes->assertStatus(200);
-        $workspaceRes->assertSee('Question Governance Review Decision');
-        $workspaceRes->assertSee('🟢 Reviewed OK');
-        $workspaceRes->assertSee('🟡 Needs Revision');
-        $workspaceRes->assertSee('⚪ Skip for now');
+        $workspaceRes->assertSee('Pure Read-Only Question Viewer');
+
+        // HOTFIX S11.3.1 Assertions
+        $workspaceRes->assertDontSee('Request Revision on Q#');
+        $workspaceRes->assertDontSee('q-rev-modal');
+        $workspaceRes->assertDontSee('Submit Question Revision');
     }
 }
