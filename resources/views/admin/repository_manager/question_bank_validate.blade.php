@@ -114,12 +114,15 @@
                         </div>
 
                         {{-- Associated Media Asset --}}
-                        @if($q->media)
+                        @php
+                            $mediaItem = $q->mediaAsset ?? $q->media ?? null;
+                        @endphp
+                        @if($mediaItem)
                         <div style="background:#0f172a;border:1px solid #1e293b;padding:.75rem;border-radius:.6rem;margin-bottom:.85rem;display:flex;align-items:center;gap:.75rem;">
                             <span style="font-size:1.5rem;">📎</span>
                             <div>
-                                <div style="font-size:.78rem;font-weight:700;color:#e2e8f0;">Attached Asset: {{ $q->media->title ?? $q->media->original_name }}</div>
-                                <div style="font-size:.7rem;color:#64748b;">Type: {{ strtoupper($q->media->type) }}</div>
+                                <div style="font-size:.78rem;font-weight:700;color:#e2e8f0;">Attached Asset: {{ $mediaItem->title ?? $mediaItem->original_name }}</div>
+                                <div style="font-size:.7rem;color:#64748b;">Type: {{ strtoupper($mediaItem->type ?? 'FILE') }}</div>
                             </div>
                         </div>
                         @endif

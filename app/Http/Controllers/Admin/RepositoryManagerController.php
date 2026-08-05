@@ -261,7 +261,13 @@ class RepositoryManagerController extends Controller
 
     public function validateQuestionBank(QuestionBank $questionBank): View
     {
-        $questionBank->load(['creator', 'questions.media', 'versions']);
+        $questionBank->load(['creator', 'questions', 'versions']);
+
+        $questionBank->questions->each(function ($question) {
+            if (method_exists($question, 'mediaAsset')) {
+                $question->load('mediaAsset');
+            }
+        });
 
         $logs = RepositoryActivityLog::where('resource_type', 'QuestionBank')
             ->where('resource_id', $questionBank->id)
