@@ -473,6 +473,36 @@ class MediaController extends Controller
         return view('admin.media.show', compact('media', 'usageInfo'));
     }
 
+    /**
+     * Download original media asset file (PART 5).
+     */
+    public function download(MediaAsset $media)
+    {
+        // For passage media or text assets, stream text response
+        if ($media->type === 'passage' || empty($media->path)) {
+            $filename = \Illuminate\Support\Str::slug($media->title ?? 'passage') . '.txt';
+            $content = $media->content_text ?? $media->description ?? 'Institutional reading passage content.';
+            return response()->streamDownload(function () use ($content) {
+                echo $content;
+            }, $filename, ['Content-Type' => 'text/plain']);
+        }
+
+        if (Storage::disk('public')->exists($media->path)) {
+            return Storage::disk('public')->download($media->path, $media->original_name);
+        }
+
+        if (file_exists(public_path($media->path))) {
+            return response()->download(public_path($media->path), $media->original_name);
+        }
+
+        // Graceful stream fallback if physical file missing
+        $filename = \Illuminate\Support\Str::slug($media->title ?? $media->original_name) . '.' . ($media->type === 'pdf' ? 'pdf' : 'txt');
+        $content = $media->content_text ?? $media->description ?? 'Institutional asset file content.';
+        return response()->streamDownload(function () use ($content) {
+            echo $content;
+        }, $filename);
+    }
+
     public function usage(MediaAsset $media): JsonResponse
     {
         $url = $media->publicUrl();

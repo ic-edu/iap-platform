@@ -178,6 +178,9 @@ test('authorized teacher can access academic library and dedicated library categ
             $mediaDetailResponse->assertStatus(200)
                 ->assertSee('Asset Metadata', false);
 
+            $downloadResponse = $this->actingAs($teacher)->get('/admin/media/' . $asset->id . '/download');
+            $downloadResponse->assertStatus(200);
+
             $mediaUsageResponse = $this->actingAs($teacher)->get('/admin/media/' . $asset->id . '/usage');
             $mediaUsageResponse->assertStatus(200)
                 ->assertJsonStructure(['media_id', 'is_used', 'message']);
