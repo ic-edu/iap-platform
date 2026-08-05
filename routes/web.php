@@ -85,6 +85,8 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
 Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
     Route::get('/teacher/dashboard', [TeacherDashboardController::class, 'index'])
         ->name('teacher.dashboard');
+    Route::get('/teacher/revision-center', [TeacherDashboardController::class, 'revisionCenter'])
+        ->name('teacher.revision-center');
 });
 
 // Finance Dedicated Landing Workspace

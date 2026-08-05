@@ -104,4 +104,55 @@ class TeacherDashboardController extends Controller
             'unreadNotificationCount'
         ));
     }
+
+    /**
+     * Display Teacher Revision Center (TASK 2, 3, 4).
+     */
+    public function revisionCenter(Request $request): View
+    {
+        $user = $request->user();
+
+        // Fetch Question Banks authored by teacher that require revision
+        $revisionQuestionBanks = QuestionBank::with(['category', 'questions'])
+            ->where('created_by', $user->id)
+            ->whereIn('status', ['needs_revision', 'revision_requested', 'rejected'])
+            ->latest('updated_at')
+            ->get();
+
+        // Attach latest repository feedback comments and reviewer details to each bank
+        foreach ($revisionQuestionBanks as $bank) {
+            $latestLog = \App\Models\RepositoryActivityLog::where('resource_type', 'QuestionBank')
+                ->where('resource_id', (string) $bank->id)
+                ->whereIn('action', ['revision_requested', 'rejected'])
+                ->with(['reviewer'])
+                ->latest()
+                ->first();
+
+            $bank->latest_feedback = $latestLog?->approval_note ?? 'Revision requested by Repository Manager. Please review questions and resubmit.';
+            $bank->reviewer_name   = $latestLog?->reviewer?->name ?? 'Repository Manager';
+            $bank->returned_at     = $latestLog?->created_at ?? $bank->updated_at;
+        }
+
+        // Fetch Assessments authored by teacher that require revision
+        $revisionAssessments = Test::with(['sections'])
+            ->where('created_by', $user->id)
+            ->whereIn('status', ['needs_revision', 'revision_requested', 'rejected'])
+            ->latest('updated_at')
+            ->get();
+
+        foreach ($revisionAssessments as $test) {
+            $latestTestLog = \App\Models\RepositoryActivityLog::where('resource_type', 'Test')
+                ->where('resource_id', (string) $test->id)
+                ->whereIn('action', ['revision_requested', 'rejected'])
+                ->with(['reviewer'])
+                ->latest()
+                ->first();
+
+            $test->latest_feedback = $latestTestLog?->approval_note ?? 'Revision requested for assessment test.';
+            $test->reviewer_name   = $latestTestLog?->reviewer?->name ?? 'Repository Manager';
+            $test->returned_at     = $latestTestLog?->created_at ?? $test->updated_at;
+        }
+
+        return view('teacher.revision_center', compact('revisionQuestionBanks', 'revisionAssessments'));
+    }
 }

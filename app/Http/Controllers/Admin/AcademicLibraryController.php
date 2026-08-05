@@ -57,8 +57,9 @@ class AcademicLibraryController extends Controller
         $user = $request->user();
         $category = AclCategory::where('slug', $slug)->firstOrFail();
 
-        // Query repositories belonging ONLY to this specific category
+        // Query repositories belonging ONLY to this specific category — strictly approved and published assets (TASK 6)
         $query = QuestionBank::with(['aclCategory', 'creator', 'questions'])
+            ->whereIn('status', ['approved', 'published'])
             ->where(function ($q) use ($category) {
                 $q->where('acl_category_id', $category->id)
                   ->orWhere(function ($sub) use ($category) {
@@ -73,15 +74,6 @@ class AcademicLibraryController extends Controller
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%");
             });
-        }
-
-        // Filter by workflow status
-        if ($status = $request->input('status')) {
-            if ($status === 'published') {
-                $query->whereIn('status', ['published', 'approved']);
-            } else {
-                $query->where('status', $status);
-            }
         }
 
         // Sort
