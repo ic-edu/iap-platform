@@ -179,6 +179,7 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(func
         Route::get('/', [MediaController::class, 'index'])->name('admin.media.index');
         Route::get('/list', [MediaController::class, 'list'])->name('admin.media.list');
         Route::post('/', [MediaController::class, 'store'])->name('admin.media.store');
+        Route::get('/{media}', [MediaController::class, 'show'])->name('admin.media.show');
         Route::post('/{media}/archive', [MediaController::class, 'archive'])->name('admin.media.archive');
         Route::post('/{media}/request-archive', [MediaController::class, 'requestArchive'])->name('admin.media.request-archive');
         Route::patch('/{media}/metadata', [MediaController::class, 'updateMetadata'])->name('admin.media.metadata');

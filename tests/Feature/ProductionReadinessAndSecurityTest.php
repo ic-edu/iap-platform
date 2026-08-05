@@ -170,6 +170,17 @@ test('authorized teacher can access academic library and dedicated library categ
     $mediaListResponse = $this->actingAs($teacher)->get('/admin/media/list');
     $mediaListResponse->assertStatus(200)
         ->assertJson(['success' => true]);
+
+    $mediaAsset = \App\Models\MediaAsset::first();
+    if ($mediaAsset) {
+        $mediaDetailResponse = $this->actingAs($teacher)->get('/admin/media/' . $mediaAsset->id);
+        $mediaDetailResponse->assertStatus(200)
+            ->assertSee('Asset Metadata', false);
+
+        $mediaUsageResponse = $this->actingAs($teacher)->get('/admin/media/' . $mediaAsset->id . '/usage');
+        $mediaUsageResponse->assertStatus(200)
+            ->assertJsonStructure(['media_id', 'is_used', 'message']);
+    }
 });
 
 test('authorized admin can access reporting analytics and export csv', function () {
