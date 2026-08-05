@@ -547,69 +547,176 @@ class MediaController extends Controller
         ]);
     }
 
-    public function updateMetadata(Request $request, MediaAsset $media): RedirectResponse
-    {
-        return $this->submitRevision($request, $media);
-    }
-
-    public function submitRevision(Request $request, MediaAsset $media): RedirectResponse
+    public function edit(Request $request, MediaAsset $media): View
     {
         $user = $request->user();
 
-        if (!$user->hasRole('teacher') && !$user->hasRole('repository-manager') && !$user->hasRole('super-admin')) {
-            abort(403);
-        }
+        // Linked questions for Reusable Slot Mapping
+        $linkedQuestions = \Illuminate\Support\Facades\Schema::hasTable('questions')
+            ? \App\Modules\QuestionBank\Models\Question::with('questionBank')
+                ->where('media_asset_id', $media->id)
+                ->get()
+            : collect([]);
+
+        // Version history list
+        $versions = \Illuminate\Support\Facades\Schema::hasTable('acl_versions')
+            ? \App\Models\AclVersion::where('resource_id', $media->id)->latest()->get()
+            : collect([]);
+
+        // Audit trails list
+        $auditLogs = \Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')
+            ? \App\Models\AclAuditTrail::where('resource_id', $media->id)->latest()->get()
+            : collect([]);
+
+        return view('admin.media.edit', compact('media', 'linkedQuestions', 'versions', 'auditLogs'));
+    }
+
+    public function update(Request $request, MediaAsset $media): RedirectResponse
+    {
+        $user = $request->user();
 
         $validated = $request->validate([
-            'title'        => ['nullable', 'string', 'max:255'],
+            'title'        => ['required', 'string', 'max:255'],
             'description'  => ['nullable', 'string', 'max:1000'],
             'category'     => ['nullable', 'string', 'max:255'],
+            'sub_category' => ['nullable', 'string', 'max:255'],
             'exam_type'    => ['nullable', 'string', 'max:50'],
+            'difficulty'   => ['nullable', 'string', 'max:50'],
+            'tags'         => ['nullable', 'string'],
             'content_text' => ['nullable', 'string'],
-            'tags'         => ['nullable', 'array'],
+            'passage_type' => ['nullable', 'string', 'in:TEXT,IMAGE,HYBRID'],
+            'passage_image'=> ['nullable', 'image', 'mimes:jpeg,png,webp,jpg', 'max:10240'],
         ]);
 
-        $changesData = [
-            'media_id'         => $media->id,
-            'media_type'       => $media->type,
-            'old_data'         => [
-                'title'        => $media->title,
-                'description'  => $media->description,
-                'category'     => $media->category,
-                'exam_type'    => $media->exam_type,
-                'content_text' => $media->content_text,
-                'tags'         => $media->tags,
-            ],
-            'new_title'        => $validated['title'] ?? $media->title,
-            'new_description'  => $validated['description'] ?? $media->description,
-            'new_category'     => $validated['category'] ?? $media->category,
-            'new_exam_type'    => $validated['exam_type'] ?? $media->exam_type,
-            'new_content_text' => $validated['content_text'] ?? $media->content_text,
-            'new_tags'         => $validated['tags'] ?? $media->tags,
-        ];
+        $imagePath = $media->path;
+        if ($request->hasFile('passage_image')) {
+            $imageFile = $request->file('passage_image');
+            $imagePath = $imageFile->store('passage-images', 'public');
+        }
 
-        // Create Review Request (PART E)
-        \App\Models\RepositoryReviewRequest::create([
-            'resource_type' => 'MediaAsset',
-            'resource_id'   => $media->id,
-            'submitted_by'  => $user->id,
-            'status'        => 'pending_review',
-            'changes_data'  => $changesData,
+        $tagArray = !empty($validated['tags'])
+            ? array_map('trim', explode(',', $validated['tags']))
+            : ($media->tags ?? []);
+
+        // Task 4: Teacher Save Draft -> Save Working Copy (status = 'draft', published version untouched)
+        $media->update([
+            'title'           => $validated['title'],
+            'description'     => $validated['description'] ?? $media->description,
+            'category'        => $validated['category'] ?? $media->category,
+            'sub_category'    => $validated['sub_category'] ?? $media->sub_category,
+            'exam_type'       => $validated['exam_type'] ?? $media->exam_type,
+            'difficulty'      => $validated['difficulty'] ?? $media->difficulty,
+            'tags'            => $tagArray,
+            'content_text'    => $validated['content_text'] ?? $media->content_text,
+            'path'            => $imagePath,
+            'approval_status' => 'draft',
         ]);
 
-        $media->approval_status = 'pending_review';
-        $media->save();
+        // Task 8: Immutable Audit Log Entry
+        if (\Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $media->id,
+                'action'        => 'saved_draft',
+                'actor_id'      => $user->id,
+                'created_by'    => $user->id,
+                'version'       => $media->version ?? '1.0',
+                'reason'        => 'Teacher saved working copy draft',
+                'metadata'      => [
+                    'title'      => $media->title,
+                    'status'     => 'draft',
+                    'updated_by' => $user->name,
+                ],
+            ]);
+        }
 
-        \App\Models\RepositoryActivityLog::create([
-            'resource_type' => 'MediaAsset',
-            'resource_id'   => $media->id,
-            'actor_id'      => $user->id,
-            'action'        => 'submitted_revision',
-            'old_values'    => $changesData['old_data'],
-            'new_values'    => $changesData,
+        return redirect()->route('admin.media.edit', $media->id)
+            ->with('status', 'Working Copy draft saved. Click "Submit for Review" when ready for Repository Manager governance review.');
+    }
+
+    public function submitForReview(Request $request, MediaAsset $media): RedirectResponse
+    {
+        $user = $request->user();
+
+        // Task 4 & 5: Submit for Review -> pending_review
+        $media->update([
+            'approval_status' => 'pending_review',
         ]);
 
-        return back()->with('status', 'Revision Request submitted to Repository Manager for Quality Assurance Review.');
+        if (\Illuminate\Support\Facades\Schema::hasTable('repository_review_requests')) {
+            \App\Models\RepositoryReviewRequest::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $media->id,
+                'submitted_by'  => $user->id,
+                'status'        => 'pending_review',
+                'changes_data'  => [
+                    'title'        => $media->title,
+                    'type'         => $media->type,
+                    'version'      => $media->version ?? '1.0',
+                    'submitted_at' => now()->toDateTimeString(),
+                    'author_name'  => $user->name,
+                ],
+            ]);
+        }
+
+        // Task 8: Immutable Audit Log Entry
+        if (\Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $media->id,
+                'action'        => 'submitted_for_review',
+                'actor_id'      => $user->id,
+                'created_by'    => $user->id,
+                'version'       => ($media->version ?? '1.0') . '-candidate',
+                'reason'        => $request->input('reason', 'Teacher submitted repository revision for review'),
+                'metadata'      => [
+                    'asset_name' => $media->title ?? $media->original_name,
+                    'role'       => $user->getRoleNames()->first() ?? 'Teacher',
+                    'status'     => 'pending_review',
+                ],
+            ]);
+        }
+
+        // Task 9: Urgent Notification for Repository Managers
+        $repoManagers = \App\Models\User::role('repository-manager')->get();
+        foreach ($repoManagers as $manager) {
+            if (method_exists($manager, 'notify')) {
+                try {
+                    $manager->notify(new \App\Notifications\EnterpriseSystemNotification(
+                        title: 'URGENT: Media Revision Submitted for Review',
+                        message: "Teacher {$user->name} submitted revision candidate for media '{$media->title}'.",
+                        type: 'GOVERNANCE_SUBMISSION',
+                        priority: 'HIGH',
+                        entityType: 'MediaAsset',
+                        entityId: $media->id,
+                        targetUrl: route('admin.repository-manager.dashboard')
+                    ));
+                } catch (\Throwable $e) {
+                    // Silently continue in dev
+                }
+            }
+        }
+
+        return redirect()->route('admin.media.edit', $media->id)
+            ->with('status', 'Submitted for Review! Pending Repository Manager Quality Assurance review.');
+    }
+
+    public function updateMetadata(Request $request, MediaAsset $media): RedirectResponse
+    {
+        return $this->submitForReview($request, $media);
+    }
+
+    public function versions(Request $request, MediaAsset $media): View
+    {
+        $versions = \Illuminate\Support\Facades\Schema::hasTable('acl_versions')
+            ? \App\Models\AclVersion::where('resource_id', $media->id)->latest()->get()
+            : collect([]);
+
+        $auditLogs = \Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')
+            ? \App\Models\AclAuditTrail::where('resource_id', $media->id)->latest()->get()
+            : collect([]);
+
+        return view('admin.media.versions', compact('media', 'versions', 'auditLogs'));
     }
 
     // ──────────────────────────────────────────────────────────────

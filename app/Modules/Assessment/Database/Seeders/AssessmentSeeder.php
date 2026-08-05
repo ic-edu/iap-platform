@@ -18,13 +18,13 @@ class AssessmentSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::first();
+        $teacher = User::where('email', 'teacher@icedu.org')->first() ?? User::role('teacher')->first() ?? User::first();
 
-        if (!$admin) {
+        if (!$teacher) {
             return;
         }
 
-        $test = Test::firstOrCreate([
+        $test = Test::updateOrCreate([
             'slug' => 'toeic-full-simulation-test-01',
         ], [
             'title' => 'TOEIC Full Simulation Test 01',
@@ -32,7 +32,7 @@ class AssessmentSeeder extends Seeder
             'duration_minutes' => 120,
             'pass_score' => 700,
             'is_published' => true,
-            'created_by' => $admin->id,
+            'created_by' => $teacher->id,
         ]);
 
         $sectionListening = TestSection::firstOrCreate([
@@ -57,9 +57,11 @@ class AssessmentSeeder extends Seeder
         }
 
         // Create sample attempt
+        $student = User::role('student')->first() ?? $teacher;
+
         $attempt = Attempt::firstOrCreate([
             'test_id' => $test->id,
-            'user_id' => $admin->id,
+            'user_id' => $student->id,
         ], [
             'started_at' => now()->subHour(),
             'submitted_at' => now(),

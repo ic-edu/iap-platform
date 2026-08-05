@@ -64,6 +64,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             AcademicSeeder::class,
+            MediaInstitutionalRepositorySeeder::class,
+            AclStarterLibrarySeeder::class,
             QuestionBankSeeder::class,
             AssessmentSeeder::class,
             FinanceSeeder::class,

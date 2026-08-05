@@ -179,6 +179,10 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher|repository-man
         Route::get('/', [MediaController::class, 'index'])->name('admin.media.index');
         Route::get('/list', [MediaController::class, 'list'])->name('admin.media.list');
         Route::post('/', [MediaController::class, 'store'])->name('admin.media.store');
+        Route::get('/{media}/edit', [MediaController::class, 'edit'])->name('admin.media.edit');
+        Route::put('/{media}', [MediaController::class, 'update'])->name('admin.media.update');
+        Route::post('/{media}/submit-review', [MediaController::class, 'submitForReview'])->name('admin.media.submit-review');
+        Route::get('/{media}/versions', [MediaController::class, 'versions'])->name('admin.media.versions');
         Route::get('/{media}', [MediaController::class, 'show'])->name('admin.media.show');
         Route::get('/{media}/download', [MediaController::class, 'download'])->name('admin.media.download');
         Route::post('/{media}/archive', [MediaController::class, 'archive'])->name('admin.media.archive');

@@ -172,6 +172,39 @@ class RepositoryManagerController extends Controller
             'approval_note' => $note,
         ]);
 
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $media->id,
+                'action'        => 'approved',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'approver_id'   => $user->id,
+                'created_by'    => $reviewRequest->submitted_by,
+                'version'       => $newVersionNumber,
+                'reason'        => $note,
+                'metadata'      => [
+                    'decision'    => 'approved',
+                    'reviewer'    => $user->name,
+                    'new_version' => $newVersionNumber,
+                ],
+            ]);
+        }
+
+        if (Schema::hasTable('acl_versions')) {
+            \App\Models\AclVersion::where('resource_id', $media->id)->update(['is_current' => false]);
+            \App\Models\AclVersion::create([
+                'resource_type'  => 'MediaAsset',
+                'resource_id'    => $media->id,
+                'version_number' => $newVersionNumber,
+                'title'          => $media->title ?? $media->original_name,
+                'snapshot_data'  => $media->toArray(),
+                'created_by'     => $user->id,
+                'change_reason'  => $note,
+                'is_current'     => true,
+            ]);
+        }
+
         return redirect()->route('admin.repository-manager.media-approval')
             ->with('success', "Media Revision Request approved successfully. Updated to version {$newVersionNumber}.");
     }
@@ -209,6 +242,23 @@ class RepositoryManagerController extends Controller
             'approval_note' => $note,
         ]);
 
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $reviewRequest->resource_id,
+                'action'        => 'revision_requested',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'created_by'    => $reviewRequest->submitted_by,
+                'version'       => $media?->version ?? '1.0',
+                'reason'        => $note,
+                'metadata'      => [
+                    'decision' => 'revision_requested',
+                    'reviewer' => $user->name,
+                ],
+            ]);
+        }
+
         return redirect()->route('admin.repository-manager.media-approval')
             ->with('warning', 'Revision requested from author.');
     }
@@ -245,6 +295,23 @@ class RepositoryManagerController extends Controller
             'action'        => 'rejected',
             'approval_note' => $note,
         ]);
+
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $reviewRequest->resource_id,
+                'action'        => 'rejected',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'created_by'    => $reviewRequest->submitted_by,
+                'version'       => $media?->version ?? '1.0',
+                'reason'        => $note,
+                'metadata'      => [
+                    'decision' => 'rejected',
+                    'reviewer' => $user->name,
+                ],
+            ]);
+        }
 
         return redirect()->route('admin.repository-manager.media-approval')
             ->with('danger', 'Media revision request rejected.');

@@ -308,21 +308,27 @@
                     <span style="font-size:.68rem;color:#64748b;font-weight:700;">v{{ $asset->version ?? '1.0' }}</span>
                 </div>
 
-                {{-- PART 4: Media Detail Link --}}
-                <a href="{{ route('admin.media.show', $asset->id) }}" class="imr-card__title">
+                {{-- TASK 1: Media Title Plain Text Only (Hyperlink Removed) --}}
+                <div class="imr-card__title" style="color:#f8fafc;font-weight:700;margin-top:.35rem;margin-bottom:.15rem;font-size:.9rem;line-height:1.3;">
                     {{ $asset->title ?? $asset->original_name }}
-                </a>
+                </div>
                 <div class="imr-card__sub">Folder: {{ $asset->category ?? 'General Assets' }}</div>
                 <div style="font-size:.68rem;color:#475569;margin-top:2px;">Size: {{ $asset->humanSize() }} • {{ $asset->created_at?->format('d M Y') }}</div>
             </div>
 
-            {{-- Card Footer & Usage Tracker (PART 5 & 6) --}}
-            <div class="imr-foot">
-                <button type="button" onclick="showUsageModal('{{ $asset->id }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" style="background:none;border:none;color:#818cf8;font-size:.75rem;font-weight:700;cursor:pointer;padding:0;">
-                    🔗 Usage Tracker
-                </button>
-                <button type="button" onclick="copyAssetUrl('{{ $asset->publicUrl() }}')" style="padding:.3rem .75rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;">
-                    Copy URL
+            {{-- TASK 1: Action Column / Action Buttons (Preview, Edit, Version History) --}}
+            <div class="imr-foot" style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#0b1329;border-top:1px solid #1e293b;">
+                <a href="{{ route('admin.media.show', $asset->id) }}" style="padding:.3rem .55rem;background:#1e293b;border:1px solid #334155;color:#38bdf8;border-radius:.4rem;font-size:.7rem;font-weight:700;text-decoration:none;">
+                    👁 Preview
+                </a>
+                <a href="{{ route('admin.media.edit', $asset->id) }}" style="padding:.3rem .55rem;background:#1e1b4b;border:1px solid #4338ca;color:#a5b4fc;border-radius:.4rem;font-size:.7rem;font-weight:700;text-decoration:none;">
+                    ✏ Edit
+                </a>
+                <a href="{{ route('admin.media.versions', $asset->id) }}" style="padding:.3rem .55rem;background:#1e293b;border:1px solid #334155;color:#fbbf24;border-radius:.4rem;font-size:.7rem;font-weight:700;text-decoration:none;">
+                    📄 Version History
+                </a>
+                <button type="button" onclick="showUsageModal('{{ $asset->id }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" style="background:none;border:none;color:#818cf8;font-size:.7rem;font-weight:700;cursor:pointer;padding:0;">
+                    🔗 Tracker
                 </button>
             </div>
         </div>

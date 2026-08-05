@@ -16,9 +16,9 @@ class QuestionBankSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::first();
+        $teacher = User::where('email', 'teacher@icedu.org')->first() ?? User::role('teacher')->first() ?? User::first();
 
-        if (!$admin) {
+        if (!$teacher) {
             return;
         }
 
@@ -29,7 +29,7 @@ class QuestionBankSeeder extends Seeder
         ], [
             'title' => 'TOEIC Official Question Bank Vol. 1',
             'category_id' => $category?->id,
-            'created_by' => $admin->id,
+            'created_by' => $teacher->id,
             'test_type' => TestType::Toeic,
             'description' => 'Official TOEIC listening and reading question pool.',
         ]);
