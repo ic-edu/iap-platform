@@ -196,16 +196,26 @@
                             <iframe id="pdfIframe" src="{{ $media->publicUrl() }}" style="width:100%;height:100%;border:none;border-radius:.75rem;background:#fff;"></iframe>
                         </div>
 
-                    {{-- PART 7: Full Passage Reader Preview --}}
+                    {{-- PART 7: Information-Only Passage Excerpt Preview (No duplicate CTAs) --}}
                     @elseif($media->type === 'passage')
-                        <div style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:.75rem;padding:1.5rem;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                                <div style="font-size:.82rem;font-weight:800;color:#818cf8;">📖 Academic Reading Passage Text</div>
-                                <button type="button" onclick="openPassageReaderModal()" style="font-size:.75rem;font-weight:700;color:#34d399;background:none;border:none;cursor:pointer;">
-                                    Expand Full Screen Reader →
-                                </button>
+                        <div style="width:100%;background:#0f172a;border:1px solid #1e293b;border-radius:.85rem;padding:2rem;display:flex;flex-direction:column;gap:1rem;justify-content:center;cursor:default;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <span style="font-size:.72rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;background:#1e293b;padding:.2rem .65rem;border-radius:.4rem;border:1px solid #334155;">
+                                    Preview (Excerpt)
+                                </span>
+                                <span style="font-size:.7rem;color:#475569;">Read-only Excerpt</span>
                             </div>
-                            <div style="font-size:.88rem;color:#e2e8f0;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;padding-right:.5rem;">{{ $media->content_text ?? $media->description }}</div>
+                            <div style="font-size:.9rem;color:#cbd5e1;line-height:1.65;cursor:default;user-select:text;">
+                                @php
+                                    $fullText = $media->content_text ?? $media->description ?? 'No passage text available.';
+                                    $paragraphs = explode("\n\n", $fullText);
+                                    $firstParagraph = $paragraphs[0] ?? $fullText;
+                                @endphp
+                                {{ $firstParagraph }}
+                            </div>
+                            <div style="font-size:.72rem;color:#475569;font-style:italic;">
+                                Use the primary action button "📖 Read Full Passage" above to view the complete multi-paragraph text.
+                            </div>
                         </div>
                     @endif
 
