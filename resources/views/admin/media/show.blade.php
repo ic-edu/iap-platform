@@ -101,22 +101,26 @@
                     </button>
                 @endif
 
-                {{-- ITEM 4: Edit Asset Button (Available for Teachers & Managers) --}}
-                <button type="button" onclick="openTeacherEditModal()" style="padding:.6rem 1.1rem;background:#3b82f6;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
+                {{-- Edit Asset Button --}}
+                <a href="{{ route('admin.media.edit', $media->id) }}" style="padding:.6rem 1.1rem;background:#3b82f6;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
                     ✏️ Edit Asset
-                </button>
+                </a>
 
                 {{-- Copy URL Button --}}
                 <button type="button" onclick="copyAssetUrl('{{ $media->publicUrl() }}')" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;cursor:pointer;">
                     📋 Copy URL
                 </button>
 
-                {{-- Download Asset (Forbidden for Teachers - ITEM 4) --}}
-                @unless(Auth::user()?->hasRole('teacher'))
+                {{-- TASK 1 & TASK 8: Secure Download Access Control --}}
+                @if(Auth::user()?->hasRole('super-admin') || Auth::user()?->hasPermissionTo('repository.download.asset'))
                 <a href="{{ route('admin.media.download', $media->id) }}" style="padding:.6rem 1.1rem;background:#10b981;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
-                    ⬇ Download Asset
+                    ⬇ Download Asset (Super Admin)
                 </a>
-                @endunless
+                @else
+                <button type="button" onclick="openDownloadRequestModal()" style="padding:.6rem 1.1rem;background:#312e81;border:1px solid #4338ca;color:#a5b4fc;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+                    📥 Request Download
+                </button>
+                @endif
             </div>
         </div>
     </div>
@@ -474,6 +478,52 @@ document.addEventListener('keydown', function(e) {
         closeTeacherEditModal();
     }
 });
+
+    {{-- TASK 8: Download Request Modal --}}
+    <div id="downloadRequestModal" class="imd-lightbox-bg" style="display:none;">
+        <div style="background:#0f172a;border:1px solid #334155;border-radius:1.25rem;max-width:550px;width:100%;padding:2rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+                <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:.5rem;">
+                    📥 Request Download Approval
+                </h3>
+                <span onclick="closeDownloadRequestModal()" style="color:#64748b;font-size:1.4rem;cursor:pointer;">&times;</span>
+            </div>
+
+            <form action="{{ route('admin.media.request-download', $media->id) }}" method="POST">
+                @csrf
+                <div style="display:flex;flex-direction:column;gap:1.25rem;">
+                    <div>
+                        <label style="font-size:.78rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.4rem;">Purpose *</label>
+                        <select name="purpose" id="downloadPurposeSelect" onchange="toggleDownloadReasonField()" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.65rem;border-radius:.6rem;font-size:.85rem;" required>
+                            <option value="Academic Audit">Academic Audit</option>
+                            <option value="Legal">Legal</option>
+                            <option value="Accreditation">Accreditation</option>
+                            <option value="Migration">Migration</option>
+                            <option value="Backup">Backup</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div id="downloadReasonDiv" style="display:none;">
+                        <label style="font-size:.78rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.4rem;">Specify Reason (Required for Other) *</label>
+                        <textarea name="reason" rows="3" placeholder="Provide detailed governance justification for download request..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.65rem;border-radius:.6rem;font-size:.85rem;"></textarea>
+                    </div>
+
+                    <button type="submit" style="width:100%;padding:.75rem;background:#4338ca;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.88rem;">
+                        Submit Request to Super Admin Queue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+function openDownloadRequestModal() { document.getElementById('downloadRequestModal').style.display = 'flex'; }
+function closeDownloadRequestModal() { document.getElementById('downloadRequestModal').style.display = 'none'; }
+function toggleDownloadReasonField() {
+    const val = document.getElementById('downloadPurposeSelect').value;
+    document.getElementById('downloadReasonDiv').style.display = (val === 'Other') ? 'block' : 'none';
+}
 
 // PDF Modal
 function openPdfModal() { document.getElementById('pdfViewerModal').style.display = 'flex'; }

@@ -9,6 +9,7 @@ use App\Models\RepositoryReviewRequest;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class MediaAuthoringAndGovernanceWorkflowTest extends TestCase
@@ -17,6 +18,7 @@ class MediaAuthoringAndGovernanceWorkflowTest extends TestCase
 
     protected User $teacher;
     protected User $repoManager;
+    protected User $superAdmin;
 
     protected function setUp(): void
     {
@@ -28,6 +30,9 @@ class MediaAuthoringAndGovernanceWorkflowTest extends TestCase
 
         $this->repoManager = User::factory()->create(['name' => 'Repo Manager', 'email' => 'repomanager_test@icedu.com']);
         $this->repoManager->assignRole('repository-manager');
+
+        $this->superAdmin = User::factory()->create(['name' => 'Super Admin User', 'email' => 'superadmin_test@icedu.org']);
+        $this->superAdmin->assignRole('super-admin');
     }
 
     public function test_teacher_can_access_media_repository_index_with_action_buttons()
@@ -256,5 +261,97 @@ class MediaAuthoringAndGovernanceWorkflowTest extends TestCase
         $this->assertEquals('Stable Published Asset v1.0', $media->title);
         $this->assertEquals('1.0', $media->version);
         $this->assertEquals('rejected', $media->approval_status);
+    }
+
+    public function test_direct_download_blocked_for_teacher_and_repository_manager()
+    {
+        $media = MediaAsset::create([
+            'title'           => 'Protected Document',
+            'original_name'   => 'protected.pdf',
+            'filename'        => 'protected.pdf',
+            'mime_type'       => 'application/pdf',
+            'type'            => 'pdf',
+            'path'            => 'media/protected.pdf',
+            'size'            => 2048,
+            'status'          => 'active',
+            'approval_status' => 'approved',
+            'version'         => '1.0',
+            'uploaded_by'     => $this->teacher->id,
+        ]);
+
+        $resTeacher = $this->actingAs($this->teacher)->get(route('admin.media.download', $media->id));
+        $resTeacher->assertStatus(403);
+
+        $resManager = $this->actingAs($this->repoManager)->get(route('admin.media.download', $media->id));
+        $resManager->assertStatus(403);
+    }
+
+    public function test_super_admin_can_download_and_signed_url_allows_download()
+    {
+        $media = MediaAsset::create([
+            'title'           => 'Protected Audio File',
+            'original_name'   => 'audio.wav',
+            'filename'        => 'audio.wav',
+            'mime_type'       => 'audio/wav',
+            'type'            => 'audio',
+            'path'            => 'media/audio.wav',
+            'size'            => 2048,
+            'status'          => 'active',
+            'approval_status' => 'approved',
+            'version'         => '1.0',
+            'uploaded_by'     => $this->teacher->id,
+        ]);
+
+        // Super Admin direct download
+        $resSuperAdmin = $this->actingAs($this->superAdmin)->get(route('admin.media.download', $media->id));
+        $resSuperAdmin->assertStatus(200);
+
+        // Signed URL download for Teacher
+        $signedUrl = URL::temporarySignedRoute('admin.media.download', now()->addMinutes(15), ['media' => $media->id]);
+        $resSigned = $this->actingAs($this->teacher)->get($signedUrl);
+        $resSigned->assertStatus(200);
+
+        $this->assertDatabaseHas('acl_audit_trails', [
+            'resource_id' => $media->id,
+            'action'      => 'download_executed',
+        ]);
+    }
+
+    public function test_download_request_workflow_from_repository_manager_to_super_admin()
+    {
+        $media = MediaAsset::create([
+            'title'           => 'Audit Target Document',
+            'original_name'   => 'audit.pdf',
+            'filename'        => 'audit.pdf',
+            'mime_type'       => 'application/pdf',
+            'type'            => 'pdf',
+            'path'            => 'media/audit.pdf',
+            'size'            => 2048,
+            'status'          => 'active',
+            'approval_status' => 'approved',
+            'version'         => '1.0',
+            'uploaded_by'     => $this->teacher->id,
+        ]);
+
+        // Manager submits download request
+        $resReq = $this->actingAs($this->repoManager)->post(route('admin.media.request-download', $media->id), [
+            'purpose' => 'Academic Audit',
+        ]);
+        $resReq->assertSessionHas('status');
+
+        $reqObj = RepositoryReviewRequest::where('resource_id', $media->id)->where('status', 'pending_download')->first();
+        $this->assertNotNull($reqObj);
+
+        // Super Admin approves request
+        $resApprove = $this->actingAs($this->superAdmin)->post(route('admin.media.approve-download', $reqObj->id));
+        $resApprove->assertSessionHas('status');
+
+        $reqObj->refresh();
+        $this->assertEquals('approved', $reqObj->status);
+
+        $this->assertDatabaseHas('acl_audit_trails', [
+            'resource_id' => $media->id,
+            'action'      => 'approve_download',
+        ]);
     }
 }

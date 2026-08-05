@@ -392,27 +392,60 @@
         </div>
     </div>
 
-    {{-- Upload Modal --}}
+    {{-- Upload Wizard Modal (TASK 3 & TASK 6) --}}
     <div id="uploadModal" class="imr-modal-bg" style="display:none;">
-        <div class="imr-modal">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-                <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;">⬆ Upload Institutional Media Asset</h3>
+        <div class="imr-modal" style="max-width:700px;width:100%;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+                <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:.5rem;">
+                    🚀 Multi-Step Asset Upload Wizard
+                </h3>
                 <span onclick="closeUploadModal()" style="color:#64748b;font-size:1.4rem;cursor:pointer;">&times;</span>
             </div>
-            <form action="{{ route('admin.media.store') }}" method="POST" enctype="multipart/form-data">
+
+            <form action="{{ route('admin.media.store') }}" method="POST" enctype="multipart/form-data" id="wizardForm">
                 @csrf
-                <div style="display:flex;flex-direction:column;gap:1rem;">
-                    <div>
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Asset Title</label>
-                        <input type="text" name="title" required placeholder="e.g. TOEFL Listening Audio Transcript 01" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                <input type="hidden" name="type" id="wizardAssetType" value="image">
+
+                {{-- STEP 1: Select Asset Type --}}
+                <div id="wizardStep1">
+                    <label style="font-size:.78rem;font-weight:800;color:#94a3b8;display:block;margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em;">
+                        Step 1: Choose Institutional Asset Type *
+                    </label>
+                    <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:.65rem;margin-bottom:1.5rem;">
+                        <button type="button" onclick="selectWizardType('image')" id="typeBtn_image" style="padding:.85rem .5rem;background:#1e293b;border:2px solid #6366f1;color:#fff;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                            <span style="font-size:1.5rem;">🖼</span> Image
+                        </button>
+                        <button type="button" onclick="selectWizardType('audio')" id="typeBtn_audio" style="padding:.85rem .5rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                            <span style="font-size:1.5rem;">🎵</span> Audio
+                        </button>
+                        <button type="button" onclick="selectWizardType('video')" id="typeBtn_video" style="padding:.85rem .5rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                            <span style="font-size:1.5rem;">🎬</span> Video
+                        </button>
+                        <button type="button" onclick="selectWizardType('pdf')" id="typeBtn_pdf" style="padding:.85rem .5rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                            <span style="font-size:1.5rem;">📄</span> PDF
+                        </button>
+                        <button type="button" onclick="selectWizardType('passage')" id="typeBtn_passage" style="padding:.85rem .5rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                            <span style="font-size:1.5rem;">📝</span> Passage
+                        </button>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                </div>
+
+                {{-- STEP 2: Dynamic Form Fields per Asset Type --}}
+                <div id="wizardStep2" style="display:flex;flex-direction:column;gap:1rem;">
+
+                    {{-- Title & Exam Fields (Common) --}}
+                    <div>
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Asset Title *</label>
+                        <input type="text" name="title" required placeholder="e.g. TOEFL Reading Passage Vol 1 / Part 1 Photograph" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;">
                         <div>
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Exam Type</label>
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Exam Type *</label>
                             <select name="exam_type" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
-                                <option value="toefl">TOEFL</option>
-                                <option value="toeic">TOEIC</option>
-                                <option value="ielts">IELTS</option>
+                                <option value="toefl">TOEFL iBT</option>
+                                <option value="toeic">TOEIC Official</option>
+                                <option value="ielts">IELTS Academic</option>
                                 <option value="placement">Placement</option>
                                 <option value="grammar">Grammar</option>
                                 <option value="vocabulary">Vocabulary</option>
@@ -420,16 +453,69 @@
                             </select>
                         </div>
                         <div>
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Folder Category</label>
-                            <input type="text" name="category" placeholder="e.g. Listening Audio" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Category / Folder</label>
+                            <input type="text" name="category" placeholder="e.g. Reading Passages" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        </div>
+                        <div>
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Sub Category</label>
+                            <input type="text" name="sub_category" placeholder="e.g. Academic Lecture" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
                         </div>
                     </div>
-                    <div>
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Media File (Image, Audio, Video, PDF)</label>
-                        <input type="file" name="file" required style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+
+                    {{-- Dynamic Section for IMAGE --}}
+                    <div id="fields_image">
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Upload Image File (JPG, PNG, WebP) *</label>
+                        <input type="file" name="file" accept="image/*" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
                     </div>
-                    <button type="submit" style="width:100%;padding:.75rem;background:#6366f1;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;margin-top:.5rem;">
-                        Upload to Repository
+
+                    {{-- Dynamic Section for AUDIO --}}
+                    <div id="fields_audio" style="display:none;">
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Upload Audio Track (MP3, WAV, M4A) *</label>
+                        <input type="file" name="audio_file" accept="audio/*" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;margin-bottom:.75rem;">
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Audio Transcript Content</label>
+                        <textarea name="content_text" rows="3" placeholder="Associated transcript text..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;"></textarea>
+                    </div>
+
+                    {{-- Dynamic Section for VIDEO --}}
+                    <div id="fields_video" style="display:none;">
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Upload Video File (MP4, WEBM) *</label>
+                        <input type="file" name="video_file" accept="video/*" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;margin-bottom:.75rem;">
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Duration / Description</label>
+                        <input type="text" name="description" placeholder="e.g. 05:30 min - Listening Section Explanation" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                    </div>
+
+                    {{-- Dynamic Section for PDF --}}
+                    <div id="fields_pdf" style="display:none;">
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Upload PDF Document *</label>
+                        <input type="file" name="pdf_file" accept="application/pdf" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                    </div>
+
+                    {{-- Dynamic Section for PASSAGE (Text Only, Image Only, Hybrid) --}}
+                    <div id="fields_passage" style="display:none;background:#080f1d;border:1px solid #334155;border-radius:.75rem;padding:1rem;">
+                        <label style="font-size:.75rem;font-weight:800;color:#818cf8;display:block;margin-bottom:.5rem;">
+                            Passage Format Selector *
+                        </label>
+                        <div style="display:flex;gap:.5rem;margin-bottom:.85rem;">
+                            <input type="hidden" name="passage_type" id="wizardPassageFormat" value="HYBRID">
+                            <button type="button" onclick="setWizardPassageMode('TEXT')" id="wPillTEXT" style="padding:.4rem .75rem;border-radius:.5rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;font-size:.75rem;font-weight:700;cursor:pointer;">Text Only</button>
+                            <button type="button" onclick="setWizardPassageMode('IMAGE')" id="wPillIMAGE" style="padding:.4rem .75rem;border-radius:.5rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;font-size:.75rem;font-weight:700;cursor:pointer;">Image Only</button>
+                            <button type="button" onclick="setWizardPassageMode('HYBRID')" id="wPillHYBRID" style="padding:.4rem .75rem;border-radius:.5rem;background:#4338ca;color:#fff;border:1px solid #6366f1;font-size:.75rem;font-weight:700;cursor:pointer;">Hybrid (Text + Image)</button>
+                        </div>
+
+                        <div id="wPassageTextDiv">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Rich Text Passage Content</label>
+                            <textarea name="passage_content_text" rows="4" placeholder="Enter passage paragraphs..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;font-family:monospace;"></textarea>
+                        </div>
+
+                        <div id="wPassageImgDiv" style="margin-top:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Passage Diagram / Image Scan</label>
+                            <input type="file" name="passage_image_file" accept="image/*" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        </div>
+                    </div>
+
+                    {{-- TASK 6: Button Changes -> "Submit for Repository Review" --}}
+                    <button type="submit" style="width:100%;padding:.75rem;background:#6366f1;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;margin-top:.5rem;font-size:.88rem;">
+                        🚀 Submit for Repository Review
                     </button>
                 </div>
             </form>
@@ -441,6 +527,46 @@
 <script>
 function openUploadModal() { document.getElementById('uploadModal').style.display = 'flex'; }
 function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; }
+
+function selectWizardType(type) {
+    document.getElementById('wizardAssetType').value = type;
+    ['image','audio','video','pdf','passage'].forEach(t => {
+        const btn = document.getElementById('typeBtn_' + t);
+        const fld = document.getElementById('fields_' + t);
+        if (btn) {
+            btn.style.border = (t === type) ? '2px solid #6366f1' : '1px solid #334155';
+            btn.style.color  = (t === type) ? '#fff' : '#94a3b8';
+        }
+        if (fld) {
+            fld.style.display = (t === type) ? 'block' : 'none';
+        }
+    });
+}
+
+function setWizardPassageMode(mode) {
+    document.getElementById('wizardPassageFormat').value = mode;
+    ['TEXT','IMAGE','HYBRID'].forEach(m => {
+        const btn = document.getElementById('wPill' + m);
+        if (btn) {
+            btn.style.background = (m === mode) ? '#4338ca' : '#1e293b';
+            btn.style.color      = (m === mode) ? '#fff' : '#cbd5e1';
+            btn.style.borderColor= (m === mode) ? '#6366f1' : '#334155';
+        }
+    });
+
+    const txt = document.getElementById('wPassageTextDiv');
+    const img = document.getElementById('wPassageImgDiv');
+    if (mode === 'TEXT') {
+        if(txt) txt.style.display = 'block';
+        if(img) img.style.display = 'none';
+    } else if (mode === 'IMAGE') {
+        if(txt) txt.style.display = 'none';
+        if(img) img.style.display = 'block';
+    } else {
+        if(txt) txt.style.display = 'block';
+        if(img) img.style.display = 'block';
+    }
+}
 
 function toggleTranscript(id) {
     const el = document.getElementById(id);

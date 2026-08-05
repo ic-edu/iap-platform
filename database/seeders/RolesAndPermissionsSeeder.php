@@ -58,6 +58,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'assessment.result.view',
             'assessment.result.export',
             'certificate.view',
+            'repository.download.asset',
             'certificate.issue',
             'certificate.reissue',
             'certificate.revoke',

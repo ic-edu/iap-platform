@@ -474,10 +474,43 @@ class MediaController extends Controller
     }
 
     /**
-     * Download original media asset file (PART 5).
+     * Download original media asset file (TASK 1 & TASK 10: SECURE DOWNLOAD POLICY).
+     * Requires Super Admin / repository.download.asset permission OR a valid temporary signed URL.
      */
-    public function download(MediaAsset $media)
+    public function download(Request $request, MediaAsset $media)
     {
+        $user = $request->user();
+        $hasSignedUrl = $request->hasValidSignature();
+        $isSuperAdmin = $user && ($user->hasRole('super-admin') || $user->hasPermissionTo('repository.download.asset'));
+
+        if (!$hasSignedUrl && !$isSuperAdmin) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Direct download is restricted by Institutional Repository Policy. Please request download approval or preview online.',
+                ], 403);
+            }
+            abort(403, 'Direct download is restricted by Institutional Repository Policy. Please request download approval or preview online.');
+        }
+
+        // TASK 9: Audit Log Download Executed
+        if (\Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $media->id,
+                'action'        => 'download_executed',
+                'actor_id'      => $user?->id,
+                'created_by'    => $user?->id,
+                'version'       => $media->version ?? '1.0',
+                'reason'        => $hasSignedUrl ? 'Executed download via approved temporary signed URL' : 'Direct download executed by Super Admin',
+                'metadata'      => [
+                    'ip_address' => $request->ip(),
+                    'asset_name' => $media->title ?? $media->original_name,
+                    'user_role'  => $user?->getRoleNames()->first() ?? 'User',
+                ],
+            ]);
+        }
+
         // For passage media or text assets, stream text response
         if ($media->type === 'passage' || empty($media->path)) {
             $filename = \Illuminate\Support\Str::slug($media->title ?? 'passage') . '.txt';
@@ -501,6 +534,164 @@ class MediaController extends Controller
         return response()->streamDownload(function () use ($content) {
             echo $content;
         }, $filename);
+    }
+
+    /**
+     * TASK 8: Repository Manager / Teacher submits Download Request for Super Admin approval.
+     */
+    public function requestDownload(Request $request, MediaAsset $media): RedirectResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'purpose' => ['required', 'string', 'in:Academic Audit,Legal,Accreditation,Migration,Backup,Other'],
+            'reason'  => ['required_if:purpose,Other', 'nullable', 'string', 'max:1000'],
+        ]);
+
+        $reason = $validated['purpose'] === 'Other' ? $validated['reason'] : "Requested for {$validated['purpose']}";
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('repository_review_requests')) {
+            \App\Models\RepositoryReviewRequest::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $media->id,
+                'submitted_by'  => $user->id,
+                'status'        => 'pending_download',
+                'changes_data'  => [
+                    'request_type' => 'download',
+                    'purpose'      => $validated['purpose'],
+                    'reason'       => $reason,
+                    'asset_title'  => $media->title ?? $media->original_name,
+                    'requester'    => $user->name,
+                ],
+            ]);
+        }
+
+        // TASK 9: Audit Log Request Download
+        if (\Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $media->id,
+                'action'        => 'request_download',
+                'actor_id'      => $user->id,
+                'created_by'    => $user->id,
+                'version'       => $media->version ?? '1.0',
+                'reason'        => $reason,
+                'metadata'      => [
+                    'purpose'    => $validated['purpose'],
+                    'ip_address' => $request->ip(),
+                    'asset_name' => $media->title ?? $media->original_name,
+                ],
+            ]);
+        }
+
+        return back()->with('status', 'Download Request submitted to Super Admin Queue for Academic Governance approval.');
+    }
+
+    /**
+     * TASK 8: Display Download Requests Queue for Super Admin.
+     */
+    public function downloadRequestsIndex(Request $request): View
+    {
+        $this->authorizeAdmin($request);
+
+        $downloadRequests = \Illuminate\Support\Facades\Schema::hasTable('repository_review_requests')
+            ? \App\Models\RepositoryReviewRequest::with(['submitter'])
+                ->where('status', 'pending_download')
+                ->latest()
+                ->paginate(15)
+            : collect([]);
+
+        return view('admin.media.download_requests', compact('downloadRequests'));
+    }
+
+    /**
+     * TASK 8: Super Admin approves download request and generates temporary signed URL.
+     */
+    public function approveDownloadRequest(Request $request, string $id): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user->hasRole('super-admin')) {
+            abort(403, 'Super Admin authorization required to approve asset download requests.');
+        }
+
+        $reviewRequest = \App\Models\RepositoryReviewRequest::findOrFail($id);
+        $media = MediaAsset::findOrFail($reviewRequest->resource_id);
+
+        // Generate temporary signed URL expiring in 30 minutes
+        $signedUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'admin.media.download',
+            now()->addMinutes(30),
+            ['media' => $media->id]
+        );
+
+        $reviewRequest->update([
+            'status'       => 'approved',
+            'reviewer_id'  => $user->id,
+            'review_notes' => 'Download request approved by Super Admin. Temporary signed URL generated.',
+            'approved_at'  => now(),
+        ]);
+
+        // TASK 9: Audit Log Approve Download
+        if (\Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $media->id,
+                'action'        => 'approve_download',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'approver_id'   => $user->id,
+                'created_by'    => $reviewRequest->submitted_by,
+                'version'       => $media->version ?? '1.0',
+                'reason'        => 'Super Admin approved download request and generated temporary signed URL',
+                'metadata'      => [
+                    'ip_address' => $request->ip(),
+                    'signed_url' => $signedUrl,
+                ],
+            ]);
+        }
+
+        return redirect()->route('admin.media.download-requests')
+            ->with('status', "Download Request approved! Temporary Signed URL (Expires in 30 min): {$signedUrl}");
+    }
+
+    /**
+     * TASK 8: Super Admin rejects download request.
+     */
+    public function rejectDownloadRequest(Request $request, string $id): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user->hasRole('super-admin')) {
+            abort(403, 'Super Admin authorization required.');
+        }
+
+        $reviewRequest = \App\Models\RepositoryReviewRequest::findOrFail($id);
+        $media = MediaAsset::find($reviewRequest->resource_id);
+
+        $reviewRequest->update([
+            'status'       => 'rejected',
+            'reviewer_id'  => $user->id,
+            'review_notes' => $request->input('reason', 'Download request rejected by Super Admin governance policy.'),
+        ]);
+
+        // TASK 9: Audit Log Reject Download
+        if (\Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id'   => $reviewRequest->resource_id,
+                'action'        => 'reject_download',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'created_by'    => $reviewRequest->submitted_by,
+                'version'       => $media?->version ?? '1.0',
+                'reason'        => $request->input('reason', 'Download request rejected by Super Admin'),
+                'metadata'      => [
+                    'ip_address' => $request->ip(),
+                ],
+            ]);
+        }
+
+        return redirect()->route('admin.media.download-requests')
+            ->with('status', 'Download request rejected.');
     }
 
     public function usage(MediaAsset $media): JsonResponse

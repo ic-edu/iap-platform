@@ -187,6 +187,7 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher|repository-man
         Route::get('/{media}/download', [MediaController::class, 'download'])->name('admin.media.download');
         Route::post('/{media}/archive', [MediaController::class, 'archive'])->name('admin.media.archive');
         Route::post('/{media}/request-archive', [MediaController::class, 'requestArchive'])->name('admin.media.request-archive');
+        Route::post('/{media}/request-download', [MediaController::class, 'requestDownload'])->name('admin.media.request-download');
         Route::patch('/{media}/metadata', [MediaController::class, 'updateMetadata'])->name('admin.media.metadata');
         Route::get('/{media}/usage', [MediaController::class, 'usage'])->name('admin.media.usage');
     });
@@ -200,7 +201,9 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::post('/{media}/request-restore', [MediaController::class, 'requestRestore'])->name('admin.media.request-restore');
         Route::post('/{media}/approve-archive', [MediaController::class, 'approveArchive'])->name('admin.media.approve-archive');
         Route::post('/{media}/approve-restore', [MediaController::class, 'approveRestore'])->name('admin.media.approve-restore');
-        Route::post('/{media}/request-delete', [MediaController::class, 'requestDelete'])->name('admin.media.request-delete');
+        Route::get('/download-requests', [MediaController::class, 'downloadRequestsIndex'])->name('admin.media.download-requests');
+        Route::post('/download-requests/{id}/approve', [MediaController::class, 'approveDownloadRequest'])->name('admin.media.approve-download');
+        Route::post('/download-requests/{id}/reject', [MediaController::class, 'rejectDownloadRequest'])->name('admin.media.reject-download');
     });
 });
 
