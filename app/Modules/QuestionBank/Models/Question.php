@@ -40,6 +40,7 @@ class Question extends Model
 
     protected $fillable = [
         'question_bank_id',
+        'media_asset_id',
         'passage_id',
         'passage_text',
         'audio_url',
@@ -82,6 +83,16 @@ class Question extends Model
     public function passage(): BelongsTo
     {
         return $this->belongsTo(Passage::class, 'passage_id');
+    }
+
+    /**
+     * Get associated institutional media asset.
+     *
+     * @return BelongsTo<\App\Models\MediaAsset, $this>
+     */
+    public function mediaAsset(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MediaAsset::class, 'media_asset_id');
     }
 
     /**

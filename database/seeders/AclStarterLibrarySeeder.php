@@ -1381,16 +1381,27 @@ class AclStarterLibrarySeeder extends Seeder
             );
 
             foreach ($repoData['questions'] as $qData) {
+                $imageUrl = $qData['image_url'] ?? null;
+                $audioUrl = $qData['audio_url'] ?? null;
+                $mediaAssetId = null;
+
+                if ($imageUrl) {
+                    $mediaAssetId = \App\Models\MediaAsset::where('path', $imageUrl)->value('id');
+                } elseif ($audioUrl) {
+                    $mediaAssetId = \App\Models\MediaAsset::where('path', $audioUrl)->value('id');
+                }
+
                 $q = Question::updateOrCreate(
                     ['question_bank_id' => $bank->id, 'prompt' => $qData['prompt']],
                     [
-                        'question_type' => $qData['type'],
-                        'difficulty'    => $qData['difficulty'],
-                        'points'        => $qData['points'],
-                        'passage_text'  => $qData['passage'] ?? null,
-                        'audio_url'     => $qData['audio_url'] ?? null,
-                        'image_url'     => $qData['image_url'] ?? null,
-                        'explanation'   => $qData['explanation'] ?? null,
+                        'question_type'  => $qData['type'],
+                        'difficulty'     => $qData['difficulty'],
+                        'points'         => $qData['points'],
+                        'passage_text'   => $qData['passage'] ?? null,
+                        'audio_url'      => $audioUrl,
+                        'image_url'      => $imageUrl,
+                        'media_asset_id' => $mediaAssetId,
+                        'explanation'    => $qData['explanation'] ?? null,
                     ]
                 );
 

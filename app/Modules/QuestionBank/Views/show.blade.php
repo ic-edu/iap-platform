@@ -680,19 +680,25 @@
 
         function selectMediaItem(item) {
             const prefix = (currentMediaTargetMode === 'edit') ? 'eq_' : 'q_';
+            const mediaIdInput = document.getElementById(prefix + 'media_asset_id');
+            if (mediaIdInput) mediaIdInput.value = item.id;
+
             if (item.type === 'audio') {
                 document.getElementById(prefix + 'audio_url').value = item.url || item.name;
                 document.getElementById(prefix + 'question_type').value = 'listening';
                 updateAnswerOptionsUI(currentMediaTargetMode);
-                showAttachedBadge('🎵 Audio Attached: ' + item.name, currentMediaTargetMode);
+                showAttachedBadge('🎵 Audio Attached: ' + (item.title || item.name), currentMediaTargetMode);
             } else if (item.type === 'passage') {
-                document.getElementById(prefix + 'passage_text').value = item.text || item.name;
+                document.getElementById(prefix + 'passage_text').value = item.content_text || item.text || item.name;
                 document.getElementById(prefix + 'question_type').value = 'reading';
                 updateAnswerOptionsUI(currentMediaTargetMode);
-                showAttachedBadge('📖 Passage Attached: ' + item.name, currentMediaTargetMode);
+                showAttachedBadge('📖 Passage Attached: ' + (item.title || item.name), currentMediaTargetMode);
+            } else if (item.type === 'image') {
+                document.getElementById(prefix + 'audio_url').value = item.url || item.name;
+                showAttachedBadge('🖼 Image Attached: ' + (item.title || item.name), currentMediaTargetMode);
             } else {
                 document.getElementById(prefix + 'audio_url').value = item.url || item.name;
-                showAttachedBadge('📎 Attached: ' + item.name, currentMediaTargetMode);
+                showAttachedBadge('📎 Attached: ' + (item.title || item.name), currentMediaTargetMode);
             }
             closeMediaSelectorModal();
         }

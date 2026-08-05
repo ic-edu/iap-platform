@@ -36,6 +36,14 @@ class MediaAsset extends Model
         'original_name',
         'mime_type',
         'type',
+        'category',
+        'sub_category',
+        'exam_type',
+        'difficulty',
+        'tags',
+        'approval_status',
+        'version',
+        'content_text',
         'path',
         'size',
         'status',
@@ -50,6 +58,7 @@ class MediaAsset extends Model
     {
         return [
             'size'        => 'integer',
+            'tags'        => 'array',
             'archived_at' => 'datetime',
         ];
     }

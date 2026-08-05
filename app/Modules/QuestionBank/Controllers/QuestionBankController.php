@@ -520,6 +520,7 @@ class QuestionBankController extends Controller
             'explanation'           => ['nullable', 'string'],
             'passage_text'          => ['nullable', 'string'],
             'audio_url'             => ['nullable', 'string'],
+            'media_asset_id'        => ['nullable', 'string'],
             'choices'               => ['nullable', 'array'],
             'choices.*.label'       => ['nullable', 'string'],
             'choices.*.content'     => ['nullable', 'string'],
@@ -534,6 +535,7 @@ class QuestionBankController extends Controller
 
         $question = Question::create([
             'question_bank_id' => $questionBank->id,
+            'media_asset_id'   => $validated['media_asset_id'] ?? null,
             'prompt'           => $validated['prompt'],
             'question_type'    => $qType,
             'difficulty'        => $validated['difficulty'],
@@ -567,6 +569,7 @@ class QuestionBankController extends Controller
             'explanation'           => ['nullable', 'string'],
             'passage_text'          => ['nullable', 'string'],
             'audio_url'             => ['nullable', 'string'],
+            'media_asset_id'        => ['nullable', 'string'],
             'choices'               => ['nullable', 'array'],
             'choices.*.label'       => ['nullable', 'string'],
             'choices.*.content'     => ['nullable', 'string'],
@@ -580,13 +583,14 @@ class QuestionBankController extends Controller
         $qType = $validated['question_type'];
 
         $question->update([
-            'prompt'        => $validated['prompt'],
-            'question_type' => $qType,
-            'difficulty'    => $validated['difficulty'],
-            'points'        => $validated['points'],
-            'explanation'   => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
-            'passage_text'  => $validated['passage_text'] ?? null,
-            'audio_url'     => $validated['audio_url'] ?? null,
+            'prompt'         => $validated['prompt'],
+            'media_asset_id' => $validated['media_asset_id'] ?? $question->media_asset_id,
+            'question_type'  => $qType,
+            'difficulty'     => $validated['difficulty'],
+            'points'         => $validated['points'],
+            'explanation'    => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
+            'passage_text'   => $validated['passage_text'] ?? null,
+            'audio_url'      => $validated['audio_url'] ?? null,
         ]);
 
         $question->choices()->delete();

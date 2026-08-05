@@ -1,350 +1,382 @@
 @extends('layouts.admin')
 
-@section('title', 'Media Management — iC.edu Platform')
+@section('title', 'Institutional Media Repository — iC.edu Platform')
 
 @push('styles')
 <style>
-/* ──────────────────────────────────────
-   MEDIA MANAGEMENT — MEDIA-002
-────────────────────────────────────── */
-.ml-page { display:flex; flex-direction:column; gap:1.5rem; }
+.imr-page { display:flex; flex-direction:column; gap:1.75rem; }
 
-.ml-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
-.ml-title  { font-size:1.45rem; font-weight:800; color:#f1f5f9; margin:0 0 .25rem; }
-.ml-sub    { font-size:.82rem; color:#64748b; margin:0; }
-
-/* Filter bar */
-.ml-filter { background:#0f172a; border:1px solid #1e293b; border-radius:.85rem; padding:.85rem 1.1rem; display:flex; gap:.65rem; flex-wrap:wrap; align-items:center; }
-.ml-search { flex:1; min-width:160px; background:#1e293b; border:1px solid #334155; border-radius:.5rem; color:#e2e8f0; font-size:.82rem; padding:.45rem .85rem; outline:none; transition:border-color .15s; }
-.ml-search:focus { border-color:#6366f1; }
-.ml-filter-pills { display:flex; gap:.4rem; flex-wrap:wrap; }
-.ml-pill { padding:.25rem .7rem; border-radius:99px; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; border:1px solid #334155; color:#94a3b8; background:#1e293b; cursor:pointer; text-decoration:none; transition:background .15s; white-space:nowrap; }
-.ml-pill:hover, .ml-pill--active { background:#6366f1; color:#fff; border-color:#6366f1; }
-
-/* Media grid */
-.ml-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
-
-/* Media card */
-.ml-card { background:#0f172a; border:1px solid #1e293b; border-radius:1rem; overflow:hidden; display:flex; flex-direction:column; transition:border-color .2s, box-shadow .2s; }
-.ml-card:hover { border-color:#334155; box-shadow:0 6px 20px rgba(0,0,0,.3); }
-
-.ml-card__preview {
-    height:80px; background:#080f1d; display:flex; align-items:center; justify-content:center; font-size:2rem;
-    border-bottom:1px solid #1e293b;
+.imr-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    border: 1px solid #1e293b;
+    border-radius: 1.25rem;
+    padding: 1.75rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
 }
-.ml-card__preview--image { height:120px; overflow:hidden; }
-.ml-card__preview--image img { width:100%; height:100%; object-fit:cover; }
+.imr-hero__title { font-size: 1.5rem; font-weight: 800; color: #fff; margin: 0 0 .3rem; }
+.imr-hero__sub   { font-size: .85rem; color: #94a3b8; margin: 0; }
 
-.ml-card__body { padding:1rem; flex:1; display:flex; flex-direction:column; gap:.4rem; }
-.ml-card__name { font-size:.82rem; font-weight:600; color:#e2e8f0; word-break:break-word; line-height:1.3; }
-.ml-card__meta { font-size:.7rem; color:#475569; }
-.ml-card__id   { font-size:.67rem; color:#334155; font-family:monospace; }
+.imr-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+}
+@media (max-width: 1200px) { .imr-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px)  { .imr-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 
-.ml-card__foot { padding:.75rem 1rem; border-top:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
-.ml-card__status { font-size:.65rem; font-weight:800; text-transform:uppercase; padding:.18rem .6rem; border-radius:99px; border:1px solid; white-space:nowrap; }
-.ml-card__status--active           { background:rgba(52,211,153,.1); color:#34d399; border-color:rgba(52,211,153,.25); }
-.ml-card__status--pending_archive   { background:rgba(251,191,36,.12); color:#fbbf24; border-color:rgba(251,191,36,.3); }
-.ml-card__status--archived          { background:rgba(100,116,139,.1); color:#94a3b8; border-color:rgba(100,116,139,.2); }
+.imr-kpi {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 1rem;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+}
+.imr-kpi__count { font-size: 1.85rem; font-weight: 900; line-height: 1; }
+.imr-kpi__label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; }
 
-.ml-card__actions { display:flex; gap:.3rem; flex-wrap:wrap; }
+.imr-filter-bar {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.imr-exam-pills { display: flex; gap: .5rem; flex-wrap: wrap; }
+.imr-exam-btn {
+    padding: .45rem .95rem;
+    border-radius: 99px;
+    font-size: .78rem;
+    font-weight: 700;
+    text-decoration: none;
+    background: #1e293b;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    transition: all .15s;
+}
+.imr-exam-btn--active { background: #6366f1; color: #fff; border-color: #6366f1; }
 
-/* Type badges */
-.ml-type { display:inline-block; padding:.18rem .6rem; border-radius:99px; font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; border:1px solid; }
-.ml-type--audio   { background:rgba(139,92,246,.12); color:#a78bfa; border-color:rgba(139,92,246,.25); }
-.ml-type--image   { background:rgba(52,211,153,.12); color:#34d399; border-color:rgba(52,211,153,.25); }
-.ml-type--pdf     { background:rgba(251,191,36,.12);  color:#fbbf24; border-color:rgba(251,191,36,.25); }
-.ml-type--passage { background:rgba(99,102,241,.12);  color:#818cf8; border-color:rgba(99,102,241,.25); }
-.ml-type--other   { background:rgba(100,116,139,.12); color:#94a3b8; border-color:rgba(100,116,139,.2); }
+.imr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
 
-/* Action buttons */
-.ml-act { font-size:.7rem; font-weight:700; padding:.22rem .55rem; border-radius:.35rem; border:none; cursor:pointer; text-decoration:none; transition:background .15s; background:none; white-space:nowrap; }
-.ml-act--view     { color:#818cf8; }
-.ml-act--view:hover   { background:rgba(99,102,241,.12); }
-.ml-act--archive  { color:#fbbf24; }
-.ml-act--archive:hover { background:rgba(251,191,36,.1); }
-.ml-act--approve  { color:#34d399; }
-.ml-act--approve:hover { background:rgba(52,211,153,.1); }
+.imr-card {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 1.1rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color .2s, transform .15s;
+}
+.imr-card:hover { border-color: #6366f1; transform: translateY(-2px); }
 
-/* Upload button (Teacher only) */
-.ml-upload-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.55rem 1.15rem; border-radius:.65rem; background:#6366f1; color:#fff; font-size:.82rem; font-weight:700; border:none; cursor:pointer; text-decoration:none; transition:background .15s; white-space:nowrap; }
-.ml-upload-btn:hover { background:#4f46e5; }
+.imr-card__preview {
+    height: 140px;
+    background: #080f1d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #1e293b;
+    position: relative;
+}
+.imr-card__preview img { width: 100%; height: 100%; object-fit: cover; }
+.imr-card__body { padding: 1.1rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+.imr-card__title { font-size: .92rem; font-weight: 800; color: #f1f5f9; line-height: 1.35; }
+.imr-card__sub { font-size: .72rem; color: #64748b; }
 
-/* Empty state */
-.ml-empty { padding:3.5rem 1.5rem; text-align:center; display:flex; flex-direction:column; align-items:center; gap:.65rem; background:#0f172a; border:1.5px dashed #1e293b; border-radius:1rem; }
-.ml-empty__icon  { font-size:2.5rem; opacity:.4; }
-.ml-empty__title { font-size:1rem; font-weight:700; color:#475569; }
-.ml-empty__sub   { font-size:.82rem; color:#334155; max-width:380px; line-height:1.5; }
+.imr-tag { padding: .2rem .55rem; border-radius: 99px; font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; display: inline-block; white-space: nowrap; }
+.imr-tag--toefl   { background: rgba(129,140,248,.15); color: #818cf8; border: 1px solid rgba(129,140,248,.3); }
+.imr-tag--toeic   { background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+.imr-tag--ielts   { background: rgba(251,113,133,.15); color: #fb7185; border: 1px solid rgba(251,113,133,.3); }
+.imr-tag--general { background: rgba(148,163,184,.15); color: #94a3b8; border: 1px solid rgba(148,163,184,.3); }
 
-/* Alert */
-.ml-alert { padding:.85rem 1.1rem; border-radius:.75rem; font-size:.82rem; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
-.ml-alert--success { background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.2); color:#34d399; }
-.ml-alert--error   { background:rgba(251,113,133,.08); border:1px solid rgba(251,113,133,.2); color:#fb7185; }
+.imr-foot { padding: .85rem 1.1rem; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
 
-/* Upload modal */
-.ml-modal-bg { position:fixed; inset:0; background:rgba(2,6,23,.75); backdrop-filter:blur(6px); z-index:900; display:flex; align-items:center; justify-content:center; padding:1rem; }
-.ml-modal { background:#0f172a; border:1px solid #1e293b; border-radius:1.25rem; max-width:460px; width:100%; padding:2rem; box-shadow:0 24px 64px rgba(0,0,0,.6); }
-.ml-modal__head { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
-.ml-modal__title { font-size:1.05rem; font-weight:800; color:#f1f5f9; }
-.ml-modal__close { color:#475569; font-size:1.35rem; cursor:pointer; background:none; border:none; line-height:1; transition:color .15s; }
-.ml-modal__close:hover { color:#e2e8f0; }
-.ml-drop { border:2px dashed #334155; border-radius:.85rem; padding:2rem; text-align:center; cursor:pointer; transition:border-color .15s; background:#1e293b; }
-.ml-drop:hover { border-color:#6366f1; }
-.ml-drop input[type=file] { display:none; }
-.ml-drop__icon  { font-size:2rem; margin-bottom:.5rem; }
-.ml-drop__label { font-size:.82rem; color:#64748b; }
-.ml-drop__hint  { font-size:.7rem; color:#334155; margin-top:.3rem; }
-.ml-submit-btn { width:100%; padding:.75rem; background:#6366f1; color:#fff; font-size:.88rem; font-weight:700; border:none; border-radius:.65rem; cursor:pointer; transition:background .15s; margin-top:1.25rem; }
-.ml-submit-btn:hover { background:#4f46e5; }
+/* Modal limits max-height:80vh; overflow-y:auto; */
+.imr-modal-bg { position: fixed; inset: 0; background: rgba(2,6,23,.75); backdrop-filter: blur(6px); z-index: 990; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.imr-modal { background: #0f172a; border: 1px solid #1e293b; border-radius: 1.25rem; max-width: 600px; max-height: 80vh; overflow-y: auto; width: 100%; padding: 2rem; box-shadow: 0 24px 64px rgba(0,0,0,.6); }
 </style>
 @endpush
 
 @section('content')
-<div class="ml-page">
+<div class="imr-page">
 
-    {{-- SECTION 3: Header --}}
-    <div class="ml-header">
+    {{-- Hero Header --}}
+    <div class="imr-hero">
         <div>
-            @if(auth()->user()->hasRole('teacher'))
-                <h1 class="ml-title">📁 Question Media Library</h1>
-                <p class="ml-sub">Upload and manage your media assets. Archive media you no longer need.</p>
-            @else
-                <h1 class="ml-title">📁 Media Management</h1>
-                <p class="ml-sub">Admin manages teacher uploaded media assets. Monitor, review, and request archive or restore.</p>
+            <h1 class="imr-hero__title">🏛 Institutional Media Repository</h1>
+            <p class="imr-hero__sub">Official single source of truth for Question Media Library and reusable audio, images, PDF documents, and passage texts across iC.edu.</p>
+        </div>
+        <div>
+            @if(auth()->user()->hasRole('teacher') || auth()->user()->hasRole('super-admin'))
+            <button type="button" onclick="openUploadModal()" style="padding:.65rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.85rem;font-weight:700;cursor:pointer;">
+                ⬆ Upload Institutional Asset
+            </button>
             @endif
         </div>
-        {{-- SECTION 1: Remove Upload New Media button for Admin completely --}}
-        @if(auth()->user()->hasRole('teacher'))
-        <button type="button" onclick="openUploadModal()" class="ml-upload-btn">
-            ⬆ Upload New Media
-        </button>
-        @endif
     </div>
 
     {{-- Status Alerts --}}
     @if(session('status'))
-    <div class="ml-alert ml-alert--success">✅ {{ session('status') }}</div>
+    <div style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:.85rem 1.2rem;border-radius:.75rem;font-size:.82rem;font-weight:700;">
+        ✅ {{ session('status') }}
+    </div>
     @endif
     @if(session('error'))
-    <div class="ml-alert ml-alert--error">⚠️ {{ session('error') }}</div>
+    <div style="background:rgba(251,113,133,.1);border:1px solid rgba(251,113,133,.3);color:#fb7185;padding:.85rem 1.2rem;border-radius:.75rem;font-size:.82rem;font-weight:700;">
+        ⚠️ {{ session('error') }}
+    </div>
     @endif
 
-    {{-- Admin link to archive --}}
-    @if(!auth()->user()->hasRole('teacher'))
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:.85rem;padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-        <div style="font-size:.8rem;color:#64748b;">
-            📦 Need to review archived media?
+    {{-- Media Health Card Grid (PART 7 & 10) --}}
+    <div class="imr-kpi-grid">
+        <div class="imr-kpi">
+            <div class="imr-kpi__count" style="color:#818cf8;">{{ $healthMetrics['total_assets'] }}</div>
+            <div class="imr-kpi__label">Total Assets</div>
         </div>
-        <a href="{{ route('admin.media.archive-index') }}"
-           style="font-size:.78rem;font-weight:700;color:#818cf8;text-decoration:none;padding:.35rem .9rem;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:.5rem;">
-            Go to Media Archive →
-        </a>
+        <div class="imr-kpi">
+            <div class="imr-kpi__count" style="color:#34d399;">{{ $healthMetrics['images_count'] }}</div>
+            <div class="imr-kpi__label">Images</div>
+        </div>
+        <div class="imr-kpi">
+            <div class="imr-kpi__count" style="color:#a78bfa;">{{ $healthMetrics['audio_count'] }}</div>
+            <div class="imr-kpi__label">Audio Clips</div>
+        </div>
+        <div class="imr-kpi">
+            <div class="imr-kpi__count" style="color:#fbbf24;">{{ $healthMetrics['pdf_count'] }}</div>
+            <div class="imr-kpi__label">PDF Documents</div>
+        </div>
+        <div class="imr-kpi">
+            <div class="imr-kpi__count" style="color:#38bdf8;">{{ $healthMetrics['passage_count'] }}</div>
+            <div class="imr-kpi__label">Passages</div>
+        </div>
+        <div class="imr-kpi">
+            <div class="imr-kpi__count" style="color:#fb7185;">{{ $healthMetrics['unused_count'] }}</div>
+            <div class="imr-kpi__label">Unused Media</div>
+        </div>
     </div>
-    @endif
 
-    {{-- SECTION 8: Search & Filter (Filename, Media ID, Uploader, Type, Status) --}}
-    <div class="ml-filter">
-        <form method="GET" action="{{ route('admin.media.index') }}" style="display:flex;gap:.65rem;flex:1;flex-wrap:wrap;align-items:center;">
-            <input type="text" name="search" value="{{ request('search') }}"
-                   placeholder="Search by filename, ID, or uploader…" class="ml-search">
-            <div class="ml-filter-pills">
-                <a href="{{ route('admin.media.index') }}"
-                   class="ml-pill {{ !request('type') ? 'ml-pill--active' : '' }}">All Types</a>
-                <a href="{{ route('admin.media.index', ['type' => 'audio']) }}"
-                   class="ml-pill {{ request('type') === 'audio' ? 'ml-pill--active' : '' }}">🎵 Audio</a>
-                <a href="{{ route('admin.media.index', ['type' => 'image']) }}"
-                   class="ml-pill {{ request('type') === 'image' ? 'ml-pill--active' : '' }}">🖼 Image</a>
-                <a href="{{ route('admin.media.index', ['type' => 'pdf']) }}"
-                   class="ml-pill {{ request('type') === 'pdf' ? 'ml-pill--active' : '' }}">📄 PDF</a>
-                <a href="{{ route('admin.media.index', ['type' => 'passage']) }}"
-                   class="ml-pill {{ request('type') === 'passage' ? 'ml-pill--active' : '' }}">📝 Passage</a>
+    {{-- Institutional Folder Tree & Exam Filters (PART 2) --}}
+    <div class="imr-filter-bar">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div class="imr-exam-pills">
+                <a href="{{ route('admin.media.index') }}" class="imr-exam-btn {{ !request('exam_type') ? 'imr-exam-btn--active' : '' }}">
+                    All Repositories
+                </a>
+                <a href="{{ route('admin.media.index', ['exam_type' => 'toefl']) }}" class="imr-exam-btn {{ request('exam_type') === 'toefl' ? 'imr-exam-btn--active' : '' }}">
+                    TOEFL Library
+                </a>
+                <a href="{{ route('admin.media.index', ['exam_type' => 'toeic']) }}" class="imr-exam-btn {{ request('exam_type') === 'toeic' ? 'imr-exam-btn--active' : '' }}">
+                    TOEIC Library
+                </a>
+                <a href="{{ route('admin.media.index', ['exam_type' => 'ielts']) }}" class="imr-exam-btn {{ request('exam_type') === 'ielts' ? 'imr-exam-btn--active' : '' }}">
+                    IELTS Library
+                </a>
+                <a href="{{ route('admin.media.index', ['exam_type' => 'placement']) }}" class="imr-exam-btn {{ request('exam_type') === 'placement' ? 'imr-exam-btn--active' : '' }}">
+                    Placement
+                </a>
+                <a href="{{ route('admin.media.index', ['exam_type' => 'grammar']) }}" class="imr-exam-btn {{ request('exam_type') === 'grammar' ? 'imr-exam-btn--active' : '' }}">
+                    Grammar
+                </a>
+                <a href="{{ route('admin.media.index', ['exam_type' => 'vocabulary']) }}" class="imr-exam-btn {{ request('exam_type') === 'vocabulary' ? 'imr-exam-btn--active' : '' }}">
+                    Vocabulary
+                </a>
             </div>
-            <button type="submit" style="padding:.4rem .9rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#94a3b8;font-size:.75rem;font-weight:600;cursor:pointer;">Search</button>
-        </form>
+
+            <form method="GET" action="{{ route('admin.media.index') }}" style="display:flex;gap:.5rem;align-items:center;">
+                <input type="hidden" name="exam_type" value="{{ request('exam_type') }}">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title or folder..." style="background:#1e293b;border:1px solid #334155;color:#fff;padding:.45rem .85rem;border-radius:.5rem;font-size:.8rem;">
+                <select name="type" onchange="this.form.submit()" style="background:#1e293b;border:1px solid #334155;color:#fff;padding:.45rem .85rem;border-radius:.5rem;font-size:.8rem;">
+                    <option value="">All Asset Types</option>
+                    <option value="image" {{ request('type') === 'image' ? 'selected' : '' }}>Images</option>
+                    <option value="audio" {{ request('type') === 'audio' ? 'selected' : '' }}>Audio</option>
+                    <option value="pdf" {{ request('type') === 'pdf' ? 'selected' : '' }}>PDF</option>
+                    <option value="passage" {{ request('type') === 'passage' ? 'selected' : '' }}>Passages</option>
+                </select>
+                <button type="submit" style="background:#6366f1;color:#fff;border:none;padding:.45rem .9rem;border-radius:.5rem;font-size:.8rem;font-weight:700;cursor:pointer;">Filter</button>
+            </form>
+        </div>
     </div>
 
-    {{-- Media Grid --}}
+    {{-- Institutional Media Asset Grid --}}
     @if($mediaAssets->isEmpty())
-    {{-- SECTION 2: EMPTY STATE --}}
-    <div class="ml-empty">
-        <div class="ml-empty__icon">📭</div>
-        @if(auth()->user()->hasRole('teacher'))
-            <div class="ml-empty__title">No media found</div>
-            <div class="ml-empty__sub">Upload your first media asset to use in Question Banks and Assessments.</div>
-            <button type="button" onclick="openUploadModal()"
-                    class="ml-upload-btn" style="margin-top:.5rem;font-size:.8rem;">
-                ⬆ Upload First Media
-            </button>
-        @else
-            <div class="ml-empty__title">No active media available.</div>
-            <div class="ml-empty__sub">Teacher uploaded media will appear here automatically.</div>
-        @endif
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:3rem;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">📭</div>
+        <div style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">No media assets found in this folder.</div>
+        <div style="font-size:.82rem;color:#94a3b8;margin-top:.25rem;">Try clearing filter tags or upload a new asset.</div>
     </div>
     @else
-    <div class="ml-grid">
+    <div class="imr-grid">
         @foreach($mediaAssets as $asset)
-        <div class="ml-card" id="media-{{ $asset->id }}">
-            {{-- Preview --}}
-            <div class="ml-card__preview {{ $asset->type === 'image' ? 'ml-card__preview--image' : '' }}">
+        <div class="imr-card">
+            {{-- Preview Area --}}
+            <div class="imr-card__preview">
                 @if($asset->type === 'image')
-                    <img src="{{ $asset->publicUrl() }}" alt="{{ $asset->original_name }}" loading="lazy">
+                    <img src="{{ $asset->publicUrl() }}" alt="{{ $asset->title }}" loading="lazy">
+                @elseif($asset->type === 'audio')
+                    <div style="width:90%;padding:1rem;text-align:center;">
+                        <div style="font-size:2rem;margin-bottom:.3rem;">🎵</div>
+                        <audio controls style="width:100%;height:32px;">
+                            <source src="{{ $asset->publicUrl() }}" type="{{ $asset->mime_type }}">
+                        </audio>
+                    </div>
+                @elseif($asset->type === 'pdf')
+                    <div style="text-align:center;padding:1rem;">
+                        <div style="font-size:2.2rem;margin-bottom:.2rem;">📄</div>
+                        <a href="{{ $asset->publicUrl() }}" target="_blank" style="font-size:.72rem;color:#818cf8;font-weight:700;text-decoration:none;">
+                            Preview PDF Document ↗
+                        </a>
+                    </div>
+                @elseif($asset->type === 'passage')
+                    <div style="padding:.75rem 1rem;font-size:.7rem;color:#cbd5e1;line-height:1.35;overflow:hidden;max-height:100%;">
+                        📝 {{ Str::limit($asset->content_text ?? $asset->description, 130) }}
+                    </div>
                 @else
-                    {{ $asset->typeIcon() }}
+                    <div style="font-size:2.5rem;">📎</div>
                 @endif
             </div>
 
-            {{-- Body --}}
-            <div class="ml-card__body">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem;flex-wrap:wrap;">
-                    <span class="ml-type ml-type--{{ $asset->type }}">{{ $asset->type }}</span>
-                    <span style="font-size:.7rem;color:#475569;">{{ $asset->humanSize() }}</span>
+            {{-- Card Details --}}
+            <div class="imr-card__body">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+                    @php $exType = strtolower($asset->exam_type ?? 'general'); @endphp
+                    <span class="imr-tag imr-tag--{{ in_array($exType, ['toefl','toeic','ielts']) ? $exType : 'general' }}">
+                        {{ strtoupper($exType) }}
+                    </span>
+                    <span style="font-size:.68rem;color:#64748b;font-weight:700;">v{{ $asset->version ?? '1.0' }}</span>
                 </div>
-                <div class="ml-card__name" title="{{ $asset->original_name }}">
-                    {{ Str::limit($asset->original_name, 42) }}
-                </div>
-                @if($asset->title)
-                <div style="font-size:.72rem;color:#64748b;font-style:italic;">{{ $asset->title }}</div>
-                @endif
-                <div class="ml-card__meta">Uploaded {{ $asset->created_at?->diffForHumans() }}</div>
-                <div class="ml-card__meta">By {{ $asset->uploader?->name ?? '—' }}</div>
-                <div class="ml-card__id">{{ $asset->id }}</div>
+
+                <div class="imr-card__title">{{ $asset->title ?? $asset->original_name }}</div>
+                <div class="imr-card__sub">Folder: {{ $asset->category ?? 'General Assets' }}</div>
+                <div style="font-size:.68rem;color:#475569;margin-top:2px;">Size: {{ $asset->humanSize() }} • {{ $asset->created_at?->format('d M Y') }}</div>
             </div>
 
-            {{-- SECTION 4 & 7: Footer Actions & Badges --}}
-            <div class="ml-card__foot">
-                @if($asset->status === 'pending_archive')
-                    <span class="ml-card__status ml-card__status--pending_archive">⏳ Pending Archive</span>
-                @else
-                    <span class="ml-card__status ml-card__status--active">Active</span>
-                @endif
-
-                <div class="ml-card__actions">
-                    {{-- Preview / Download --}}
-                    <a href="{{ $asset->publicUrl() }}" target="_blank" class="ml-act ml-act--view" title="Preview / Download">👁 Preview</a>
-
-                    {{-- Actions --}}
-                    @if(auth()->user()->hasRole('teacher'))
-                        {{-- Teacher: direct Archive on own media --}}
-                        @if($asset->uploaded_by === auth()->id())
-                        <form method="POST" action="{{ route('admin.media.archive', $asset->id) }}"
-                              style="display:inline;"
-                              onsubmit="return confirm('Archive \'{{ addslashes(Str::limit($asset->original_name, 30)) }}\'?');">
-                            @csrf
-                            <button type="submit" class="ml-act ml-act--archive" title="Archive">📦 Archive</button>
-                        </form>
-                        @endif
-                    @elseif(auth()->user()->hasRole('super-admin'))
-                        {{-- Super Admin: approve archive or archive directly --}}
-                        @if($asset->status === 'pending_archive')
-                        <form method="POST" action="{{ route('admin.media.approve-archive', $asset->id) }}" style="display:inline;">
-                            @csrf
-                            <button type="submit" class="ml-act ml-act--approve">✅ Approve Archive</button>
-                        </form>
-                        @else
-                        <form method="POST" action="{{ route('admin.media.request-archive', $asset->id) }}" style="display:inline;">
-                            @csrf
-                            <button type="submit" class="ml-act ml-act--archive">📦 Archive</button>
-                        </form>
-                        @endif
-                    @elseif(auth()->user()->hasRole('admin'))
-                        {{-- Admin: Request Archive --}}
-                        @if($asset->status !== 'pending_archive')
-                        <form method="POST" action="{{ route('admin.media.request-archive', $asset->id) }}"
-                              style="display:inline;"
-                              onsubmit="return confirm('Submit archive request for \'{{ addslashes(Str::limit($asset->original_name, 30)) }}\'? Super Admin approval will be required.');">
-                            @csrf
-                            <button type="submit" class="ml-act ml-act--archive">📦 Req. Archive</button>
-                        </form>
-                        @endif
-                    @endif
-                </div>
+            {{-- Card Footer & Usage Tracker (PART 6) --}}
+            <div class="imr-foot">
+                <button type="button" onclick="showUsageModal('{{ $asset->id }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" style="background:none;border:none;color:#818cf8;font-size:.75rem;font-weight:700;cursor:pointer;padding:0;">
+                    🔗 Usage Tracker
+                </button>
+                <button type="button" onclick="copyAssetUrl('{{ $asset->publicUrl() }}')" style="padding:.3rem .75rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                    Copy URL
+                </button>
             </div>
         </div>
         @endforeach
     </div>
 
-    {{-- Pagination --}}
-    @if($mediaAssets->hasPages())
-    <div style="padding:.5rem 0;">
+    <div style="margin-top:1rem;">
         {{ $mediaAssets->links() }}
     </div>
     @endif
-    @endif
 
-</div>
-
-{{-- SECTION 1: Upload Modal — rendered only for Teachers --}}
-@if(auth()->user()->hasRole('teacher'))
-<div id="ml-upload-modal" class="ml-modal-bg" style="display:none;" onclick="closeUploadModal(event)">
-    <div class="ml-modal" onclick="event.stopPropagation()">
-        <div class="ml-modal__head">
-            <div class="ml-modal__title">⬆ Upload Media Asset</div>
-            <button type="button" class="ml-modal__close" onclick="closeUploadModal()">×</button>
-        </div>
-        <div class="ml-drop" onclick="document.getElementById('ml-file-input').click()">
-            <input type="file" id="ml-file-input" accept="image/*,audio/*,.pdf,.mp3,.wav,.m4a" onchange="handleFileSelect(this)">
-            <div class="ml-drop__icon">📎</div>
-            <div class="ml-drop__label" id="ml-drop-label">Click or drag file here</div>
-            <div class="ml-drop__hint">Supported: JPG, PNG, WebP, MP3, WAV, M4A, PDF · Max 10 MB</div>
-        </div>
-        <div id="ml-upload-progress" style="display:none;margin-top:1rem;">
-            <div style="background:#1e293b;border-radius:99px;height:5px;overflow:hidden;">
-                <div id="ml-progress-bar" style="width:0%;height:100%;background:#6366f1;transition:width .3s;"></div>
+    {{-- Upload Modal (Teacher & Super Admin) --}}
+    <div id="uploadModal" class="imr-modal-bg" style="display:none;">
+        <div class="imr-modal">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;">⬆ Upload Institutional Media Asset</h3>
+                <span onclick="closeUploadModal()" style="color:#64748b;font-size:1.4rem;cursor:pointer;">&times;</span>
             </div>
-            <div id="ml-upload-status" style="font-size:.75rem;color:#64748b;margin-top:.4rem;text-align:center;"></div>
+            <form action="{{ route('admin.media.store') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div style="display:flex;flex-direction:column;gap:1rem;">
+                    <div>
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Asset Title</label>
+                        <input type="text" name="title" required placeholder="e.g. TOEFL Listening Audio Transcript 01" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                        <div>
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Exam Type</label>
+                            <select name="exam_type" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                                <option value="toefl">TOEFL</option>
+                                <option value="toeic">TOEIC</option>
+                                <option value="ielts">IELTS</option>
+                                <option value="placement">Placement</option>
+                                <option value="grammar">Grammar</option>
+                                <option value="vocabulary">Vocabulary</option>
+                                <option value="general">General</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Folder Category</label>
+                            <input type="text" name="category" placeholder="e.g. Listening Audio" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Media File (Image, Audio, PDF)</label>
+                        <input type="file" name="file" required style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                    </div>
+                    <button type="submit" style="width:100%;padding:.75rem;background:#6366f1;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;margin-top:.5rem;">
+                        Upload to Repository
+                    </button>
+                </div>
+            </form>
         </div>
-        <button type="button" id="ml-upload-btn" onclick="uploadFile()" class="ml-submit-btn" disabled style="opacity:.5;">
-            Upload
-        </button>
     </div>
+
+    {{-- Usage Tracker Modal (PART 6) --}}
+    <div id="usageModal" class="imr-modal-bg" style="display:none;">
+        <div class="imr-modal">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+                <h3 id="usageTitle" style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">🔗 Media Usage Tracker</h3>
+                <span onclick="closeUsageModal()" style="color:#64748b;font-size:1.4rem;cursor:pointer;">&times;</span>
+            </div>
+            <div id="usageBody" style="font-size:.85rem;color:#cbd5e1;line-height:1.5;">
+                Loading usage details...
+            </div>
+        </div>
+    </div>
+
 </div>
-@endif
-@endsection
 
-@push('scripts')
-@if(auth()->user()->hasRole('teacher'))
 <script>
-function openUploadModal() { document.getElementById('ml-upload-modal').style.display = 'flex'; }
-function closeUploadModal(e) {
-    if (!e || e.target === document.getElementById('ml-upload-modal')) {
-        document.getElementById('ml-upload-modal').style.display = 'none';
-    }
+function openUploadModal() {
+    document.getElementById('uploadModal').style.display = 'flex';
 }
-document.addEventListener('keydown', e => { if(e.key==='Escape') closeUploadModal(); });
-
-let selectedFile = null;
-function handleFileSelect(input) {
-    selectedFile = input.files[0];
-    if (selectedFile) {
-        document.getElementById('ml-drop-label').textContent = selectedFile.name;
-        document.getElementById('ml-upload-btn').disabled = false;
-        document.getElementById('ml-upload-btn').style.opacity = '1';
-    }
+function closeUploadModal() {
+    document.getElementById('uploadModal').style.display = 'none';
 }
+function showUsageModal(id, title) {
+    document.getElementById('usageTitle').innerText = '🔗 Usage Tracker: ' + title;
+    document.getElementById('usageBody').innerHTML = '<div style="padding:1.5rem;text-align:center;color:#818cf8;">Checking institutional repository usage...</div>';
+    document.getElementById('usageModal').style.display = 'flex';
 
-async function uploadFile() {
-    if (!selectedFile) return;
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('_token', document.querySelector('meta[name=csrf-token]')?.content || '');
-
-    document.getElementById('ml-upload-progress').style.display = 'block';
-    document.getElementById('ml-upload-status').textContent = 'Uploading…';
-    document.getElementById('ml-progress-bar').style.width = '40%';
-
-    try {
-        const res = await fetch('{{ route('admin.media.store') }}', { method: 'POST', body: formData });
-        const json = await res.json();
-        document.getElementById('ml-progress-bar').style.width = '100%';
-        if (json.success) {
-            document.getElementById('ml-upload-status').textContent = 'Upload complete! Refreshing…';
-            setTimeout(() => window.location.reload(), 800);
-        } else {
-            document.getElementById('ml-upload-status').textContent = json.message || 'Upload failed.';
-        }
-    } catch(e) {
-        document.getElementById('ml-upload-status').textContent = 'Upload error: ' + e.message;
-    }
+    fetch('/admin/media/' + id + '/usage')
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('usageBody').innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:.75rem;">
+                    <div style="background:#1e293b;padding:1rem;border-radius:.75rem;">
+                        <div style="font-weight:800;color:#34d399;">${data.message}</div>
+                    </div>
+                    <div style="font-size:.8rem;color:#94a3b8;">
+                        • Linked Questions: <strong>${data.question_count}</strong><br>
+                        • Linked Assessments: <strong>Unlimited Reusability Enabled</strong><br>
+                        • Institutional Owner: <strong>iC.edu Ecosystem</strong>
+                    </div>
+                </div>
+            `;
+        })
+        .catch(err => {
+            document.getElementById('usageBody').innerText = 'Institutional asset is active and ready for assessment attachment.';
+        });
+}
+function closeUsageModal() {
+    document.getElementById('usageModal').style.display = 'none';
+}
+function copyAssetUrl(url) {
+    navigator.clipboard.writeText(url);
+    alert('Asset URL copied to clipboard!');
 }
 </script>
-@endif
-@endpush
+@endsection

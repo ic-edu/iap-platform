@@ -162,6 +162,14 @@ test('authorized teacher can access academic library and dedicated library categ
     $analyticsResponse = $this->actingAs($teacher)->get('/admin/academic-library/analytics');
     $analyticsResponse->assertStatus(200)
         ->assertSee('IRQA Quality Analytics', false);
+
+    $mediaResponse = $this->actingAs($teacher)->get('/admin/media');
+    $mediaResponse->assertStatus(200)
+        ->assertSee('Institutional Media Repository', false);
+
+    $mediaListResponse = $this->actingAs($teacher)->get('/admin/media/list');
+    $mediaListResponse->assertStatus(200)
+        ->assertJson(['success' => true]);
 });
 
 test('authorized admin can access reporting analytics and export csv', function () {

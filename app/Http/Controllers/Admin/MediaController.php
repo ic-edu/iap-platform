@@ -27,12 +27,11 @@ class MediaController extends Controller
         $user  = $request->user();
         $query = MediaAsset::with(['uploader']);
 
-        // Teacher sees only their own active uploads
+        // Teacher sees active active media assets in institutional repository
         if ($user->hasRole('teacher')) {
-            $query->active()->where('uploaded_by', $user->id);
+            $query->whereIn('status', ['active', 'published']);
         } else {
-            // Admin & Super Admin see active and pending_archive media
-            $query->whereIn('status', ['active', 'pending_archive']);
+            $query->whereIn('status', ['active', 'published', 'pending_archive']);
         }
 
         // Filter by type
@@ -40,17 +39,28 @@ class MediaController extends Controller
             $query->where('type', $type);
         }
 
+        // Filter by exam_type
+        if ($examType = $request->input('exam_type')) {
+            $query->where('exam_type', $examType);
+        }
+
+        // Filter by category
+        if ($category = $request->input('category')) {
+            $query->where('category', $category);
+        }
+
         // Filter by status
         if ($status = $request->input('status')) {
             $query->where('status', $status);
         }
 
-        // Search by filename, media ID, or uploader name (SECTION 8)
+        // Search by filename, media ID, title, or uploader name
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('original_name', 'like', "%{$search}%")
                   ->orWhere('id', 'like', "%{$search}%")
                   ->orWhere('title', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%")
                   ->orWhereHas('uploader', function ($uq) use ($search) {
                       $uq->where('name', 'like', "%{$search}%")
                          ->orWhere('email', 'like', "%{$search}%");
@@ -60,28 +70,86 @@ class MediaController extends Controller
 
         $mediaAssets = $query->latest()->paginate(12)->withQueryString();
 
-        return view('admin.media.index', compact('mediaAssets'));
+        // Calculate Media Health Cards & Metrics (PART 7 & 10)
+        $allAssets = MediaAsset::all();
+        $totalAssets = $allAssets->count();
+        $imagesCount = $allAssets->where('type', 'image')->count();
+        $audioCount  = $allAssets->where('type', 'audio')->count();
+        $videoCount  = $allAssets->where('type', 'video')->count();
+        $pdfCount    = $allAssets->where('type', 'pdf')->count();
+        $passageCount= $allAssets->where('type', 'passage')->count();
+        $pendingCount= $allAssets->where('approval_status', 'pending')->count();
+        $totalSizeBytes = $allAssets->sum('size');
+
+        // Usage check
+        $usedMediaUrls = \DB::table('questions')
+            ->whereNotNull('image_url')
+            ->orWhereNotNull('audio_url')
+            ->pluck('image_url')
+            ->merge(\DB::table('questions')->pluck('audio_url'))
+            ->filter()
+            ->toArray();
+        $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')->toArray();
+
+        $unusedCount = $allAssets->filter(function ($m) use ($usedMediaUrls, $usedMediaIds) {
+            return !in_array($m->id, $usedMediaIds) && !in_array($m->path, $usedMediaUrls) && !in_array($m->publicUrl(), $usedMediaUrls);
+        })->count();
+
+        $healthMetrics = [
+            'total_assets'      => $totalAssets,
+            'images_count'      => $imagesCount,
+            'audio_count'       => $audioCount,
+            'video_count'       => $videoCount,
+            'pdf_count'         => $pdfCount,
+            'passage_count'     => $passageCount,
+            'unused_count'      => $unusedCount,
+            'pending_count'     => $pendingCount,
+            'total_size_mb'     => round($totalSizeBytes / 1048576, 1) . ' MB',
+        ];
+
+        return view('admin.media.index', compact('mediaAssets', 'healthMetrics'));
     }
 
     /**
-     * Get JSON list of active media for modal selectors.
+     * Get JSON list of active media for Media Picker Modal (PART 3 & 4).
      */
     public function list(Request $request): JsonResponse
     {
-        $type  = $request->query('type');
-        $query = MediaAsset::active()->latest()->take(50);
+        $type     = $request->query('type');
+        $examType = $request->query('exam_type');
+        $category = $request->query('category');
+        $search   = $request->query('search');
+
+        $query = MediaAsset::active()->latest()->take(100);
 
         if ($type && $type !== 'all') {
             $query->where('type', $type);
         }
+        if ($examType && $examType !== 'all') {
+            $query->where('exam_type', $examType);
+        }
+        if ($category && $category !== 'all') {
+            $query->where('category', $category);
+        }
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('original_name', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%");
+            });
+        }
 
         $items = $query->get()->map(fn ($m) => [
-            'id'          => $m->id,
-            'name'        => $m->original_name,
-            'url'         => $m->publicUrl(),
-            'type'        => $m->type,
-            'size'        => $m->humanSize(),
-            'uploaded_at' => $m->created_at?->format('Y-m-d H:i'),
+            'id'             => $m->id,
+            'title'          => $m->title ?? $m->original_name,
+            'name'           => $m->original_name,
+            'url'            => $m->publicUrl(),
+            'type'           => $m->type,
+            'exam_type'      => strtoupper($m->exam_type ?? 'GENERAL'),
+            'category'       => $m->category ?? 'General',
+            'content_text'   => $m->content_text,
+            'size'           => $m->humanSize(),
+            'uploaded_at'    => $m->created_at?->format('Y-m-d H:i'),
         ]);
 
         return response()->json(['success' => true, 'data' => $items->toArray()]);
