@@ -502,6 +502,22 @@ a.tw-hero__pill:hover { opacity: .8; }
         </a>
         @endif
 
+        @if($needsRevisionAssessments > 0)
+        <a href="{{ route('admin.publications.assessments', ['status' => 'needs_revision']) }}" class="tw-kpi tw-kpi--amber" style="border-color:#f59e0b;">
+            <div class="tw-kpi__icon">⚠️</div>
+            <div class="tw-kpi__count" style="color:#fbbf24;">{{ $needsRevisionAssessments }}</div>
+            <div class="tw-kpi__label">Needs Revision</div>
+            <div class="tw-kpi__desc">Returned by Repository Manager</div>
+        </a>
+        @else
+        <a href="javascript:void(0)" class="tw-kpi tw-kpi--amber">
+            <div class="tw-kpi__icon">⚠️</div>
+            <div class="tw-kpi__count">0</div>
+            <div class="tw-kpi__label">Needs Revision</div>
+            <div class="tw-kpi__desc">No revision requests</div>
+        </a>
+        @endif
+
         @if($draftQuestionBanks > 0)
         <a href="{{ route('admin.question-banks.index', ['status' => 'draft']) }}" class="tw-kpi tw-kpi--slate">
             <div class="tw-kpi__icon">✏️</div>
@@ -719,13 +735,14 @@ a.tw-hero__pill:hover { opacity: .8; }
                     <span class="tw-panel__title">📊 Content Progress</span>
                 </div>
                 @php
-                    $total = max($totalQuestionBanks, 1);
+                    $totalContent = max($totalQuestionBanks + ($draftAssessments + $pendingAssessments + $approvedAssessments + $needsRevisionAssessments), 1);
                     $progItems = [
-                        ['label' => 'Published', 'count' => $publishedQuestionBanks, 'color' => '#34d399'],
-                        ['label' => 'Approved',  'count' => $approvedQuestionBanks,  'color' => '#818cf8'],
-                        ['label' => 'Pending',   'count' => $pendingApprovalQuestionBanks, 'color' => '#fbbf24'],
-                        ['label' => 'Draft',     'count' => $draftQuestionBanks,     'color' => '#64748b'],
-                        ['label' => 'Archived',  'count' => $archivedQuestionBanks,  'color' => '#334155'],
+                        ['label' => 'Published',      'count' => $publishedQuestionBanks, 'color' => '#34d399'],
+                        ['label' => 'Approved',       'count' => $approvedQuestionBanks + $approvedAssessments, 'color' => '#818cf8'],
+                        ['label' => 'Pending',        'count' => $pendingApprovalQuestionBanks + $pendingAssessments, 'color' => '#fbbf24'],
+                        ['label' => 'Needs Revision', 'count' => $needsRevisionAssessments, 'color' => '#f59e0b'],
+                        ['label' => 'Draft',          'count' => $draftQuestionBanks + $draftAssessments, 'color' => '#64748b'],
+                        ['label' => 'Archived',       'count' => $archivedQuestionBanks,  'color' => '#334155'],
                     ];
                 @endphp
                 @foreach($progItems as $pi)
