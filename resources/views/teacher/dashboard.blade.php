@@ -42,10 +42,14 @@
     letter-spacing: .04em;
     border: 1px solid;
     white-space: nowrap;
+    cursor: default;
+    text-decoration: none;
+}
+a.tw-hero__pill {
     cursor: pointer;
     transition: opacity .15s;
 }
-.tw-hero__pill:hover { opacity: .8; }
+a.tw-hero__pill:hover { opacity: .8; }
 .tw-hero__pill--amber  { background: rgba(251,191,36,.12); color: #fbbf24; border-color: rgba(251,191,36,.3); }
 .tw-hero__pill--emerald{ background: rgba(52,211,153,.12); color: #34d399; border-color: rgba(52,211,153,.3); }
 .tw-hero__pill--indigo { background: rgba(99,102,241,.18); color: #a5b4fc; border-color: rgba(99,102,241,.35); }
@@ -361,6 +365,11 @@
 
     {{-- ══════════════════════════════════════════════
          SECTION 1 — HERO HEADER
+         TEACHER WORKSPACE UI CONVENTION:
+         • Hero = Information
+         • Statistic Cards = Navigation
+         • Tables = Management
+         • Forms = Editing
          ══════════════════════════════════════════════ --}}
     <div class="tw-hero">
         <div>
@@ -379,7 +388,7 @@
                 </a>
                 @endif
                 @if($publishedQuestionBanks > 0)
-                <span class="tw-hero__pill tw-hero__pill--emerald">
+                <span class="tw-hero__pill tw-hero__pill--emerald" style="cursor:default;user-select:none;">
                     🟢 {{ $publishedQuestionBanks }} Published
                 </span>
                 @endif
