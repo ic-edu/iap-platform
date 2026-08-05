@@ -227,7 +227,18 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
         Route::post('/questions/{questionBank}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestQuestionBankRevision'])->name('admin.repository-manager.question-bank-revision');
         Route::post('/questions/{questionBank}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectQuestionBank'])->name('admin.repository-manager.question-bank-reject');
         Route::get('/duplicates', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'duplicates'])->name('admin.repository-manager.duplicates');
+
+        // SPRINT 10.2: Assessment Approval Queue Routes
+        Route::get('/assessments', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentApprovalCenter'])->name('admin.repository-manager.assessment-approval');
+        Route::get('/assessments/{test}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentReview'])->name('admin.repository-manager.assessment-review');
+        Route::post('/assessments/{test}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveAssessment'])->name('admin.repository-manager.assessment-approve');
+        Route::post('/assessments/{test}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionAssessment'])->name('admin.repository-manager.assessment-revision');
+        Route::post('/assessments/{test}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectAssessment'])->name('admin.repository-manager.assessment-reject');
     });
+});
+
+Route::middleware(['web', 'auth', 'role:teacher|repository-manager|super-admin'])->group(function () {
+    Route::post('/admin/repository-manager/assessments/{test}/submit', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'submitAssessmentForReview'])->name('admin.tests.submit');
 });
 
 

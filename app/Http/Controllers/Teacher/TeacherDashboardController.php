@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Assessment\Models\Test;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -12,7 +13,7 @@ class TeacherDashboardController extends Controller
     /**
      * Display Teacher Authoring Workspace Dashboard (TEACHER-UX-001 v2).
      *
-     * All counts are scoped to the authenticated teacher's own question banks.
+     * All counts are scoped to the authenticated teacher's own question banks and assessments.
      */
     public function index(Request $request): View
     {
@@ -32,6 +33,21 @@ class TeacherDashboardController extends Controller
         $approvedQuestionBanks    = (clone $myBanksQuery)->where('status', 'approved')->count();
         $archivedQuestionBanks    = (clone $myBanksQuery)->where('status', 'archived')->count();
         $rejectedQuestionBanks    = (clone $myBanksQuery)->where('status', 'rejected')->count();
+
+        // SPRINT 10.2: Synchronized Assessment Test Metrics
+        $myTestsQuery = Test::where('created_by', $user->id);
+
+        $draftAssessments       = (clone $myTestsQuery)->whereIn('status', ['draft'])->count();
+        $pendingAssessments     = (clone $myTestsQuery)->whereIn('status', ['pending', 'pending_approval'])->count();
+        $approvedAssessments    = (clone $myTestsQuery)->where('status', 'approved')->count();
+        $needsRevisionAssessments = (clone $myTestsQuery)->whereIn('status', ['needs_revision', 'revision_requested', 'rejected'])->count();
+        $archivedAssessments    = (clone $myTestsQuery)->where('status', 'archived')->count();
+
+        // Combined Single Source of Truth Metrics for Teacher Dashboard
+        $draftTotal     = $draftQuestionBanks + $draftAssessments;
+        $pendingTotal   = $pendingApprovalQuestionBanks + $pendingAssessments;
+        $approvedTotal  = $approvedQuestionBanks + $approvedAssessments;
+        $archivedTotal  = $archivedQuestionBanks + $archivedAssessments;
 
         // ──────────────────────────────────────────────
         // Recent banks for the activity widget (latest 8, with questions)
@@ -72,6 +88,15 @@ class TeacherDashboardController extends Controller
             'approvedQuestionBanks',
             'archivedQuestionBanks',
             'rejectedQuestionBanks',
+            'draftAssessments',
+            'pendingAssessments',
+            'approvedAssessments',
+            'needsRevisionAssessments',
+            'archivedAssessments',
+            'draftTotal',
+            'pendingTotal',
+            'approvedTotal',
+            'archivedTotal',
             'recentQuestionBanks',
             'latestDraftBank',
             'notifications',

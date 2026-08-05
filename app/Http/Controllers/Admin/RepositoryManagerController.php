@@ -8,6 +8,7 @@ use App\Models\RepositoryActivityLog;
 use App\Models\RepositoryApproval;
 use App\Models\RepositoryReviewRequest;
 use App\Models\RepositoryVersion;
+use App\Modules\Assessment\Models\Test;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -413,5 +414,275 @@ class RepositoryManagerController extends Controller
     public function duplicates(): View
     {
         return view('admin.repository_manager.duplicates');
+    }
+
+    /**
+     * Display Assessment Approval Queue for Repository Manager (TASK 1).
+     */
+    public function assessmentApprovalCenter(Request $request): View
+    {
+        $status = $request->query('status', 'pending');
+
+        $query = Test::with(['creator', 'sections.testQuestions']);
+
+        if ($status !== 'all') {
+            if ($status === 'pending') {
+                $query->whereIn('status', ['pending', 'pending_approval']);
+            } else {
+                $query->where('status', $status);
+            }
+        }
+
+        $assessments = $query->latest()->paginate(15);
+        $pendingCount = Test::whereIn('status', ['pending', 'pending_approval'])->count();
+        $approvedCount = Test::where('status', 'approved')->count();
+        $needsRevisionCount = Test::whereIn('status', ['needs_revision', 'revision_requested', 'rejected'])->count();
+
+        return view('admin.repository_manager.assessment_approval', compact(
+            'assessments',
+            'status',
+            'pendingCount',
+            'approvedCount',
+            'needsRevisionCount'
+        ));
+    }
+
+    /**
+     * Review assessment details (TASK 3).
+     */
+    public function assessmentReview(Test $test): View
+    {
+        $test->load(['creator', 'sections.testQuestions.questionBank']);
+
+        $logs = RepositoryActivityLog::where('resource_type', 'Test')
+            ->where('resource_id', (string) $test->id)
+            ->with(['actor', 'reviewer'])
+            ->latest()
+            ->get();
+
+        return view('admin.repository_manager.assessment_review', compact('test', 'logs'));
+    }
+
+    /**
+     * Approve assessment (TASK 4).
+     */
+    public function approveAssessment(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+        $note = $request->input('notes', 'Assessment approved by Repository Manager.');
+
+        $previousStatus = $test->status;
+        $test->status = 'approved';
+        $test->is_published = true;
+        $test->save();
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $test->created_by ?? $user->id,
+            'reviewer_id'   => $user->id,
+            'action'        => 'approved',
+            'approval_note' => $note,
+        ]);
+
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'Test',
+                'resource_id'   => (string) $test->id,
+                'action'        => 'assessment_approved',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'created_by'    => $test->created_by ?? $user->id,
+                'version'       => '1.0',
+                'reason'        => $note,
+                'ip_address'    => $request->ip(),
+                'metadata'      => [
+                    'previous_status' => $previousStatus,
+                    'new_status'      => 'approved',
+                    'reviewer'        => $user->name,
+                ],
+            ]);
+        }
+
+        if ($test->creator) {
+            try {
+                $test->creator->notify(new \App\Notifications\EnterpriseSystemNotification(
+                    title: 'Assessment Approved',
+                    message: "Your Assessment Test '{$test->title}' was approved by Repository Manager {$user->name}. It is now available for institutional use.",
+                    type: 'ASSESSMENT_APPROVED',
+                    priority: 'HIGH',
+                    entityType: 'test',
+                    entityId: (string) $test->id,
+                    targetUrl: route('admin.tests.show', $test->id)
+                ));
+            } catch (\Throwable $e) {
+                // Silently skip
+            }
+        }
+
+        return redirect()->route('admin.repository-manager.assessment-approval')
+            ->with('success', "Assessment '{$test->title}' approved successfully and made live for institutional use.");
+    }
+
+    /**
+     * Request revision for assessment (TASK 5).
+     */
+    public function requestRevisionAssessment(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+        $note = $request->input('notes', 'Revision requested by Repository Manager.');
+
+        $previousStatus = $test->status;
+        $test->status = 'needs_revision';
+        $test->is_published = false;
+        $test->save();
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $test->created_by ?? $user->id,
+            'reviewer_id'   => $user->id,
+            'action'        => 'revision_requested',
+            'approval_note' => $note,
+        ]);
+
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'Test',
+                'resource_id'   => (string) $test->id,
+                'action'        => 'assessment_revision_requested',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'created_by'    => $test->created_by ?? $user->id,
+                'version'       => '1.0',
+                'reason'        => $note,
+                'ip_address'    => $request->ip(),
+                'metadata'      => [
+                    'previous_status' => $previousStatus,
+                    'new_status'      => 'needs_revision',
+                    'reviewer'        => $user->name,
+                ],
+            ]);
+        }
+
+        if ($test->creator) {
+            try {
+                $test->creator->notify(new \App\Notifications\EnterpriseSystemNotification(
+                    title: 'Assessment Revision Requested',
+                    message: "Your Assessment Test '{$test->title}' requires revision. Reviewer notes: {$note}",
+                    type: 'ASSESSMENT_REVISION_REQUESTED',
+                    priority: 'HIGH',
+                    entityType: 'test',
+                    entityId: (string) $test->id,
+                    targetUrl: route('admin.tests.show', $test->id)
+                ));
+            } catch (\Throwable $e) {
+                // Silently skip
+            }
+        }
+
+        return redirect()->route('admin.repository-manager.assessment-approval')
+            ->with('warning', "Revision requested for Assessment '{$test->title}'. Author notified.");
+    }
+
+    /**
+     * Reject assessment (TASK 5).
+     */
+    public function rejectAssessment(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+        $note = $request->input('notes', 'Assessment rejected by Repository Manager.');
+
+        $previousStatus = $test->status;
+        $test->status = 'needs_revision';
+        $test->is_published = false;
+        $test->save();
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $test->created_by ?? $user->id,
+            'reviewer_id'   => $user->id,
+            'action'        => 'rejected',
+            'approval_note' => $note,
+        ]);
+
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'Test',
+                'resource_id'   => (string) $test->id,
+                'action'        => 'assessment_rejected',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'created_by'    => $test->created_by ?? $user->id,
+                'version'       => '1.0',
+                'reason'        => $note,
+                'ip_address'    => $request->ip(),
+                'metadata'      => [
+                    'previous_status' => $previousStatus,
+                    'new_status'      => 'needs_revision',
+                    'reviewer'        => $user->name,
+                ],
+            ]);
+        }
+
+        if ($test->creator) {
+            try {
+                $test->creator->notify(new \App\Notifications\EnterpriseSystemNotification(
+                    title: 'Assessment Rejected',
+                    message: "Your Assessment Test '{$test->title}' was rejected by Repository Manager {$user->name}. Reason: {$note}",
+                    type: 'ASSESSMENT_REJECTED',
+                    priority: 'HIGH',
+                    entityType: 'test',
+                    entityId: (string) $test->id,
+                    targetUrl: route('admin.tests.show', $test->id)
+                ));
+            } catch (\Throwable $e) {
+                // Silently skip
+            }
+        }
+
+        return redirect()->route('admin.repository-manager.assessment-approval')
+            ->with('danger', "Assessment '{$test->title}' rejected.");
+    }
+
+    /**
+     * Submit assessment for review (TASK 2).
+     */
+    public function submitAssessmentForReview(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+        $previousStatus = $test->status;
+
+        $test->status = 'pending';
+        $test->save();
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $user->id,
+            'action'        => 'submitted',
+            'approval_note' => 'Assessment submitted for Repository Manager review.',
+        ]);
+
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'Test',
+                'resource_id'   => (string) $test->id,
+                'action'        => 'assessment_submitted',
+                'actor_id'      => $user->id,
+                'created_by'    => $user->id,
+                'version'       => '1.0',
+                'reason'        => 'Teacher submitted assessment for Repository Manager review',
+                'ip_address'    => $request->ip(),
+                'metadata'      => [
+                    'previous_status' => $previousStatus,
+                    'new_status'      => 'pending',
+                    'submitter'       => $user->name,
+                ],
+            ]);
+        }
+
+        return back()->with('status', 'Assessment submitted successfully for Repository Manager review.');
     }
 }
