@@ -481,7 +481,7 @@ class MediaController extends Controller
     {
         $user = $request->user();
         $hasSignedUrl = $request->hasValidSignature();
-        $isSuperAdmin = $user && ($user->hasRole('super-admin') || $user->hasPermissionTo('repository.download.asset'));
+        $isSuperAdmin = $user && $user->canDownloadRepositoryAsset();
 
         if (!$hasSignedUrl && !$isSuperAdmin) {
             if ($request->wantsJson()) {

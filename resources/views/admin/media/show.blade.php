@@ -111,8 +111,8 @@
                     📋 Copy URL
                 </button>
 
-                {{-- TASK 1 & TASK 8: Secure Download Access Control --}}
-                @if(Auth::user()?->hasRole('super-admin') || Auth::user()?->hasPermissionTo('repository.download.asset'))
+                {{-- TASK 1 & TASK 8: Secure Download Access Control (Defensive) --}}
+                @if(Auth::user()?->canDownloadRepositoryAsset())
                 <a href="{{ route('admin.media.download', $media->id) }}" style="padding:.6rem 1.1rem;background:#10b981;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
                     ⬇ Download Asset (Super Admin)
                 </a>

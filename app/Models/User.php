@@ -103,4 +103,21 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Certificate::class, 'user_id');
     }
+
+    /**
+     * Defensive permission check for downloading repository assets.
+     * Never throws PermissionDoesNotExist exception even if permissions are unseeded.
+     */
+    public function canDownloadRepositoryAsset(): bool
+    {
+        if ($this->hasRole('super-admin')) {
+            return true;
+        }
+
+        try {
+            return $this->hasPermissionTo('repository.download.asset');
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
 }

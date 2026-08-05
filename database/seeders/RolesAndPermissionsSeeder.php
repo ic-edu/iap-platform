@@ -197,12 +197,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'repository.versioning',
         ]);
 
-        // Regular Admin (Operational Only - CANNOT approve academic assets)
+        // Regular Admin (Operational Only - CANNOT approve academic assets or download repository files)
         $roleAdmin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $adminPerms = Permission::all()->reject(fn ($p) => in_array($p->name, [
             'repository.approve',
             'repository.reject',
             'repository.request_revision',
+            'repository.download.asset',
         ]));
         $roleAdmin->syncPermissions($adminPerms);
 
