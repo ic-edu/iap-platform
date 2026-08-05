@@ -112,6 +112,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'cms.view',
             'reporting.view',
             'settings.view',
+
+            // Enterprise Repository Governance Permissions (PART A & J)
+            'repository.manage',
+            'repository.review',
+            'repository.approve',
+            'repository.reject',
+            'repository.request_revision',
+            'repository.audit',
+            'repository.quality_assurance',
+            'repository.versioning',
         ];
 
         foreach ($permissions as $permission) {
@@ -168,10 +178,48 @@ class RolesAndPermissionsSeeder extends Seeder
             'reporting.view',
         ]);
 
-        $roleAdmin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $roleAdmin->syncPermissions(Permission::all());
+        // PART A: Repository Manager (Academic Leader)
+        $roleRepoManager = Role::firstOrCreate(['name' => 'repository-manager', 'guard_name' => 'web']);
+        $roleRepoManager->syncPermissions([
+            'manage question banks',
+            'manage questions',
+            'manage tests',
+            'analytics.view',
+            'reporting.view',
+            'repository.manage',
+            'repository.review',
+            'repository.approve',
+            'repository.reject',
+            'repository.request_revision',
+            'repository.audit',
+            'repository.quality_assurance',
+            'repository.versioning',
+        ]);
 
+        // Regular Admin (Operational Only - CANNOT approve academic assets)
+        $roleAdmin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $adminPerms = Permission::all()->reject(fn ($p) => in_array($p->name, [
+            'repository.approve',
+            'repository.reject',
+            'repository.request_revision',
+        ]));
+        $roleAdmin->syncPermissions($adminPerms);
+
+        // Super Admin (Full override)
         $roleSuperAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
         $roleSuperAdmin->syncPermissions(Permission::all());
+
+        // Create Default Repository Manager Account
+        $repoUser = \App\Models\User::firstOrCreate(
+            ['email' => 'repomanager@icedu.com'],
+            [
+                'name'     => 'Dr. Eleanor Vance (Repository Manager)',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'status'   => 'active',
+            ]
+        );
+        if (!$repoUser->hasRole('repository-manager')) {
+            $repoUser->assignRole('repository-manager');
+        }
     }
 }

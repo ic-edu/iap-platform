@@ -264,6 +264,19 @@
                         <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             📊 Student Reports
                         </a>
+                    @elseif (Auth::user()->hasRole('repository-manager'))
+                        <a href="{{ route('admin.repository-manager.dashboard') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-indigo-500/30 text-indigo-300 font-bold block transition-colors">
+                            ⚡ Repository Manager Command Center
+                        </a>
+                        <a href="{{ route('admin.repository-manager.media-approval') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            🖼 Media Approval Center
+                        </a>
+                        <a href="{{ route('admin.repository-manager.questions-approval') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📂 Question Banks Approval
+                        </a>
+                        <a href="{{ route('admin.academic-library.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📚 Academic Library Explorer
+                        </a>
                     @elseif (Auth::user()->hasRole('finance'))
                         <a href="{{ route('admin.commerce.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             🛍️ Billing &amp; Packages

@@ -549,27 +549,67 @@ class MediaController extends Controller
 
     public function updateMetadata(Request $request, MediaAsset $media): RedirectResponse
     {
+        return $this->submitRevision($request, $media);
+    }
+
+    public function submitRevision(Request $request, MediaAsset $media): RedirectResponse
+    {
         $user = $request->user();
 
-        // Teachers can only edit their own media; Admin cannot edit academic media content
-        if ($user->hasRole('teacher') && $media->uploaded_by !== $user->id) {
+        if (!$user->hasRole('teacher') && !$user->hasRole('repository-manager') && !$user->hasRole('super-admin')) {
             abort(403);
         }
 
-        if (!$user->hasRole('teacher') && !$user->hasRole('super-admin')) {
-            abort(403, 'Only Teachers can edit academic media metadata.');
-        }
-
         $validated = $request->validate([
-            'title'       => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:1000'],
+            'title'        => ['nullable', 'string', 'max:255'],
+            'description'  => ['nullable', 'string', 'max:1000'],
+            'category'     => ['nullable', 'string', 'max:255'],
+            'exam_type'    => ['nullable', 'string', 'max:50'],
+            'content_text' => ['nullable', 'string'],
+            'tags'         => ['nullable', 'array'],
         ]);
 
-        $media->update($validated);
+        $changesData = [
+            'media_id'         => $media->id,
+            'media_type'       => $media->type,
+            'old_data'         => [
+                'title'        => $media->title,
+                'description'  => $media->description,
+                'category'     => $media->category,
+                'exam_type'    => $media->exam_type,
+                'content_text' => $media->content_text,
+                'tags'         => $media->tags,
+            ],
+            'new_title'        => $validated['title'] ?? $media->title,
+            'new_description'  => $validated['description'] ?? $media->description,
+            'new_category'     => $validated['category'] ?? $media->category,
+            'new_exam_type'    => $validated['exam_type'] ?? $media->exam_type,
+            'new_content_text' => $validated['content_text'] ?? $media->content_text,
+            'new_tags'         => $validated['tags'] ?? $media->tags,
+        ];
 
-        ActivityLogger::log('media_metadata_updated', "Media metadata updated: {$media->original_name}", $user);
+        // Create Review Request (PART E)
+        \App\Models\RepositoryReviewRequest::create([
+            'resource_type' => 'MediaAsset',
+            'resource_id'   => $media->id,
+            'submitted_by'  => $user->id,
+            'status'        => 'pending_review',
+            'changes_data'  => $changesData,
+        ]);
 
-        return back()->with('status', 'Media metadata updated.');
+        $media->approval_status = 'pending_review';
+        $media->save();
+
+        \App\Models\RepositoryActivityLog::create([
+            'resource_type' => 'MediaAsset',
+            'resource_id'   => $media->id,
+            'actor_id'      => $user->id,
+            'action'        => 'submitted_revision',
+            'old_values'    => $changesData['old_data'],
+            'new_values'    => $changesData,
+        ]);
+
+        return back()->with('status', 'Revision Request submitted to Repository Manager for Quality Assurance Review.');
     }
 
     // ──────────────────────────────────────────────────────────────

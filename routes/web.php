@@ -200,6 +200,20 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
     });
 });
 
+// PART B: Repository Manager Dedicated Workspace & Approval Center
+Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group(function () {
+    Route::prefix('admin/repository-manager')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'dashboard'])->name('admin.repository-manager.dashboard');
+        Route::get('/media', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'mediaApprovalCenter'])->name('admin.repository-manager.media-approval');
+        Route::get('/media/{reviewRequest}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'mediaReview'])->name('admin.repository-manager.media-review');
+        Route::post('/media/{reviewRequest}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveMedia'])->name('admin.repository-manager.media-approve');
+        Route::post('/media/{reviewRequest}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionMedia'])->name('admin.repository-manager.media-revision');
+        Route::post('/media/{reviewRequest}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectMedia'])->name('admin.repository-manager.media-reject');
+        Route::get('/questions', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'questionsApproval'])->name('admin.repository-manager.questions-approval');
+        Route::get('/duplicates', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'duplicates'])->name('admin.repository-manager.duplicates');
+    });
+});
+
 
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
