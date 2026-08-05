@@ -154,6 +154,14 @@ test('authorized teacher can access academic library and dedicated library categ
     $qualityResponse = $this->actingAs($teacher)->get('/admin/academic-library/quality');
     $qualityResponse->assertStatus(200)
         ->assertSee('IRQA', false);
+
+    $explorerResponse = $this->actingAs($teacher)->get('/admin/academic-library/explorer?filter=needs_improvement&sort=health_asc');
+    $explorerResponse->assertStatus(200)
+        ->assertSee('Repository Explorer', false);
+
+    $analyticsResponse = $this->actingAs($teacher)->get('/admin/academic-library/analytics');
+    $analyticsResponse->assertStatus(200)
+        ->assertSee('IRQA Quality Analytics', false);
 });
 
 test('authorized admin can access reporting analytics and export csv', function () {

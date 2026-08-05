@@ -35,6 +35,14 @@
     display: flex;
     flex-direction: column;
     gap: .25rem;
+    text-decoration: none;
+    transition: border-color .2s, transform .15s, box-shadow .2s;
+    cursor: pointer;
+}
+.irqa-kpi:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(99,102,241,.15);
 }
 .irqa-kpi__count { font-size: 1.85rem; font-weight: 900; line-height: 1; }
 .irqa-kpi__label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; }
@@ -82,35 +90,54 @@
             <h1 class="irqa-hero__title">🛡 Institutional Repository Quality Assurance (IRQA)</h1>
             <p class="irqa-hero__sub">Comprehensive metadata completeness, difficulty balance, explanation coverage, and governance audit dashboard.</p>
         </div>
-        <div>
-            <a href="{{ route('admin.academic-library.index') }}" style="padding:.6rem 1.2rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#e2e8f0;font-size:.85rem;font-weight:700;text-decoration:none;">
-                📚 Library Overview
+        <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
+            <a href="{{ route('admin.academic-library.explorer') }}" style="padding:.6rem 1.2rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:700;text-decoration:none;">
+                🔍 Repository Explorer
+            </a>
+            <a href="{{ route('admin.academic-library.analytics') }}" style="padding:.6rem 1.2rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#e2e8f0;font-size:.85rem;font-weight:700;text-decoration:none;">
+                📊 Analytics
             </a>
         </div>
     </div>
 
-    {{-- Global Quality Metrics Grid (PART 11) --}}
+    {{-- Global Quality Metrics Grid (PART 11 & TASK 1) --}}
     <div class="irqa-kpi-grid">
-        <div class="irqa-kpi">
+        {{-- Card 1: Total Repositories --}}
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'all']) }}" class="irqa-kpi">
             <div class="irqa-kpi__count" style="color:#818cf8;">{{ $summary['total_repositories'] }}</div>
-            <div class="irqa-kpi__label">Total Repositories</div>
-        </div>
-        <div class="irqa-kpi">
+            <div class="irqa-kpi__label">Total Repositories →</div>
+        </a>
+
+        {{-- Card 2: Healthy Repositories --}}
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'healthy']) }}" class="irqa-kpi">
             <div class="irqa-kpi__count" style="color:#34d399;">{{ $summary['healthy_count'] }}</div>
-            <div class="irqa-kpi__label">Healthy Repositories</div>
-        </div>
-        <div class="irqa-kpi">
+            <div class="irqa-kpi__label">Healthy Repositories →</div>
+        </a>
+
+        {{-- Card 3: Needs Improvement (TASK 1.3 & TASK 3: Lowest Health Score First) --}}
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc']) }}" class="irqa-kpi">
             <div class="irqa-kpi__count" style="color:#fb7185;">{{ $summary['needs_improvement_count'] }}</div>
-            <div class="irqa-kpi__label">Needing Improvement</div>
-        </div>
-        <div class="irqa-kpi">
+            <div class="irqa-kpi__label">Needing Improvement →</div>
+        </a>
+
+        {{-- Card 4: Awaiting Approval (TASK 1.4: Floating Dialog if count == 0) --}}
+        @if($summary['pending_approval_count'] > 0)
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval']) }}" class="irqa-kpi">
             <div class="irqa-kpi__count" style="color:#fbbf24;">{{ $summary['pending_approval_count'] }}</div>
-            <div class="irqa-kpi__label">Awaiting Approval</div>
-        </div>
-        <div class="irqa-kpi">
+            <div class="irqa-kpi__label">Awaiting Approval →</div>
+        </a>
+        @else
+        <button type="button" onclick="openNoApprovalModal()" class="irqa-kpi" style="text-align:left;background:#0f172a;border:1px solid #1e293b;">
+            <div class="irqa-kpi__count" style="color:#fbbf24;">{{ $summary['pending_approval_count'] }}</div>
+            <div class="irqa-kpi__label">Awaiting Approval ⓘ</div>
+        </button>
+        @endif
+
+        {{-- Card 5: Average Health Score (TASK 1.5: Opens IRQA Analytics) --}}
+        <a href="{{ route('admin.academic-library.analytics') }}" class="irqa-kpi">
             <div class="irqa-kpi__count" style="color:#38bdf8;">{{ $summary['avg_health_score'] }} <span style="font-size:.85rem;color:#64748b;">/ 100</span></div>
-            <div class="irqa-kpi__label">Average Health Score</div>
-        </div>
+            <div class="irqa-kpi__label">Average Health Score 📊</div>
+        </a>
     </div>
 
     {{-- Duplicate Detection Alerts Panel (PART 6) --}}
@@ -193,6 +220,27 @@
             </table>
         </div>
     </div>
+
+    {{-- Floating Dialog Modal for 0 Awaiting Approval (TASK 1.4) --}}
+    <div id="noApprovalModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,.75);backdrop-filter:blur(6px);z-index:999;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;max-width:440px;width:100%;padding:2rem;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.6);">
+            <div style="font-size:2.5rem;margin-bottom:.5rem;">🎉</div>
+            <h3 style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">No Repository Awaiting Approval</h3>
+            <p style="font-size:.85rem;color:#94a3b8;line-height:1.45;margin-bottom:1.5rem;">Everything has already been reviewed.</p>
+            <button type="button" onclick="closeNoApprovalModal()" style="padding:.6rem 1.5rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-weight:700;cursor:pointer;font-size:.85rem;">
+                OK, Understood
+            </button>
+        </div>
+    </div>
+
+    <script>
+    function openNoApprovalModal() {
+        document.getElementById('noApprovalModal').style.display = 'flex';
+    }
+    function closeNoApprovalModal() {
+        document.getElementById('noApprovalModal').style.display = 'none';
+    }
+    </script>
 
 </div>
 @endsection

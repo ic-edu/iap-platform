@@ -127,4 +127,30 @@ class AcademicLibraryController extends Controller
 
         return view('admin.academic_library.quality', compact('summary'));
     }
+
+    /**
+     * Display Repository Explorer (TASK 2).
+     */
+    public function explorer(Request $request): View
+    {
+        $qualityService = app(\App\Services\RepositoryQualityService::class);
+        $explorerData   = $qualityService->getExplorerAudits([
+            'filter' => $request->input('filter', 'all'),
+            'search' => $request->input('search', ''),
+            'sort'   => $request->input('sort', ''),
+        ]);
+
+        return view('admin.academic_library.explorer', compact('explorerData'));
+    }
+
+    /**
+     * Display Read-Only IRQA Analytics (TASK 1.5).
+     */
+    public function analytics(Request $request): View
+    {
+        $qualityService = app(\App\Services\RepositoryQualityService::class);
+        $analyticsData  = $qualityService->getAnalyticsData();
+
+        return view('admin.academic_library.analytics', compact('analyticsData'));
+    }
 }

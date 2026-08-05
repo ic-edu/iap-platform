@@ -231,6 +231,133 @@ class RepositoryQualityService
     }
 
     /**
+     * Get Audited Repositories filtered, searched, and sorted for Repository Explorer.
+     */
+    public function getExplorerAudits(array $options = []): array
+    {
+        $filter = $options['filter'] ?? 'all';
+        $search = strtolower(trim($options['search'] ?? ''));
+        $sort   = $options['sort'] ?? ($filter === 'needs_improvement' ? 'health_asc' : 'health_desc');
+
+        $banks = QuestionBank::with(['questions.choices', 'aclCategory', 'creator'])->get();
+        $audits = [];
+
+        foreach ($banks as $bank) {
+            $audit = $this->validateRepository($bank);
+
+            // 1. Search Filter
+            if (!empty($search)) {
+                $titleMatch = str_contains(strtolower($audit['title']), $search);
+                $typeMatch  = str_contains(strtolower($audit['test_type']), $search);
+                $catMatch   = str_contains(strtolower($bank->aclCategory?->name ?? ''), $search);
+                if (!$titleMatch && !$typeMatch && !$catMatch) {
+                    continue;
+                }
+            }
+
+            // 2. Status Filter
+            $bankStatus = is_object($bank->status) ? $bank->status->value : (string)($bank->status ?? 'draft');
+            $passFilter = match ($filter) {
+                'healthy'           => !$audit['needs_improvement'],
+                'needs_improvement' => $audit['needs_improvement'],
+                'awaiting_approval' => in_array($bankStatus, ['pending_approval', 'submitted']),
+                'archived'          => $bankStatus === 'archived',
+                default             => true,
+            };
+
+            if ($passFilter) {
+                $audits[] = $audit;
+            }
+        }
+
+        // 3. Sorting
+        usort($audits, function ($a, $b) use ($sort) {
+            return match ($sort) {
+                'health_asc'     => $a['health_score'] <=> $b['health_score'],
+                'health_desc'    => $b['health_score'] <=> $a['health_score'],
+                'title_asc'      => strcmp($a['title'], $b['title']),
+                'questions_desc' => $b['total_questions'] <=> $a['total_questions'],
+                default          => $b['health_score'] <=> $a['health_score'],
+            };
+        });
+
+        return [
+            'filter'       => $filter,
+            'search'       => $search,
+            'sort'         => $sort,
+            'total_found'  => count($audits),
+            'audits'       => $audits,
+        ];
+    }
+
+    /**
+     * Get Read-Only Analytics Data for IRQA Analytics (TASK 1.5).
+     */
+    public function getAnalyticsData(): array
+    {
+        $globalSummary = $this->getGlobalQualitySummary();
+        $audits = $globalSummary['audits'];
+
+        $distribution = [
+            'excellent'         => 0,
+            'good'              => 0,
+            'needs_improvement' => 0,
+        ];
+
+        $sumMetadata    = 0;
+        $sumQuestions   = 0;
+        $sumExplanation = 0;
+        $sumDifficulty  = 0;
+
+        foreach ($audits as $audit) {
+            if ($audit['health_score'] >= 90) {
+                $distribution['excellent']++;
+            } elseif ($audit['health_score'] >= 75) {
+                $distribution['good']++;
+            } else {
+                $distribution['needs_improvement']++;
+            }
+
+            $sumMetadata    += $audit['scores']['metadata'];
+            $sumQuestions   += $audit['scores']['questions'];
+            $sumExplanation += $audit['scores']['explanation'];
+            $sumDifficulty  += $audit['scores']['difficulty'];
+        }
+
+        $totalCount = max(1, count($audits));
+
+        // Top healthy repository
+        $sortedByHealthDesc = $audits;
+        usort($sortedByHealthDesc, fn($a, $b) => $b['health_score'] <=> $a['health_score']);
+        $topHealthy = $sortedByHealthDesc[0] ?? null;
+
+        // Lowest health repository
+        $sortedByHealthAsc = $audits;
+        usort($sortedByHealthAsc, fn($a, $b) => $a['health_score'] <=> $b['health_score']);
+        $lowestRepo = $sortedByHealthAsc[0] ?? null;
+
+        $coverageService = app(\App\Services\AclCoverageService::class);
+        $coverageReport  = $coverageService->getCategoryCoverageReport();
+        $overallCoverage = 0;
+        if (is_array($coverageReport) && isset($coverageReport['overall_percentage'])) {
+            $overallCoverage = $coverageReport['overall_percentage'];
+        }
+
+        return [
+            'global_summary'        => $globalSummary,
+            'avg_health_score'      => $globalSummary['avg_health_score'],
+            'distribution'          => $distribution,
+            'metadata_completion'   => round($sumMetadata / $totalCount),
+            'question_completeness' => round($sumQuestions / $totalCount),
+            'explanation_coverage'  => round($sumExplanation / $totalCount),
+            'difficulty_balance'    => round($sumDifficulty / $totalCount),
+            'overall_coverage'      => $overallCoverage,
+            'top_healthy_repo'      => $topHealthy,
+            'lowest_repo'           => $lowestRepo,
+        ];
+    }
+
+    /**
      * Detect duplicate question prompts, choices, or bank titles (PART 6).
      */
     public function detectDuplicates(Collection $banks): array

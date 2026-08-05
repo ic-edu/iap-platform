@@ -170,6 +170,8 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(func
     Route::prefix('admin/academic-library')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'index'])->name('admin.academic-library.index');
         Route::get('/quality', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'quality'])->name('admin.academic-library.quality');
+        Route::get('/explorer', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'explorer'])->name('admin.academic-library.explorer');
+        Route::get('/analytics', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'analytics'])->name('admin.academic-library.analytics');
         Route::get('/{slug}', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'show'])->name('admin.academic-library.show');
     });
 
