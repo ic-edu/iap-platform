@@ -50,7 +50,7 @@ class QuestionReviewWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * TEST 1: Question Review Workspace prioritizes pure read-only inspection and Question Navigator.
+     * TEST 1: Question Review Workspace prioritizes inspection and Question Navigator.
      */
     public function test_1_workspace_renders_question_navigator_and_pure_read_only_viewer()
     {
@@ -80,9 +80,8 @@ class QuestionReviewWorkspaceRefactorTest extends TestCase
         $workspaceRes->assertSee('Question Navigator');
         $workspaceRes->assertSee('Jump to question');
 
-        // Pure Question Viewer Assertions (HOTFIX S11.3.1)
-        $workspaceRes->assertDontSee('Request Revision on Q#');
+        // Question Annotation Workspace Assertions (Sprint 11.4)
+        $workspaceRes->assertSee('Question Annotation Workspace');
         $workspaceRes->assertDontSee('q-rev-modal');
-        $workspaceRes->assertDontSee('Submit Question Revision');
     }
 }

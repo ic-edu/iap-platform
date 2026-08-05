@@ -49,7 +49,7 @@ class WorkflowRefactorReviewEntryPointTest extends TestCase
     }
 
     /**
-     * TEST 1: Review & Governance entry point opens pure read-only Question Viewer.
+     * TEST 1: Review & Governance entry point opens Question Annotation Workspace without popups.
      */
     public function test_1_review_and_governance_opens_workspace_not_revision_dialog()
     {
@@ -77,12 +77,12 @@ class WorkflowRefactorReviewEntryPointTest extends TestCase
         $queueRes->assertStatus(200);
         $queueRes->assertSee(route('admin.repository-manager.assessment-review', $test->id));
 
-        // Review & Governance target route opens pure read-only Question Viewer
+        // Review & Governance target route opens Question Annotation Workspace
         $workspaceRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
         $workspaceRes->assertStatus(200);
-        $workspaceRes->assertSee('Pure Read-Only Question Viewer');
+        $workspaceRes->assertSee('Question Annotation Workspace');
 
-        // HOTFIX S11.3.1 Assertions
+        // HOTFIX Assertions (No popup modals)
         $workspaceRes->assertDontSee('Request Revision on Q#');
         $workspaceRes->assertDontSee('q-rev-modal');
         $workspaceRes->assertDontSee('Submit Question Revision');

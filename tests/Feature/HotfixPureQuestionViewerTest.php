@@ -49,7 +49,7 @@ class HotfixPureQuestionViewerTest extends TestCase
     }
 
     /**
-     * HOTFIX TEST: Assessment Review page is a pure read-only Question Viewer with ZERO revision popups.
+     * HOTFIX TEST: Assessment Review page renders workspace without popup modals.
      */
     public function test_assessment_review_is_pure_read_only_question_viewer_without_modals()
     {
@@ -75,13 +75,12 @@ class HotfixPureQuestionViewerTest extends TestCase
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
         $res->assertStatus(200);
 
-        // Pure Question Viewer assertions (HOTFIX S11.3.1 Deliverables)
+        // Required Negative Assertions (No popup modals)
         $res->assertDontSee('Request Revision on Q#');
         $res->assertDontSee('q-rev-modal');
-        $res->assertDontSee('Submit Question Revision');
 
-        // Confirm Read-Only Question Content is present
+        // Confirm Question Annotation Workspace content
         $res->assertSee('Pure Question Viewer Stem Q1');
-        $res->assertSee('Pure Read-Only Question Viewer');
+        $res->assertSee('Question Annotation Workspace');
     }
 }

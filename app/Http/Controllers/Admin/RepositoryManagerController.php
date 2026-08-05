@@ -543,7 +543,8 @@ class RepositoryManagerController extends Controller
         }
 
         $reviewedOkCount = $questionReviews->where('status', 'reviewed_ok')->count();
-        $needsRevisionCount = $questionReviews->where('status', 'needs_revision')->count();
+        $needsRevisionCount = $questionReviews->whereIn('status', ['needs_revision', 'critical_issue'])->count();
+        $criticalCount = $questionReviews->where('status', 'critical_issue')->count();
         $notReviewedCount = max(0, $totalQuestionsCount - ($reviewedOkCount + $needsRevisionCount));
 
         $isApprovalAllowed = ($totalQuestionsCount > 0 && $reviewedOkCount === $totalQuestionsCount && $needsRevisionCount === 0);
@@ -554,6 +555,7 @@ class RepositoryManagerController extends Controller
             'total'          => $totalQuestionsCount,
             'reviewed_ok'    => $reviewedOkCount,
             'needs_revision' => $needsRevisionCount,
+            'critical'       => $criticalCount,
             'not_reviewed'   => $notReviewedCount,
             'percentage'     => $progressPercentage,
             'is_allowed'     => $isApprovalAllowed,
@@ -589,22 +591,25 @@ class RepositoryManagerController extends Controller
     }
 
     /**
-     * Request revision for a specific question (TASK 2, 7).
+     * Request revision or mark critical issue for a specific question (TASK 1, 2, 6).
      */
     public function requestQuestionRevision(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse
     {
         $user = $request->user();
 
         $validated = $request->validate([
+            'status'   => ['nullable', 'string'],
             'field'    => ['required', 'string'],
             'comment'  => ['required', 'string'],
             'severity' => ['nullable', 'string'],
         ]);
 
+        $status = $validated['status'] ?? ($validated['severity'] === 'critical' ? 'critical_issue' : 'needs_revision');
+
         \App\Models\TestQuestionReview::updateOrCreate(
             ['test_id' => (string) $test->id, 'question_id' => (string) $question->id],
             [
-                'status'      => 'needs_revision',
+                'status'      => $status,
                 'field'       => $validated['field'],
                 'comment'     => $validated['comment'],
                 'severity'    => $validated['severity'] ?? 'warning',
@@ -612,7 +617,7 @@ class RepositoryManagerController extends Controller
             ]
         );
 
-        // Derive Assessment Status -> needs_revision (TASK 7)
+        // Derive Assessment Status -> needs_revision (TASK 6)
         $test->update([
             'status'       => 'needs_revision',
             'is_published' => false,
@@ -624,10 +629,10 @@ class RepositoryManagerController extends Controller
             'actor_id'      => $test->created_by ?? $user->id,
             'reviewer_id'   => $user->id,
             'action'        => 'revision_requested',
-            'approval_note' => "Question revision requested on field '{$validated['field']}': {$validated['comment']}",
+            'approval_note' => "Question review annotation added on field '{$validated['field']}': {$validated['comment']}",
         ]);
 
-        return redirect()->back()->with('warning', "Question #{$question->id} marked Needs Revision.");
+        return redirect()->back()->with('warning', "Question #{$question->id} annotated for revision.");
     }
 
     /**
