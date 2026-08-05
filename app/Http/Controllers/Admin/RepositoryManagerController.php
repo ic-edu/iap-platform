@@ -521,7 +521,7 @@ class RepositoryManagerController extends Controller
     }
 
     /**
-     * Review assessment details (TASK 3).
+     * Review assessment details with Question Review Items & Progress (TASK 1, 3).
      */
     public function assessmentReview(Test $test): View
     {
@@ -533,21 +533,129 @@ class RepositoryManagerController extends Controller
             'sections.testQuestions.question.passage',
         ]);
 
+        $questionReviews = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+            ->get()
+            ->keyBy('question_id');
+
+        $totalQuestionsCount = 0;
+        foreach ($test->sections as $sec) {
+            $totalQuestionsCount += $sec->testQuestions->count();
+        }
+
+        $reviewedOkCount = $questionReviews->where('status', 'reviewed_ok')->count();
+        $needsRevisionCount = $questionReviews->where('status', 'needs_revision')->count();
+        $notReviewedCount = max(0, $totalQuestionsCount - ($reviewedOkCount + $needsRevisionCount));
+
+        $isApprovalAllowed = ($totalQuestionsCount > 0 && $reviewedOkCount === $totalQuestionsCount && $needsRevisionCount === 0);
+
+        $progressPercentage = $totalQuestionsCount > 0 ? round(($reviewedOkCount / $totalQuestionsCount) * 100) : 0;
+
+        $reviewProgress = [
+            'total'          => $totalQuestionsCount,
+            'reviewed_ok'    => $reviewedOkCount,
+            'needs_revision' => $needsRevisionCount,
+            'not_reviewed'   => $notReviewedCount,
+            'percentage'     => $progressPercentage,
+            'is_allowed'     => $isApprovalAllowed,
+        ];
+
         $logs = RepositoryActivityLog::where('resource_type', 'Test')
             ->where('resource_id', (string) $test->id)
             ->with(['actor', 'reviewer'])
             ->latest()
             ->get();
 
-        return view('admin.repository_manager.assessment_review', compact('test', 'logs'));
+        return view('admin.repository_manager.assessment_review', compact('test', 'logs', 'questionReviews', 'reviewProgress'));
     }
 
     /**
-     * Approve assessment (TASK 4).
+     * Mark single question as Reviewed OK (TASK 2).
+     */
+    public function markQuestionReviewed(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse
+    {
+        $user = $request->user();
+
+        \App\Models\TestQuestionReview::updateOrCreate(
+            ['test_id' => (string) $test->id, 'question_id' => (string) $question->id],
+            [
+                'status'      => 'reviewed_ok',
+                'field'       => null,
+                'comment'     => null,
+                'reviewer_id' => $user->id,
+            ]
+        );
+
+        return redirect()->back()->with('success', "Question #{$question->id} marked as Reviewed OK.");
+    }
+
+    /**
+     * Request revision for a specific question (TASK 2, 7).
+     */
+    public function requestQuestionRevision(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'field'    => ['required', 'string'],
+            'comment'  => ['required', 'string'],
+            'severity' => ['nullable', 'string'],
+        ]);
+
+        \App\Models\TestQuestionReview::updateOrCreate(
+            ['test_id' => (string) $test->id, 'question_id' => (string) $question->id],
+            [
+                'status'      => 'needs_revision',
+                'field'       => $validated['field'],
+                'comment'     => $validated['comment'],
+                'severity'    => $validated['severity'] ?? 'warning',
+                'reviewer_id' => $user->id,
+            ]
+        );
+
+        // Derive Assessment Status -> needs_revision (TASK 7)
+        $test->update([
+            'status'       => 'needs_revision',
+            'is_published' => false,
+        ]);
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $test->created_by ?? $user->id,
+            'reviewer_id'   => $user->id,
+            'action'        => 'revision_requested',
+            'approval_note' => "Question revision requested on field '{$validated['field']}': {$validated['comment']}",
+        ]);
+
+        return redirect()->back()->with('warning', "Question #{$question->id} marked Needs Revision.");
+    }
+
+    /**
+     * Approve assessment with Approval Guard (TASK 4).
      */
     public function approveAssessment(Request $request, Test $test): RedirectResponse
     {
         $user = $request->user();
+
+        // TASK 4: Approval Guard
+        $totalQuestionsCount = 0;
+        foreach ($test->sections as $sec) {
+            $totalQuestionsCount += $sec->testQuestions->count();
+        }
+
+        $reviewedOkCount = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+            ->where('status', 'reviewed_ok')
+            ->count();
+
+        $needsRevisionCount = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+            ->where('status', 'needs_revision')
+            ->count();
+
+        if ($totalQuestionsCount > 0 && ($reviewedOkCount < $totalQuestionsCount || $needsRevisionCount > 0)) {
+            return redirect()->back()->with('error', "Cannot approve assessment. All questions must be marked 'Reviewed OK' first. (Current: {$reviewedOkCount}/{$totalQuestionsCount} Reviewed OK).");
+        }
+
+        $note = $request->input('notes', 'Assessment approved by Repository Manager.');
         $note = $request->input('notes', 'Assessment approved by Repository Manager.');
 
         $previousStatus = $test->status;

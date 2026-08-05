@@ -250,8 +250,14 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
 
         // SPRINT 10.2: Assessment Approval Queue Routes
         Route::get('/assessments', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentApprovalCenter'])->name('admin.repository-manager.assessment-approval');
-        Route::get('/assessments/{test}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentReview'])->name('admin.repository-manager.assessment-review');
-        Route::post('/assessments/{test}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveAssessment'])->name('admin.repository-manager.assessment-approve');
+        Route::get('/repository-manager/assessments/{test}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentReview'])
+            ->name('admin.repository-manager.assessment-review');
+        Route::post('/repository-manager/assessments/{test}/questions/{question}/review-ok', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'markQuestionReviewed'])
+            ->name('admin.repository-manager.question-review-ok');
+        Route::post('/repository-manager/assessments/{test}/questions/{question}/request-revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestQuestionRevision'])
+            ->name('admin.repository-manager.question-request-revision');
+        Route::post('/repository-manager/assessments/{test}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveAssessment'])
+            ->name('admin.repository-manager.assessment-approve');
         Route::post('/assessments/{test}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionAssessment'])->name('admin.repository-manager.assessment-revision');
         Route::post('/assessments/{test}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectAssessment'])->name('admin.repository-manager.assessment-reject');
     });

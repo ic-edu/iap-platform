@@ -367,6 +367,11 @@ class TestBuilderController extends Controller
             }
         }
 
+        // Clear/resolve question review flag upon Teacher edit (TASK 6)
+        \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+            ->where('question_id', (string) $question->id)
+            ->delete();
+
         return redirect()->route('teacher.tests.show', $test->id)
             ->with('status', "Question #{$question->id} updated successfully.");
     }
@@ -412,6 +417,10 @@ class TestBuilderController extends Controller
     public function validateAssessment(Test $test): array
     {
         $test->load(['sections.testQuestions.question.choices']);
+        $repoReviews = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+            ->get()
+            ->keyBy('question_id');
+
         $errors = [];
         $allQuestions = [];
         $questionIndex = 1;
@@ -440,6 +449,12 @@ class TestBuilderController extends Controller
                             $qErrors[] = "No correct answer option selected.";
                         }
                     }
+                }
+
+                // TASK 5: Structured Repository Question Review Mapping
+                $qRev = $repoReviews[$q->id] ?? null;
+                if ($qRev && $qRev->status === 'needs_revision') {
+                    $qErrors[] = "Repository Feedback (" . ucfirst($qRev->field ?? 'general') . "): " . ($qRev->comment ?? 'Revision requested');
                 }
 
                 if (!empty($qErrors)) {

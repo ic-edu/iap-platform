@@ -8,7 +8,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
         <div>
             <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin:0 0 .3rem;">🔍 Assessment Governance Review</h1>
-            <p style="font-size:.88rem;color:#94a3b8;margin:0;">Validate test structure, sections, questions, and duration before approving for institutional use.</p>
+            <p style="font-size:.88rem;color:#94a3b8;margin:0;">Validate test structure, sections, questions, choices, and answer keys before approving for institutional use.</p>
         </div>
         <div>
             <a href="{{ route('admin.repository-manager.assessment-approval') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
@@ -17,8 +17,58 @@
         </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;">
-        {{-- Left: Assessment Details & Structure --}}
+    @if(session('success'))
+    <div style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+        ✅ {{ session('success') }}
+    </div>
+    @endif
+
+    @if(session('warning'))
+    <div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fbbf24;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+        ⚠️ {{ session('warning') }}
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+        🚫 {{ session('error') }}
+    </div>
+    @endif
+
+    {{-- TASK 3: Repository Review Progress Widget --}}
+    @if(isset($reviewProgress))
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.35rem;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;flex-wrap:wrap;gap:1rem;">
+            <div>
+                <div style="font-size:.78rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15rem;">
+                    📊 Structured Question Review Progress
+                </div>
+                <div style="font-size:1.1rem;font-weight:800;color:#fff;">
+                    {{ $reviewProgress['reviewed_ok'] }} of {{ $reviewProgress['total'] }} Questions Reviewed OK ({{ $reviewProgress['percentage'] }}%)
+                </div>
+            </div>
+            <div style="display:flex;gap:1rem;font-size:.82rem;">
+                <div style="background:#1e293b;padding:.4rem .75rem;border-radius:.5rem;border:1px solid #334155;color:#34d399;font-weight:700;">
+                    🟢 Reviewed OK: {{ $reviewProgress['reviewed_ok'] }}
+                </div>
+                <div style="background:#1e293b;padding:.4rem .75rem;border-radius:.5rem;border:1px solid #334155;color:#fbbf24;font-weight:700;">
+                    🟡 Needs Revision: {{ $reviewProgress['needs_revision'] }}
+                </div>
+                <div style="background:#1e293b;padding:.4rem .75rem;border-radius:.5rem;border:1px solid #334155;color:#94a3b8;font-weight:700;">
+                    ⚪ Not Reviewed: {{ $reviewProgress['not_reviewed'] }}
+                </div>
+            </div>
+        </div>
+
+        {{-- Progress Bar --}}
+        <div style="width:100%;height:8px;background:#1e293b;border-radius:4px;overflow:hidden;">
+            <div style="width:{{ $reviewProgress['percentage'] }}%;height:100%;background:{{ $reviewProgress['is_allowed'] ? '#34d399' : '#818cf8' }};transition:width .3s ease;"></div>
+        </div>
+    </div>
+    @endif
+
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start;">
+        {{-- Left: Assessment Details & Section Question Review --}}
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
@@ -53,7 +103,7 @@
                     </div>
                     <div>
                         <div style="font-size:.7rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Pass Score</div>
-                        <div style="font-size:1.1rem;font-weight:800;color:#fff;margin-top:.2rem;">🎯 {{ $test->pass_score }}%</div>
+                        <div style="font-size:1.1rem;font-weight:800;color:#fff;margin-top:.2rem;">🎯 {{ $test->pass_score }} pts</div>
                     </div>
                     <div>
                         <div style="font-size:.7rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Sections</div>
@@ -62,69 +112,152 @@
                 </div>
             </div>
 
-            {{-- Sections Breakdown --}}
+            {{-- Sections Breakdown & Question-Level Structured Review --}}
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
-                <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Section & Item Composition</h3>
+                <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Section & Question Governance Review</h3>
 
                 @if($test->sections->isEmpty())
                     <div style="color:#64748b;font-size:.85rem;text-align:center;padding:2rem;">No test sections created yet.</div>
                 @else
+                    @php $qIdxGlobal = 1; @endphp
                     @foreach($test->sections as $sec)
-                    <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1rem;margin-bottom:1rem;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                            <div style="font-weight:800;color:#fff;font-size:.95rem;">{{ $sec->title ?? 'Section' }}</div>
-                            <span style="font-size:.75rem;color:#a5b4fc;font-weight:700;">{{ $sec->testQuestions->count() }} Questions</span>
+                    <div style="background:#1e293b;border:1px solid #334155;border-radius:.85rem;padding:1.1rem;margin-bottom:1.25rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+                            <div style="font-weight:800;color:#fff;font-size:1rem;">Section {{ $sec->order }}: {{ $sec->title ?? 'Section' }}</div>
+                            <span style="font-size:.78rem;color:#a5b4fc;font-weight:700;background:rgba(99,102,241,.15);padding:.2rem .6rem;border-radius:.4rem;">
+                                {{ $sec->testQuestions->count() }} Questions
+                            </span>
                         </div>
-                        @if($sec->description)
-                            <div style="font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;">{{ $sec->description }}</div>
-                        @endif
 
                         @if($sec->testQuestions->isNotEmpty())
-                            <div style="display:flex;flex-direction:column;gap:.85rem;margin-top:.75rem;">
+                            <div style="display:flex;flex-direction:column;gap:1rem;margin-top:1rem;">
                                 @foreach($sec->testQuestions as $idx => $tq)
                                     @php
                                         $q = $tq->question;
+                                        $qRev = $questionReviews[$q?->id] ?? null;
+                                        $qStatus = $qRev?->status ?? 'not_reviewed';
                                     @endphp
                                     @if($q)
-                                    <div style="background:#0f172a;border:1px solid #334155;border-radius:.6rem;padding:1rem;">
-                                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.4rem;">
+                                    <div style="background:#0f172a;border:1px solid {{ $qStatus === 'needs_revision' ? 'rgba(245,158,11,.5)' : ($qStatus === 'reviewed_ok' ? 'rgba(52,211,153,.3)' : '#334155') }};border-radius:.75rem;padding:1.1rem;">
+                                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.5rem;">
                                             <div>
-                                                <span style="font-size:.72rem;font-weight:800;color:#cbd5e1;background:#334155;padding:.15rem .45rem;border-radius:.3rem;margin-right:.4rem;">
-                                                    Q{{ $tq->order ?? ($idx + 1) }}
-                                                </span>
-                                                <span style="font-weight:700;color:#fff;font-size:.9rem;">
-                                                    {{ $q->prompt ?? 'Item Prompt Stem' }}
-                                                </span>
-                                            </div>
-                                            <div style="display:flex;gap:.4rem;align-items:center;">
-                                                <span style="font-size:.68rem;color:#94a3b8;background:#1e293b;padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">
-                                                    {{ $q->question_type }}
-                                                </span>
-                                                @php $diffVal = is_object($q->difficulty) ? $q->difficulty->value : $q->difficulty; @endphp
-                                                <span style="font-size:.68rem;color:#a78bfa;background:rgba(167,139,250,.12);padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">
-                                                    {{ $diffVal ?? 'easy' }}
-                                                </span>
+                                                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">
+                                                    <span style="font-size:.75rem;font-weight:800;color:#cbd5e1;background:#334155;padding:.15rem .55rem;border-radius:.3rem;">
+                                                        Q#{{ $qIdxGlobal }}
+                                                    </span>
+                                                    <span style="font-size:.7rem;color:#94a3b8;background:#1e293b;padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">{{ $q->question_type }}</span>
+                                                    @php $diffVal = is_object($q->difficulty) ? $q->difficulty->value : $q->difficulty; @endphp
+                                                    <span style="font-size:.7rem;color:#a78bfa;background:rgba(167,139,250,.12);padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">{{ $diffVal ?? 'easy' }}</span>
+
+                                                    {{-- TASK 1: Question Review Status Badges --}}
+                                                    @if($qStatus === 'reviewed_ok')
+                                                        <span style="font-size:.72rem;font-weight:800;color:#34d399;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);padding:.15rem .55rem;border-radius:.3rem;">
+                                                            🟢 Reviewed OK
+                                                        </span>
+                                                    @elseif($qStatus === 'needs_revision')
+                                                        <span style="font-size:.72rem;font-weight:800;color:#fbbf24;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);padding:.15rem .55rem;border-radius:.3rem;">
+                                                            🟡 Needs Revision ({{ $qRev->field ?? 'General' }})
+                                                        </span>
+                                                    @else
+                                                        <span style="font-size:.72rem;font-weight:800;color:#94a3b8;background:rgba(148,163,184,.15);border:1px solid rgba(148,163,184,.3);padding:.15rem .55rem;border-radius:.3rem;">
+                                                            ⚪ Not Reviewed
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                <div style="font-weight:700;color:#fff;font-size:.9rem;line-height:1.4;">
+                                                    {{ $q->prompt ?? '(Empty Prompt Stem)' }}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {{-- Choices & Correct Answer Inspection (DEFECT 2 & 4) --}}
+                                        {{-- Choices & Correct Answer Inspection (TASK 2 & DEFECT 2) --}}
                                         @if($q->choices && $q->choices->isNotEmpty())
-                                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.65rem;">
+                                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.75rem;">
                                                 @foreach($q->choices as $cIdx => $choice)
-                                                    <div style="font-size:.78rem;padding:.4rem .65rem;background:#1e293b;border:1px solid {{ $choice->is_correct ? '#10b981' : '#334155' }};border-radius:.35rem;color:{{ $choice->is_correct ? '#34d399' : '#cbd5e1' }};font-weight:{{ $choice->is_correct ? '800' : '400' }};">
+                                                    <div style="font-size:.78rem;padding:.45rem .7rem;background:#1e293b;border:1px solid {{ $choice->is_correct ? '#10b981' : '#334155' }};border-radius:.4rem;color:{{ $choice->is_correct ? '#34d399' : '#cbd5e1' }};font-weight:{{ $choice->is_correct ? '800' : '400' }};">
                                                         {{ chr(65 + $cIdx) }}. {{ $choice->content ?? $choice->choice_text }} {{ $choice->is_correct ? '✓ (Correct)' : '' }}
                                                     </div>
                                                 @endforeach
                                             </div>
                                         @endif
 
-                                        {{-- Answer Rationale / Explanation --}}
+                                        {{-- Answer Explanation --}}
                                         @if($q->explanation)
-                                            <div style="font-size:.75rem;color:#94a3b8;margin-top:.6rem;background:#1e293b;padding:.45rem .65rem;border-radius:.35rem;border-left:3px solid #818cf8;">
-                                                <strong>Explanation:</strong> {{ $q->explanation }}
+                                            <div style="font-size:.78rem;color:#94a3b8;margin-top:.65rem;background:#1e293b;padding:.5rem .75rem;border-radius:.4rem;border-left:3px solid #818cf8;">
+                                                <strong>Rationale:</strong> {{ $q->explanation }}
                                             </div>
                                         @endif
+
+                                        {{-- Display existing revision comment if any --}}
+                                        @if($qRev && $qRev->comment)
+                                            <div style="font-size:.78rem;color:#fbbf24;margin-top:.65rem;background:rgba(245,158,11,.1);padding:.5rem .75rem;border-radius:.4rem;border:1px solid rgba(245,158,11,.3);">
+                                                💬 <strong>Reviewer Feedback ({{ ucfirst($qRev->field) }}):</strong> "{{ $qRev->comment }}"
+                                            </div>
+                                        @endif
+
+                                        {{-- TASK 2: Question Governance Review Action Forms --}}
+                                        <div style="display:flex;gap:.75rem;margin-top:1rem;padding-top:.85rem;border-top:1px solid #1e293b;flex-wrap:wrap;align-items:center;">
+                                            {{-- Mark Reviewed OK --}}
+                                            <form method="POST" action="{{ route('admin.repository-manager.question-review-ok', ['test' => $test->id, 'question' => $q->id]) }}" style="display:inline;">
+                                                @csrf
+                                                <button type="submit" style="padding:.45rem .85rem;background:#10b981;color:#fff;border:none;border-radius:.5rem;font-size:.78rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+                                                    ✓ Mark Reviewed OK
+                                                </button>
+                                            </form>
+
+                                            {{-- Request Question Revision Button --}}
+                                            <button type="button" onclick="document.getElementById('q-rev-modal-{{ $q->id }}').classList.remove('hidden')" style="padding:.45rem .85rem;background:#f59e0b;color:#fff;border:none;border-radius:.5rem;font-size:.78rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+                                                ⚠️ Request Revision
+                                            </button>
+                                        </div>
+
+                                        {{-- Structured Question Revision Modal (TASK 2) --}}
+                                        <div id="q-rev-modal-{{ $q->id }}" class="hidden" style="position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.85);display:flex;align-items:center;justify-content:center;padding:1.5rem;">
+                                            <div style="background:#0f172a;border:1px solid #334155;border-radius:1.25rem;max-width:500px;width:100%;padding:1.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,.7);">
+                                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #1e293b;padding-bottom:.75rem;">
+                                                    <h4 style="font-size:1rem;font-weight:800;color:#fff;margin:0;">
+                                                        ⚠️ Request Revision on Q#{{ $qIdxGlobal }}
+                                                    </h4>
+                                                    <button type="button" onclick="document.getElementById('q-rev-modal-{{ $q->id }}').classList.add('hidden')" style="background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;">✕</button>
+                                                </div>
+
+                                                <form method="POST" action="{{ route('admin.repository-manager.question-request-revision', ['test' => $test->id, 'question' => $q->id]) }}" style="display:flex;flex-direction:column;gap:1rem;">
+                                                    @csrf
+                                                    <div>
+                                                        <label style="display:block;font-size:.8rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;">Target Revision Field *</label>
+                                                        <select name="field" required style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.85rem;">
+                                                            <option value="stem">Stem / Prompt Text</option>
+                                                            <option value="choices">Choices / Options</option>
+                                                            <option value="correct_answer">Correct Answer Selection</option>
+                                                            <option value="explanation">Explanation / Rationale</option>
+                                                            <option value="media">Media Attachment</option>
+                                                            <option value="general">General Question Quality</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div>
+                                                        <label style="display:block;font-size:.8rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;">Reviewer Feedback Comment *</label>
+                                                        <textarea name="comment" rows="3" required placeholder="Describe the specific issue and required correction for the author..." style="width:100%;padding:.65rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.85rem;"></textarea>
+                                                    </div>
+
+                                                    <div>
+                                                        <label style="display:block;font-size:.8rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;">Severity</label>
+                                                        <select name="severity" style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.85rem;">
+                                                            <option value="warning">Warning (Requires Fix)</option>
+                                                            <option value="critical">Critical Blocker</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:.75rem;border-top:1px solid #1e293b;padding-top:.85rem;">
+                                                        <button type="button" onclick="document.getElementById('q-rev-modal-{{ $q->id }}').classList.add('hidden')" style="padding:.55rem 1rem;background:#334155;color:#fff;border:none;border-radius:.5rem;font-size:.8rem;font-weight:700;cursor:pointer;">Cancel</button>
+                                                        <button type="submit" style="padding:.55rem 1.25rem;background:#f59e0b;color:#fff;border:none;border-radius:.5rem;font-size:.8rem;font-weight:800;cursor:pointer;">⚠️ Submit Question Revision</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
+                                    @php $qIdxGlobal++; @endphp
                                     @endif
                                 @endforeach
                             </div>
@@ -135,21 +268,31 @@
             </div>
         </div>
 
-        {{-- Right: Repository Governance Action Form --}}
+        {{-- Right: Repository Governance Action Form & Audit Log --}}
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
                 <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Governance Decision</h3>
 
-                {{-- Approve Form --}}
+                {{-- TASK 4: Approve Form with Approval Guard --}}
                 <form action="{{ route('admin.repository-manager.assessment-approve', $test->id) }}" method="POST" style="margin-bottom:1rem;">
                     @csrf
                     <div style="margin-bottom:.75rem;">
                         <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Approval Notes (Optional)</label>
                         <input type="text" name="notes" placeholder="e.g. Assessment meets institutional quality standards." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
                     </div>
-                    <button type="submit" style="width:100%;padding:.75rem;background:#10b981;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+                    
+                    @if(isset($reviewProgress) && $reviewProgress['is_allowed'])
+                    <button type="submit" style="width:100%;padding:.75rem;background:#10b981;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 4px 14px rgba(16,185,129,.35);">
                         ✓ Approve Assessment
                     </button>
+                    @else
+                    <button type="button" disabled style="width:100%;padding:.75rem;background:#1e293b;color:#64748b;font-weight:700;border:1px solid #334155;border-radius:.6rem;cursor:not-allowed;font-size:.85rem;" title="All questions must be marked Reviewed OK first.">
+                        🚫 Approve Disabled (Review Pending)
+                    </button>
+                    <div style="font-size:.72rem;color:#f59e0b;margin-top:.4rem;text-align:center;">
+                        Review all questions to enable institutional approval.
+                    </div>
+                    @endif
                 </form>
 
                 <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
@@ -158,26 +301,18 @@
                 <form action="{{ route('admin.repository-manager.assessment-revision', $test->id) }}" method="POST" style="margin-bottom:1rem;">
                     @csrf
                     <div style="margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Revision Requirements *</label>
-                        <textarea name="notes" rows="3" placeholder="Provide clear feedback for the author..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;" required></textarea>
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Overall Revision Notes</label>
+                        <textarea name="notes" rows="3" placeholder="Provide overall review notes..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;"></textarea>
                     </div>
                     <button type="submit" style="width:100%;padding:.75rem;background:#f59e0b;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
-                        ⚠️ Request Revision
-                    </button>
-                </form>
-
-                {{-- Reject Form --}}
-                <form action="{{ route('admin.repository-manager.assessment-reject', $test->id) }}" method="POST">
-                    @csrf
-                    <button type="submit" style="width:100%;padding:.6rem;background:#ef4444;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.8rem;" onclick="return confirm('Are you sure you want to reject this assessment test?')">
-                        ✖ Reject Assessment
+                        ⚠️ Request General Revision
                     </button>
                 </form>
             </div>
 
             {{-- Audit Logs Widget --}}
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.5rem;">
-                <h4 style="font-size:.9rem;font-weight:800;color:#fff;margin:0 0 drop-1rem;">📜 Activity Audit History</h4>
+                <h4 style="font-size:.9rem;font-weight:800;color:#fff;margin:0 0 1rem;">📜 Activity Audit History</h4>
                 @if($logs->isEmpty())
                     <div style="font-size:.78rem;color:#64748b;">No prior activity logged.</div>
                 @else
