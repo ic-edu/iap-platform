@@ -131,11 +131,20 @@ class MediaAsset extends Model
     }
 
     /**
-     * Public URL for the stored file.
+     * Centralized Preview Gateway URL (TASK 2 & TASK 5 & TASK 8).
+     * Never exposes raw /storage paths.
+     */
+    public function previewUrl(): string
+    {
+        return route('media.preview', $this->id);
+    }
+
+    /**
+     * Public URL alias pointing exclusively to central preview gateway.
      */
     public function publicUrl(): string
     {
-        return Storage::url($this->path);
+        return $this->previewUrl();
     }
 
     /**

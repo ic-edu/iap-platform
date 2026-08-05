@@ -75,43 +75,20 @@
                 </p>
             </div>
 
-            {{-- Action Buttons --}}
+            {{-- Action Buttons (TASK 4 & TASK 6: Single Interaction Blueprint, NO duplicate buttons) --}}
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-
-                {{-- Primary Action according to Media Type --}}
-                @if($media->type === 'passage')
-                    <button type="button" onclick="openPassageReaderModal()" style="padding:.6rem 1.2rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
-                        📖 Read Full Passage
-                    </button>
-                @elseif($media->type === 'image')
-                    <button type="button" onclick="openLightboxModal()" style="padding:.6rem 1.2rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
-                        🖼 View Image
-                    </button>
-                @elseif($media->type === 'pdf')
-                    <button type="button" onclick="openPdfModal()" style="padding:.6rem 1.2rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
-                        📄 View PDF
-                    </button>
-                @elseif($media->type === 'audio')
-                    <button type="button" onclick="toggleCustomAudio()" style="padding:.6rem 1.2rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
-                        ▶ Play Audio
-                    </button>
-                @elseif($media->type === 'video')
-                    <button type="button" onclick="triggerVideoPlay()" style="padding:.6rem 1.2rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
-                        ▶ Play Video
-                    </button>
-                @endif
 
                 {{-- Edit Asset Button --}}
                 <a href="{{ route('admin.media.edit', $media->id) }}" style="padding:.6rem 1.1rem;background:#3b82f6;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
                     ✏️ Edit Asset
                 </a>
 
-                {{-- Copy URL Button --}}
-                <button type="button" onclick="copyAssetUrl('{{ $media->publicUrl() }}')" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;cursor:pointer;">
+                {{-- Copy Protected Preview URL Button (TASK 5) --}}
+                <button type="button" onclick="copyAssetUrl('{{ route('media.preview', $media->id) }}')" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;cursor:pointer;">
                     📋 Copy URL
                 </button>
 
-                {{-- ROLE GOVERNANCE MATRIX: Super Admin gets Download, Repository Manager gets Request Download, Teachers & Students get NO download/request buttons --}}
+                {{-- ROLE GOVERNANCE MATRIX --}}
                 @if(Auth::user()?->hasRole('super-admin'))
                 <a href="{{ route('admin.media.download', $media->id) }}" style="padding:.6rem 1.1rem;background:#10b981;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
                     ⬇ Download Asset (Super Admin)
@@ -141,94 +118,14 @@
 
     <div class="imd-grid">
 
-        {{-- Left Column: Interactive Media Previewers --}}
+        {{-- Left Column: Centralized Media Preview (TASK 1, 3, 4, 9) --}}
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
 
             <div class="imd-card">
                 <h3 style="font-size:1rem;font-weight:800;color:#fff;margin:0 0 1rem;">Asset Interactive Preview</h3>
 
                 <div class="imd-preview-box">
-
-                    {{-- Image Lightbox Preview (No Download) --}}
-                    @if($media->type === 'image')
-                        <div style="text-align:center;width:100%;">
-                            <img id="mainPreviewImg" src="{{ route('admin.media.stream', $media->id) }}" alt="{{ $media->title }}" style="max-width:100%;max-height:400px;border-radius:.75rem;cursor:pointer;" onclick="openLightboxModal()">
-                        </div>
-
-                    {{-- CUSTOM AUDIO PLAYER (SECURE INLINE STREAMING, NO DOWNLOAD) --}}
-                    @elseif($media->type === 'audio')
-                        <div style="width:100%;max-width:550px;background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.5rem;text-align:center;">
-                            <div style="font-size:3rem;margin-bottom:.5rem;">🎵</div>
-                            <audio id="customAudioElement" src="{{ route('admin.media.stream', $media->id) }}" controlsList="nodownload noplaybackrate" preload="metadata"></audio>
-
-                            {{-- Custom Player Bar --}}
-                            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;background:#1e293b;padding:.75rem 1rem;border-radius:.75rem;">
-                                {{-- Play/Pause Button --}}
-                                <button type="button" id="customAudioPlayBtn" onclick="toggleCustomAudio()" style="width:40px;height:40px;border-radius:50%;background:#6366f1;color:#fff;border:none;font-weight:800;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                                    ▶
-                                </button>
-
-                                {{-- Seek Slider & Time Counter --}}
-                                <div style="flex:1;display:flex;flex-direction:column;gap:.25rem;">
-                                    <input type="range" id="customAudioSeek" value="0" min="0" step="0.1" oninput="seekCustomAudio(this.value)" style="width:100%;cursor:pointer;accent-color:#6366f1;">
-                                    <div style="display:flex;justify-content:space-between;font-size:.7rem;color:#94a3b8;font-family:monospace;">
-                                        <span id="customAudioCurrent">00:00</span>
-                                        <span id="customAudioDuration">00:00</span>
-                                    </div>
-                                </div>
-
-                                {{-- Volume Control --}}
-                                <div style="display:flex;align-items:center;gap:.3rem;">
-                                    <span style="font-size:.9rem;">🔊</span>
-                                    <input type="range" id="customAudioVolume" min="0" max="1" step="0.05" value="1" oninput="setCustomAudioVolume(this.value)" style="width:60px;cursor:pointer;accent-color:#6366f1;">
-                                </div>
-                            </div>
-
-                            @if($media->content_text)
-                            <div style="text-align:left;background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1rem;">
-                                <div style="font-size:.75rem;font-weight:800;color:#34d399;margin-bottom:.4rem;">📝 Audio Spoken Transcript</div>
-                                <div style="font-size:.82rem;color:#cbd5e1;line-height:1.5;">{{ $media->content_text }}</div>
-                            </div>
-                            @endif
-                        </div>
-
-                    {{-- HTML5 Video Player (SECURE NO DOWNLOAD) --}}
-                    @elseif($media->type === 'video')
-                        <div style="width:100%;max-width:640px;text-align:center;">
-                            <video id="html5Video" controls controlsList="nodownload noplaybackrate" style="width:100%;border-radius:.75rem;max-height:400px;background:#000;">
-                                <source src="{{ route('admin.media.stream', $media->id) }}" type="{{ $media->mime_type ?? 'video/mp4' }}">
-                            </video>
-                        </div>
-
-                    {{-- SECURE READONLY EMBEDDED PDF VIEWER (TOOLBAR DISABLED) --}}
-                    @elseif($media->type === 'pdf')
-                        <div style="width:100%;height:480px;background:#1e293b;border-radius:.75rem;overflow:hidden;">
-                            <iframe id="pdfIframe" src="{{ route('admin.media.stream', $media->id) }}#toolbar=0&navpanes=0&scrollbar=1" style="width:100%;height:100%;border:none;border-radius:.75rem;background:#fff;"></iframe>
-                        </div>
-
-                    {{-- Passage Excerpt Preview --}}
-                    @elseif($media->type === 'passage')
-                        <div style="width:100%;background:#0f172a;border:1px solid #1e293b;border-radius:.85rem;padding:2rem;display:flex;flex-direction:column;gap:1rem;justify-content:center;cursor:default;">
-                            <div style="display:flex;align-items:center;justify-content:space-between;">
-                                <span style="font-size:.72rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;background:#1e293b;padding:.2rem .65rem;border-radius:.4rem;border:1px solid #334155;">
-                                    Preview (Excerpt)
-                                </span>
-                                <span style="font-size:.7rem;color:#475569;">Read-only Excerpt</span>
-                            </div>
-                            <div style="font-size:.9rem;color:#cbd5e1;line-height:1.65;cursor:default;user-select:text;">
-                                @php
-                                    $fullText = $media->content_text ?? $media->description ?? 'No passage text available.';
-                                    $paragraphs = explode("\n\n", $fullText);
-                                    $firstParagraph = $paragraphs[0] ?? $fullText;
-                                @endphp
-                                {{ $firstParagraph }}
-                            </div>
-                            <div style="font-size:.72rem;color:#475569;font-style:italic;">
-                                Use the primary action button "📖 Read Full Passage" above to view the complete multi-paragraph text.
-                            </div>
-                        </div>
-                    @endif
-
+                    <x-media-preview :media="$media" />
                 </div>
             </div>
 

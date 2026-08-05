@@ -12,9 +12,13 @@ use App\Http\Controllers\Finance\FinanceDashboardController;
 use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Teacher\TeacherDashboardController;
+use App\Http\Controllers\MediaPreviewController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
+// Central Media Preview Gateway (TASK 1 & TASK 2)
+Route::get('/media/{media}/preview', [MediaPreviewController::class, 'preview'])->name('media.preview');
 
 Route::get('/', function () {
     if (!Auth::check()) {

@@ -386,4 +386,32 @@ class MediaAuthoringAndGovernanceWorkflowTest extends TestCase
         $resTeacher->assertDontSee('Download Asset');
         $resTeacher->assertDontSee('Request Download');
     }
+
+    public function test_central_media_preview_controller_serves_media_inline()
+    {
+        $media = MediaAsset::create([
+            'title'           => 'Central Gateway Test Passage',
+            'original_name'   => 'passage.txt',
+            'filename'        => 'passage.txt',
+            'mime_type'       => 'text/plain',
+            'type'            => 'passage',
+            'path'            => 'media/passage.txt',
+            'size'            => 1024,
+            'status'          => 'active',
+            'approval_status' => 'approved',
+            'version'         => '1.0',
+            'content_text'    => 'Central Preview Gateway Content Text',
+            'uploaded_by'     => $this->teacher->id,
+        ]);
+
+        // Unauthenticated access blocked
+        $resGuest = $this->get(route('media.preview', $media->id));
+        $resGuest->assertStatus(403);
+
+        // Authenticated preview access allowed with inline disposition
+        $resTeacher = $this->actingAs($this->teacher)->get(route('media.preview', $media->id));
+        $resTeacher->assertStatus(200);
+        $resTeacher->assertHeader('Content-Disposition', 'inline');
+        $resTeacher->assertSee('Central Preview Gateway Content Text');
+    }
 }
