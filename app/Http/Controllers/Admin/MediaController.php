@@ -436,18 +436,29 @@ class MediaController extends Controller
     {
         $url = $media->publicUrl();
 
-        $questions = \App\Modules\QuestionBank\Models\Question::with('questionBank')
-            ->where('media_asset_id', $media->id)
-            ->orWhere('audio_url', $url)
-            ->orWhere('audio_url', $media->path)
-            ->orWhere('image_url', $url)
-            ->orWhere('image_url', $media->path)
-            ->get();
+        $questions = \Illuminate\Support\Facades\Schema::hasTable('questions')
+            ? \App\Modules\QuestionBank\Models\Question::with('questionBank')
+                ->where('media_asset_id', $media->id)
+                ->orWhere('audio_url', $url)
+                ->orWhere('audio_url', $media->path)
+                ->orWhere('image_url', $url)
+                ->orWhere('image_url', $media->path)
+                ->get()
+            : collect([]);
 
         $questionBanks = $questions->pluck('questionBank')->filter()->unique('id');
-        $assessments = \DB::table('tests')->whereIn('id', $questionBanks->pluck('id'))->get();
-        $courses = \DB::table('courses')->take(2)->get();
-        $studentAttemptsCount = \DB::table('test_attempts')->count();
+
+        $assessments = \Illuminate\Support\Facades\Schema::hasTable('tests')
+            ? \DB::table('tests')->whereIn('id', $questionBanks->pluck('id'))->get()
+            : collect([]);
+
+        $courses = \Illuminate\Support\Facades\Schema::hasTable('courses')
+            ? \DB::table('courses')->take(2)->get()
+            : collect([]);
+
+        $studentAttemptsCount = \Illuminate\Support\Facades\Schema::hasTable('test_attempts')
+            ? \DB::table('test_attempts')->count()
+            : null;
 
         $usageInfo = [
             'question_count'      => $questions->count(),
@@ -466,13 +477,15 @@ class MediaController extends Controller
     {
         $url = $media->publicUrl();
 
-        $questions = \App\Modules\QuestionBank\Models\Question::with('questionBank')
-            ->where('media_asset_id', $media->id)
-            ->orWhere('audio_url', $url)
-            ->orWhere('audio_url', $media->path)
-            ->orWhere('image_url', $url)
-            ->orWhere('image_url', $media->path)
-            ->get();
+        $questions = \Illuminate\Support\Facades\Schema::hasTable('questions')
+            ? \App\Modules\QuestionBank\Models\Question::with('questionBank')
+                ->where('media_asset_id', $media->id)
+                ->orWhere('audio_url', $url)
+                ->orWhere('audio_url', $media->path)
+                ->orWhere('image_url', $url)
+                ->orWhere('image_url', $media->path)
+                ->get()
+            : collect([]);
 
         $qBanks = $questions->pluck('questionBank')->filter()->unique('id')->map(fn ($b) => [
             'id'    => $b->id,
@@ -483,6 +496,10 @@ class MediaController extends Controller
         $qCount = $questions->count();
         $isUsed = $qCount > 0;
 
+        $studentAttempts = \Illuminate\Support\Facades\Schema::hasTable('test_attempts')
+            ? \DB::table('test_attempts')->count()
+            : null;
+
         return response()->json([
             'media_id'         => $media->id,
             'title'            => $media->title ?? $media->original_name,
@@ -491,8 +508,8 @@ class MediaController extends Controller
             'question_count'   => $qCount,
             'question_banks'   => $qBanks,
             'assessments_count'=> $qBanks->count(),
-            'courses_count'    => $isUsed ? 1 : 0,
-            'student_attempts' => $isUsed ? 42 : 0,
+            'courses_count'    => (\Illuminate\Support\Facades\Schema::hasTable('courses') && $isUsed) ? \DB::table('courses')->count() : null,
+            'student_attempts' => $studentAttempts,
             'uploader'         => $media->uploader?->name ?? 'Institutional Repository System',
             'message'          => $isUsed
                 ? "This asset is active and referenced by {$qCount} Question(s) across {$qBanks->count()} Question Bank(s)."
