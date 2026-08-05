@@ -97,6 +97,10 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.tests.index');
     Route::get('/teacher/assessments/{test}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'show'])
         ->name('teacher.tests.show');
+    Route::put('/teacher/assessments/{test}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'update'])
+        ->name('teacher.tests.update');
+    Route::post('/teacher/assessments/{test}/resubmit', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'resubmit'])
+        ->name('teacher.tests.resubmit');
 });
 
 // Finance Dedicated Landing Workspace

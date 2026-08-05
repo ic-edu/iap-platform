@@ -501,24 +501,17 @@
                             <span class="tb-badge {{ $badgeClass }}">{{ $statusLabel }}</span>
                         </td>
 
-                        {{-- Actions --}}
+                        {{-- Actions (TASK 3 Workflow Action Buttons) --}}
                         <td style="text-align:right;">
                             <div style="display:flex;gap:.25rem;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
-                                {{-- Submit for Approval — Draft or Rejected --}}
-                                @if(!Auth::user()?->hasRole('super-admin') && in_array($status, ['draft', 'rejected', '']))
-                                <form method="POST" action="{{ route('admin.tests.submit-approval', $test->id) }}" style="display:inline;"
-                                      onsubmit="return confirm('Submit \'{{ addslashes($test->title) }}\' for Super Admin approval?');">
-                                    @csrf
-                                    <button type="submit" class="tb-act tb-act--submit">📤 Submit</button>
-                                </form>
-                                @endif
-
-                                {{-- Publish — Admin only on Approved tests --}}
-                                @if(Auth::user()?->hasRole('admin') && $status === 'approved')
-                                <form method="POST" action="{{ route('admin.tests.publish', $test->id) }}" style="display:inline;">
-                                    @csrf
-                                    <button type="submit" class="tb-act tb-act--publish">🟢 Publish</button>
-                                </form>
+                                @if(in_array($status, ['needs_revision', 'revision_requested']))
+                                <a href="{{ route('teacher.tests.show', $test->id) }}" class="tb-act" style="background:#f59e0b;color:#fff;text-decoration:none;font-weight:700;padding:.25rem .6rem;border-radius:.35rem;font-size:.75rem;">✏️ Continue Revision</a>
+                                @elseif(in_array($status, ['pending', 'pending_approval']))
+                                <a href="{{ route('teacher.tests.show', $test->id) }}" class="tb-act" style="background:#334155;color:#e2e8f0;text-decoration:none;font-weight:700;padding:.25rem .6rem;border-radius:.35rem;font-size:.75rem;">👁 View</a>
+                                @elseif($status === 'draft')
+                                <a href="{{ route('teacher.tests.show', $test->id) }}" class="tb-act" style="background:#4338ca;color:#fff;text-decoration:none;font-weight:700;padding:.25rem .6rem;border-radius:.35rem;font-size:.75rem;">✏️ Edit</a>
+                                @else
+                                <a href="{{ route('teacher.tests.show', $test->id) }}" class="tb-act" style="background:#1e293b;color:#94a3b8;text-decoration:none;font-weight:700;padding:.25rem .6rem;border-radius:.35rem;font-size:.75rem;">👁 Preview</a>
                                 @endif
 
                                 {{-- Duplicate --}}

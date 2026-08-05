@@ -207,7 +207,7 @@ class TestBuilderController extends Controller
     }
 
     /**
-     * Display or edit specific assessment test in Assessment Builder workspace.
+     * Display Assessment Detail page for Teacher (TASK 1, 5, 8).
      */
     public function show(Request $request, Test $test): View
     {
@@ -217,6 +217,100 @@ class TestBuilderController extends Controller
             abort(403, 'Unauthorized access to assessment test.');
         }
 
-        return $this->index($request);
+        $test->load(['sections.testQuestions.question', 'creator']);
+
+        $latestFeedbackLog = \App\Models\RepositoryActivityLog::where('resource_type', 'Test')
+            ->where('resource_id', (string) $test->id)
+            ->whereIn('action', ['revision_requested', 'rejected'])
+            ->with(['reviewer'])
+            ->latest()
+            ->first();
+
+        $workflowTimeline = [
+            [
+                'step' => 'Draft Created',
+                'status' => 'completed',
+                'date' => $test->created_at?->format('M d, Y H:i'),
+            ],
+            [
+                'step' => 'Submitted for Approval',
+                'status' => in_array($test->status, ['pending', 'pending_approval', 'needs_revision', 'revision_requested', 'approved', 'published']) ? 'completed' : 'pending',
+                'date' => null,
+            ],
+            [
+                'step' => 'Repository Review',
+                'status' => in_array($test->status, ['needs_revision', 'revision_requested', 'approved', 'published']) ? 'completed' : 'pending',
+                'date' => $latestFeedbackLog?->created_at?->format('M d, Y H:i'),
+            ],
+            [
+                'step' => 'Needs Revision',
+                'status' => in_array($test->status, ['needs_revision', 'revision_requested']) ? 'active' : (in_array($test->status, ['approved', 'published']) ? 'completed' : 'pending'),
+                'date' => $latestFeedbackLog?->created_at?->format('M d, Y H:i'),
+            ],
+            [
+                'step' => 'Approved & Live',
+                'status' => in_array($test->status, ['approved', 'published']) ? 'completed' : 'pending',
+                'date' => null,
+            ],
+        ];
+
+        return view('teacher.assessment_detail', compact('test', 'latestFeedbackLog', 'workflowTimeline'));
+    }
+
+    /**
+     * Update existing assessment details / Save Draft (TASK 4, 6).
+     */
+    public function update(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to update assessment test.');
+        }
+
+        $validated = $request->validate([
+            'title'            => ['required', 'string', 'max:255'],
+            'test_type'        => ['required', 'string'],
+            'duration_minutes' => ['required', 'integer', 'min:1'],
+            'pass_score'       => ['required', 'integer', 'min:0'],
+        ]);
+
+        $test->update([
+            'title'            => $validated['title'],
+            'test_type'        => $validated['test_type'],
+            'duration_minutes' => $validated['duration_minutes'],
+            'pass_score'       => $validated['pass_score'],
+        ]);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Assessment '{$test->title}' updated and saved to Draft successfully.");
+    }
+
+    /**
+     * Resubmit assessment to Repository Manager Approval Queue (TASK 7).
+     */
+    public function resubmit(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to resubmit assessment test.');
+        }
+
+        $test->update([
+            'status'       => 'pending_approval',
+            'is_published' => false,
+        ]);
+
+        \App\Models\RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $user->id,
+            'action'        => 'resubmitted',
+            'approval_note' => 'Teacher resubmitted assessment test after completing requested revisions.',
+        ]);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Assessment '{$test->title}' resubmitted successfully to Repository Manager Approval Queue.");
     }
 }
