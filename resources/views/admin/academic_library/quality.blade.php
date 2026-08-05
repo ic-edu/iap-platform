@@ -79,9 +79,15 @@
 
     {{-- Breadcrumb & Navigation --}}
     <div style="display:flex;justify-content:space-between;align-items:center;">
+        @if(Auth::user()?->hasRole('repository-manager'))
+        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back to Repository Manager Dashboard
+        </a>
+        @else
         <a href="{{ route('admin.academic-library.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back to Academic Library
         </a>
+        @endif
     </div>
 
     {{-- Hero Header --}}

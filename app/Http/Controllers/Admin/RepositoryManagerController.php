@@ -259,6 +259,84 @@ class RepositoryManagerController extends Controller
         return view('admin.repository_manager.questions_approval', compact('questionBanks'));
     }
 
+    public function validateQuestionBank(QuestionBank $questionBank): View
+    {
+        $questionBank->load(['creator', 'questions.media', 'versions']);
+
+        $logs = RepositoryActivityLog::where('resource_type', 'QuestionBank')
+            ->where('resource_id', $questionBank->id)
+            ->with(['actor', 'reviewer'])
+            ->latest()
+            ->get();
+
+        return view('admin.repository_manager.question_bank_validate', compact('questionBank', 'logs'));
+    }
+
+    public function approveQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        $note = $request->input('notes', 'Question bank approved for institutional publishing.');
+
+        $questionBank->status = 'published';
+        $questionBank->is_published = true;
+        $questionBank->save();
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $questionBank->id,
+            'actor_id'      => $questionBank->created_by,
+            'reviewer_id'   => $user->id,
+            'action'        => 'approved',
+            'approval_note' => $note,
+        ]);
+
+        return redirect()->route('admin.repository-manager.questions-approval')
+            ->with('success', 'Question bank successfully approved and published to academic repository.');
+    }
+
+    public function requestQuestionBankRevision(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        $note = $request->input('notes', 'Revision requested. Please fix specified items.');
+
+        $questionBank->status = 'revision_requested';
+        $questionBank->save();
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $questionBank->id,
+            'actor_id'      => $questionBank->created_by,
+            'reviewer_id'   => $user->id,
+            'action'        => 'revision_requested',
+            'approval_note' => $note,
+        ]);
+
+        return redirect()->route('admin.repository-manager.questions-approval')
+            ->with('warning', 'Revision requested from author.');
+    }
+
+    public function rejectQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        $note = $request->input('notes', 'Question bank repository rejected and archived.');
+
+        $questionBank->status = 'archived';
+        $questionBank->is_published = false;
+        $questionBank->save();
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $questionBank->id,
+            'actor_id'      => $questionBank->created_by,
+            'reviewer_id'   => $user->id,
+            'action'        => 'rejected',
+            'approval_note' => $note,
+        ]);
+
+        return redirect()->route('admin.repository-manager.questions-approval')
+            ->with('danger', 'Question bank repository rejected and archived.');
+    }
+
     public function duplicates(): View
     {
         return view('admin.repository_manager.duplicates');

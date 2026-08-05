@@ -63,7 +63,7 @@
                             </span>
                         </td>
                         <td>
-                            <a href="{{ route('admin.question-banks.show', $bank->id) }}" style="padding:.4rem .85rem;background:#6366f1;color:#fff;border-radius:.45rem;font-size:.75rem;font-weight:800;text-decoration:none;">
+                            <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" style="padding:.4rem .85rem;background:#6366f1;color:#fff;border-radius:.45rem;font-size:.75rem;font-weight:800;text-decoration:none;">
                                 Review & Validate →
                             </a>
                         </td>

@@ -210,6 +210,10 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
         Route::post('/media/{reviewRequest}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionMedia'])->name('admin.repository-manager.media-revision');
         Route::post('/media/{reviewRequest}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectMedia'])->name('admin.repository-manager.media-reject');
         Route::get('/questions', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'questionsApproval'])->name('admin.repository-manager.questions-approval');
+        Route::get('/questions/{questionBank}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'validateQuestionBank'])->name('admin.repository-manager.question-bank-validate');
+        Route::post('/questions/{questionBank}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveQuestionBank'])->name('admin.repository-manager.question-bank-approve');
+        Route::post('/questions/{questionBank}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestQuestionBankRevision'])->name('admin.repository-manager.question-bank-revision');
+        Route::post('/questions/{questionBank}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectQuestionBank'])->name('admin.repository-manager.question-bank-reject');
         Route::get('/duplicates', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'duplicates'])->name('admin.repository-manager.duplicates');
     });
 });

@@ -166,3 +166,56 @@ test('teacher cannot see IRQA Quality Audit button in academic library', functio
         ->assertDontSee('IRQA Quality Audit', false)
         ->assertSee('Authoring Workspace', false);
 });
+
+test('repository manager can open dedicated question bank validation workspace', function () {
+    $repoManager = User::factory()->create();
+    $repoManager->assignRole('repository-manager');
+
+    $qb = \App\Modules\QuestionBank\Models\QuestionBank::create([
+        'title' => 'TOEFL Grammar Governance Review Bank',
+        'slug'  => 'toefl-grammar-governance-review-bank',
+        'test_type' => 'toefl',
+        'status' => 'draft',
+        'created_by' => $repoManager->id,
+    ]);
+
+    $response = $this->actingAs($repoManager)->get('/admin/repository-manager/questions/' . $qb->id);
+    $response->assertStatus(200)
+        ->assertSee('Validation Workspace', false)
+        ->assertSee('Approve & Publish Repository', false)
+        ->assertSee('Request Revision from Author', false)
+        ->assertSee('Reject & Archive Repository', false);
+});
+
+test('repository manager can approve question bank and log audit entry', function () {
+    $repoManager = User::factory()->create();
+    $repoManager->assignRole('repository-manager');
+
+    $teacher = User::factory()->create();
+    $teacher->assignRole('teacher');
+
+    $qb = \App\Modules\QuestionBank\Models\QuestionBank::create([
+        'title' => 'IELTS Reading Governance Test',
+        'slug'  => 'ielts-reading-governance-test',
+        'test_type' => 'ielts',
+        'status' => 'draft',
+        'created_by' => $teacher->id,
+    ]);
+
+    $response = $this->actingAs($repoManager)->post('/admin/repository-manager/questions/' . $qb->id . '/approve', [
+        'notes' => 'Verified academic quality and compliance.',
+    ]);
+
+    $response->assertRedirect('/admin/repository-manager/questions');
+
+    $qb->refresh();
+    expect($qb->status)->toBe('published');
+    expect($qb->is_published)->toBeTrue();
+
+    $this->assertDatabaseHas('repository_activity_logs', [
+        'resource_type' => 'QuestionBank',
+        'resource_id'   => $qb->id,
+        'action'        => 'approved',
+        'reviewer_id'   => $repoManager->id,
+    ]);
+});
