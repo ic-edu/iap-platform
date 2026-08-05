@@ -44,9 +44,10 @@ class TeacherDashboardController extends Controller
         $needsRevisionAssessments = $testMetrics['needs_revision'];
         $archivedAssessments      = $testMetrics['archived'];
 
-        // Combined Single Source of Truth Metrics for Teacher Dashboard
+        // Combined Single Source of Truth Metrics for Teacher Dashboard (DEFECT 1 Workflow Inbox)
+        $workflowInbox  = $workflowService->getWorkflowInboxMetrics($user);
+        $pendingTotal   = $workflowInbox['total'];
         $draftTotal     = $draftQuestionBanks + $draftAssessments;
-        $pendingTotal   = $pendingApprovalQuestionBanks + $pendingAssessments;
         $approvedTotal  = $approvedQuestionBanks + $approvedAssessments;
         $archivedTotal  = $archivedQuestionBanks + $archivedAssessments;
 
@@ -98,6 +99,7 @@ class TeacherDashboardController extends Controller
             'pendingTotal',
             'approvedTotal',
             'archivedTotal',
+            'workflowInbox',
             'recentQuestionBanks',
             'latestDraftBank',
             'notifications',

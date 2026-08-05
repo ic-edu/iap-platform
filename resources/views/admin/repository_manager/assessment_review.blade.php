@@ -80,46 +80,52 @@
                         @endif
 
                         @if($sec->testQuestions->isNotEmpty())
-                            <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:.75rem;">
+                            <div style="display:flex;flex-direction:column;gap:.85rem;margin-top:.75rem;">
                                 @foreach($sec->testQuestions as $idx => $tq)
                                     @php
                                         $q = $tq->question;
                                     @endphp
-                                    <div style="background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.85rem;">
-                                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+                                    @if($q)
+                                    <div style="background:#0f172a;border:1px solid #334155;border-radius:.6rem;padding:1rem;">
+                                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.4rem;">
                                             <div>
                                                 <span style="font-size:.72rem;font-weight:800;color:#cbd5e1;background:#334155;padding:.15rem .45rem;border-radius:.3rem;margin-right:.4rem;">
                                                     Q{{ $tq->order ?? ($idx + 1) }}
                                                 </span>
-                                                <span style="font-weight:700;color:#fff;font-size:.88rem;">
-                                                    {{ $q?->prompt ?? $q?->question_text ?? 'Item Prompt' }}
+                                                <span style="font-weight:700;color:#fff;font-size:.9rem;">
+                                                    {{ $q->prompt ?? 'Item Prompt Stem' }}
                                                 </span>
                                             </div>
-                                            @if($q?->questionBank)
-                                                <span style="font-size:.68rem;color:#a78bfa;font-weight:700;white-space:nowrap;background:rgba(167,139,250,.12);padding:.15rem .45rem;border-radius:.3rem;border:1px solid rgba(167,139,250,.3);">
-                                                    🏛 {{ $q->questionBank->title }}
+                                            <div style="display:flex;gap:.4rem;align-items:center;">
+                                                <span style="font-size:.68rem;color:#94a3b8;background:#1e293b;padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">
+                                                    {{ $q->question_type }}
                                                 </span>
-                                            @endif
+                                                @php $diffVal = is_object($q->difficulty) ? $q->difficulty->value : $q->difficulty; @endphp
+                                                <span style="font-size:.68rem;color:#a78bfa;background:rgba(167,139,250,.12);padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">
+                                                    {{ $diffVal ?? 'easy' }}
+                                                </span>
+                                            </div>
                                         </div>
 
-                                        {{-- Optional Media Preview --}}
-                                        @if($q?->mediaAsset)
-                                            <div style="margin-top:.5rem;">
-                                                <x-media-preview :media="$q->mediaAsset" />
-                                            </div>
-                                        @endif
-
-                                        {{-- Choices list if available --}}
-                                        @if($q?->choices && $q->choices->isNotEmpty())
-                                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.6rem;">
-                                                @foreach($q->choices as $choice)
-                                                    <div style="font-size:.75rem;padding:.35rem .6rem;background:#1e293b;border:1px solid {{ $choice->is_correct ? '#10b981' : '#334155' }};border-radius:.35rem;color:{{ $choice->is_correct ? '#34d399' : '#cbd5e1' }};font-weight:{{ $choice->is_correct ? '800' : '400' }};">
-                                                        {{ $choice->is_correct ? '✓ ' : '' }}{{ $choice->text ?? $choice->choice_text }}
+                                        {{-- Choices & Correct Answer Inspection (DEFECT 2 & 4) --}}
+                                        @if($q->choices && $q->choices->isNotEmpty())
+                                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.65rem;">
+                                                @foreach($q->choices as $cIdx => $choice)
+                                                    <div style="font-size:.78rem;padding:.4rem .65rem;background:#1e293b;border:1px solid {{ $choice->is_correct ? '#10b981' : '#334155' }};border-radius:.35rem;color:{{ $choice->is_correct ? '#34d399' : '#cbd5e1' }};font-weight:{{ $choice->is_correct ? '800' : '400' }};">
+                                                        {{ chr(65 + $cIdx) }}. {{ $choice->content ?? $choice->choice_text }} {{ $choice->is_correct ? '✓ (Correct)' : '' }}
                                                     </div>
                                                 @endforeach
                                             </div>
                                         @endif
+
+                                        {{-- Answer Rationale / Explanation --}}
+                                        @if($q->explanation)
+                                            <div style="font-size:.75rem;color:#94a3b8;margin-top:.6rem;background:#1e293b;padding:.45rem .65rem;border-radius:.35rem;border-left:3px solid #818cf8;">
+                                                <strong>Explanation:</strong> {{ $q->explanation }}
+                                            </div>
+                                        @endif
                                     </div>
+                                    @endif
                                 @endforeach
                             </div>
                         @endif

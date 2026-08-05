@@ -32,6 +32,34 @@ class AssessmentWorkflowService
     }
 
     /**
+     * Get aggregated Workflow Inbox metrics for Teacher (DEFECT 1).
+     * Aggregates pending items across all workflow-enabled entities.
+     */
+    public function getWorkflowInboxMetrics(User $user): array
+    {
+        $pendingQuestionBanks = \App\Modules\QuestionBank\Models\QuestionBank::where('created_by', $user->id)
+            ->whereIn('status', ['pending', 'pending_approval'])
+            ->count();
+
+        $pendingAssessments = Test::where('created_by', $user->id)
+            ->whereIn('status', ['pending', 'pending_approval'])
+            ->count();
+
+        $pendingMedia = 0;
+        $pendingCertificates = 0;
+
+        $totalPending = $pendingQuestionBanks + $pendingAssessments + $pendingMedia + $pendingCertificates;
+
+        return [
+            'question_banks' => $pendingQuestionBanks,
+            'assessments'    => $pendingAssessments,
+            'media'          => $pendingMedia,
+            'certificates'   => $pendingCertificates,
+            'total'          => $totalPending,
+        ];
+    }
+
+    /**
      * Get synchronized assessment metrics for Repository Manager Command Center (PART E).
      */
     public function getRepositoryManagerMetrics(): array

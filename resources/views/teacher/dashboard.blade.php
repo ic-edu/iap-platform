@@ -470,19 +470,20 @@ a.tw-hero__pill:hover { opacity: .8; }
         </a>
         @endif
 
-        @if($pendingApprovalQuestionBanks > 0)
-        <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="tw-kpi tw-kpi--amber">
+        {{-- DEFECT 1: Awaiting Approval Workflow Inbox KPI Card --}}
+        @if($pendingTotal > 0)
+        <a href="javascript:void(0)" onclick="document.getElementById('workflow-inbox-modal').classList.remove('hidden')" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⏳</div>
-            <div class="tw-kpi__count">{{ $pendingApprovalQuestionBanks }}</div>
+            <div class="tw-kpi__count">{{ $pendingTotal }}</div>
             <div class="tw-kpi__label">Awaiting Approval</div>
-            <div class="tw-kpi__desc">Submitted, pending Super Admin</div>
+            <div class="tw-kpi__desc">Workflow Review Inbox</div>
         </a>
         @else
-        <a href="javascript:void(0)" onclick="openNoPendingApprovalModal()" class="tw-kpi tw-kpi--amber">
+        <a href="javascript:void(0)" onclick="document.getElementById('workflow-inbox-modal').classList.remove('hidden')" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⏳</div>
             <div class="tw-kpi__count">0</div>
             <div class="tw-kpi__label">Awaiting Approval</div>
-            <div class="tw-kpi__desc">No banks awaiting approval</div>
+            <div class="tw-kpi__desc">Workflow Review Inbox Empty</div>
         </a>
         @endif
 
@@ -915,15 +916,48 @@ a.tw-hero__pill:hover { opacity: .8; }
             <button type="button" onclick="closeNoDraftModal();openCreateModal();" class="tw-form-submit" style="flex:1.5;margin-top:0;">Create Draft</button>
         </div>
     </div>
-</div>
+</div>{{-- Workflow Inbox Modal (DEFECT 1) --}}
+<div id="workflow-inbox-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4" style="position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.85);display:flex;align-items:center;justify-content:center;">
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:1.25rem;max-width:480px;width:100%;padding:1.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,.7);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;border-bottom:1px solid #1e293b;padding-bottom:.85rem;">
+            <div>
+                <h3 style="font-size:1.15rem;font-weight:800;color:#fff;margin:0;">📥 Workflow Review Inbox</h3>
+                <p style="font-size:.78rem;color:#94a3b8;margin:.2rem 0 0;">Aggregated pending governance items</p>
+            </div>
+            <button type="button" onclick="document.getElementById('workflow-inbox-modal').classList.add('hidden')" style="background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;">✕</button>
+        </div>
 
-{{-- No Pending Approval Modal (PART 9) --}}
-<div id="tw-no-pending-approval-modal" class="tw-modal-backdrop" style="display:none;" onclick="closeNoPendingApprovalModal(event)">
-    <div class="tw-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:440px;">
-        <div style="font-size:2.75rem;margin-bottom:.5rem;">🎉</div>
-        <div style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">No Question Banks are awaiting approval.</div>
-        <p style="font-size:.85rem;color:#94a3b8;margin-bottom:1.5rem;line-height:1.5;">Everything you submitted has already been reviewed by Super Admin.</p>
-        <button type="button" onclick="closeNoPendingApprovalModal()" class="tw-form-submit" style="margin-top:0;">Close</button>
+        <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:.75rem 1rem;border-radius:.6rem;">
+                <span style="color:#cbd5e1;font-weight:600;font-size:.88rem;">📋 Assessment Tests</span>
+                <strong style="color:#fbbf24;font-size:1.05rem;">{{ $pendingAssessments }}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:.75rem 1rem;border-radius:.6rem;">
+                <span style="color:#cbd5e1;font-weight:600;font-size:.88rem;">🏛 Question Banks</span>
+                <strong style="color:#fbbf24;font-size:1.05rem;">{{ $pendingApprovalQuestionBanks }}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:.75rem 1rem;border-radius:.6rem;">
+                <span style="color:#64748b;font-weight:600;font-size:.88rem;">🖼 Media Assets</span>
+                <strong style="color:#64748b;font-size:1.05rem;">0</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:.75rem 1rem;border-radius:.6rem;">
+                <span style="color:#64748b;font-weight:600;font-size:.88rem;">📜 Certificates</span>
+                <strong style="color:#64748b;font-size:1.05rem;">0</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#0f172a;border:1px solid #334155;padding:.85rem 1rem;border-radius:.6rem;margin-top:.25rem;">
+                <span style="color:#fff;font-weight:800;font-size:.92rem;">Total Pending Review</span>
+                <strong style="color:#818cf8;font-size:1.2rem;">{{ $pendingTotal }}</strong>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:.75rem;">
+            <a href="{{ route('teacher.tests.index', ['status' => 'pending_approval']) }}" style="flex:1;text-align:center;padding:.65rem;background:#6366f1;color:#fff;border-radius:.55rem;font-size:.8rem;font-weight:800;text-decoration:none;">
+                View Pending Tests
+            </a>
+            <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" style="flex:1;text-align:center;padding:.65rem;background:#334155;color:#fff;border-radius:.55rem;font-size:.8rem;font-weight:800;text-decoration:none;">
+                View Pending Banks
+            </a>
+        </div>
     </div>
 </div>
 
