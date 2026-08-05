@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-.mr-container { display:flex; flex-direction:column; gap:1.75rem; }
+.mr-container { display:flex; flex-direction:column; gap:1.75rem; width:100%; max-width:100%; }
 .mr-card { background:#0f172a; border:1px solid #1e293b; border-radius:1.25rem; padding:1.75rem; }
 
 .diff-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-top:1rem; }

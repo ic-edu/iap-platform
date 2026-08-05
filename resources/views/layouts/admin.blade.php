@@ -17,7 +17,8 @@
 </head>
 <body class="h-full font-sans antialiased bg-slate-900 text-slate-100">
     <div class="min-h-screen flex flex-col md:flex-row">
-        <!-- Sidebar Navigation -->
+        <!-- Sidebar Navigation (Removed for Repository Manager role - Full Width Command Center) -->
+        @unless(Auth::user()?->hasRole('repository-manager'))
         <aside class="w-full md:w-64 bg-slate-950 border-b md:border-b-0 md:border-r border-slate-800 flex-shrink-0">
             <div class="p-6 flex items-center justify-between border-b border-slate-900">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
@@ -65,6 +66,7 @@
                 @endforeach
             </nav>
         </aside>
+        @endunless
 
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col min-w-0">

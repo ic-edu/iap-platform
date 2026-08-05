@@ -164,8 +164,8 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
 
 });
 
-// Shared Media Library & Academic Library (Teacher + Admin + Super Admin)
-Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher'])->group(function () {
+// Shared Media Library & Academic Library (Teacher + Admin + Super Admin + Repository Manager)
+Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher|repository-manager'])->group(function () {
     // Academic Library Architecture (Sprint: Academic Library Architecture)
     Route::prefix('admin/academic-library')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'index'])->name('admin.academic-library.index');

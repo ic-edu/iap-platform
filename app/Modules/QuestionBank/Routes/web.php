@@ -3,7 +3,7 @@
 use App\Modules\QuestionBank\Controllers\QuestionBankController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin'])->prefix('admin/question-banks')->group(function () {
+Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-manager'])->prefix('admin/question-banks')->group(function () {
     Route::get('/', [QuestionBankController::class, 'index'])->name('admin.question-banks.index');
     Route::post('/', [QuestionBankController::class, 'store'])->name('admin.question-banks.store');
     Route::get('/{questionBank}', [QuestionBankController::class, 'show'])->name('admin.question-banks.show');

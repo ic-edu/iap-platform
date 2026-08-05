@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-.qa-container { display:flex; flex-direction:column; gap:1.5rem; }
+.qa-container { display:flex; flex-direction:column; gap:1.5rem; width:100%; max-width:100%; }
 .qa-card { background:#0f172a; border:1px solid #1e293b; border-radius:1.25rem; padding:1.5rem; }
 .qa-table { width:100%; border-collapse:collapse; font-size:.84rem; text-align:left; }
 .qa-table th { padding:.75rem 1rem; background:#1e293b; color:#94a3b8; font-weight:700; border-bottom:1px solid #334155; }

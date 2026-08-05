@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-.mac-container { display:flex; flex-direction:column; gap:1.5rem; }
+.mac-container { display:flex; flex-direction:column; gap:1.5rem; width:100%; max-width:100%; }
 .mac-card { background:#0f172a; border:1px solid #1e293b; border-radius:1.25rem; padding:1.5rem; }
 
 .mac-pills { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.25rem; }

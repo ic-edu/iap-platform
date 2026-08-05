@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-.dd-container { display:flex; flex-direction:column; gap:1.5rem; }
+.dd-container { display:flex; flex-direction:column; gap:1.5rem; width:100%; max-width:100%; }
 .dd-card { background:#0f172a; border:1px solid #1e293b; border-radius:1.25rem; padding:1.5rem; }
 .dd-box { background:#1e293b; border:1px solid #334155; border-radius:.85rem; padding:1.25rem; margin-bottom:1rem; }
 </style>
