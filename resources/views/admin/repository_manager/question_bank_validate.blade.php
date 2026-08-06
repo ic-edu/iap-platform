@@ -55,8 +55,8 @@
 
     {{-- PART 3: BACK NAVIGATION --}}
     <div>
-        <a href="{{ route('admin.repository-manager.questions-approval') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
-            ← Back to Approval Queue
+        <a href="{{ route('admin.repository-manager.questions-approval') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+            ← Back
         </a>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.5rem;flex-wrap:wrap;">
             <div>

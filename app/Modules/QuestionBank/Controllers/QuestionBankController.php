@@ -657,7 +657,7 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Delete question bank (Admin / Super Admin only).
+     * Delete question bank (Safe Delete Governance Workflow TASK 4).
      */
     public function destroy(QuestionBank $questionBank): RedirectResponse
     {
@@ -666,9 +666,23 @@ class QuestionBankController extends Controller
             abort(403, 'Teachers cannot delete question banks.');
         }
 
+        // TASK 4 Safe Delete Governance: Published assets enter pending_deletion for Super Admin approval
+        if (in_array($questionBank->status, ['published', 'approved']) && !$user->hasRole('super-admin')) {
+            $questionBank->update(['status' => 'pending_deletion']);
+
+            ActivityLogger::log(
+                action: 'question_bank_deletion_requested',
+                description: "Requested deletion for published question bank: {$questionBank->title}",
+                subject: $questionBank
+            );
+
+            return redirect()->route('admin.question-banks.index')
+                ->with('status', "Deletion requested for published question bank '{$questionBank->title}'. Awaiting Super Admin approval.");
+        }
+
         $questionBank->delete();
 
-        ActivityLogger::log('question_bank_deleted', "Deleted question bank: {$questionBank->title}", $user);
+        ActivityLogger::log('question_bank_deleted', "Soft deleted question bank: {$questionBank->title}", $user);
 
         return redirect()->route('admin.question-banks.index')
             ->with('status', "Question bank '{$questionBank->title}' deleted.");

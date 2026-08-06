@@ -5,7 +5,7 @@ use App\Modules\Assessment\Controllers\TestBuilderController;
 use Illuminate\Support\Facades\Route;
 
 // Admin & Teacher Test Builder Routes
-Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin'])->prefix('admin/tests')->group(function () {
+Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-manager'])->prefix('admin/tests')->group(function () {
     Route::get('/', [TestBuilderController::class, 'index'])->name('admin.tests.index');
     Route::post('/', [TestBuilderController::class, 'store'])->name('admin.tests.store');
     Route::get('/{test}', [TestBuilderController::class, 'show'])->name('admin.tests.show');

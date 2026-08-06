@@ -86,8 +86,8 @@
 
     @if(Auth::user()?->hasRole('repository-manager'))
     <div>
-        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;display:inline-block;margin-bottom:.5rem;">
-            ← Back to Repository Manager Dashboard
+        <a href="{{ route('admin.repository-manager.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;display:inline-block;margin-bottom:.5rem;">
+            ← Back
         </a>
     </div>
     @endif

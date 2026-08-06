@@ -191,7 +191,7 @@ class TestBuilderController extends Controller
     }
 
     /**
-     * Delete test.
+     * Delete test (Safe Delete Governance Workflow TASK 4).
      */
     public function destroy(Test $test): RedirectResponse
     {
@@ -200,7 +200,31 @@ class TestBuilderController extends Controller
             abort(403, 'Teachers cannot delete assessment tests.');
         }
 
+        // TASK 4 Safe Delete Governance: Published/Approved tests enter pending_deletion for Super Admin approval
+        if (($test->is_published || in_array($test->status, ['published', 'approved'])) && !$user->hasRole('super-admin')) {
+            $test->update(['status' => 'pending_deletion']);
+
+            \App\Models\RepositoryActivityLog::create([
+                'resource_type' => 'Test',
+                'resource_id'   => (string) $test->id,
+                'actor_id'      => $user->id,
+                'action'        => 'test_deletion_requested',
+                'approval_note' => "Deletion requested for published assessment test '{$test->title}'. Awaiting Super Admin approval.",
+            ]);
+
+            return redirect()->route('admin.tests.index')
+                ->with('status', "Deletion requested for published assessment '{$test->title}'. Awaiting Super Admin approval.");
+        }
+
         $test->delete();
+
+        \App\Models\RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $user->id,
+            'action'        => 'test_deleted',
+            'approval_note' => "Assessment '{$test->title}' soft deleted.",
+        ]);
 
         return redirect()->route('admin.tests.index')
             ->with('status', "Assessment '{$test->title}' deleted.");
