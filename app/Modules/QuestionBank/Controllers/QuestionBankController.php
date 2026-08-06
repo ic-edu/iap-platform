@@ -271,14 +271,17 @@ class QuestionBankController extends Controller
 
         $questionBank->update(['status' => 'pending_approval']);
 
-        // HOTFIX GOVERNANCE WORKFLOW: Create GovernanceApprovalTask
-        $approvalTask = \App\Models\GovernanceApprovalTask::create([
-            'question_bank_id' => $questionBank->id,
-            'teacher_id'       => $user?->id ?? $questionBank->created_by,
-            'workflow'         => 'APPROVAL',
-            'status'           => 'OPEN',
-            'submitted_at'     => now(),
-        ]);
+        // Guarantee GovernanceApprovalTask creation (Idempotent: prevents duplicates)
+        if (\Illuminate\Support\Facades\Schema::hasTable('governance_approval_tasks')) {
+            \App\Models\GovernanceApprovalTask::firstOrCreate([
+                'question_bank_id' => $questionBank->id,
+                'status'           => 'OPEN',
+            ], [
+                'teacher_id'       => $user?->id ?? $questionBank->created_by,
+                'workflow'         => 'APPROVAL',
+                'submitted_at'     => now(),
+            ]);
+        }
 
         // Dispatch Repository Manager Notification
         if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {

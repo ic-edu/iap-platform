@@ -22,13 +22,28 @@ class RepositoryManagerController extends Controller
 {
     public function dashboard(AssessmentWorkflowService $workflowService): View
     {
+        // Self-Healing Resolution: Ensure every pending_approval QuestionBank has an active OPEN GovernanceApprovalTask
+        if (Schema::hasTable('question_banks') && Schema::hasTable('governance_approval_tasks')) {
+            $pendingBanks = QuestionBank::whereIn('status', ['pending', 'pending_approval'])->get();
+            foreach ($pendingBanks as $bank) {
+                \App\Models\GovernanceApprovalTask::firstOrCreate([
+                    'question_bank_id' => $bank->id,
+                    'status'           => 'OPEN',
+                ], [
+                    'teacher_id'   => $bank->created_by,
+                    'workflow'     => 'APPROVAL',
+                    'submitted_at' => $bank->updated_at ?? now(),
+                ]);
+            }
+        }
+
         $pendingQuestionsCount = Schema::hasTable('question_banks')
-            ? QuestionBank::where('status', 'draft')->orWhere('is_published', false)->count()
+            ? QuestionBank::whereIn('status', ['pending', 'pending_approval'])->count()
             : 0;
 
         $pendingMediaCount = RepositoryReviewRequest::where('status', 'pending_review')->count();
         $pendingRepositoriesCount = Schema::hasTable('question_banks')
-            ? QuestionBank::where('status', 'draft')->count()
+            ? QuestionBank::whereIn('status', ['pending', 'pending_approval'])->count()
             : 0;
 
         // PART A & PART E: Shared AssessmentWorkflowService Metrics (Single Source of Truth)
@@ -352,7 +367,7 @@ class RepositoryManagerController extends Controller
     public function questionsApproval(): View
     {
         $questionBanks = Schema::hasTable('question_banks')
-            ? QuestionBank::where('status', 'draft')->orWhere('is_published', false)->latest()->paginate(15)
+            ? QuestionBank::whereIn('status', ['pending', 'pending_approval', 'submitted'])->latest()->paginate(15)
             : collect([]);
 
         return view('admin.repository_manager.questions_approval', compact('questionBanks'));

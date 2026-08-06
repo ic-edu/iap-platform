@@ -236,6 +236,40 @@ class TeacherRepositoryRevisionController extends Controller
         if ($bank) {
             $bank->status = 'pending_approval';
             $bank->save();
+
+            // Guarantee NEW GovernanceApprovalTask creation upon resubmission (Idempotent)
+            if (\Illuminate\Support\Facades\Schema::hasTable('governance_approval_tasks')) {
+                \App\Models\GovernanceApprovalTask::firstOrCreate([
+                    'question_bank_id' => $bank->id,
+                    'status'           => 'OPEN',
+                ], [
+                    'teacher_id'       => Auth::id(),
+                    'workflow'         => 'APPROVAL',
+                    'submitted_at'     => now(),
+                ]);
+            }
+
+            // Dispatch Repository Manager Notification for resubmission
+            if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+                $repoManagers = \App\Models\User::role(['repository-manager', 'super-admin'])->get();
+                foreach ($repoManagers as $rm) {
+                    \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                        'id'              => (string) \Illuminate\Support\Str::uuid(),
+                        'type'            => 'repository_resubmitted_for_approval',
+                        'notifiable_type' => 'App\Models\User',
+                        'notifiable_id'   => $rm->id,
+                        'data'            => json_encode([
+                            'title'        => 'Repository Resubmitted for Governance Approval',
+                            'message'      => "Repository '{$bank->title}' has been revised and resubmitted by " . (Auth::user()?->name ?? 'Teacher'),
+                            'repository'   => $bank->title,
+                            'submitted_by' => Auth::user()?->name ?? 'Teacher',
+                            'link'         => route('admin.repository-manager.question-bank-validate', $bank->id),
+                        ]),
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ]);
+                }
+            }
         }
 
         // 3. Audit Log: Automatic IRQA Scan Started
