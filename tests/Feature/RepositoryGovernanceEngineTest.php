@@ -99,10 +99,10 @@ class RepositoryGovernanceEngineTest extends TestCase
         $test->refresh();
         $this->assertEquals('pending_approval', $test->status);
 
-        // Teacher Dashboard Awaiting Approval Workflow Inbox KPI shows pending count
+        // Teacher Dashboard Awaiting Approval KPI shows pending count
         $dashRes = $this->actingAs($this->teacherA)->get(route('teacher.dashboard'));
         $dashRes->assertStatus(200);
-        $dashRes->assertSee('Workflow Review Inbox');
+        $dashRes->assertSee('Awaiting Approval');
 
         // Repository Manager Approval Queue lists the assessment
         $repoQueueRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval'));

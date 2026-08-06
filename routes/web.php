@@ -32,6 +32,10 @@ Route::get('/', function () {
         return redirect()->route('super-admin.dashboard');
     }
 
+    if ($user->hasRole('repository-manager')) {
+        return redirect()->route('admin.repository-manager.dashboard');
+    }
+
     if ($user->hasRole('admin')) {
         return redirect()->route('admin.dashboard');
     }
@@ -53,6 +57,10 @@ Route::get('/dashboard', function () {
 
     if ($user?->hasRole('super-admin')) {
         return redirect()->route('super-admin.dashboard');
+    }
+
+    if ($user?->hasRole('repository-manager')) {
+        return redirect()->route('admin.repository-manager.dashboard');
     }
 
     if ($user?->hasRole('admin')) {
