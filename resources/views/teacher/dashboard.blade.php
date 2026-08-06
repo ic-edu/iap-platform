@@ -521,7 +521,10 @@ a.tw-hero__pill:hover { opacity: .8; }
 
         {{-- RRWE v1.0 PART 2: Repository Revisions Widget --}}
         @php
-            $pendingRepositoryRevisionsCount = \App\Models\RepositoryRevisionRequest::where('teacher_id', Auth::id())->whereIn('status', ['OPEN', 'IN_PROGRESS', 'RESUBMITTED'])->count();
+            $pendingRepositoryRevisionsCount = \App\Models\RepositoryRevisionRequest::where(function ($q) {
+                $q->where('teacher_id', Auth::id())
+                  ->orWhereHas('questionBank', fn($bq) => $bq->where('created_by', Auth::id()));
+            })->whereIn('status', ['OPEN', 'IN_PROGRESS', 'RESUBMITTED'])->count();
         @endphp
         @if($pendingRepositoryRevisionsCount > 0)
         <a href="{{ route('teacher.repository-revisions.index') }}" class="tw-kpi tw-kpi--amber" style="border-color:#6366f1;">

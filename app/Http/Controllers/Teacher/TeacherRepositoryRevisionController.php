@@ -28,7 +28,12 @@ class TeacherRepositoryRevisionController extends Controller
         $teacherId = Auth::id();
 
         $revisionRequests = RepositoryRevisionRequest::with(['questionBank', 'requestedBy', 'items'])
-            ->where('teacher_id', $teacherId)
+            ->where(function ($q) use ($teacherId) {
+                $q->where('teacher_id', $teacherId)
+                  ->orWhereHas('questionBank', function ($bq) use ($teacherId) {
+                      $bq->where('created_by', $teacherId);
+                  });
+            })
             ->latest()
             ->paginate(12);
 

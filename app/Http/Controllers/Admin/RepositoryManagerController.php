@@ -401,10 +401,12 @@ class RepositoryManagerController extends Controller
         $questionBank->status = 'needs_revision';
         $questionBank->save();
 
-        // RRWE v1.0 PART 1 & 4: Create RepositoryRevisionRequest and Items
+        $teacherId = $questionBank->created_by ?: ($questionBank->creator?->id ?? $user->id);
+
+        // HOTFIX GOVERNANCE WORKFLOW: Create RepositoryRevisionRequest & RepositoryRevisionTask
         $revisionRequest = \App\Models\RepositoryRevisionRequest::create([
             'question_bank_id' => $questionBank->id,
-            'teacher_id'       => $questionBank->created_by,
+            'teacher_id'       => $teacherId,
             'requested_by_id'  => $user->id,
             'status'           => 'OPEN',
             'notes'            => $note,
