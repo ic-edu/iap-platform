@@ -153,6 +153,7 @@
         $highlightChoices     = str_contains($fbLower, 'choice') || str_contains($fbLower, 'answer');
         $highlightExplanation = str_contains($fbLower, 'explanation');
         $highlightMedia       = str_contains($fbLower, 'media') || str_contains($fbLower, 'attachment');
+        $qTypeVal             = $question->question_type->value ?? $question->question_type ?? 'multiple_choice';
     @endphp
 
     <div class="fre-panel">
@@ -206,11 +207,17 @@
                 <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;">
                     <div>
                         <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Question Type</label>
-                        <select name="question_type" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
-                            <option value="multiple_choice" {{ ($question->question_type->value ?? $question->question_type ?? '') === 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
-                            <option value="listening" {{ ($question->question_type->value ?? $question->question_type ?? '') === 'listening' ? 'selected' : '' }}>Listening</option>
-                            <option value="reading" {{ ($question->question_type->value ?? $question->question_type ?? '') === 'reading' ? 'selected' : '' }}>Reading</option>
-                            <option value="essay" {{ ($question->question_type->value ?? $question->question_type ?? '') === 'essay' ? 'selected' : '' }}>Essay</option>
+                        <select id="fre_question_type" name="question_type" onchange="updateRevisionAnswerOptionsUI()" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                            <option value="multiple_choice" {{ $qTypeVal === 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
+                            <option value="single_choice" {{ $qTypeVal === 'single_choice' ? 'selected' : '' }}>Single Choice</option>
+                            <option value="listening" {{ $qTypeVal === 'listening' ? 'selected' : '' }}>Listening</option>
+                            <option value="reading" {{ $qTypeVal === 'reading' ? 'selected' : '' }}>Reading</option>
+                            <option value="true_false" {{ $qTypeVal === 'true_false' ? 'selected' : '' }}>True / False</option>
+                            <option value="short_answer" {{ $qTypeVal === 'short_answer' ? 'selected' : '' }}>Short Answer</option>
+                            <option value="essay" {{ $qTypeVal === 'essay' ? 'selected' : '' }}>Essay</option>
+                            <option value="speaking" {{ $qTypeVal === 'speaking' ? 'selected' : '' }}>Speaking</option>
+                            <option value="matching" {{ $qTypeVal === 'matching' ? 'selected' : '' }}>Matching Pairs</option>
+                            <option value="ordering" {{ $qTypeVal === 'ordering' ? 'selected' : '' }}>Ordering Sequence</option>
                         </select>
                     </div>
                     <div>
@@ -269,42 +276,45 @@
                 </div>
             </div>
 
-            {{-- 5. Option Answer Choices & Correct Answer Selector --}}
+            {{-- 5. DYNAMIC QUESTION TYPE CONTROL CONTAINER (REUSED SHARED CONTROL LOGIC) --}}
             <div id="answer-choices-section" class="fre-section {{ $highlightChoices ? 'fre-highlight' : '' }}">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;">
-                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">🎯 Option Answer Choices &amp; Correct Selector</label>
+                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">🎯 Dynamic Answer Controls</label>
                     @if($highlightChoices)
                     <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
-                        ⚠️ Action Required: Fix Option Choices Below
+                        ⚠️ Action Required: Fix Option Choices / Answer Fields Below
                     </span>
                     @endif
                 </div>
 
-                @if($question->choices->count() > 0)
-                    @foreach($question->choices as $cIdx => $choice)
-                    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem;">
-                        <input type="radio" name="correct_choice_id" value="{{ $choice->id }}" {{ $choice->is_correct ? 'checked' : '' }} style="accent-color:#10b981;width:1.2rem;height:1.2rem;" title="Mark as Correct Choice">
-                        <span style="font-weight:800;color:#818cf8;width:1.5rem;">{{ $choice->label ?? chr(65 + $cIdx) }}.</span>
-                        <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm" required>
-                        <input type="hidden" name="choices[{{ $choice->id }}][label]" value="{{ $choice->label ?? chr(65 + $cIdx) }}">
-                    </div>
-                    @endforeach
-                @else
-                    <div style="font-size:.8rem;color:#fb7185;padding:.75rem;background:rgba(244,63,94,.1);border-radius:.5rem;margin-bottom:.75rem;">
-                        ⚠️ No answer choices currently attached to this question. Add choices below.
-                    </div>
-                @endif
+                {{-- Dynamic Target Container --}}
+                <div id="fre_dynamic_answer_container">
+                    @if($question->choices->count() > 0)
+                        @foreach($question->choices as $cIdx => $choice)
+                        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem;">
+                            <input type="radio" name="correct_choice_id" value="{{ $choice->id }}" {{ $choice->is_correct ? 'checked' : '' }} style="accent-color:#10b981;width:1.2rem;height:1.2rem;" title="Mark as Correct Choice">
+                            <span style="font-weight:800;color:#818cf8;width:1.5rem;">{{ $choice->label ?? chr(65 + $cIdx) }}.</span>
+                            <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm" required>
+                            <input type="hidden" name="choices[{{ $choice->id }}][label]" value="{{ $choice->label ?? chr(65 + $cIdx) }}">
+                        </div>
+                        @endforeach
+                    @else
+                        <div style="font-size:.8rem;color:#fb7185;padding:.75rem;background:rgba(244,63,94,.1);border-radius:.5rem;margin-bottom:.75rem;">
+                            ⚠️ No answer choices currently attached to this question. Add choices below.
+                        </div>
+                    @endif
 
-                {{-- Add New Choice Input --}}
-                <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #334155;">
-                    <div style="font-size:.78rem;font-weight:700;color:#818cf8;margin-bottom:.4rem;">+ Add Additional Choice:</div>
-                    <div style="display:flex;gap:.75rem;align-items:center;">
-                        <input type="text" name="new_choice_label" placeholder="Choice Label (e.g. C)" style="width:70px;" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                        <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                        <label style="font-size:.75rem;color:#34d399;font-weight:700;display:flex;align-items:center;gap:.3rem;">
-                            <input type="checkbox" name="new_choice_is_correct" value="1" style="accent-color:#10b981;">
-                            Correct
-                        </label>
+                    {{-- Add New Choice Input --}}
+                    <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #334155;">
+                        <div style="font-size:.78rem;font-weight:700;color:#818cf8;margin-bottom:.4rem;">+ Add Additional Choice:</div>
+                        <div style="display:flex;gap:.75rem;align-items:center;">
+                            <input type="text" name="new_choice_label" placeholder="Choice Label (e.g. C)" style="width:70px;" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                            <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                            <label style="font-size:.75rem;color:#34d399;font-weight:700;display:flex;align-items:center;gap:.3rem;">
+                                <input type="checkbox" name="new_choice_is_correct" value="1" style="accent-color:#10b981;">
+                                Correct
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -391,13 +401,102 @@
 
 </div>
 
-{{-- SMART AUTO-SCROLL SCRIPT --}}
+{{-- DYNAMIC QUESTION TYPE RENDERING & SMART AUTO-SCROLL SCRIPT --}}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+    // Smart auto scroll to highlighted finding field
     const highlighted = document.querySelector('.fre-highlight');
     if (highlighted) {
         highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 });
+
+function updateRevisionAnswerOptionsUI() {
+    const typeSelect = document.getElementById('fre_question_type');
+    const container = document.getElementById('fre_dynamic_answer_container');
+    if (!typeSelect || !container) return;
+
+    const type = typeSelect.value;
+
+    if (['multiple_choice', 'single_choice', 'listening', 'reading'].includes(type)) {
+        // Render Multiple Choice / Single Choice Options
+        container.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:.65rem;margin-bottom:.85rem;">
+                <label style="font-size:.78rem;font-weight:800;color:#fff;display:block;margin-bottom:.3rem;">Option Answer Choices (Select 1 Correct Answer)</label>
+                ${['A', 'B', 'C', 'D'].map((lbl, i) => `
+                    <div style="display:flex;align-items:center;gap:.75rem;">
+                        <input type="radio" name="correct_choice_id" value="${i}" ${i === 0 ? 'checked' : ''} style="accent-color:#10b981;width:1.2rem;height:1.2rem;">
+                        <span style="font-weight:800;color:#818cf8;width:1.5rem;">${lbl}.</span>
+                        <input type="hidden" name="choices[${i}][label]" value="${lbl}">
+                        <input type="text" name="choices[${i}][content]" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm" placeholder="Option ${lbl} content..." required>
+                    </div>
+                `).join('')}
+            </div>
+            <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #334155;">
+                <div style="font-size:.78rem;font-weight:700;color:#818cf8;margin-bottom:.4rem;">+ Add Additional Choice:</div>
+                <div style="display:flex;gap:.75rem;align-items:center;">
+                    <input type="text" name="new_choice_label" placeholder="Choice Label (e.g. E)" style="width:70px;" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                    <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                    <label style="font-size:.75rem;color:#34d399;font-weight:700;display:flex;align-items:center;gap:.3rem;">
+                        <input type="checkbox" name="new_choice_is_correct" value="1" style="accent-color:#10b981;">
+                        Correct
+                    </label>
+                </div>
+            </div>
+        `;
+    } else if (type === 'true_false') {
+        // Render True / False Radio Selector
+        container.innerHTML = `
+            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.5rem;">True / False Correct Answer Designation</label>
+            <div style="display:flex;gap:1.5rem;align-items:center;">
+                <label style="font-size:.85rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                    <input type="radio" name="tf_correct_choice" value="true" checked style="accent-color:#10b981;width:1.2rem;height:1.2rem;"> True
+                </label>
+                <label style="font-size:.85rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                    <input type="radio" name="tf_correct_choice" value="false" style="accent-color:#10b981;width:1.2rem;height:1.2rem;"> False
+                </label>
+            </div>
+        `;
+    } else if (type === 'short_answer') {
+        // Render Short Answer Accepted Strings
+        container.innerHTML = `
+            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Accepted Exact Correct Answer String *</label>
+            <input type="text" name="short_answer_text" required class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter expected exact string answer...">
+        `;
+    } else if (type === 'essay') {
+        // Render Essay Reference Answer & Rubric
+        container.innerHTML = `
+            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Sample Answer &amp; Scoring Rubric Guidelines (Optional)</label>
+            <textarea name="reference_answer_text" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter model reference answer or grading rubric guidelines..."></textarea>
+        `;
+    } else if (type === 'speaking') {
+        // Render Speaking Prompt & Rubric
+        container.innerHTML = `
+            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Speaking Audio Prompt &amp; Evaluation Rubric</label>
+            <textarea name="speaking_rubric" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter speaking response instructions, target vocabulary, and scoring rubric..."></textarea>
+        `;
+    } else if (type === 'matching') {
+        // Render Matching Pair Editor
+        container.innerHTML = `
+            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.5rem;">Matching Pair Elements</label>
+            <div style="display:flex;flex-direction:column;gap:.5rem;">
+                <div style="display:flex;gap:.5rem;">
+                    <input type="text" placeholder="Premise (Left Column)" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                    <span style="color:#818cf8;font-weight:800;align-self:center;">➔</span>
+                    <input type="text" placeholder="Target Match (Right Column)" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                </div>
+            </div>
+        `;
+    } else if (type === 'ordering') {
+        // Render Ordering Sequence Editor
+        container.innerHTML = `
+            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.5rem;">Correct Ordering Sequence Items (In Proper Order)</label>
+            <div style="display:flex;flex-direction:column;gap:.5rem;">
+                <input type="text" placeholder="Step 1 Item..." class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                <input type="text" placeholder="Step 2 Item..." class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+            </div>
+        `;
+    }
+}
 </script>
 @endsection
