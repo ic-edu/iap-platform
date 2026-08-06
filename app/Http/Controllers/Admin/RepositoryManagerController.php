@@ -379,6 +379,15 @@ class RepositoryManagerController extends Controller
             'approval_note' => $note,
         ]);
 
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $questionBank->id,
+            'actor_id'      => $questionBank->created_by,
+            'reviewer_id'   => $user->id,
+            'action'        => 'repository_manager_approved_repository',
+            'approval_note' => $note,
+        ]);
+
         return redirect()->route('admin.repository-manager.questions-approval')
             ->with('success', 'Question bank successfully approved and published to academic repository.');
     }
@@ -459,6 +468,15 @@ class RepositoryManagerController extends Controller
             'actor_id'      => $questionBank->created_by,
             'reviewer_id'   => $user->id,
             'action'        => 'revision_requested',
+            'approval_note' => $note,
+        ]);
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $questionBank->id,
+            'actor_id'      => $questionBank->created_by,
+            'reviewer_id'   => $user->id,
+            'action'        => 'repository_manager_requested_revision',
             'approval_note' => $note,
         ]);
 
