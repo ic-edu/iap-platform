@@ -146,17 +146,17 @@
                         </button>
                     </form>
 
-                    {{-- Submit Again Button (TASK 6) --}}
+                    {{-- Resubmit Button --}}
                     @if(in_array($test->status, ['needs_revision', 'revision_requested', 'draft']))
                     <form method="POST" action="{{ route('teacher.tests.resubmit', $test->id) }}" style="display:inline;">
                         @csrf
                         @if($validationResult['is_valid'])
-                        <button type="submit" onclick="return confirm('Resubmit this assessment to the Repository Manager for governance review?')" style="padding:.75rem 1.5rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 14px rgba(99,102,241,.35);">
-                            🚀 Submit Again for Review
+                        <button type="submit" onclick="return confirm('Resubmit this Assessment for Repository Review?')" style="padding:.75rem 1.5rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 14px rgba(99,102,241,.35);">
+                            🚀 {{ $test->status === 'draft' ? 'Submit for Review' : 'Resubmit for Review' }}
                         </button>
                         @else
                         <button type="button" disabled style="padding:.75rem 1.5rem;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:.65rem;font-size:.88rem;font-weight:700;cursor:not-allowed;" title="Resolve all validation issues to enable submission.">
-                            🚫 Submit Disabled (Validation Required)
+                            🚫 Submission Disabled (Validation Required)
                         </button>
                         @endif
                     </form>

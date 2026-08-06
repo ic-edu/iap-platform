@@ -127,7 +127,7 @@ class AssessmentAuthoringWorkflowTest extends TestCase
     }
 
     /**
-     * TEST 4: Teacher clicks Submit Again -> status changes to pending_approval and appears in Repository Queue.
+     * TEST 4: Teacher clicks Resubmit for Review -> status changes to pending_approval and appears in Repository Queue.
      */
     public function test_4_teacher_resubmit_updates_status_to_pending_approval_and_appears_in_queue()
     {

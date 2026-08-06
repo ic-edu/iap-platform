@@ -206,7 +206,7 @@ class ProgressiveAuthoringLazyLoadingTest extends TestCase
 
         $resInvalid = $this->actingAs($this->teacherA)->get(route('teacher.tests.show', $test->id));
         $resInvalid->assertStatus(200);
-        $resInvalid->assertSee('Submit Disabled (Validation Required)');
+        $resInvalid->assertSee('Submission Disabled (Validation Required)');
 
         // Fix question prompt & choice
         $invalidQuestion->update(['prompt' => 'Fixed Valid Stem Prompt']);
@@ -221,7 +221,7 @@ class ProgressiveAuthoringLazyLoadingTest extends TestCase
 
         $resValid = $this->actingAs($this->teacherA)->get(route('teacher.tests.show', $test->id));
         $resValid->assertStatus(200);
-        $resValid->assertSee('Submit Again for Review');
+        $resValid->assertSee('Resubmit for Review');
     }
 
     /**

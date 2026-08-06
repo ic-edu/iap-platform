@@ -403,12 +403,12 @@ class TestBuilderController extends Controller
             'resource_type' => 'Test',
             'resource_id'   => (string) $test->id,
             'actor_id'      => $user->id,
-            'action'        => 'resubmitted',
-            'approval_note' => 'Teacher resubmitted assessment test after completing requested revisions and passing validation.',
+            'action'        => 'assessment_resubmitted',
+            'approval_note' => 'Assessment resubmitted for review.',
         ]);
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Assessment '{$test->title}' resubmitted successfully to Repository Manager Approval Queue.");
+            ->with('status', "Assessment resubmitted successfully.");
     }
 
     /**
