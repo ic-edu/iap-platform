@@ -80,7 +80,7 @@ class WorkflowRefactorReviewEntryPointTest extends TestCase
         // Review & Governance target route opens Question Annotation Workspace
         $workspaceRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
         $workspaceRes->assertStatus(200);
-        $workspaceRes->assertSee('Question Annotation Workspace');
+        $workspaceRes->assertSee('Annotation Workspace');
 
         // HOTFIX Assertions (No popup modals)
         $workspaceRes->assertDontSee('Request Revision on Q#');

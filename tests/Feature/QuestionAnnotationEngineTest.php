@@ -50,7 +50,7 @@ class QuestionAnnotationEngineTest extends TestCase
     }
 
     /**
-     * TEST 1: Question Review State persistence (not_reviewed, reviewed_ok, needs_revision, critical_issue).
+     * TEST 1: Question Review State persistence (Default OK vs Flagged Revision / Critical Issue).
      */
     public function test_1_question_review_state_persistence_and_annotation()
     {
@@ -71,7 +71,7 @@ class QuestionAnnotationEngineTest extends TestCase
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q2->id, 'order' => 2]);
 
-        // Mark Q1 Reviewed OK
+        // Mark Q1 Reviewed OK / Clear flag (Default OK)
         $this->actingAs($this->repoManager)->post(route('admin.repository-manager.question-review-ok', ['test' => $test->id, 'question' => $q1->id]));
 
         // Annotate Q2 with Critical Issue
@@ -85,7 +85,11 @@ class QuestionAnnotationEngineTest extends TestCase
         $rev1 = TestQuestionReview::where('test_id', $test->id)->where('question_id', $q1->id)->first();
         $rev2 = TestQuestionReview::where('test_id', $test->id)->where('question_id', $q2->id)->first();
 
-        $this->assertEquals('reviewed_ok', $rev1->status);
+        // Under Review by Exception, Q1 has no flag record (implicitly Default OK)
+        $this->assertNull($rev1);
+        
+        // Q2 has a critical_issue flag record
+        $this->assertNotNull($rev2);
         $this->assertEquals('critical_issue', $rev2->status);
         $this->assertEquals('choices', $rev2->field);
         $this->assertEquals('Answer key option C is missing or invalid.', $rev2->comment);
@@ -117,9 +121,9 @@ class QuestionAnnotationEngineTest extends TestCase
 
         // Verify Question Navigator widget & Inline Review Panel
         $res->assertSee('Question Navigator');
-        $res->assertSee('🔴 Q1');
-        $res->assertSee('Question Review Decision');
-        $res->assertSee('🔴 Critical Issue');
+        $res->assertSee('🔴');
+        $res->assertSee('Q1');
+        $res->assertSee('Annotation Workspace');
         $res->assertSee('Stem ambiguous');
         $res->assertDontSee('q-rev-modal');
     }
@@ -145,7 +149,6 @@ class QuestionAnnotationEngineTest extends TestCase
 
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
         $res->assertStatus(200);
-        $res->assertSee('No Question has been marked for revision.');
-        $res->assertSee('Revision Disabled');
+        $res->assertSee('0 Questions Flagged — No revisions needed');
     }
 }

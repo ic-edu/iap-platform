@@ -51,9 +51,9 @@ class StructuredQuestionReviewEngineTest extends TestCase
     }
 
     /**
-     * TEST 1: Repository Manager marks Q1 OK and Q2 Needs Revision -> Teacher sees targeted Q2 revision only.
+     * TEST 1: Repository Manager flags Q2 Needs Revision -> Teacher sees targeted Q2 revision only.
      */
-    public function test_1_repository_manager_marks_questions_and_teacher_sees_targeted_revision()
+    public function test_1_repository_manager_flags_question_and_teacher_sees_targeted_revision()
     {
         $test = AssessmentTest::create([
             'title'            => 'TOEIC Structured Review 01',
@@ -77,13 +77,6 @@ class StructuredQuestionReviewEngineTest extends TestCase
             'prompt'           => 'Valid Prompt Stem Q1',
             'question_type'    => 'multiple_choice',
         ]);
-        QuestionChoice::create([
-            'question_id' => $q1->id,
-            'label'       => 'A',
-            'content'     => 'Valid Option A',
-            'choice_text' => 'Valid Option A',
-            'is_correct'  => true,
-        ]);
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
 
         // Q2 (Requires Revision)
@@ -92,20 +85,9 @@ class StructuredQuestionReviewEngineTest extends TestCase
             'prompt'           => 'Flawed Prompt Stem Q2',
             'question_type'    => 'multiple_choice',
         ]);
-        QuestionChoice::create([
-            'question_id' => $q2->id,
-            'label'       => 'A',
-            'content'     => 'Flawed Option A',
-            'choice_text' => 'Flawed Option A',
-            'is_correct'  => true,
-        ]);
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q2->id, 'order' => 2]);
 
-        // Repository Manager marks Q1 OK
-        $resOk = $this->actingAs($this->repoManager)->post(route('admin.repository-manager.question-review-ok', ['test' => $test->id, 'question' => $q1->id]));
-        $resOk->assertRedirect();
-
-        // Repository Manager marks Q2 Needs Revision
+        // Repository Manager flags Q2 Needs Revision
         $resRev = $this->actingAs($this->repoManager)->post(route('admin.repository-manager.question-request-revision', ['test' => $test->id, 'question' => $q2->id]), [
             'field'    => 'stem',
             'comment'  => 'Prompt stem Q2 is ambiguous, please clarify context.',
@@ -123,9 +105,9 @@ class StructuredQuestionReviewEngineTest extends TestCase
     }
 
     /**
-     * TEST 2: Approve button disabled until ALL questions are marked Reviewed OK.
+     * TEST 2: Approve button enabled immediately under Review by Exception, disabled if flagged.
      */
-    public function test_2_approve_disabled_until_all_questions_reviewed_ok()
+    public function test_2_approve_disabled_when_flagged_questions_exist()
     {
         $test = AssessmentTest::create([
             'title'            => 'TOEFL Approval Guard 02',
@@ -145,18 +127,25 @@ class StructuredQuestionReviewEngineTest extends TestCase
         ]);
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
 
-        // Attempt approve while Q1 is not_reviewed -> MUST BE BLOCKED
+        // Flag Q1
+        $this->actingAs($this->repoManager)->post(route('admin.repository-manager.question-request-revision', ['test' => $test->id, 'question' => $q1->id]), [
+            'field'    => 'stem',
+            'comment'  => 'Fix stem',
+            'severity' => 'warning',
+        ]);
+
+        // Attempt approve while Q1 is flagged -> MUST BE BLOCKED
         $resApproveBlocked = $this->actingAs($this->repoManager)->post(route('admin.repository-manager.assessment-approve', $test->id));
         $resApproveBlocked->assertRedirect();
         $resApproveBlocked->assertSessionHas('error');
 
         $test->refresh();
-        $this->assertEquals('pending_approval', $test->status);
+        $this->assertEquals('needs_revision', $test->status);
 
-        // Mark Q1 Reviewed OK
+        // Clear flag Q1
         $this->actingAs($this->repoManager)->post(route('admin.repository-manager.question-review-ok', ['test' => $test->id, 'question' => $q1->id]));
 
-        // Approve attempt -> SUCCESS
+        // Approve attempt -> SUCCESS under Review by Exception
         $resApproveSuccess = $this->actingAs($this->repoManager)->post(route('admin.repository-manager.assessment-approve', $test->id));
         $resApproveSuccess->assertRedirect(route('admin.repository-manager.assessment-approval'));
 

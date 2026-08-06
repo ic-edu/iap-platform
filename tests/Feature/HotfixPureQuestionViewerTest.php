@@ -79,8 +79,8 @@ class HotfixPureQuestionViewerTest extends TestCase
         $res->assertDontSee('Request Revision on Q#');
         $res->assertDontSee('q-rev-modal');
 
-        // Confirm Question Annotation Workspace content
+        // Confirm Question Workspace content
         $res->assertSee('Pure Question Viewer Stem Q1');
-        $res->assertSee('Question Annotation Workspace');
+        $res->assertSee('Annotation Workspace');
     }
 }

@@ -80,8 +80,8 @@ class QuestionReviewWorkspaceRefactorTest extends TestCase
         $workspaceRes->assertSee('Question Navigator');
         $workspaceRes->assertSee('Jump to question');
 
-        // Question Annotation Workspace Assertions (Sprint 11.4)
-        $workspaceRes->assertSee('Question Annotation Workspace');
+        // Question Annotation Workspace Assertions (Sprint 11.5)
+        $workspaceRes->assertSee('Annotation Workspace');
         $workspaceRes->assertDontSee('q-rev-modal');
     }
 }

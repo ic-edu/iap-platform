@@ -542,23 +542,22 @@ class RepositoryManagerController extends Controller
             $totalQuestionsCount += $sec->testQuestions->count();
         }
 
-        $reviewedOkCount = $questionReviews->where('status', 'reviewed_ok')->count();
-        $needsRevisionCount = $questionReviews->whereIn('status', ['needs_revision', 'critical_issue'])->count();
+        $flaggedQuestions = $questionReviews->whereIn('status', ['needs_revision', 'critical_issue']);
+        $flaggedQuestionsCount = $flaggedQuestions->count();
         $criticalCount = $questionReviews->where('status', 'critical_issue')->count();
-        $notReviewedCount = max(0, $totalQuestionsCount - ($reviewedOkCount + $needsRevisionCount));
+        $defaultOkCount = max(0, $totalQuestionsCount - $flaggedQuestionsCount);
 
-        $isApprovalAllowed = ($totalQuestionsCount > 0 && $reviewedOkCount === $totalQuestionsCount && $needsRevisionCount === 0);
-
-        $progressPercentage = $totalQuestionsCount > 0 ? round(($reviewedOkCount / $totalQuestionsCount) * 100) : 0;
+        // Business Rule 1 & 5: Review by Exception - Approved allowed if flaggedQuestionsCount === 0
+        $isApprovalAllowed = ($totalQuestionsCount > 0 && $flaggedQuestionsCount === 0);
+        $isRevisionAllowed = ($flaggedQuestionsCount > 0);
 
         $reviewProgress = [
-            'total'          => $totalQuestionsCount,
-            'reviewed_ok'    => $reviewedOkCount,
-            'needs_revision' => $needsRevisionCount,
-            'critical'       => $criticalCount,
-            'not_reviewed'   => $notReviewedCount,
-            'percentage'     => $progressPercentage,
-            'is_allowed'     => $isApprovalAllowed,
+            'total'               => $totalQuestionsCount,
+            'default_ok'          => $defaultOkCount,
+            'flagged'             => $flaggedQuestionsCount,
+            'critical'            => $criticalCount,
+            'is_allowed'          => $isApprovalAllowed,
+            'is_revision_allowed' => $isRevisionAllowed,
         ];
 
         $logs = RepositoryActivityLog::where('resource_type', 'Test')
@@ -571,29 +570,45 @@ class RepositoryManagerController extends Controller
     }
 
     /**
-     * Mark single question as Reviewed OK (TASK 2).
+     * Clear flag / Mark question as Default OK (BUSINESS RULE 1 & UX).
      */
-    public function markQuestionReviewed(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse
+    public function markQuestionReviewed(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $user = $request->user();
 
-        \App\Models\TestQuestionReview::updateOrCreate(
-            ['test_id' => (string) $test->id, 'question_id' => (string) $question->id],
-            [
-                'status'      => 'reviewed_ok',
-                'field'       => null,
-                'comment'     => null,
-                'reviewer_id' => $user->id,
-            ]
-        );
+        \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+            ->where('question_id', (string) $question->id)
+            ->delete();
 
-        return redirect()->back()->with('success', "Question #{$question->id} marked as Reviewed OK.");
+        // Calculate updated counts
+        $allReviews = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)->get();
+        $flaggedCount = $allReviews->whereIn('status', ['needs_revision', 'critical_issue'])->count();
+        
+        $totalQuestionsCount = 0;
+        foreach ($test->sections as $sec) {
+            $totalQuestionsCount += $sec->testQuestions->count();
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success'             => true,
+                'message'             => 'Flag cleared — Question marked OK.',
+                'question_id'         => (string) $question->id,
+                'status'              => 'default_ok',
+                'flagged_count'       => $flaggedCount,
+                'default_ok_count'    => max(0, $totalQuestionsCount - $flaggedCount),
+                'is_allowed'          => ($totalQuestionsCount > 0 && $flaggedCount === 0),
+                'is_revision_allowed' => ($flaggedCount > 0),
+            ]);
+        }
+
+        return redirect()->back()->with('success', "Question #{$question->id} flag cleared.");
     }
 
     /**
-     * Request revision or mark critical issue for a specific question (TASK 1, 2, 6).
+     * Request revision or mark critical issue for a specific question (BUSINESS RULE 2 & 3).
      */
-    public function requestQuestionRevision(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse
+    public function requestQuestionRevision(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $user = $request->user();
 
@@ -606,7 +621,7 @@ class RepositoryManagerController extends Controller
 
         $status = $validated['status'] ?? ($validated['severity'] === 'critical' ? 'critical_issue' : 'needs_revision');
 
-        \App\Models\TestQuestionReview::updateOrCreate(
+        $review = \App\Models\TestQuestionReview::updateOrCreate(
             ['test_id' => (string) $test->id, 'question_id' => (string) $question->id],
             [
                 'status'      => $status,
@@ -617,7 +632,7 @@ class RepositoryManagerController extends Controller
             ]
         );
 
-        // Derive Assessment Status -> needs_revision (TASK 6)
+        // Derive Assessment Status -> needs_revision
         $test->update([
             'status'       => 'needs_revision',
             'is_published' => false,
@@ -629,35 +644,51 @@ class RepositoryManagerController extends Controller
             'actor_id'      => $test->created_by ?? $user->id,
             'reviewer_id'   => $user->id,
             'action'        => 'revision_requested',
-            'approval_note' => "Question review annotation added on field '{$validated['field']}': {$validated['comment']}",
+            'approval_note' => "Question flagged for revision on field '{$validated['field']}': {$validated['comment']}",
         ]);
 
-        return redirect()->back()->with('warning', "Question #{$question->id} annotated for revision.");
-    }
-
-    /**
-     * Approve assessment with Approval Guard (TASK 4).
-     */
-    public function approveAssessment(Request $request, Test $test): RedirectResponse
-    {
-        $user = $request->user();
-
-        // TASK 4: Approval Guard
+        // Calculate updated counts
+        $allReviews = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)->get();
+        $flaggedCount = $allReviews->whereIn('status', ['needs_revision', 'critical_issue'])->count();
+        
         $totalQuestionsCount = 0;
         foreach ($test->sections as $sec) {
             $totalQuestionsCount += $sec->testQuestions->count();
         }
 
-        $reviewedOkCount = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
-            ->where('status', 'reviewed_ok')
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success'             => true,
+                'message'             => 'Review saved.',
+                'question_id'         => (string) $question->id,
+                'status'              => $status,
+                'field'               => $validated['field'],
+                'comment'             => $validated['comment'],
+                'severity'            => $validated['severity'] ?? 'warning',
+                'flagged_count'       => $flaggedCount,
+                'default_ok_count'    => max(0, $totalQuestionsCount - $flaggedCount),
+                'is_allowed'          => ($totalQuestionsCount > 0 && $flaggedCount === 0),
+                'is_revision_allowed' => ($flaggedCount > 0),
+            ]);
+        }
+
+        return redirect()->back()->with('warning', "Question #{$question->id} flagged for revision.");
+    }
+
+    /**
+     * Approve assessment with Review by Exception Guard (BUSINESS RULE 5).
+     */
+    public function approveAssessment(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        // BUSINESS RULE 5: Approve Guard (Flagged Questions === 0)
+        $flaggedCount = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+            ->whereIn('status', ['needs_revision', 'critical_issue'])
             ->count();
 
-        $needsRevisionCount = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
-            ->where('status', 'needs_revision')
-            ->count();
-
-        if ($totalQuestionsCount > 0 && ($reviewedOkCount < $totalQuestionsCount || $needsRevisionCount > 0)) {
-            return redirect()->back()->with('error', "Cannot approve assessment. All questions must be marked 'Reviewed OK' first. (Current: {$reviewedOkCount}/{$totalQuestionsCount} Reviewed OK).");
+        if ($flaggedCount > 0) {
+            return redirect()->back()->with('error', "Cannot approve assessment. {$flaggedCount} question(s) are flagged for revision. Resolve all flags before approving.");
         }
 
         $note = $request->input('notes', 'Assessment approved by Repository Manager.');
