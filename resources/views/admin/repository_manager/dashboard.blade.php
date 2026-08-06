@@ -375,7 +375,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="{{ route('admin.question-banks.show', $qb->id) }}" style="padding:.35rem .75rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.45rem;font-size:.72rem;font-weight:700;text-decoration:none;">
+                                    <a href="{{ route('admin.repository-manager.question-bank-validate', $qb->id) }}" style="padding:.35rem .75rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.45rem;font-size:.72rem;font-weight:700;text-decoration:none;">
                                         Review Bank →
                                     </a>
                                 </td>
