@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Focused Question Revision Editor — iC.edu Platform')
+@section('title', 'Full Question Revision Editor — iC.edu Platform')
 
 @push('styles')
 <style>
@@ -18,15 +18,35 @@
     border-radius: 1.25rem;
     padding: 1.75rem;
 }
+.fre-section {
+    background: #080f1d;
+    border: 1px solid #1e293b;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    transition: all .2s ease;
+}
 .fre-highlight {
     border: 2px solid #fb7185 !important;
-    box-shadow: 0 0 20px rgba(251,113,133,0.3) !important;
-    animation: pulseBorder 2s infinite ease-in-out;
+    box-shadow: 0 0 20px rgba(251,113,133,0.35) !important;
+    animation: pulseHighlight 2s infinite ease-in-out;
 }
-@keyframes pulseBorder {
+@keyframes pulseHighlight {
     0%, 100% { border-color: #fb7185; }
     50% { border-color: #f43f5e; }
 }
+.fre-val-badge {
+    padding: .3rem .65rem;
+    border-radius: .4rem;
+    font-size: .72rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+.fre-val-badge--pass { background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+.fre-val-badge--fail { background: rgba(244,63,94,.15); color: #fb7185; border: 1px solid rgba(244,63,94,.3); }
+
 .fre-progress-bar {
     height: 8px;
     background: #1e293b;
@@ -52,13 +72,13 @@
         </a>
     </div>
 
-    {{-- PART 2: REPOSITORY REVISION MODE BANNER --}}
+    {{-- REPOSITORY REVISION OVERLAY GOVERNANCE BANNER --}}
     <div class="fre-banner">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
             <div>
                 <span style="font-size:.72rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.08em;">🛠 Focused Repository Revision Mode</span>
                 <h1 style="font-size:1.5rem;font-weight:900;color:#fff;margin:.25rem 0 .2rem;">
-                    {{ $revisionRequest->questionBank?->title }}
+                    {{ $bank?->title ?? 'Repository Asset' }}
                 </h1>
                 <div style="font-size:.82rem;color:#94a3b8;">
                     Requested By: <strong style="color:#e2e8f0;">{{ $revisionRequest->requestedBy?->name ?? 'Repository Manager' }}</strong> • Status: <strong style="color:#fbbf24;text-transform:uppercase;">Needs Revision</strong>
@@ -81,6 +101,31 @@
         </div>
     </div>
 
+    {{-- LIVE VALIDATION CHECKLIST STRIP --}}
+    @php
+        $vChecks = $validationData['checks'] ?? [];
+        $vPassed = $validationData['passed_count'] ?? 0;
+        $vTotal  = $validationData['total_count'] ?? 8;
+    @endphp
+    <div class="fre-panel" style="padding:1.25rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+            <div style="font-size:.88rem;font-weight:900;color:#fff;">
+                📊 Live Validation Checklist ({{ $vPassed }} / {{ $vTotal }} Passed)
+            </div>
+            <span style="font-size:.75rem;font-weight:800;color:{{ $vPassed === $vTotal ? '#34d399' : '#fbbf24' }};">
+                {{ $vPassed === $vTotal ? '✔ 100% Quality Standards Satisfied' : '⚠️ Outstanding Quality Requirements' }}
+            </span>
+        </div>
+
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            @foreach($vChecks as $key => $check)
+            <span class="fre-val-badge {{ $check['passed'] ? 'fre-val-badge--pass' : 'fre-val-badge--fail' }}">
+                {{ $check['passed'] ? '✓' : '✖' }} {{ $check['label'] }}
+            </span>
+            @endforeach
+        </div>
+    </div>
+
     @if(session('success'))
     <div style="background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:800;">
         {{ session('success') }}
@@ -99,89 +144,212 @@
     </div>
     @endif
 
-    {{-- PART 4 & 5: FOCUSED QUESTION EDITOR FORM --}}
+    {{-- FULL QUESTION EDITOR FORM --}}
+    @php
+        $fbLower = strtolower($item->feedback);
+        $highlightPrompt      = str_contains($fbLower, 'prompt');
+        $highlightCategory    = str_contains($fbLower, 'category');
+        $highlightDifficulty  = str_contains($fbLower, 'difficulty');
+        $highlightChoices     = str_contains($fbLower, 'choice') || str_contains($fbLower, 'answer');
+        $highlightExplanation = str_contains($fbLower, 'explanation');
+        $highlightMedia       = str_contains($fbLower, 'media') || str_contains($fbLower, 'attachment');
+    @endphp
+
     <div class="fre-panel">
         <form method="POST" action="{{ route('teacher.repository-revisions.update-question', [$revisionRequest->id, $item->id]) }}">
             @csrf
             <input type="hidden" name="question_id" value="{{ $question->id ?? '' }}">
 
-            <div style="margin-bottom:1.5rem;">
-                <label style="font-size:.82rem;font-weight:800;color:#e2e8f0;display:block;margin-bottom:.4rem;">Question Prompt Text</label>
+            {{-- 1. Category Assignment Section --}}
+            <div id="category-section" class="fre-section {{ $highlightCategory ? 'fre-highlight' : '' }}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">🏷 Academic Subject Category</label>
+                    @if($highlightCategory)
+                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                        ⚠️ Action Required: Assign Category Below
+                    </span>
+                    @endif
+                </div>
+                <select name="category_id" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                    <option value="">-- Select Category --</option>
+                    @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}" {{ ($bank->acl_category_id ?? '') == $cat->id ? 'selected' : '' }}>
+                        {{ $cat->name }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- 2. Question Prompt Section --}}
+            <div id="prompt-section" class="fre-section {{ $highlightPrompt ? 'fre-highlight' : '' }}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">📝 Question Prompt Text</label>
+                    @if($highlightPrompt)
+                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                        ⚠️ Action Required: Update Question Prompt
+                    </span>
+                    @endif
+                </div>
                 <textarea name="prompt" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" required>{{ old('prompt', $question->prompt ?? '') }}</textarea>
             </div>
 
-            {{-- Answer Choices Section (Highlighted if issue related to choices) --}}
-            @php
-                $isChoicesIssue = str_contains(strtolower($item->feedback), 'choice') || str_contains(strtolower($item->feedback), 'answer');
-            @endphp
-            <div id="answer-choices-section" class="p-4 rounded-xl mb-6 bg-slate-950 border border-slate-800 {{ $isChoicesIssue ? 'fre-highlight' : '' }}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;">
-                    <h3 style="font-size:.95rem;font-weight:800;color:#fff;margin:0;">Option Answer Choices</h3>
-                    @if($isChoicesIssue)
+            {{-- 3. Question Type & Difficulty & Points Section --}}
+            <div id="difficulty-section" class="fre-section {{ $highlightDifficulty ? 'fre-highlight' : '' }}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">⚙️ Question Type, Difficulty & Points</label>
+                    @if($highlightDifficulty)
                     <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
-                        ⚠️ Affected Field: Fix Answer Choices Below
+                        ⚠️ Action Required: Adjust Difficulty / Parameters
+                    </span>
+                    @endif
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;">
+                    <div>
+                        <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Question Type</label>
+                        <select name="question_type" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                            <option value="multiple_choice" {{ ($question->question_type->value ?? $question->question_type ?? '') === 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
+                            <option value="listening" {{ ($question->question_type->value ?? $question->question_type ?? '') === 'listening' ? 'selected' : '' }}>Listening</option>
+                            <option value="reading" {{ ($question->question_type->value ?? $question->question_type ?? '') === 'reading' ? 'selected' : '' }}>Reading</option>
+                            <option value="essay" {{ ($question->question_type->value ?? $question->question_type ?? '') === 'essay' ? 'selected' : '' }}>Essay</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Difficulty</label>
+                        <select name="difficulty" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                            <option value="easy" {{ ($question->difficulty ?? '') === 'easy' ? 'selected' : '' }}>Easy</option>
+                            <option value="medium" {{ ($question->difficulty ?? '') === 'medium' ? 'selected' : '' }}>Medium</option>
+                            <option value="hard" {{ ($question->difficulty ?? '') === 'hard' ? 'selected' : '' }}>Hard</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Points</label>
+                        <input type="number" name="points" value="{{ old('points', $question->points ?? 1) }}" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                    </div>
+                </div>
+            </div>
+
+            {{-- 4. Media Asset Manager Section --}}
+            <div id="media-section" class="fre-section {{ $highlightMedia ? 'fre-highlight' : '' }}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">📎 Media Asset Manager</label>
+                    @if($highlightMedia)
+                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                        ⚠️ Action Required: Attach / Replace Media Asset
                     </span>
                     @endif
                 </div>
 
-                @if($question && $question->choices->count() > 0)
+                @if($question->mediaAsset ?? $question->media)
+                @php $m = $question->mediaAsset ?? $question->media; @endphp
+                <div style="background:#0f172a;border:1px solid #334155;padding:.85rem 1rem;border-radius:.75rem;margin-bottom:.85rem;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:.75rem;">
+                        <span style="font-size:1.5rem;">🎧</span>
+                        <div>
+                            <div style="font-size:.82rem;font-weight:800;color:#fff;">{{ $m->title ?? $m->original_name }}</div>
+                            <div style="font-size:.72rem;color:#64748b;">Type: {{ strtoupper($m->type ?? 'FILE') }} • ID: {{ substr($m->id, 0, 8) }}</div>
+                        </div>
+                    </div>
+                    <label style="font-size:.75rem;color:#fb7185;font-weight:700;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                        <input type="checkbox" name="remove_media" value="1" style="accent-color:#f43f5e;">
+                        Remove Media
+                    </label>
+                </div>
+                @endif
+
+                <div>
+                    <label style="font-size:.75rem;color:#cbd5e1;font-weight:700;display:block;margin-bottom:.3rem;">Select / Replace Attached Media:</label>
+                    <select name="media_asset_id" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                        <option value="">-- No Media Asset Attached --</option>
+                        @foreach($mediaAssets as $ma)
+                        <option value="{{ $ma->id }}" {{ ($question->media_asset_id ?? '') == $ma->id ? 'selected' : '' }}>
+                            {{ $ma->title ?? $ma->original_name }} ({{ strtoupper($ma->type ?? 'FILE') }})
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            {{-- 5. Option Answer Choices & Correct Answer Selector --}}
+            <div id="answer-choices-section" class="fre-section {{ $highlightChoices ? 'fre-highlight' : '' }}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;">
+                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">🎯 Option Answer Choices &amp; Correct Selector</label>
+                    @if($highlightChoices)
+                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                        ⚠️ Action Required: Fix Option Choices Below
+                    </span>
+                    @endif
+                </div>
+
+                @if($question->choices->count() > 0)
                     @foreach($question->choices as $cIdx => $choice)
                     <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem;">
-                        <input type="radio" name="correct_choice" value="{{ $choice->id }}" {{ $choice->is_correct ? 'checked' : '' }} style="accent-color:#10b981;width:1.1rem;height:1.1rem;">
+                        <input type="radio" name="correct_choice_id" value="{{ $choice->id }}" {{ $choice->is_correct ? 'checked' : '' }} style="accent-color:#10b981;width:1.2rem;height:1.2rem;" title="Mark as Correct Choice">
+                        <span style="font-weight:800;color:#818cf8;width:1.5rem;">{{ $choice->label ?? chr(65 + $cIdx) }}.</span>
                         <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm" required>
-                        <input type="hidden" name="choices[{{ $choice->id }}][is_correct]" value="{{ $choice->is_correct ? '1' : '0' }}">
+                        <input type="hidden" name="choices[{{ $choice->id }}][label]" value="{{ $choice->label ?? chr(65 + $cIdx) }}">
                     </div>
                     @endforeach
                 @else
-                    <div style="font-size:.8rem;color:#fb7185;padding:.75rem;background:rgba(244,63,94,.1);border-radius:.5rem;">
-                        ⚠️ No choices currently attached. Please save prompt and update choices in repository editor.
+                    <div style="font-size:.8rem;color:#fb7185;padding:.75rem;background:rgba(244,63,94,.1);border-radius:.5rem;margin-bottom:.75rem;">
+                        ⚠️ No answer choices currently attached to this question. Add choices below.
                     </div>
                 @endif
+
+                {{-- Add New Choice Input --}}
+                <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #334155;">
+                    <div style="font-size:.78rem;font-weight:700;color:#818cf8;margin-bottom:.4rem;">+ Add Additional Choice:</div>
+                    <div style="display:flex;gap:.75rem;align-items:center;">
+                        <input type="text" name="new_choice_label" placeholder="Choice Label (e.g. C)" style="width:70px;" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                        <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                        <label style="font-size:.75rem;color:#34d399;font-weight:700;display:flex;align-items:center;gap:.3rem;">
+                            <input type="checkbox" name="new_choice_is_correct" value="1" style="accent-color:#10b981;">
+                            Correct
+                        </label>
+                    </div>
+                </div>
             </div>
 
-            {{-- Explanation Section (Highlighted if issue related to explanation) --}}
-            @php
-                $isExplanationIssue = str_contains(strtolower($item->feedback), 'explanation');
-            @endphp
-            <div id="explanation-section" class="p-4 rounded-xl mb-6 bg-slate-950 border border-slate-800 {{ $isExplanationIssue ? 'fre-highlight' : '' }}">
+            {{-- 6. Pedagogical Explanation Section --}}
+            <div id="explanation-section" class="fre-section {{ $highlightExplanation ? 'fre-highlight' : '' }}">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                    <label style="font-size:.82rem;font-weight:800;color:#e2e8f0;margin:0;">Pedagogical Explanation</label>
-                    @if($isExplanationIssue)
+                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">💡 Pedagogical Explanation &amp; Rationale</label>
+                    @if($highlightExplanation)
                     <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
-                        ⚠️ Affected Field: Provide Detailed Explanation
+                        ⚠️ Action Required: Provide Explanation
                     </span>
                     @endif
                 </div>
-                <textarea name="explanation" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Provide detailed explanation for the correct answer...">{{ old('explanation', $question->explanation ?? '') }}</textarea>
+                <textarea name="explanation" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Provide detailed academic rationale for the correct choice...">{{ old('explanation', $question->explanation ?? '') }}</textarea>
             </div>
 
-            <div style="display:flex;gap:1rem;margin-bottom:1.5rem;">
-                <div style="flex:1;">
-                    <label style="font-size:.82rem;font-weight:800;color:#e2e8f0;display:block;margin-bottom:.4rem;">Difficulty</label>
-                    <select name="difficulty" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
-                        <option value="easy" {{ ($question->difficulty ?? '') === 'easy' ? 'selected' : '' }}>Easy</option>
-                        <option value="medium" {{ ($question->difficulty ?? '') === 'medium' ? 'selected' : '' }}>Medium</option>
-                        <option value="hard" {{ ($question->difficulty ?? '') === 'hard' ? 'selected' : '' }}>Hard</option>
-                    </select>
-                </div>
-                <div style="flex:1;">
-                    <label style="font-size:.82rem;font-weight:800;color:#e2e8f0;display:block;margin-bottom:.4rem;">Points</label>
-                    <input type="number" name="points" value="{{ old('points', $question->points ?? 1) }}" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+            {{-- 7. Tags & Metadata Section --}}
+            <div id="metadata-section" class="fre-section">
+                <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;display:block;margin-bottom:.5rem;">🏷 Tags &amp; Metadata</label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;">
+                    <div>
+                        <label style="font-size:.75rem;color:#cbd5e1;display:block;margin-bottom:.2rem;">Tags (comma separated)</label>
+                        <input type="text" name="tags" value="{{ old('tags', 'toeic, grammar, reading') }}" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                    </div>
+                    <div>
+                        <label style="font-size:.75rem;color:#cbd5e1;display:block;margin-bottom:.2rem;">Repository Version</label>
+                        <input type="text" value="v{{ $bank->current_version ?? '1.0' }}" readonly class="w-full bg-slate-950 border border-slate-800 text-slate-400 rounded-xl p-2.5 text-sm">
+                    </div>
                 </div>
             </div>
 
-            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
-                💾 Save Question Revision & Validate Finding
+            {{-- SAVE QUESTION SUBMIT BUTTON --}}
+            <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
+                💾 Save Question Revision &amp; Validate Quality Standards
             </button>
         </form>
     </div>
 
-    {{-- PART 6 & 7: BOTTOM REVISION PROGRESS & RESUBMIT STRIP --}}
+    {{-- BOTTOM REVISION PROGRESS & RESUBMIT STRIP --}}
     @php
         $totalItems = $revisionRequest->items->count();
         $closedItems = $revisionRequest->items->where('status', 'CLOSED')->count();
         $percentComplete = $totalItems > 0 ? round(($closedItems / $totalItems) * 100) : 0;
-        $allResolved = $closedItems >= $totalItems && $totalItems > 0;
+        $allResolved = $closedItems >= $totalItems && $totalItems > 0 && $vPassed === $vTotal;
     @endphp
 
     <div class="fre-panel" style="border-color:#3730a3;background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);">
@@ -203,12 +371,12 @@
                 <div style="font-size:.9rem;font-weight:800;color:#34d399;">
                     ✔ All Findings Resolved — Ready For Resubmission
                 </div>
-                <div style="font-size:.78rem;color:#94a3b8;">All actionable items have been verified and fixed.</div>
+                <div style="font-size:.78rem;color:#94a3b8;">All actionable items and live validation checklist items pass 100%.</div>
                 @else
                 <div style="font-size:.9rem;font-weight:800;color:#fb7185;">
-                    ⚠️ Remaining Findings: {{ $totalItems - $closedItems }} Unresolved Issue(s)
+                    ⚠️ Remaining Findings: Unresolved Issue(s) Exist
                 </div>
-                <div style="font-size:.78rem;color:#94a3b8;">Complete all remaining findings before resubmitting repository.</div>
+                <div style="font-size:.78rem;color:#94a3b8;">Complete all remaining findings and live validation checklist before resubmitting repository.</div>
                 @endif
             </div>
 
@@ -222,4 +390,14 @@
     </div>
 
 </div>
+
+{{-- SMART AUTO-SCROLL SCRIPT --}}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const highlighted = document.querySelector('.fre-highlight');
+    if (highlighted) {
+        highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+});
+</script>
 @endsection

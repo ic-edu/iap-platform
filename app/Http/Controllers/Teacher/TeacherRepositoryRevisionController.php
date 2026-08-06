@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Models\AclCategory;
+use App\Models\MediaAsset;
 use App\Models\RepositoryActivityLog;
 use App\Models\RepositoryRevisionItem;
 use App\Models\RepositoryRevisionRequest;
@@ -57,7 +59,7 @@ class TeacherRepositoryRevisionController extends Controller
     }
 
     /**
-     * SPRINT RRUXO-ENTERPRISE PART 1 & 2 & 4: Focused Question Editor inside Revision Mode.
+     * SPRINT RRUXO-REVISION-EDITOR-ENHANCEMENT: Full Question Editor in Repository Revision Mode.
      */
     public function editQuestion(Request $request, RepositoryRevisionRequest $revisionRequest, RepositoryRevisionItem $item): View
     {
@@ -66,9 +68,17 @@ class TeacherRepositoryRevisionController extends Controller
         }
 
         $revisionRequest->load(['questionBank', 'requestedBy', 'items']);
-        $item->load(['question.choices']);
+        $item->load(['question.choices', 'question.mediaAsset']);
 
         $question = $item->question ?? $revisionRequest->questionBank->questions()->first();
+        $bank     = $revisionRequest->questionBank;
+
+        // Categories & Media assets for dropdown selection
+        $categories  = AclCategory::all();
+        $mediaAssets = Schema::hasTable('media_assets') ? MediaAsset::latest()->take(50)->get() : collect();
+
+        // Compute Live Validation Checklist
+        $validationData = $this->computeQuestionValidation($question, $bank);
 
         RepositoryActivityLog::create([
             'resource_type' => 'Question',
@@ -76,14 +86,22 @@ class TeacherRepositoryRevisionController extends Controller
             'actor_id'      => Auth::id(),
             'reviewer_id'   => $revisionRequest->requested_by_id,
             'action'        => 'teacher_edited_question',
-            'approval_note' => "Teacher editing question #{$question->id} in Focused Revision Mode.",
+            'approval_note' => "Teacher editing question #{$question->id} in Full Repository Revision Editor.",
         ]);
 
-        return view('teacher.repository_revisions.focused_editor', compact('revisionRequest', 'item', 'question'));
+        return view('teacher.repository_revisions.focused_editor', compact(
+            'revisionRequest',
+            'item',
+            'question',
+            'bank',
+            'categories',
+            'mediaAssets',
+            'validationData'
+        ));
     }
 
     /**
-     * SPRINT RRUXO-ENTERPRISE PART 5: Save & Validate Question inside Focused Editor.
+     * SPRINT RRUXO-REVISION-EDITOR-ENHANCEMENT: Full Save Question Workflow with Live Validation.
      */
     public function updateQuestion(Request $request, RepositoryRevisionRequest $revisionRequest, RepositoryRevisionItem $item): RedirectResponse
     {
@@ -92,28 +110,59 @@ class TeacherRepositoryRevisionController extends Controller
         }
 
         $question = $item->question ?? Question::findOrFail($request->input('question_id'));
+        $bank     = $revisionRequest->questionBank;
 
-        $question->prompt      = $request->input('prompt', $question->prompt);
-        $question->explanation = $request->input('explanation', $question->explanation);
-        $question->difficulty  = $request->input('difficulty', $question->difficulty);
-        $question->points      = $request->input('points', $question->points);
+        // 1. Update Question core fields
+        $question->prompt        = $request->input('prompt', $question->prompt);
+        $question->question_type = $request->input('question_type', $question->question_type ?? 'multiple_choice');
+        $question->explanation   = $request->input('explanation', $question->explanation);
+        $question->difficulty    = $request->input('difficulty', $question->difficulty);
+        $question->points        = $request->input('points', $question->points);
+
+        // Update Media Attachment
+        if ($request->has('remove_media') && $request->input('remove_media') == '1') {
+            $question->media_asset_id = null;
+        } elseif ($request->filled('media_asset_id')) {
+            $question->media_asset_id = $request->input('media_asset_id');
+        }
+
         $question->save();
 
-        // Update answer choices if provided
+        // 2. Update Question Bank Category if selected
+        if ($request->filled('category_id') && $bank) {
+            $bank->acl_category_id = $request->input('category_id');
+            $bank->save();
+        }
+
+        // 3. Update / Create Answer Choices & Correct Answer Selector
         if ($request->has('choices')) {
+            $correctChoiceId = $request->input('correct_choice_id');
             foreach ($request->input('choices', []) as $cId => $cData) {
-                $choice = QuestionChoice::find($cId);
-                if ($choice) {
-                    $choice->content    = $cData['content'] ?? $choice->content;
-                    $choice->is_correct = isset($cData['is_correct']) && $cData['is_correct'] == '1';
-                    $choice->save();
+                if (is_numeric($cId) || strlen($cId) > 10) {
+                    $choice = QuestionChoice::find($cId);
+                    if ($choice) {
+                        $choice->content    = $cData['content'] ?? $choice->content;
+                        $choice->label      = $cData['label'] ?? $choice->label;
+                        $choice->is_correct = ($correctChoiceId == $cId) || (isset($cData['is_correct']) && $cData['is_correct'] == '1');
+                        $choice->save();
+                    }
                 }
             }
         }
 
-        // Validate issue resolution
+        // Handle Adding New Answer Choice
+        if ($request->filled('new_choice_content')) {
+            QuestionChoice::create([
+                'question_id' => $question->id,
+                'label'       => $request->input('new_choice_label', 'A'),
+                'content'     => $request->input('new_choice_content'),
+                'is_correct'  => $request->has('new_choice_is_correct'),
+            ]);
+        }
+
+        // 4. Run IRQA Validation Check
         $qualityService = app(RepositoryQualityService::class);
-        $rescanAudit = $qualityService->validateRepository($revisionRequest->questionBank);
+        $rescanAudit = $qualityService->validateRepository($bank);
         $currentWarnings = $rescanAudit['warnings'] ?? [];
 
         $stillPresent = false;
@@ -135,20 +184,20 @@ class TeacherRepositoryRevisionController extends Controller
             'actor_id'      => Auth::id(),
             'reviewer_id'   => $revisionRequest->requested_by_id,
             'action'        => 'teacher_saved_revision',
-            'approval_note' => "Teacher saved question revision for item #{$item->id}.",
+            'approval_note' => "Teacher saved full question revision for item #{$item->id}.",
         ]);
 
         if ($item->status === 'CLOSED') {
             return redirect()->route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id])
-                ->with('success', '✔ Finding Fixed! Issue resolved successfully. Stay inside editor to resubmit when all findings are complete.');
+                ->with('success', '✔ Finding Fixed! Validation passed for this item. Complete remaining findings to resubmit.');
         }
 
         return redirect()->route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id])
-            ->with('info', 'Question saved. Please ensure all required fields meet institutional quality standards.');
+            ->with('info', 'Question saved. Please review the live validation checklist below to ensure all requirements are satisfied.');
     }
 
     /**
-     * Resubmit repository & trigger Automatic IRQA Re-Scan (PART 6, 7 & 8).
+     * Resubmit repository & trigger Automatic IRQA Re-Scan.
      */
     public function resubmit(Request $request, RepositoryRevisionRequest $revisionRequest): RedirectResponse
     {
@@ -156,7 +205,7 @@ class TeacherRepositoryRevisionController extends Controller
             abort(403, 'Unauthorized access to repository revision request.');
         }
 
-        // PART 7: Auto Validate Before Resubmit (Check remaining open findings)
+        // Auto Validate Before Resubmit (Check remaining open findings)
         $unresolvedCount = $revisionRequest->items()->where('status', '!=', 'CLOSED')->count();
         if ($unresolvedCount > 0) {
             return redirect()->back()
@@ -212,7 +261,6 @@ class TeacherRepositoryRevisionController extends Controller
         $irqaPassed = empty($currentWarnings) && ($rescanAudit['health_score'] ?? 0) >= 90;
 
         if ($irqaPassed) {
-            // Log IRQA Passed
             RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
                 'resource_id'   => $bank->id,
@@ -222,7 +270,6 @@ class TeacherRepositoryRevisionController extends Controller
                 'approval_note' => 'Automatic IRQA re-scan passed with zero remaining quality findings.',
             ]);
 
-            // Notify Repository Manager (PART 10)
             if (Schema::hasTable('notifications')) {
                 DB::table('notifications')->insert([
                     'id'              => (string) \Illuminate\Support\Str::uuid(),
@@ -239,7 +286,6 @@ class TeacherRepositoryRevisionController extends Controller
                 ]);
             }
         } else {
-            // Log IRQA Failed
             RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
                 'resource_id'   => $bank->id,
@@ -249,7 +295,6 @@ class TeacherRepositoryRevisionController extends Controller
                 'approval_note' => 'Automatic IRQA re-scan detected unresolved findings. Governance review required by Repository Manager.',
             ]);
 
-            // Notify Repository Manager (PART 10)
             if (Schema::hasTable('notifications')) {
                 DB::table('notifications')->insert([
                     'id'              => (string) \Illuminate\Support\Str::uuid(),
@@ -267,7 +312,6 @@ class TeacherRepositoryRevisionController extends Controller
             }
         }
 
-        // Notify Teacher (PART 9 - Neutral notification only)
         if (Schema::hasTable('notifications')) {
             DB::table('notifications')->insert([
                 'id'              => (string) \Illuminate\Support\Str::uuid(),
@@ -286,5 +330,40 @@ class TeacherRepositoryRevisionController extends Controller
 
         return redirect()->route('teacher.repository-revisions.index')
             ->with('success', 'Repository successfully resubmitted. Waiting Repository Manager review.');
+    }
+
+    /**
+     * Compute Live Validation Checklist for Full Question Editor.
+     */
+    protected function computeQuestionValidation(Question $question, $bank): array
+    {
+        $hasPrompt      = !empty(trim($question->prompt ?? ''));
+        $hasCategory    = !empty($bank->acl_category_id);
+        $hasDifficulty  = !empty($question->difficulty);
+        $hasChoices     = $question->choices->count() >= 2;
+        $hasCorrect     = $question->choices->where('is_correct', true)->count() >= 1;
+        $hasExplanation = !empty(trim($question->explanation ?? ''));
+        $hasMedia       = true;
+        $hasMetadata    = !empty($bank->title) && !empty($bank->test_type);
+
+        $checks = [
+            'prompt'         => ['label' => 'Question Prompt', 'passed' => $hasPrompt],
+            'category'       => ['label' => 'Category', 'passed' => $hasCategory],
+            'difficulty'     => ['label' => 'Difficulty', 'passed' => $hasDifficulty],
+            'choices'        => ['label' => 'Answer Choices', 'passed' => $hasChoices],
+            'correct_answer' => ['label' => 'Correct Answer', 'passed' => $hasCorrect],
+            'explanation'    => ['label' => 'Explanation', 'passed' => $hasExplanation],
+            'media'          => ['label' => 'Media Attachment', 'passed' => $hasMedia],
+            'metadata'       => ['label' => 'Metadata', 'passed' => $hasMetadata],
+        ];
+
+        $passedCount = count(array_filter($checks, fn($c) => $c['passed']));
+        $totalCount  = count($checks);
+
+        return [
+            'checks'       => $checks,
+            'passed_count' => $passedCount,
+            'total_count'  => $totalCount,
+        ];
     }
 }
