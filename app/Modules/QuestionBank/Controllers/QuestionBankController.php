@@ -271,6 +271,37 @@ class QuestionBankController extends Controller
 
         $questionBank->update(['status' => 'pending_approval']);
 
+        // HOTFIX GOVERNANCE WORKFLOW: Create GovernanceApprovalTask
+        $approvalTask = \App\Models\GovernanceApprovalTask::create([
+            'question_bank_id' => $questionBank->id,
+            'teacher_id'       => $user?->id ?? $questionBank->created_by,
+            'workflow'         => 'APPROVAL',
+            'status'           => 'OPEN',
+            'submitted_at'     => now(),
+        ]);
+
+        // Dispatch Repository Manager Notification
+        if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+            $repoManagers = \App\Models\User::role(['repository-manager', 'super-admin'])->get();
+            foreach ($repoManagers as $rm) {
+                \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                    'id'              => (string) \Illuminate\Support\Str::uuid(),
+                    'type'            => 'repository_submitted_for_approval',
+                    'notifiable_type' => 'App\Models\User',
+                    'notifiable_id'   => $rm->id,
+                    'data'            => json_encode([
+                        'title'        => 'New Repository Submitted',
+                        'message'      => "Repository '{$questionBank->title}' submitted by {$user->name}",
+                        'repository'   => $questionBank->title,
+                        'submitted_by' => $user->name,
+                        'link'         => route('admin.repository-manager.question-bank-validate', $questionBank->id),
+                    ]),
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+            }
+        }
+
         ActivityLogger::log('QUESTION_BANK_SUBMITTED', "Submitted question bank for approval: {$questionBank->title}", $user);
 
         AclAuditTrail::create([
@@ -279,7 +310,7 @@ class QuestionBankController extends Controller
             'action'        => 'submitted',
             'actor_id'      => $user?->id,
             'version'       => $questionBank->current_version ?? '1.0',
-            'reason'        => 'Submitted for Super Admin governance approval',
+            'reason'        => 'Submitted for Repository Manager governance approval',
         ]);
 
         return redirect()->route('admin.question-banks.index')

@@ -339,15 +339,52 @@
     {{-- PRIORITY 2: RECENTLY UPDATED REPOSITORIES & AUDIT LOG (PART 3 & PART 9) --}}
     <div class="rm-section-grid">
 
-        {{-- Panel 3: PART 3 - Recently Updated Repositories (Renamed from Misleading Question Bank Approval Queue) --}}
+        {{-- Panel 3: Open Governance Approval Queue (Task-Driven Governance Queue) --}}
         <div class="rm-panel">
             <div>
                 <div class="rm-panel__header">
-                    <h3 class="rm-panel__title">📂 Recently Updated Repositories</h3>
+                    <h3 class="rm-panel__title">⚡ Open Governance Approval Queue</h3>
+                    <span style="font-size:.7rem;color:#64748b;font-weight:600;">(Recently Updated Repositories)</span>
                     <a href="{{ route('admin.repository-manager.questions-approval') }}" style="font-size:.78rem;color:#818cf8;font-weight:700;text-decoration:none;">Open Queue →</a>
                 </div>
 
-                @if($recentlyUpdatedRepositories->count() > 0)
+                @if(isset($openApprovalTasks) && $openApprovalTasks->count() > 0)
+                    <table class="rm-table">
+                        <thead>
+                            <tr>
+                                <th>Repository Title</th>
+                                <th>Teacher Author</th>
+                                <th>Submitted At</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($openApprovalTasks as $task)
+                            <tr>
+                                <td>
+                                    <div style="font-weight:700;color:#fff;">{{ $task->questionBank?->title ?? 'Repository Asset' }}</div>
+                                    <div style="font-size:.7rem;color:#64748b;">Task ID: {{ substr($task->id, 0, 13) }}</div>
+                                </td>
+                                <td>
+                                    <div style="font-weight:700;color:#e2e8f0;">{{ $task->teacher?->name ?? 'Teacher' }}</div>
+                                </td>
+                                <td style="font-size:.75rem;color:#94a3b8;">{{ $task->submitted_at ? \Carbon\Carbon::parse($task->submitted_at)->diffForHumans() : $task->created_at?->diffForHumans() }}</td>
+                                <td>
+                                    <span style="padding:.2rem .55rem;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;border-radius:.4rem;font-size:.7rem;font-weight:800;text-transform:uppercase;">
+                                        {{ $task->status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ route('admin.repository-manager.question-bank-validate', $task->question_bank_id) }}" style="padding:.35rem .75rem;background:#6366f1;color:#fff;border-radius:.45rem;font-size:.72rem;font-weight:800;text-decoration:none;">
+                                        Validation Workspace →
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @elseif($recentlyUpdatedRepositories->count() > 0)
                     <table class="rm-table">
                         <thead>
                             <tr>
@@ -376,7 +413,7 @@
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.repository-manager.question-bank-validate', $qb->id) }}" style="padding:.35rem .75rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.45rem;font-size:.72rem;font-weight:700;text-decoration:none;">
-                                        Review Bank →
+                                        Validation Workspace →
                                     </a>
                                 </td>
                             </tr>
@@ -385,7 +422,7 @@
                     </table>
                 @else
                     <div style="text-align:center;padding:1.5rem;color:#64748b;font-size:.82rem;background:#080f1d;border-radius:.75rem;border:1px solid #1e293b;">
-                        No recently updated Question Bank repositories.
+                        ✨ Governance queue is empty. No pending approval tasks.
                     </div>
                 @endif
             </div>

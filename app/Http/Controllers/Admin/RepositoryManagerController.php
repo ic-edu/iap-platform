@@ -72,6 +72,21 @@ class RepositoryManagerController extends Controller
             ? QuestionBank::latest()->take(5)->get()
             : collect([]);
 
+        $openApprovalTasks = Schema::hasTable('governance_approval_tasks')
+            ? \App\Models\GovernanceApprovalTask::with(['questionBank', 'teacher'])
+                ->where('status', 'OPEN')
+                ->latest()
+                ->take(10)
+                ->get()
+            : collect([]);
+
+        if (Schema::hasTable('governance_approval_tasks')) {
+            $governanceApprovalCount = \App\Models\GovernanceApprovalTask::where('status', 'OPEN')->count();
+            if ($governanceApprovalCount > 0) {
+                $pendingQuestionsCount = $governanceApprovalCount;
+            }
+        }
+
         return view('admin.repository_manager.dashboard', compact(
             'pendingQuestionsCount',
             'pendingMediaCount',
@@ -86,7 +101,8 @@ class RepositoryManagerController extends Controller
             'urgentAlerts',
             'teacherSubmissionsQueue',
             'teacherPerformanceSummary',
-            'recentlyUpdatedRepositories'
+            'recentlyUpdatedRepositories',
+            'openApprovalTasks'
         ));
     }
 
@@ -388,6 +404,12 @@ class RepositoryManagerController extends Controller
             'approval_note' => $note,
         ]);
 
+        if (Schema::hasTable('governance_approval_tasks')) {
+            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+                ->where('status', 'OPEN')
+                ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
+        }
+
         return redirect()->route('admin.repository-manager.questions-approval')
             ->with('success', 'Question bank successfully approved and published to academic repository.');
     }
@@ -400,6 +422,12 @@ class RepositoryManagerController extends Controller
         $previousBankStatus = $questionBank->status;
         $questionBank->status = 'needs_revision';
         $questionBank->save();
+
+        if (Schema::hasTable('governance_approval_tasks')) {
+            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+                ->where('status', 'OPEN')
+                ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
+        }
 
         $teacherId = $questionBank->created_by ?: ($questionBank->creator?->id ?? $user->id);
 
