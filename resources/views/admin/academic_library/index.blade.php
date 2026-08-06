@@ -104,9 +104,15 @@
                 🛡 IRQA Quality Audit
             </a>
             @endunless
+            @if(Auth::user()?->hasRole('repository-manager'))
+            <a href="{{ route('admin.repository-manager.questions-approval') }}" class="acl-btn" style="font-size:.85rem;padding:.65rem 1.25rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;text-decoration:none;border-radius:.6rem;font-weight:700;">
+                ⚡ Governance Queue
+            </a>
+            @else
             <a href="{{ route('admin.question-banks.index') }}" class="acl-btn" style="font-size:.85rem;padding:.65rem 1.25rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;text-decoration:none;border-radius:.6rem;font-weight:700;">
                 ✏️ Authoring Workspace
             </a>
+            @endif
         </div>
     </div>
 

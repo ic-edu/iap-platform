@@ -162,7 +162,7 @@
         <div class="al-repo-card">
             <div>
                 <div class="al-repo-card__head">
-                    <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="al-repo-card__title">
+                    <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" class="al-repo-card__title">
                         {{ $bank->title }}
                     </a>
                     <span style="padding:.2rem .6rem;border-radius:99px;font-size:.65rem;font-weight:800;text-transform:uppercase;background:rgba(255,255,255,.05);color:{{ $badgeColor }};border:1px solid {{ $badgeColor }}40;white-space:nowrap;">
@@ -193,7 +193,7 @@
                 </div>
             </div>
 
-            <a href="{{ route('admin.question-banks.show', $bank->id) }}" style="display:block;text-align:center;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;transition:background .15s;">
+            <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" style="display:block;text-align:center;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;transition:background .15s;">
                 Open Repository →
             </a>
         </div>

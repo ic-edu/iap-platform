@@ -148,7 +148,7 @@
             <div>
                 <div class="exp-card__head">
                     <div>
-                        <a href="{{ route('admin.question-banks.show', $audit['bank_id']) }}" class="exp-card__title">
+                        <a href="{{ route('admin.repository-manager.question-bank-validate', $audit['bank_id']) }}" class="exp-card__title">
                             {{ $audit['title'] }}
                         </a>
                         <div class="exp-card__sub">
@@ -188,7 +188,7 @@
                 <div style="font-size:.7rem;color:#64748b;">
                     Author: <strong>{{ $audit['governance']['contributor'] }}</strong>
                 </div>
-                <a href="{{ route('admin.question-banks.show', $audit['bank_id']) }}" style="padding:.45rem .95rem;background:#6366f1;color:#fff;border-radius:.5rem;font-size:.78rem;font-weight:700;text-decoration:none;">
+                <a href="{{ route('admin.repository-manager.question-bank-validate', $audit['bank_id']) }}" style="padding:.45rem .95rem;background:#6366f1;color:#fff;border-radius:.5rem;font-size:.78rem;font-weight:700;text-decoration:none;">
                     Open Repository →
                 </a>
             </div>
