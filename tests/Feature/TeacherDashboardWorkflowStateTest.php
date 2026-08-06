@@ -1,0 +1,112 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\RepositoryRevisionRequest;
+use App\Models\User;
+use App\Modules\QuestionBank\Models\QuestionBank;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+use Tests\TestCase;
+
+class TeacherDashboardWorkflowStateTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected User $teacher;
+    protected User $repoManager;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $this->teacher = User::factory()->create([
+            'name'   => 'Teacher Workflow State Test',
+            'email'  => 'teacher_wf_state@icedu.org',
+            'status' => 'active',
+        ]);
+        $this->teacher->assignRole('teacher');
+
+        $this->repoManager = User::factory()->create([
+            'name'   => 'Repository Manager Governance',
+            'email'  => 'repomanager_gov_wf@icedu.org',
+            'status' => 'active',
+        ]);
+        $this->repoManager->assignRole('repository-manager');
+    }
+
+    /**
+     * ACCEPTANCE TEST 1: Teacher with Awaiting Approval = 1, Repository Revision = 1, Drafts = 0.
+     * Expectation: "You're all caught up" MUST NOT appear. Work requiring attention MUST appear.
+     */
+    public function test_1_dashboard_does_not_show_all_caught_up_when_active_revisions_or_approvals_exist()
+    {
+        // 1. Create Question Bank 1: Awaiting Approval = 1
+        $submittedBank = QuestionBank::create([
+            'title'       => 'TOEIC Listening Bank Submitted',
+            'slug'        => 'toeic-listening-bank-submitted',
+            'test_type'   => 'toeic',
+            'status'      => 'pending_approval',
+            'created_by'  => $this->teacher->id,
+            'description' => 'Awaiting approval bank',
+        ]);
+
+        // 2. Create Question Bank 2: Needs Revision / Repository Revision = 1
+        $revisionBank = QuestionBank::create([
+            'title'       => 'TOEIC Reading Bank Needs Revision',
+            'slug'        => 'toeic-reading-bank-needs-revision',
+            'test_type'   => 'toeic',
+            'status'      => 'needs_revision',
+            'created_by'  => $this->teacher->id,
+            'description' => 'Needs revision bank',
+        ]);
+
+        RepositoryRevisionRequest::create([
+            'question_bank_id' => $revisionBank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Please revise option choice labels.',
+        ]);
+
+        // 3. Render Teacher Dashboard
+        $response = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
+
+        $response->assertStatus(200);
+
+        // MUST NOT see "You're all caught up" or "No unfinished authoring work"
+        $response->assertDontSee("You're all caught up");
+        $response->assertDontSee('No unfinished authoring work');
+
+        // MUST see attention header & cards
+        $response->assertSee('You have work requiring attention');
+        $response->assertSee('Repository Revisions');
+        $response->assertSee('Awaiting Approval');
+    }
+
+    /**
+     * ACCEPTANCE TEST 2: Teacher with Awaiting Approval = 0, Repository Revision = 0, Drafts = 0.
+     * Expectation: "You're all caught up" MUST appear.
+     */
+    public function test_2_dashboard_shows_all_caught_up_only_when_no_active_tasks_exist()
+    {
+        // No banks or all published
+        QuestionBank::create([
+            'title'       => 'TOEIC Published Bank',
+            'slug'        => 'toeic-published-bank',
+            'test_type'   => 'toeic',
+            'status'      => 'published',
+            'is_published'=> true,
+            'created_by'  => $this->teacher->id,
+            'description' => 'Published bank',
+        ]);
+
+        $response = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertSee("You're all caught up", false);
+        $response->assertSee('No unfinished authoring work');
+    }
+}

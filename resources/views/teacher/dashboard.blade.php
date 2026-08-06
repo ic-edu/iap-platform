@@ -415,9 +415,34 @@ a.tw-hero__pill:hover { opacity: .8; }
     </div>
 
     {{-- ══════════════════════════════════════════════
-         CONTINUE WORKING SPOTLIGHT SECTION (PART 3)
+         CONTINUE WORKING SPOTLIGHT SECTION (HERO WORKFLOW STATE)
          ══════════════════════════════════════════════ --}}
-    @if(isset($latestDraftBank))
+    @php
+        $pendingRepoRevCount = \App\Models\RepositoryRevisionRequest::where(function ($q) {
+            $q->where('teacher_id', Auth::id())
+              ->orWhereHas('questionBank', fn($bq) => $bq->where('created_by', Auth::id()));
+        })->whereIn('status', ['OPEN', 'IN_PROGRESS'])->count();
+
+        $actionNeededCount = ($draftQuestionBanks ?? 0) + ($draftAssessments ?? 0) + ($needsRevisionAssessments ?? 0) + ($pendingRepoRevCount ?? 0);
+        $inProgressReviewCount = ($pendingApprovalQuestionBanks ?? 0) + ($pendingAssessments ?? 0);
+    @endphp
+
+    @if($pendingRepoRevCount > 0)
+    {{-- STATE A: ACTIONABLE REPOSITORY REVISION SPOTLIGHT --}}
+    <div style="background:linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);border:2px solid #fb7185;border-radius:1.25rem;padding:1.5rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;box-shadow:0 12px 30px -8px rgba(251,113,133,0.3);">
+        <div>
+            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fb7185;">🛠 Action Required • Repository Revision Task</div>
+            <h3 style="font-size:1.25rem;font-weight:900;color:#fff;margin:.25rem 0 .3rem;">You have work requiring attention</h3>
+            <div style="font-size:.82rem;color:#cbd5e1;">You have {{ $pendingRepoRevCount }} repository revision task(s) requiring your immediate attention or revision.</div>
+        </div>
+        <div>
+            <a href="{{ route('teacher.repository-revisions.index') }}" class="tw-qa-btn tw-qa-btn--primary" style="background:#f43f5e;border-color:#fb7185;">
+                🛠 Open Revision Task Center →
+            </a>
+        </div>
+    </div>
+    @elseif(isset($latestDraftBank) && $latestDraftBank)
+    {{-- STATE B: CONTINUE WORKING DRAFT SPOTLIGHT --}}
     <div style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);border:1px solid rgba(99,102,241,.3);border-radius:1.25rem;padding:1.5rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
         <div>
             <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;">⚡ Continue Working</div>
@@ -439,7 +464,22 @@ a.tw-hero__pill:hover { opacity: .8; }
             </a>
         </div>
     </div>
+    @elseif($inProgressReviewCount > 0)
+    {{-- STATE C: INSTITUTIONAL REVIEW IN PROGRESS --}}
+    <div style="background:#0f172a;border:1px solid #3730a3;border-radius:1.25rem;padding:1.5rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
+        <div>
+            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#818cf8;">⏳ Institutional Review In Progress</div>
+            <h3 style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin:.25rem 0 .3rem;">You have work requiring attention</h3>
+            <div style="font-size:.82rem;color:#94a3b8;">You have {{ $inProgressReviewCount }} workflow item(s) that are awaiting institutional review.</div>
+        </div>
+        <div>
+            <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="tw-qa-btn tw-qa-btn--secondary">
+                📋 View Submitted Repositories →
+            </a>
+        </div>
+    </div>
     @else
+    {{-- STATE D: TRUE ALL CAUGHT UP --}}
     <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.5rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.5rem;">
         <div style="font-size:2.25rem;opacity:.8;">🎉</div>
         <div style="font-size:1.05rem;font-weight:800;color:#f1f5f9;">You're all caught up.</div>
@@ -451,7 +491,7 @@ a.tw-hero__pill:hover { opacity: .8; }
     @endif
 
     {{-- ══════════════════════════════════════════════
-         SECTION 2 — SMART KPI CARDS (PART 6, 7, 8, 9)
+         SECTION 2 — SMART KPI CARDS (WORKFLOW SEPARATION)
          ══════════════════════════════════════════════ --}}
     <div class="tw-kpi-grid">
         @if($totalQuestionBanks > 0)
@@ -471,19 +511,19 @@ a.tw-hero__pill:hover { opacity: .8; }
         @endif
 
         {{-- Teacher Awaiting Approval KPI Card --}}
-        @if($pendingTotal > 0)
-        <a href="{{ route('teacher.tests.index', ['status' => 'pending_approval']) }}" class="tw-kpi tw-kpi--amber">
+        @if(($pendingApprovalQuestionBanks ?? 0) > 0)
+        <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⏳</div>
-            <div class="tw-kpi__count">{{ $pendingTotal }}</div>
+            <div class="tw-kpi__count">{{ $pendingApprovalQuestionBanks }}</div>
             <div class="tw-kpi__label">Awaiting Approval</div>
-            <div class="tw-kpi__desc">My Submitted Items Pending Review</div>
+            <div class="tw-kpi__desc">Repositories Submitted for Review</div>
         </a>
         @else
         <a href="javascript:void(0)" onclick="openNoPendingApprovalModal()" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⏳</div>
             <div class="tw-kpi__count">0</div>
             <div class="tw-kpi__label">Awaiting Approval</div>
-            <div class="tw-kpi__desc">No Items Pending Review</div>
+            <div class="tw-kpi__desc">No Repositories Awaiting Review</div>
         </a>
         @endif
 
@@ -503,35 +543,29 @@ a.tw-hero__pill:hover { opacity: .8; }
         </a>
         @endif
 
-        @if($needsRevisionAssessments > 0)
+        @if(($needsRevisionAssessments ?? 0) > 0)
         <a href="{{ route('teacher.revision-center') }}" class="tw-kpi tw-kpi--amber" style="border-color:#f59e0b;">
             <div class="tw-kpi__icon">⚠️</div>
             <div class="tw-kpi__count" style="color:#fbbf24;">{{ $needsRevisionAssessments }}</div>
-            <div class="tw-kpi__label">Needs Revision</div>
-            <div class="tw-kpi__desc">Returned by Repository Manager</div>
+            <div class="tw-kpi__label">Question Revisions</div>
+            <div class="tw-kpi__desc">Question-level items needing update</div>
         </a>
         @else
         <a href="javascript:void(0)" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⚠️</div>
             <div class="tw-kpi__count">0</div>
-            <div class="tw-kpi__label">Needs Revision</div>
-            <div class="tw-kpi__desc">No revision requests</div>
+            <div class="tw-kpi__label">Question Revisions</div>
+            <div class="tw-kpi__desc">No question-level revisions</div>
         </a>
         @endif
 
         {{-- RRWE v1.0 PART 2: Repository Revisions Widget --}}
-        @php
-            $pendingRepositoryRevisionsCount = \App\Models\RepositoryRevisionRequest::where(function ($q) {
-                $q->where('teacher_id', Auth::id())
-                  ->orWhereHas('questionBank', fn($bq) => $bq->where('created_by', Auth::id()));
-            })->whereIn('status', ['OPEN', 'IN_PROGRESS', 'RESUBMITTED'])->count();
-        @endphp
-        @if($pendingRepositoryRevisionsCount > 0)
+        @if(($pendingRepoRevCount ?? 0) > 0)
         <a href="{{ route('teacher.repository-revisions.index') }}" class="tw-kpi tw-kpi--amber" style="border-color:#6366f1;">
             <div class="tw-kpi__icon">🛠</div>
-            <div class="tw-kpi__count" style="color:#818cf8;">{{ $pendingRepositoryRevisionsCount }}</div>
+            <div class="tw-kpi__count" style="color:#818cf8;">{{ $pendingRepoRevCount }}</div>
             <div class="tw-kpi__label">Repository Revisions</div>
-            <div class="tw-kpi__desc">Repository Revision Center →</div>
+            <div class="tw-kpi__desc">Repository-level revision tasks</div>
         </a>
         @else
         <a href="{{ route('teacher.repository-revisions.index') }}" class="tw-kpi tw-kpi--slate">
