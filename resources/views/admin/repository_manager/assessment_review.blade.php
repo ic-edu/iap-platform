@@ -2,6 +2,22 @@
 
 @section('title', 'Review Assessment — Repository Smart Review Engine')
 
+@push('styles')
+<style>
+@media (max-width: 1024px) {
+    .sticky-governance-sidebar {
+        position: static !important;
+    }
+}
+#btn-back-to-top:hover {
+    background: #1e1b4b !important;
+    border-color: #818cf8 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px -5px rgba(99,102,241,.7) !important;
+}
+</style>
+@endpush
+
 @section('content')
 <div style="padding: 1.5rem 0;">
     {{-- Header --}}
@@ -17,8 +33,13 @@
         </div>
     </div>
 
-    {{-- Toast Notification Container --}}
-    <div id="smart-review-toast" style="position:fixed;bottom:2rem;right:2rem;z-index:99999;background:#10b981;color:#fff;padding:.75rem 1.25rem;border-radius:.75rem;font-size:.85rem;font-weight:800;box-shadow:0 20px 25px -5px rgba(0,0,0,.5);display:none;align-items:center;gap:.5rem;transition:opacity .3s ease;">
+    {{-- Floating Back to Top Button (TASK 1, 2, 3, 4) --}}
+    <button id="btn-back-to-top" type="button" title="Back to Top" onclick="window.scrollTo({top:0, behavior:'smooth'})" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;width:3rem;height:3rem;border-radius:9999px;background:#0f172a;border:1px solid #6366f1;color:#fff;font-size:1.25rem;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 25px -5px rgba(99,102,241,.5);opacity:0;pointer-events:none;transition:opacity .3s ease, transform .2s ease;">
+        ↑
+    </button>
+
+    {{-- Toast Notification Container (Positioned above Back to Top button to prevent overlap) --}}
+    <div id="smart-review-toast" style="position:fixed;bottom:5.25rem;right:1.5rem;z-index:99999;background:#10b981;color:#fff;padding:.75rem 1.25rem;border-radius:.75rem;font-size:.85rem;font-weight:800;box-shadow:0 20px 25px -5px rgba(0,0,0,.5);display:none;align-items:center;gap:.5rem;transition:opacity .3s ease;">
         ✨ <span id="toast-message">Review saved.</span>
     </div>
 
@@ -257,8 +278,8 @@
             </div>
         </div>
 
-        {{-- Right: Question Navigator, Governance Decision Form & Audit Log (BUSINESS RULES 4, 5, 6) --}}
-        <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        {{-- Right: Question Navigator, Governance Decision Form & Audit Log (Sticky Sidebar TASK 5) --}}
+        <div class="sticky-governance-sidebar" style="display:flex;flex-direction:column;gap:1.25rem;position:sticky;top:1.5rem;">
             
             {{-- BUSINESS RULE 4: Question Navigator Sidebar Widget --}}
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.25rem;">
@@ -524,5 +545,18 @@ function updateQuestionUI(questionId, data) {
 function capitalize(s) {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
+
+// Back to Top button scroll visibility listener (TASK 1 & 3)
+window.addEventListener('scroll', function() {
+    const btn = document.getElementById('btn-back-to-top');
+    if (!btn) return;
+    if (window.scrollY > 500) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+    } else {
+        btn.style.opacity = '0';
+        btn.style.pointerEvents = 'none';
+    }
+});
 </script>
 @endsection
