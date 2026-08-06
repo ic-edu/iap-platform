@@ -92,9 +92,20 @@
                             ID: {{ substr($rr->id, 0, 13) }} • {{ $rr->created_at?->diffForHumans() }}
                         </div>
                     </div>
+                    @php
+                        $totCount = $rr->items->count();
+                        $clsCount = $rr->items->where('status', 'CLOSED')->count();
+                        $isReadyResubmit = $totCount > 0 && $clsCount >= $totCount;
+                    @endphp
+                    @if($isReadyResubmit)
+                    <span style="padding:.25rem .65rem;border-radius:99px;font-size:.68rem;font-weight:800;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);">
+                        ✔ All Findings Resolved — Ready For Resubmission
+                    </span>
+                    @else
                     <span class="trr-badge trr-badge--{{ strtolower($rr->status) }}">
                         {{ $rr->status }}
                     </span>
+                    @endif
                 </div>
 
                 <div style="font-size:.82rem;color:#cbd5e1;background:#080f1d;padding:.85rem 1rem;border-radius:.65rem;border:1px solid #1e293b;margin-bottom:1rem;">

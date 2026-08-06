@@ -91,18 +91,9 @@
             @endif
 
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem;">
-                @if($item->question_id)
-                <a href="{{ route('admin.question-banks.show', $revisionRequest->question_bank_id) }}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1">
-                    ✏️ Edit Question #{{ substr($item->question_id, 0, 8) }}
+                <a href="{{ route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]) }}" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-sm">
+                    🛠 Open Focused Question Editor →
                 </a>
-                @else
-                <a href="{{ route('admin.question-banks.show', $revisionRequest->question_bank_id) }}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1">
-                    📝 Open Question Bank Editor
-                </a>
-                <a href="{{ route('admin.academic-library.explorer') }}" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-bold text-xs inline-flex items-center gap-1">
-                    📊 Category & Difficulty Manager
-                </a>
-                @endif
             </div>
         </div>
         @endforeach

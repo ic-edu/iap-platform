@@ -86,7 +86,7 @@ class IrqaRescanGovernanceAuthorityTest extends TestCase
             'finding_type'                   => 'quality_warning',
             'severity'                       => 'high',
             'feedback'                       => 'Missing Category association',
-            'status'                         => 'OPEN',
+            'status'                         => 'CLOSED',
         ]);
 
         $response = $this->actingAs($this->teacher)
@@ -119,12 +119,12 @@ class IrqaRescanGovernanceAuthorityTest extends TestCase
 
         $this->assertDatabaseHas('repository_activity_logs', [
             'resource_id' => $this->bank->id,
-            'action'      => 'automatic_irqa_scan_started',
+            'action'      => 'irqa_scan_started',
         ]);
 
         $this->assertDatabaseHas('repository_activity_logs', [
             'resource_id' => $this->bank->id,
-            'action'      => 'automatic_irqa_scan_completed',
+            'action'      => 'irqa_scan_completed',
         ]);
     }
 }

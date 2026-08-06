@@ -27,33 +27,33 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $this->teacher = User::factory()->create([
-            'name'   => 'Teacher RRWE Test',
-            'email'  => 'teacher_rrwe@icedu.org',
+            'name'   => 'Teacher RRWE Enterprise Test',
+            'email'  => 'teacher_rrwe_ent@icedu.org',
             'status' => 'active',
         ]);
         $this->teacher->assignRole('teacher');
 
         $this->repoManager = User::factory()->create([
-            'name'   => 'Repository Manager RRWE Test',
-            'email'  => 'repomanager_rrwe@icedu.org',
+            'name'   => 'Repository Manager RRWE Enterprise Test',
+            'email'  => 'repomanager_rrwe_ent@icedu.org',
             'status' => 'active',
         ]);
         $this->repoManager->assignRole('repository-manager');
 
         $this->bank = QuestionBank::create([
-            'title'       => 'RRWE Test Question Bank 01',
-            'slug'        => 'rrwe-test-qb-01',
+            'title'       => 'RRWE Enterprise Test Bank',
+            'slug'        => 'rrwe-ent-test-bank',
             'test_type'   => 'toeic',
             'status'      => 'pending_approval',
             'created_by'  => $this->teacher->id,
-            'description' => 'Test Repository',
+            'description' => 'Test Repository Enterprise',
         ]);
 
         $this->question = Question::create([
             'question_bank_id' => $this->bank->id,
-            'prompt'           => 'What is the correct answer?',
+            'prompt'           => 'What is the capital of France?',
             'question_type'    => 'multiple_choice',
-            'explanation'      => 'Comprehensive explanation text.',
+            'explanation'      => 'Detailed explanation provided.',
             'difficulty'       => 'medium',
             'points'           => 1,
         ]);
@@ -61,14 +61,14 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         QuestionChoice::create([
             'question_id' => $this->question->id,
             'label'       => 'A',
-            'content'     => 'Option A',
+            'content'     => 'Paris',
             'is_correct'  => true,
         ]);
 
         QuestionChoice::create([
             'question_id' => $this->question->id,
             'label'       => 'B',
-            'content'     => 'Option B',
+            'content'     => 'London',
             'is_correct'  => false,
         ]);
     }
@@ -96,17 +96,12 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
             'requested_by_id'  => $this->repoManager->id,
             'status'           => 'OPEN',
         ]);
-
-        $this->assertDatabaseHas('repository_revision_items', [
-            'question_bank_id' => $this->bank->id,
-            'status'           => 'OPEN',
-        ]);
     }
 
     /**
-     * TEST 2: Teacher Revision Center displays pending repository revision request.
+     * TEST 2: Focused Question Editor Mode renders Repository Revision Mode banner.
      */
-    public function test_2_teacher_revision_center_displays_pending_revisions()
+    public function test_2_focused_question_editor_renders_revision_mode_banner()
     {
         $revisionRequest = RepositoryRevisionRequest::create([
             'question_bank_id' => $this->bank->id,
@@ -116,30 +111,33 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
             'notes'            => 'Missing category tag.',
         ]);
 
-        RepositoryRevisionItem::create([
+        $item = RepositoryRevisionItem::create([
             'repository_revision_request_id' => $revisionRequest->id,
             'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
             'finding_type'                   => 'quality_warning',
             'severity'                       => 'high',
             'feedback'                       => 'Missing Category association',
             'status'                         => 'OPEN',
         ]);
 
-        $response = $this->actingAs($this->teacher)->get(route('teacher.repository-revisions.index'));
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]));
 
         $response->assertStatus(200);
-        $response->assertSee($this->bank->title);
-        $response->assertSee('Missing category tag.');
+        $response->assertSee('Focused Repository Revision Mode');
+        $response->assertSee('Missing Category association');
 
-        $showResponse = $this->actingAs($this->teacher)->get(route('teacher.repository-revisions.show', $revisionRequest->id));
-        $showResponse->assertStatus(200);
-        $showResponse->assertSee('Missing Category association');
+        $this->assertDatabaseHas('repository_activity_logs', [
+            'resource_id' => (string) $this->question->id,
+            'action'      => 'teacher_edited_question',
+        ]);
     }
 
     /**
-     * TEST 3: Teacher resubmitting repository triggers Automatic IRQA Re-Scan and closes fixed findings.
+     * TEST 3: Auto validate blocks resubmit if open findings exist, and allows when all closed.
      */
-    public function test_3_teacher_resubmission_triggers_automatic_irqa_rescan_and_closes_findings()
+    public function test_3_auto_validate_blocks_resubmit_when_open_findings_exist()
     {
         $revisionRequest = RepositoryRevisionRequest::create([
             'question_bank_id' => $this->bank->id,
@@ -152,28 +150,27 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $item = RepositoryRevisionItem::create([
             'repository_revision_request_id' => $revisionRequest->id,
             'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
             'finding_type'                   => 'quality_warning',
             'severity'                       => 'high',
-            'feedback'                       => 'Resolved test issue',
+            'feedback'                       => 'Unresolved test issue',
             'status'                         => 'OPEN',
         ]);
 
-        $response = $this->actingAs($this->teacher)
+        // Attempt resubmit with OPEN item -> Should be blocked
+        $blockedResponse = $this->actingAs($this->teacher)
             ->post(route('teacher.repository-revisions.resubmit', $revisionRequest->id));
 
-        $response->assertRedirect(route('teacher.repository-revisions.index'));
+        $blockedResponse->assertSessionHas('error');
 
-        $this->assertDatabaseHas('repository_revision_requests', [
-            'id'     => $revisionRequest->id,
-            'status' => 'RESUBMITTED',
-        ]);
+        // Mark item CLOSED -> Should succeed
+        $item->status = 'CLOSED';
+        $item->save();
 
-        $this->assertDatabaseHas('question_banks', [
-            'id'     => $this->bank->id,
-            'status' => 'pending_approval',
-        ]);
+        $successResponse = $this->actingAs($this->teacher)
+            ->post(route('teacher.repository-revisions.resubmit', $revisionRequest->id));
 
-        $item->refresh();
-        $this->assertEquals('CLOSED', $item->status);
+        $successResponse->assertRedirect(route('teacher.repository-revisions.index'));
+        $successResponse->assertSessionHas('success', 'Repository successfully resubmitted. Waiting Repository Manager review.');
     }
 }

@@ -276,10 +276,12 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
     });
 });
 
-// RRWE v1.0 PART 3: Teacher Repository Revision Center Routes
+// RRWE v1.0 & RRUXO-ENTERPRISE: Teacher Repository Revision Center Routes
 Route::middleware(['web', 'auth', 'role:teacher|super-admin'])->prefix('teacher/repository-revisions')->group(function () {
     Route::get('/', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'index'])->name('teacher.repository-revisions.index');
     Route::get('/{revisionRequest}', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'show'])->name('teacher.repository-revisions.show');
+    Route::get('/{revisionRequest}/item/{item}/edit', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'editQuestion'])->name('teacher.repository-revisions.edit-question');
+    Route::post('/{revisionRequest}/item/{item}/update', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'updateQuestion'])->name('teacher.repository-revisions.update-question');
     Route::post('/{revisionRequest}/resubmit', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'resubmit'])->name('teacher.repository-revisions.resubmit');
 });
 
