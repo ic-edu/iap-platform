@@ -23,8 +23,8 @@
 
     {{-- Header --}}
     <div>
-        <a href="{{ route('admin.repository-manager.media-approval') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
-            ← Back to Media Approval Center
+        <a href="{{ route('admin.repository-manager.media-approval') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+            ← Back
         </a>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-top:.5rem;">
             <div>

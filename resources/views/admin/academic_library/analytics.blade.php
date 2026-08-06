@@ -65,15 +65,9 @@
 
     {{-- Breadcrumb Navigation --}}
     <div style="display:flex;justify-content:space-between;align-items:center;">
-        @if(Auth::user()?->hasRole('repository-manager'))
-        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
-            ← Back to Repository Manager Dashboard
+        <a href="{{ route('admin.academic-library.quality') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back
         </a>
-        @else
-        <a href="{{ route('admin.academic-library.quality') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
-            ← Back to Quality Dashboard
-        </a>
-        @endif
         <span style="padding:.25rem .75rem;background:#1e293b;color:#94a3b8;border-radius:99px;font-size:.7rem;font-weight:700;">INSTITUTIONAL QUALITY ANALYTICS</span>
     </div>
 

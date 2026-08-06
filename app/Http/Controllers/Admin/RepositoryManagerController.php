@@ -37,9 +37,13 @@ class RepositoryManagerController extends Controller
         $approvedAssessmentsToday = $assessmentMetrics['approvedAssessmentsToday'];
         $needsRevisionCount       = $assessmentMetrics['needsRevisionCount'];
 
-        $duplicatesCount = 3; // Duplicate detection scan results
-        $metadataCompleteness = 96.5;
-        $repositoryHealthScore = 94;
+        // TASK 5: Real Duplicate Count & Dynamic Health Metrics from RepositoryQualityService
+        $qualityService  = app(\App\Services\RepositoryQualityService::class);
+        $globalSummary   = $qualityService->getGlobalQualitySummary();
+        $duplicatesData  = $globalSummary['duplicates'] ?? [];
+        $duplicatesCount = count($duplicatesData['duplicate_titles'] ?? []) + count($duplicatesData['duplicate_prompts'] ?? []);
+        $repositoryHealthScore = $globalSummary['avg_health_score'] ?? 100;
+        $metadataCompleteness  = $qualityService->getAnalyticsData()['metadata_completion'] ?? 100;
 
         $recentActivityLogs = RepositoryActivityLog::with(['actor', 'reviewer'])
             ->latest()

@@ -71,6 +71,16 @@
 .irqa-badge--excellent { background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
 .irqa-badge--good      { background: rgba(129,140,248,.15); color: #818cf8; border: 1px solid rgba(129,140,248,.3); }
 .irqa-badge--warning   { background: rgba(251,113,133,.15); color: #fb7185; border: 1px solid rgba(251,113,133,.3); }
+
+.irqa-count--indigo  { color: #818cf8; }
+.irqa-count--emerald { color: #34d399; }
+.irqa-count--rose    { color: #fb7185; }
+.irqa-count--amber   { color: #fbbf24; }
+.irqa-count--sky     { color: #38bdf8; }
+
+.irqa-dup-panel { background: #1e1022; border: 1px solid rgba(244,63,94,.25); border-radius: 1rem; padding: 1.25rem 1.5rem; }
+.irqa-dup-title { font-size: .9rem; font-weight: 800; color: #fb7185; margin-bottom: .5rem; }
+.irqa-dup-list  { font-size: .8rem; color: #cbd5e1; display: flex; flex-direction: column; gap: .35rem; }
 </style>
 @endpush
 
@@ -79,15 +89,9 @@
 
     {{-- Breadcrumb & Navigation --}}
     <div style="display:flex;justify-content:space-between;align-items:center;">
-        @if(Auth::user()?->hasRole('repository-manager'))
-        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
-            ← Back to Repository Manager Dashboard
+        <a href="{{ route('admin.repository-manager.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back
         </a>
-        @else
-        <a href="{{ route('admin.academic-library.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
-            ← Back to Academic Library
-        </a>
-        @endif
     </div>
 
     {{-- Hero Header --}}
@@ -96,12 +100,9 @@
             <h1 class="irqa-hero__title">🛡 Institutional Repository Quality Assurance (IRQA)</h1>
             <p class="irqa-hero__sub">Comprehensive metadata completeness, difficulty balance, explanation coverage, and governance audit dashboard.</p>
         </div>
-        <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
-            <a href="{{ route('admin.academic-library.explorer') }}" style="padding:.6rem 1.2rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:700;text-decoration:none;">
-                🔍 Repository Explorer
-            </a>
-            <a href="{{ route('admin.academic-library.analytics') }}" style="padding:.6rem 1.2rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#e2e8f0;font-size:.85rem;font-weight:700;text-decoration:none;">
-                📊 Analytics
+        <div>
+            <a href="{{ route('admin.academic-library.explorer') }}" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-colors inline-flex items-center gap-2" style="text-decoration:none;">
+                🔍 Open Repository Explorer
             </a>
         </div>
     </div>
@@ -110,47 +111,47 @@
     <div class="irqa-kpi-grid">
         {{-- Card 1: Total Repositories --}}
         <a href="{{ route('admin.academic-library.explorer', ['filter' => 'all']) }}" class="irqa-kpi">
-            <div class="irqa-kpi__count" style="color:#818cf8;">{{ $summary['total_repositories'] }}</div>
+            <div class="irqa-kpi__count irqa-count--indigo">{{ $summary['total_repositories'] }}</div>
             <div class="irqa-kpi__label">Total Repositories →</div>
         </a>
 
         {{-- Card 2: Healthy Repositories --}}
         <a href="{{ route('admin.academic-library.explorer', ['filter' => 'healthy']) }}" class="irqa-kpi">
-            <div class="irqa-kpi__count" style="color:#34d399;">{{ $summary['healthy_count'] }}</div>
+            <div class="irqa-kpi__count irqa-count--emerald">{{ $summary['healthy_count'] }}</div>
             <div class="irqa-kpi__label">Healthy Repositories →</div>
         </a>
 
         {{-- Card 3: Needs Improvement (TASK 1.3 & TASK 3: Lowest Health Score First) --}}
         <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc']) }}" class="irqa-kpi">
-            <div class="irqa-kpi__count" style="color:#fb7185;">{{ $summary['needs_improvement_count'] }}</div>
+            <div class="irqa-kpi__count irqa-count--rose">{{ $summary['needs_improvement_count'] }}</div>
             <div class="irqa-kpi__label">Needing Improvement →</div>
         </a>
 
         {{-- Card 4: Awaiting Approval (TASK 1.4: Floating Dialog if count == 0) --}}
         @if($summary['pending_approval_count'] > 0)
         <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval']) }}" class="irqa-kpi">
-            <div class="irqa-kpi__count" style="color:#fbbf24;">{{ $summary['pending_approval_count'] }}</div>
+            <div class="irqa-kpi__count irqa-count--amber">{{ $summary['pending_approval_count'] }}</div>
             <div class="irqa-kpi__label">Awaiting Approval →</div>
         </a>
         @else
         <button type="button" onclick="openNoApprovalModal()" class="irqa-kpi" style="text-align:left;background:#0f172a;border:1px solid #1e293b;">
-            <div class="irqa-kpi__count" style="color:#fbbf24;">{{ $summary['pending_approval_count'] }}</div>
+            <div class="irqa-kpi__count irqa-count--amber">{{ $summary['pending_approval_count'] }}</div>
             <div class="irqa-kpi__label">Awaiting Approval ⓘ</div>
         </button>
         @endif
 
         {{-- Card 5: Average Health Score (TASK 1.5: Opens IRQA Analytics) --}}
         <a href="{{ route('admin.academic-library.analytics') }}" class="irqa-kpi">
-            <div class="irqa-kpi__count" style="color:#38bdf8;">{{ $summary['avg_health_score'] }} <span style="font-size:.85rem;color:#64748b;">/ 100</span></div>
+            <div class="irqa-kpi__count irqa-count--sky">{{ $summary['avg_health_score'] }} <span style="font-size:.85rem;color:#64748b;">/ 100</span></div>
             <div class="irqa-kpi__label">Average Health Score 📊</div>
         </a>
     </div>
 
     {{-- Duplicate Detection Alerts Panel (PART 6) --}}
     @if(count($summary['duplicates']['duplicate_titles']) > 0 || count($summary['duplicates']['duplicate_prompts']) > 0)
-    <div style="background:#1e1022;border:1px solid #f43f5e40;border-radius:1rem;padding:1.25rem 1.5rem;">
-        <div style="font-size:.9rem;font-weight:800;color:#fb7185;margin-bottom:.5rem;">⚠️ Duplicate Detection Warnings (PART 6)</div>
-        <div style="font-size:.8rem;color:#cbd5e1;display:flex;flex-direction:column;gap:.35rem;">
+    <div class="irqa-dup-panel">
+        <div class="irqa-dup-title">⚠️ Duplicate Detection Warnings (PART 6)</div>
+        <div class="irqa-dup-list">
             @foreach($summary['duplicates']['duplicate_titles'] as $dupTitle)
             <div>• {{ $dupTitle }}</div>
             @endforeach

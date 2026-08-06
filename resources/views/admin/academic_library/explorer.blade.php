@@ -81,8 +81,8 @@
 
     {{-- Navigation Breadcrumb --}}
     <div style="display:flex;justify-content:space-between;align-items:center;">
-        <a href="{{ route('admin.academic-library.quality') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
-            ← Back to Quality Dashboard
+        <a href="{{ route('admin.academic-library.quality') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back
         </a>
     </div>
 

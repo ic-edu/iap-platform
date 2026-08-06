@@ -256,18 +256,23 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
         Route::post('/questions/{questionBank}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectQuestionBank'])->name('admin.repository-manager.question-bank-reject');
         Route::get('/duplicates', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'duplicates'])->name('admin.repository-manager.duplicates');
 
-        // SPRINT 10.2: Assessment Approval Queue Routes
+        // SPRINT 10.2 & Sprint 11.5 Continuous Improvement: Assessment Approval & Review Routes
         Route::get('/assessments', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentApprovalCenter'])->name('admin.repository-manager.assessment-approval');
-        Route::get('/repository-manager/assessments/{test}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentReview'])
+        Route::get('/assessments/{test}/review', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentReview'])
             ->name('admin.repository-manager.assessment-review');
-        Route::post('/repository-manager/assessments/{test}/questions/{question}/review-ok', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'markQuestionReviewed'])
+        Route::post('/assessments/{test}/questions/{question}/review-ok', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'markQuestionReviewed'])
             ->name('admin.repository-manager.question-review-ok');
-        Route::post('/repository-manager/assessments/{test}/questions/{question}/request-revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestQuestionRevision'])
+        Route::post('/assessments/{test}/questions/{question}/request-revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestQuestionRevision'])
             ->name('admin.repository-manager.question-request-revision');
-        Route::post('/repository-manager/assessments/{test}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveAssessment'])
+        Route::post('/assessments/{test}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveAssessment'])
             ->name('admin.repository-manager.assessment-approve');
         Route::post('/assessments/{test}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionAssessment'])->name('admin.repository-manager.assessment-revision');
         Route::post('/assessments/{test}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectAssessment'])->name('admin.repository-manager.assessment-reject');
+
+        // Backward compatibility redirect for legacy double-prefixed URI
+        Route::get('/repository-manager/assessments/{test}', function ($test) {
+            return redirect()->route('admin.repository-manager.assessment-review', $test);
+        });
     });
 });
 

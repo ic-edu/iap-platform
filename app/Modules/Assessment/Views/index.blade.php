@@ -522,14 +522,9 @@
                                 </form>
                                 @endif
 
-                                {{-- Delete — Non-teachers or non-published --}}
+                                {{-- Request Deletion — Non-teachers or non-published --}}
                                 @if(!Auth::user()?->hasRole('teacher') && (!$test->is_published || Auth::user()?->hasRole('super-admin')))
-                                <form method="POST" action="{{ route('admin.tests.destroy', $test->id) }}" style="display:inline;"
-                                      onsubmit="return confirm('Delete assessment test \'{{ addslashes($test->title) }}\'?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="tb-act tb-act--delete">🗑 Delete</button>
-                                </form>
+                                <button type="button" onclick="openRequestDeletionModal('{{ route('admin.tests.destroy', $test->id) }}', '{{ addslashes($test->title) }}')" class="tb-act tb-act--delete">🗑 Request Deletion</button>
                                 @endif
                             </div>
                         </td>
@@ -644,10 +639,54 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeCreateTestModal();
         closeTbNothingModal();
+        closeRequestDeletionModal();
     }
 });
 @if($errors->any())
 openCreateTestModal();
 @endif
+
+function openRequestDeletionModal(actionUrl, assetTitle) {
+    const modal = document.getElementById('request-deletion-modal');
+    const form = document.getElementById('request-deletion-form');
+    if (modal && form) {
+        form.action = actionUrl;
+        modal.classList.remove('hidden');
+    }
+}
+function closeRequestDeletionModal() {
+    const modal = document.getElementById('request-deletion-modal');
+    if (modal) modal.classList.add('hidden');
+}
 </script>
+
+<!-- Request Deletion Governance Modal (TASK 3) -->
+<div id="request-deletion-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-white">🗑 Request Deletion</h3>
+            <button type="button" onclick="closeRequestDeletionModal()" class="text-slate-400 hover:text-white">✕</button>
+        </div>
+        <form id="request-deletion-form" method="POST" action="">
+            @csrf
+            @method('DELETE')
+            <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3 mb-4">
+                <p class="text-xs text-slate-300 font-semibold mb-1">
+                    This action will <strong>NOT</strong> permanently delete this assessment test.
+                </p>
+                <p class="text-[11px] text-slate-400">
+                    A deletion request will be submitted to Super Admin for approval.
+                </p>
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reason (required)</label>
+                <textarea name="notes" required rows="3" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none" placeholder="Provide justification for deletion request..."></textarea>
+            </div>
+            <div class="flex justify-end gap-2 text-xs font-bold">
+                <button type="button" onclick="closeRequestDeletionModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-500 shadow-lg">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endpush
