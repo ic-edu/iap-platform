@@ -85,10 +85,19 @@
 
                 <!-- Topbar Actions -->
                 <div class="flex items-center gap-3">
-                    <!-- Quick Action Button -->
+                    <!-- Topbar Action Button (Role-Aware: Dashboard for Repository Manager, Quick Action for others) -->
+                    @if(Auth::user()?->hasRole('repository-manager'))
+                    <a href="{{ route('admin.repository-manager.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Repository Manager Dashboard">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                        <span>Dashboard</span>
+                    </a>
+                    @else
                     <button onclick="document.getElementById('quick-action-modal').classList.remove('hidden')" class="hidden sm:inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors shadow-sm">
                         <span>+ Quick Action</span>
                     </button>
+                    @endif
 
                     <!-- Notifications Dropdown (NOTIFICATION-001) -->
                     <div class="relative" id="notifications-bell-container">
