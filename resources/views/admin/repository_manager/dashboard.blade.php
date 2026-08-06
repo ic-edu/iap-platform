@@ -42,10 +42,10 @@
     line-height: 1.5;
 }
 
-/* KPI Cards Grid (7 Cards Full Width) */
+/* Actionable KPI Cards Grid (Priority 1) */
 .rm-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     gap: 1.25rem;
     width: 100%;
 }
@@ -61,7 +61,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 140px;
+    min-height: 135px;
 }
 .rm-kpi-card:hover {
     border-color: #6366f1;
@@ -70,17 +70,17 @@
 }
 
 .rm-kpi-lbl {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 800;
     color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 .rm-kpi-val {
-    font-size: 2.25rem;
+    font-size: 2.15rem;
     font-weight: 900;
     line-height: 1;
-    margin: 0.65rem 0 0.35rem 0;
+    margin: 0.5rem 0 0.25rem 0;
 }
 .rm-kpi-sub {
     font-size: 0.75rem;
@@ -117,7 +117,7 @@
     margin-bottom: 1.25rem;
 }
 .rm-panel__title {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 800;
     color: #ffffff;
     margin: 0;
@@ -136,7 +136,7 @@
 @section('content')
 <div class="rm-command-center">
 
-    {{-- Executive Full Width Hero --}}
+    {{-- Executive Mission Control Hero (PART 1) --}}
     <div class="rm-hero">
         <div>
             <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.5rem;">
@@ -147,64 +147,60 @@
             </div>
             <h1 class="rm-hero__title">Repository Manager Command Center</h1>
             <p class="rm-hero__sub">
-                Institutional Quality Assurance • Metadata Compliance • Passage Verification • Duplicate Prevention • Audit Logging
+                Actionable decision engine for quality assurance, assessment approval, passage verification, and duplicate prevention.
             </p>
         </div>
 
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-            <a href="{{ route('admin.repository-manager.media-approval') }}" style="padding:.7rem 1.35rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);">
-                Review Pending Media ({{ $pendingMediaCount }})
+        {{-- PART 1: MISSION CONTROL PRIMARY HEADER BUTTONS --}}
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+            {{-- 1. Notifications Center Button --}}
+            <button type="button" onclick="if (typeof toggleNotificationsDropdown === 'function') { toggleNotificationsDropdown(); } else { window.location.href='#'; }" style="padding:.7rem 1.2rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;">
+                🔔 Notifications
+            </button>
+
+            {{-- 2. IRQA Repository Explorer --}}
+            <a href="{{ route('admin.academic-library.explorer') }}" style="padding:.7rem 1.2rem;background:#1e293b;border:1px solid #334155;color:#e0e7ff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+                🔍 IRQA Explorer
             </a>
-            <a href="{{ route('admin.repository-manager.questions-approval') }}" style="padding:.7rem 1.35rem;background:#1e293b;border:1px solid #3730a3;color:#e0e7ff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;">
-                Review Question Banks ({{ $pendingQuestionsCount }})
-            </a>
-            <a href="{{ route('admin.repository-manager.duplicates') }}" style="padding:.7rem 1.35rem;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;">
-                🔍 Duplicate Center
+
+            {{-- 3. Aggregated Governance Queue --}}
+            <a href="{{ route('admin.repository-manager.assessment-approval') }}" style="padding:.7rem 1.25rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);display:inline-flex;align-items:center;gap:.4rem;">
+                ⚡ Governance Queue ({{ $pendingAssessmentsCount + $pendingMediaCount + $pendingQuestionsCount }})
             </a>
         </div>
     </div>
 
-    {{-- TASK 2 & 3: CLICKABLE KPI CARDS (7 CARDS FULL WIDTH GRID) --}}
+    {{-- PRIORITY 1: ACTIONABLE MISSION CONTROL KPI CARDS (PART 2 & PART 5) --}}
     <div class="rm-kpi-grid">
         
-        {{-- Card 0: Pending Assessment Reviews (PART B - SPRINT 10.2) --}}
+        {{-- Card 1: Pending Assessment Reviews --}}
         <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="rm-kpi-card" style="border-color:#6366f1;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Pending Assessments</span>
                 <span style="font-size:1.5rem;">📋</span>
             </div>
             <div class="rm-kpi-val" style="color:#6366f1;">{{ $pendingAssessmentsCount }}</div>
-            <div class="rm-kpi-sub">Assessment Approval Queue →</div>
+            <div class="rm-kpi-sub">Review Queue →</div>
         </a>
 
-        {{-- Card 1: Pending Question Reviews --}}
+        {{-- Card 2: Pending Question Reviews --}}
         <a href="{{ route('admin.repository-manager.questions-approval') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span class="rm-kpi-lbl">Pending Questions</span>
+                <span class="rm-kpi-lbl">Pending Question Banks</span>
                 <span style="font-size:1.5rem;">❓</span>
             </div>
             <div class="rm-kpi-val" style="color:#fbbf24;">{{ $pendingQuestionsCount }}</div>
-            <div class="rm-kpi-sub">Question Approval Queue →</div>
+            <div class="rm-kpi-sub">Question Queue →</div>
         </a>
 
-        {{-- Card 2: Pending Media Reviews --}}
+        {{-- Card 3: Pending Media Reviews --}}
         <a href="{{ route('admin.repository-manager.media-approval') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Pending Media</span>
                 <span style="font-size:1.5rem;">🖼</span>
             </div>
             <div class="rm-kpi-val" style="color:#a78bfa;">{{ $pendingMediaCount }}</div>
-            <div class="rm-kpi-sub">Media Approval Queue →</div>
-        </a>
-
-        {{-- Card 3: Pending Repositories --}}
-        <a href="{{ route('admin.academic-library.index') }}?filter=awaiting_approval" class="rm-kpi-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span class="rm-kpi-lbl">Pending Repositories</span>
-                <span style="font-size:1.5rem;">🏛</span>
-            </div>
-            <div class="rm-kpi-val" style="color:#38bdf8;">{{ $pendingRepositoriesCount }}</div>
-            <div class="rm-kpi-sub">Repository Explorer →</div>
+            <div class="rm-kpi-sub">Media Queue →</div>
         </a>
 
         {{-- Card 4: Duplicate Detection --}}
@@ -217,17 +213,17 @@
             <div class="rm-kpi-sub">Duplicate Center →</div>
         </a>
 
-        {{-- Card 5: Repository Coverage --}}
-        <a href="{{ route('admin.academic-library.index') }}" class="rm-kpi-card">
+        {{-- Card 5: Repository Explorer --}}
+        <a href="{{ route('admin.academic-library.explorer') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span class="rm-kpi-lbl">Repository Coverage</span>
-                <span style="font-size:1.5rem;">📊</span>
+                <span class="rm-kpi-lbl">Repository Explorer</span>
+                <span style="font-size:1.5rem;">🏛</span>
             </div>
-            <div class="rm-kpi-val" style="color:#34d399;">100%</div>
-            <div class="rm-kpi-sub">Coverage Analytics →</div>
+            <div class="rm-kpi-val" style="color:#38bdf8;">{{ $pendingRepositoriesCount }}</div>
+            <div class="rm-kpi-sub">Open Explorer →</div>
         </a>
 
-        {{-- Card 6: Metadata Completeness --}}
+        {{-- Card 6: Metadata Compliance --}}
         <a href="{{ route('admin.academic-library.quality') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Metadata Compliance</span>
@@ -244,15 +240,50 @@
                 <span style="font-size:1.5rem;">💚</span>
             </div>
             <div class="rm-kpi-val" style="color:#34d399;">{{ $repositoryHealthScore }}/100</div>
-            <div class="rm-kpi-sub">IRQA Analytics →</div>
+            <div class="rm-kpi-sub">Full Analytics →</div>
         </a>
 
     </div>
 
-    {{-- SECTION 1: QUEUES (TEACHER REVISIONS & QUESTION BANKS) --}}
+    {{-- PRIORITY 1: URGENT ALERTS & TEACHER REVISIONS (PART 4 & PART 9) --}}
     <div class="rm-section-grid">
 
-        {{-- Panel 1: Teacher Revision Queue --}}
+        {{-- Panel 1: Urgent Academic Alerts --}}
+        <div class="rm-panel">
+            <div>
+                <div class="rm-panel__header">
+                    <h3 class="rm-panel__title">🚨 Urgent Academic Alerts</h3>
+                    <a href="{{ route('admin.repository-manager.assessment-approval') }}" style="font-size:.78rem;color:#f87171;font-weight:700;text-decoration:none;">Alert Center →</a>
+                </div>
+
+                @php
+                    $activeAlerts = array_filter($urgentAlerts, fn($alert) => $alert['count'] > 0);
+                @endphp
+
+                @if(count($activeAlerts) > 0)
+                    <div style="display:flex;flex-direction:column;gap:.85rem;">
+                        @foreach($activeAlerts as $alert)
+                        <a href="{{ $alert['link'] }}" style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:.85rem;color:#f87171;text-decoration:none;transition:transform .15s ease;">
+                            <div>
+                                <div style="font-size:.88rem;font-weight:800;">{{ $alert['title'] }}</div>
+                                <div style="font-size:.75rem;color:#fca5a5;margin-top:2px;">Immediate reviewer action required</div>
+                            </div>
+                            <span style="font-size:1.15rem;font-weight:900;background:#ef4444;color:#fff;padding:.25rem .75rem;border-radius:99px;">
+                                {{ $alert['count'] }}
+                            </span>
+                        </a>
+                        @endforeach
+                    </div>
+                @else
+                    {{-- PART 4: COMPACT OPTIMIZED EMPTY STATE --}}
+                    <div style="text-align:center;padding:1.5rem;color:#34d399;font-size:.82rem;background:rgba(52,211,153,.08);border-radius:.75rem;border:1px solid rgba(52,211,153,.2);">
+                        ✅ No urgent alerts. Platform is operating normally.
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- Panel 2: Teacher Revision Queue --}}
         <div class="rm-panel">
             <div>
                 <div class="rm-panel__header">
@@ -295,18 +326,24 @@
                         </tbody>
                     </table>
                 @else
-                    <div style="text-align:center;padding:2.5rem;color:#64748b;font-size:.88rem;">
-                        ✨ All teacher media revisions have been audited and resolved.
+                    {{-- PART 4: COMPACT OPTIMIZED EMPTY STATE --}}
+                    <div style="text-align:center;padding:1.5rem;color:#64748b;font-size:.82rem;background:#080f1d;border-radius:.75rem;border:1px solid #1e293b;">
+                        ✨ No pending teacher revisions. Repository is fully synchronized.
                     </div>
                 @endif
             </div>
         </div>
 
-        {{-- Panel 2: Question Bank Approval Queue --}}
+    </div>
+
+    {{-- PRIORITY 2: RECENTLY UPDATED REPOSITORIES & AUDIT LOG (PART 3 & PART 9) --}}
+    <div class="rm-section-grid">
+
+        {{-- Panel 3: PART 3 - Recently Updated Repositories (Renamed from Misleading Question Bank Approval Queue) --}}
         <div class="rm-panel">
             <div>
                 <div class="rm-panel__header">
-                    <h3 class="rm-panel__title">📂 Question Bank Approval Queue</h3>
+                    <h3 class="rm-panel__title">📂 Recently Updated Repositories</h3>
                     <a href="{{ route('admin.repository-manager.questions-approval') }}" style="font-size:.78rem;color:#818cf8;font-weight:700;text-decoration:none;">Open Queue →</a>
                 </div>
 
@@ -347,19 +384,14 @@
                         </tbody>
                     </table>
                 @else
-                    <div style="text-align:center;padding:2.5rem;color:#64748b;font-size:.88rem;">
-                        No pending Question Bank repositories awaiting review.
+                    <div style="text-align:center;padding:1.5rem;color:#64748b;font-size:.82rem;background:#080f1d;border-radius:.75rem;border:1px solid #1e293b;">
+                        No recently updated Question Bank repositories.
                     </div>
                 @endif
             </div>
         </div>
 
-    </div>
-
-    {{-- SECTION 2: AUDIT LOG & URGENT ALERTS --}}
-    <div class="rm-section-grid">
-
-        {{-- Panel 3: Repository Activity Audit Log --}}
+        {{-- Panel 4: Repository Activity Audit Log --}}
         <div class="rm-panel">
             <div>
                 <div class="rm-panel__header">
@@ -389,97 +421,25 @@
                         @endforeach
                     </div>
                 @else
-                    <div style="text-align:center;padding:2.5rem;color:#64748b;font-size:.85rem;">
+                    <div style="text-align:center;padding:1.5rem;color:#64748b;font-size:.82rem;background:#080f1d;border-radius:.75rem;border:1px solid #1e293b;">
                         No activity audit logs recorded yet.
                     </div>
                 @endif
             </div>
         </div>
 
-        {{-- Panel 4: Urgent Academic Alerts --}}
-        <div class="rm-panel">
-            <div>
-                <div class="rm-panel__header">
-                    <h3 class="rm-panel__title">🚨 Urgent Academic Alerts</h3>
-                    <a href="{{ route('admin.repository-manager.media-approval') }}" style="font-size:.78rem;color:#f87171;font-weight:700;text-decoration:none;">Alert Center →</a>
-                </div>
-
-                <div style="display:flex;flex-direction:column;gap:.85rem;">
-                    @foreach($urgentAlerts as $alert)
-                    <a href="{{ $alert['link'] }}" style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:.85rem;color:#f87171;text-decoration:none;transition:transform .15s ease;">
-                        <div>
-                            <div style="font-size:.88rem;font-weight:800;">{{ $alert['title'] }}</div>
-                            <div style="font-size:.75rem;color:#fca5a5;margin-top:2px;">Immediate reviewer action required</div>
-                        </div>
-                        <span style="font-size:1.15rem;font-weight:900;background:#ef4444;color:#fff;padding:.25rem .75rem;border-radius:99px;">
-                            {{ $alert['count'] }}
-                        </span>
-                    </a>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-
     </div>
 
-    {{-- SECTION 3: TEACHER PERFORMANCE & QUALITY ANALYTICS --}}
-    <div class="rm-section-grid">
-
-        {{-- Panel 5: Teacher Submission Summary --}}
-        <div class="rm-panel">
-            <div>
-                <div class="rm-panel__header">
-                    <h3 class="rm-panel__title">👨‍🏫 Teacher Submission Summary</h3>
-                    <span style="font-size:.75rem;color:#64748b;font-weight:700;">Author Performance</span>
-                </div>
-
-                <div style="display:flex;flex-direction:column;gap:.85rem;">
-                    @foreach($teacherPerformanceSummary as $tp)
-                    <div style="padding:.9rem 1.1rem;background:#1e293b;border-radius:.75rem;border:1px solid #334155;">
-                        <div style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin-bottom:.35rem;">{{ $tp['name'] }}</div>
-                        <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#94a3b8;">
-                            <span>Submissions: <strong style="color:#fff;">{{ $tp['submitted'] }}</strong></span>
-                            <span>Approved: <strong style="color:#34d399;">{{ $tp['approved'] }}</strong></span>
-                            <span>Revisions: <strong style="color:#fbbf24;">{{ $tp['revisions'] }}</strong></span>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
+    {{-- PRIORITY 3: COMPACT INSTITUTIONAL ANALYTICS CTA BANNER (PART 2 & PART 9) --}}
+    <div style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);border:1px solid #3730a3;border-radius:1.25rem;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+            <div style="font-size:.75rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;">Priority 3 • Institutional Quality Engine</div>
+            <h3 style="font-size:1.2rem;font-weight:800;color:#fff;margin:.2rem 0 0;">Macro IRQA Analytics & Teacher Submission Performance</h3>
+            <p style="font-size:.82rem;color:#94a3b8;margin:0;">Deep-dive into category coverage, difficulty balance distribution, and author performance analytics on the dedicated analytics page.</p>
         </div>
-
-        {{-- Panel 6: IRQA Quality Analytics Overview --}}
-        <div class="rm-panel">
-            <div>
-                <div class="rm-panel__header">
-                    <h3 class="rm-panel__title">📊 Institutional Quality Analytics</h3>
-                    <a href="{{ route('admin.academic-library.analytics') }}" style="font-size:.78rem;color:#34d399;font-weight:700;text-decoration:none;">Full Analytics →</a>
-                </div>
-
-                <div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);padding:1.25rem;border-radius:.85rem;margin-bottom:1rem;">
-                    <div style="font-size:.75rem;font-weight:800;color:#34d399;text-transform:uppercase;">Overall Compliance Status</div>
-                    <div style="font-size:1.5rem;font-weight:900;color:#fff;margin-top:.25rem;">
-                        94 / 100 <span style="font-size:.8rem;color:#94a3b8;font-weight:600;">(Grade A Institutional Benchmark)</span>
-                    </div>
-                </div>
-
-                <div style="display:flex;flex-direction:column;gap:.6rem;font-size:.8rem;color:#cbd5e1;">
-                    <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #1e293b;">
-                        <span>TOEFL Academic Repository</span>
-                        <strong style="color:#34d399;">98.2% Compliant</strong>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #1e293b;">
-                        <span>TOEIC Business Repository</span>
-                        <strong style="color:#34d399;">96.5% Compliant</strong>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;padding:.5rem 0;">
-                        <span>IELTS International Repository</span>
-                        <strong style="color:#34d399;">95.0% Compliant</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        <a href="{{ route('admin.academic-library.analytics') }}" style="padding:.7rem 1.35rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+            Open Full Analytics →
+        </a>
     </div>
 
 </div>

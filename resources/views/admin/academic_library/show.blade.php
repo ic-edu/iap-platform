@@ -92,13 +92,12 @@
 @section('content')
 <div class="al-cat-workspace">
 
-    {{-- Breadcrumbs --}}
-    <div style="font-size:.82rem;color:#64748b;">
-        <a href="{{ route('admin.academic-library.index') }}" style="color:#818cf8;font-weight:700;text-decoration:none;">
-            Academic Library
+    {{-- Breadcrumbs / Back Navigation (PART 7) --}}
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <a href="{{ route('admin.academic-library.index') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back
         </a>
-        <span style="margin: 0 .4rem;">→</span>
-        <span style="color:#e2e8f0;font-weight:700;">{{ $category->name }}</span>
+        <span style="color:#94a3b8;font-size:.8rem;font-weight:700;">Category: {{ $category->name }}</span>
     </div>
 
     {{-- Hero Header --}}
