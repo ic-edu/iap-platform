@@ -13,9 +13,39 @@
         ];
     @endphp
 
+    @php
+        $from = request('from');
+        $testId = request('test_id');
+
+        if ($from === 'dashboard') {
+            $backUrl = route('teacher.dashboard');
+            $backLabel = '← Back to Teacher Dashboard';
+        } elseif ($from === 'test_builder' && $testId) {
+            $backUrl = route('teacher.tests.show', $testId);
+            $backLabel = '← Back to Assessment Test Builder';
+        } elseif ($from === 'revision_center') {
+            $backUrl = route('teacher.revision-center');
+            $backLabel = '← Back to Revision Center';
+        } elseif (Auth::user()?->hasRole('teacher')) {
+            $backUrl = route('teacher.question-banks.index');
+            $backLabel = '← Back to Question Banks';
+        } elseif (Auth::user()?->hasRole('repository-manager')) {
+            $backUrl = route('admin.repository-manager.questions-approval');
+            $backLabel = '← Back to Governance Queue';
+        } else {
+            $backUrl = route('admin.question-banks.index');
+            $backLabel = '← Back to Question Banks';
+        }
+    @endphp
+
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <a href="{{ route('admin.question-banks.index') }}" class="text-xs text-slate-400 hover:text-white transition-colors">&larr; Back to Question Banks</a>
+            <div class="flex items-center gap-3 mb-1">
+                <a href="{{ $backUrl }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">{{ $backLabel }}</a>
+                @if(Auth::user()?->hasRole('teacher'))
+                    <a href="{{ route('teacher.dashboard') }}" class="text-xs text-slate-400 hover:text-white font-semibold transition-colors">🏠 Dashboard</a>
+                @endif
+            </div>
             <div class="flex items-center gap-3 mt-1">
                 <h1 class="text-2xl font-bold text-white">{{ $questionBank->title }}</h1>
                 @php

@@ -84,13 +84,28 @@
 @section('content')
 <div class="al-workspace">
 
-    @if(Auth::user()?->hasRole('repository-manager'))
-    <div>
-        <a href="{{ route('admin.repository-manager.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;display:inline-block;margin-bottom:.5rem;">
+    @php
+        if (Auth::user()?->hasRole('teacher')) {
+            $alBackUrl = route('teacher.dashboard');
+        } elseif (Auth::user()?->hasRole('repository-manager')) {
+            $alBackUrl = route('admin.repository-manager.dashboard');
+        } elseif (Auth::user()?->hasRole('super-admin')) {
+            $alBackUrl = route('super-admin.dashboard');
+        } else {
+            $alBackUrl = route('admin.dashboard');
+        }
+    @endphp
+
+    <div style="display:flex;gap:1rem;align-items:center;margin-bottom:.5rem;">
+        <a href="{{ $alBackUrl }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;display:inline-block;">
             ← Back
         </a>
+        @if(Auth::user()?->hasRole('teacher'))
+        <a href="{{ route('teacher.dashboard') }}" style="color:#94a3b8;font-size:.8rem;font-weight:700;text-decoration:none;display:inline-block;">
+            🏠 Dashboard
+        </a>
+        @endif
     </div>
-    @endif
 
     {{-- Hero Header --}}
     <div class="al-hero">

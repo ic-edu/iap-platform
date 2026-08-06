@@ -10,9 +10,12 @@
             <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin:0 0 .3rem;">⚠️ Teacher Revision Center</h1>
             <p style="font-size:.88rem;color:#94a3b8;margin:0;">Review Repository Manager feedback notes and revise returned Question Banks and Assessments.</p>
         </div>
-        <div>
-            <a href="{{ route('teacher.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+        <div style="display:flex;gap:.75rem;align-items:center;">
+            <a href="{{ route('teacher.dashboard') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
                 ← Back
+            </a>
+            <a href="{{ route('teacher.dashboard') }}" style="padding:.6rem 1.1rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+                🏠 Dashboard
             </a>
         </div>
     </div>

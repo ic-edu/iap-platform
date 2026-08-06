@@ -31,12 +31,18 @@
             </div>
             <h1 style="font-size:1.75rem;font-weight:800;color:#fff;margin:0;">{{ $test->title }}</h1>
         </div>
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+            @if(request('from') === 'revision_center')
             <a href="{{ route('teacher.revision-center') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
-                ⬅ Revision Center
+                ← Back to Revision Center
             </a>
+            @else
             <a href="{{ route('teacher.tests.index') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
-                📋 All Assessments
+                ← Back to Assessments
+            </a>
+            @endif
+            <a href="{{ route('teacher.dashboard') }}" style="padding:.6rem 1.1rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+                🏠 Dashboard
             </a>
         </div>
     </div>

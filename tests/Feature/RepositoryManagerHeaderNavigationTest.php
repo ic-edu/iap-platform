@@ -70,13 +70,14 @@ class RepositoryManagerHeaderNavigationTest extends TestCase
     }
 
     /**
-     * TEST 3: Non-Repository Manager (Teacher) continues rendering + Quick Action.
+     * TEST 3: Teacher header renders Dashboard button instead of Quick Action (TEACHER-NAV-STD).
      */
-    public function test_3_teacher_header_retains_quick_action()
+    public function test_3_teacher_header_renders_dashboard_button()
     {
         $response = $this->actingAs($this->teacher)->get(route('admin.question-banks.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('+ Quick Action');
+        $response->assertSee('🏠 Dashboard');
+        $response->assertDontSee('+ Quick Action');
     }
 }

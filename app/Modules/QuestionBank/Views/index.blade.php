@@ -359,6 +359,17 @@
     </div>
     @endif
 
+    @if(Auth::user()?->hasRole('teacher'))
+    <div style="display:flex;gap:1.25rem;align-items:center;margin-bottom:1rem;">
+        <a href="{{ route('teacher.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back to Teacher Dashboard
+        </a>
+        <a href="{{ route('teacher.dashboard') }}" style="color:#cbd5e1;font-size:.82rem;font-weight:700;text-decoration:none;">
+            🏠 Dashboard
+        </a>
+    </div>
+    @endif
+
     {{-- Hero Header --}}
     <div class="acl-hero">
         <div>
