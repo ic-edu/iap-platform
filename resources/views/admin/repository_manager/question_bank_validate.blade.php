@@ -81,6 +81,40 @@
         {{-- Left Column: Question Navigator & Detailed Question Preview --}}
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
 
+            {{-- RRWE v1.0 PART 7: Repository Findings & Active Revisions Panel --}}
+            @php
+                $activeRevisionRequest = \App\Models\RepositoryRevisionRequest::with(['items', 'requestedBy'])
+                    ->where('question_bank_id', $questionBank->id)
+                    ->latest()
+                    ->first();
+            @endphp
+            @if($activeRevisionRequest)
+            <div class="qbw-card" style="border-color:#6366f1;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">
+                        🔍 Active Governance Revision Request ({{ $activeRevisionRequest->status }})
+                    </h3>
+                    <span style="font-size:.75rem;color:#818cf8;font-weight:700;">Task ID: {{ substr($activeRevisionRequest->id, 0, 8) }}</span>
+                </div>
+                <div style="font-size:.82rem;color:#cbd5e1;background:#080f1d;padding:.85rem;border-radius:.6rem;border:1px solid #1e293b;margin-bottom:1rem;">
+                    <strong>Reviewer Feedback:</strong> "{{ $activeRevisionRequest->notes }}"
+                </div>
+                @if($activeRevisionRequest->items->count() > 0)
+                <div style="display:flex;flex-direction:column;gap:.5rem;">
+                    <div style="font-size:.72rem;font-weight:800;color:#94a3b8;text-transform:uppercase;">Tracked Quality Findings:</div>
+                    @foreach($activeRevisionRequest->items as $item)
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .85rem;background:#1e293b;border-radius:.5rem;font-size:.78rem;color:#e2e8f0;">
+                        <span>⚠️ {{ $item->feedback }}</span>
+                        <span style="padding:.15rem .5rem;border-radius:.3rem;font-size:.68rem;font-weight:800;text-transform:uppercase;{{ $item->status === 'CLOSED' ? 'background:rgba(52,211,153,.2);color:#34d399;' : 'background:rgba(244,63,94,.2);color:#fb7185;' }}">
+                            {{ $item->status }}
+                        </span>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+            </div>
+            @endif
+
             <div class="qbw-card">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
                     <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">

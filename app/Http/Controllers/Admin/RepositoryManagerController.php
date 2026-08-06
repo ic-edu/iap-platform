@@ -392,6 +392,67 @@ class RepositoryManagerController extends Controller
         $questionBank->status = 'needs_revision';
         $questionBank->save();
 
+        // RRWE v1.0 PART 1 & 4: Create RepositoryRevisionRequest and Items
+        $revisionRequest = \App\Models\RepositoryRevisionRequest::create([
+            'question_bank_id' => $questionBank->id,
+            'teacher_id'       => $questionBank->created_by,
+            'requested_by_id'  => $user->id,
+            'status'           => 'OPEN',
+            'notes'            => $note,
+        ]);
+
+        $qualityService = app(\App\Services\RepositoryQualityService::class);
+        $audit = $qualityService->validateRepository($questionBank);
+
+        if (!empty($audit['warnings'])) {
+            foreach ($audit['warnings'] as $warning) {
+                \App\Models\RepositoryRevisionItem::create([
+                    'repository_revision_request_id' => $revisionRequest->id,
+                    'question_bank_id'               => $questionBank->id,
+                    'finding_type'                   => 'quality_warning',
+                    'severity'                       => 'high',
+                    'feedback'                       => $warning,
+                    'suggested_fix'                  => 'Please review and update this repository item.',
+                    'status'                         => 'OPEN',
+                ]);
+
+                \App\Models\RepositoryFinding::create([
+                    'question_bank_id' => $questionBank->id,
+                    'finding_code'     => 'IRQA_WARN',
+                    'title'            => $warning,
+                    'description'      => $warning,
+                    'severity'         => 'high',
+                    'status'           => 'OPEN',
+                ]);
+            }
+        } else {
+            \App\Models\RepositoryRevisionItem::create([
+                'repository_revision_request_id' => $revisionRequest->id,
+                'question_bank_id'               => $questionBank->id,
+                'finding_type'                   => 'reviewer_feedback',
+                'severity'                       => 'medium',
+                'feedback'                       => $note,
+                'suggested_fix'                  => 'Address reviewer notes in repository.',
+                'status'                         => 'OPEN',
+            ]);
+        }
+
+        if (Schema::hasTable('notifications')) {
+            \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                'id'              => (string) \Illuminate\Support\Str::uuid(),
+                'type'            => 'repository_revision_requested',
+                'notifiable_type' => 'App\Models\User',
+                'notifiable_id'   => $questionBank->created_by,
+                'data'            => json_encode([
+                    'title'   => 'Repository Revision Requested',
+                    'message' => "Repository Manager requested revision for '{$questionBank->title}'. Notes: {$note}",
+                    'link'    => route('teacher.repository-revisions.show', $revisionRequest->id),
+                ]),
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
+        }
+
         RepositoryActivityLog::create([
             'resource_type' => 'QuestionBank',
             'resource_id'   => $questionBank->id,

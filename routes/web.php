@@ -276,6 +276,13 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
     });
 });
 
+// RRWE v1.0 PART 3: Teacher Repository Revision Center Routes
+Route::middleware(['web', 'auth', 'role:teacher|super-admin'])->prefix('teacher/repository-revisions')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'index'])->name('teacher.repository-revisions.index');
+    Route::get('/{revisionRequest}', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'show'])->name('teacher.repository-revisions.show');
+    Route::post('/{revisionRequest}/resubmit', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'resubmit'])->name('teacher.repository-revisions.resubmit');
+});
+
 Route::middleware(['web', 'auth', 'role:teacher|repository-manager|super-admin'])->group(function () {
     Route::post('/admin/repository-manager/assessments/{test}/submit', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'submitAssessmentForReview'])->name('admin.tests.submit');
 });

@@ -519,6 +519,26 @@ a.tw-hero__pill:hover { opacity: .8; }
         </a>
         @endif
 
+        {{-- RRWE v1.0 PART 2: Repository Revisions Widget --}}
+        @php
+            $pendingRepositoryRevisionsCount = \App\Models\RepositoryRevisionRequest::where('teacher_id', Auth::id())->whereIn('status', ['OPEN', 'IN_PROGRESS', 'RESUBMITTED'])->count();
+        @endphp
+        @if($pendingRepositoryRevisionsCount > 0)
+        <a href="{{ route('teacher.repository-revisions.index') }}" class="tw-kpi tw-kpi--amber" style="border-color:#6366f1;">
+            <div class="tw-kpi__icon">🛠</div>
+            <div class="tw-kpi__count" style="color:#818cf8;">{{ $pendingRepositoryRevisionsCount }}</div>
+            <div class="tw-kpi__label">Repository Revisions</div>
+            <div class="tw-kpi__desc">Repository Revision Center →</div>
+        </a>
+        @else
+        <a href="{{ route('teacher.repository-revisions.index') }}" class="tw-kpi tw-kpi--slate">
+            <div class="tw-kpi__icon">🛠</div>
+            <div class="tw-kpi__count">0</div>
+            <div class="tw-kpi__label">Repository Revisions</div>
+            <div class="tw-kpi__desc">No repository revisions</div>
+        </a>
+        @endif
+
         @if($draftQuestionBanks > 0)
         <a href="{{ route('admin.question-banks.index', ['status' => 'draft']) }}" class="tw-kpi tw-kpi--slate">
             <div class="tw-kpi__icon">✏️</div>
