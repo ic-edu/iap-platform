@@ -101,11 +101,6 @@
             <h1 class="irqa-hero__title">🛡 Institutional Repository Quality Assurance (IRQA)</h1>
             <p class="irqa-hero__sub">Comprehensive metadata completeness, difficulty balance, explanation coverage, and governance audit dashboard.</p>
         </div>
-        <div>
-            <a href="{{ route('admin.academic-library.explorer') }}" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-colors inline-flex items-center gap-2" style="text-decoration:none;">
-                🔍 Open Repository Explorer
-            </a>
-        </div>
     </div>
 
     {{-- Global Quality Metrics Grid (PART 11 & TASK 1) --}}

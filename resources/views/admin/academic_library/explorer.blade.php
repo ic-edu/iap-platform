@@ -81,7 +81,7 @@
 
     {{-- Navigation Breadcrumb (Part 14: Explicit route destination) --}}
     <div style="display:flex;justify-content:space-between;align-items:center;">
-        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('admin.academic-library.quality') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
     </div>
