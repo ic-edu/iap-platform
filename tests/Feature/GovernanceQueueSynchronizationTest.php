@@ -71,11 +71,11 @@ class GovernanceQueueSynchronizationTest extends TestCase
         $this->assertEquals('APPROVAL', $task->workflow);
         $this->assertEquals($this->teacher->id, $task->teacher_id);
 
-        // Assert Repository Manager Dashboard shows Governance Queue = 1 and Pending Question Banks = 1
+        // Assert Repository Manager Dashboard shows Governance Queue = 1 and does NOT duplicate Pending Question Banks card
         $rmDashboard = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
         $rmDashboard->assertStatus(200);
         $rmDashboard->assertSee('Governance Queue (1)');
-        $rmDashboard->assertSee('Pending Question Banks');
+        $rmDashboard->assertDontSee('Pending Question Banks');
         $rmDashboard->assertSee('IELTS Speaking Interview &amp; Cue Card Prompts', false);
     }
 

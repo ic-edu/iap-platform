@@ -86,7 +86,7 @@ class RepositoryManagerMissionControlTest extends TestCase
         $response = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('✨ No pending teacher revisions. Repository is fully synchronized.');
+        $response->assertSee('✓ No pending teacher revisions.');
     }
 
     /**
@@ -98,10 +98,10 @@ class RepositoryManagerMissionControlTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Review Queue →');
-        $response->assertSee('Question Queue →');
+        $response->assertDontSee('Question Queue →');
         $response->assertSee('Media Queue →');
         $response->assertSee('Duplicate Center →');
-        $response->assertSee('Open Explorer →');
+        $response->assertSee('Total Repositories →');
         $response->assertSee('Metadata Validator →');
         $response->assertSee('Full Analytics →');
     }

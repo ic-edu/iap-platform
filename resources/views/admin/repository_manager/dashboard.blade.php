@@ -183,17 +183,7 @@
             <div class="rm-kpi-sub">Review Queue →</div>
         </a>
 
-        {{-- Card 2: Pending Question Reviews --}}
-        <a href="{{ route('admin.repository-manager.questions-approval') }}" class="rm-kpi-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span class="rm-kpi-lbl">Pending Question Banks</span>
-                <span style="font-size:1.5rem;">❓</span>
-            </div>
-            <div class="rm-kpi-val" style="color:#fbbf24;">{{ $pendingQuestionsCount }}</div>
-            <div class="rm-kpi-sub">Question Queue →</div>
-        </a>
-
-        {{-- Card 3: Pending Media Reviews --}}
+        {{-- Card 2: Pending Media Reviews --}}
         <a href="{{ route('admin.repository-manager.media-approval') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Pending Media</span>
@@ -203,7 +193,7 @@
             <div class="rm-kpi-sub">Media Queue →</div>
         </a>
 
-        {{-- Card 4: Duplicate Detection --}}
+        {{-- Card 3: Duplicate Detection --}}
         <a href="{{ route('admin.repository-manager.duplicates') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Duplicate Detection</span>
@@ -213,17 +203,17 @@
             <div class="rm-kpi-sub">Duplicate Center →</div>
         </a>
 
-        {{-- Card 5: Repository Explorer --}}
+        {{-- Card 4: Repository Explorer --}}
         <a href="{{ route('admin.academic-library.explorer') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Repository Explorer</span>
                 <span style="font-size:1.5rem;">🏛</span>
             </div>
-            <div class="rm-kpi-val" style="color:#38bdf8;">{{ $pendingRepositoriesCount }}</div>
-            <div class="rm-kpi-sub">Open Explorer →</div>
+            <div class="rm-kpi-val" style="color:#38bdf8;">{{ $totalRepositoriesCount }}</div>
+            <div class="rm-kpi-sub">Total Repositories →</div>
         </a>
 
-        {{-- Card 6: Metadata Compliance --}}
+        {{-- Card 5: Metadata Compliance --}}
         <a href="{{ route('admin.academic-library.quality') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Metadata Compliance</span>
@@ -233,7 +223,7 @@
             <div class="rm-kpi-sub">Metadata Validator →</div>
         </a>
 
-        {{-- Card 7: Health Score --}}
+        {{-- Card 6: Health Score --}}
         <a href="{{ route('admin.academic-library.analytics') }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Health Score</span>
@@ -277,7 +267,7 @@
                 @else
                     {{-- PART 4: COMPACT OPTIMIZED EMPTY STATE --}}
                     <div style="text-align:center;padding:1.5rem;color:#34d399;font-size:.82rem;background:rgba(52,211,153,.08);border-radius:.75rem;border:1px solid rgba(52,211,153,.2);">
-                        ✅ No urgent alerts. Platform is operating normally.
+                        ✓ No urgent academic alerts.
                     </div>
                 @endif
             </div>
@@ -328,7 +318,7 @@
                 @else
                     {{-- PART 4: COMPACT OPTIMIZED EMPTY STATE --}}
                     <div style="text-align:center;padding:1.5rem;color:#64748b;font-size:.82rem;background:#080f1d;border-radius:.75rem;border:1px solid #1e293b;">
-                        ✨ No pending teacher revisions. Repository is fully synchronized.
+                        ✓ No pending teacher revisions.
                     </div>
                 @endif
             </div>

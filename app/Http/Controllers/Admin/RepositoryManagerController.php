@@ -37,13 +37,19 @@ class RepositoryManagerController extends Controller
             }
         }
 
-        $pendingQuestionsCount = Schema::hasTable('question_banks')
-            ? QuestionBank::whereIn('status', ['pending', 'pending_approval'])->count()
+        $pendingGovernanceTaskCount = Schema::hasTable('governance_approval_tasks')
+            ? \App\Models\GovernanceApprovalTask::where('status', 'OPEN')->count()
             : 0;
 
+        $pendingQuestionsCount = $pendingGovernanceTaskCount > 0
+            ? $pendingGovernanceTaskCount
+            : (Schema::hasTable('question_banks') ? QuestionBank::whereIn('status', ['pending', 'pending_approval'])->count() : 0);
+
         $pendingMediaCount = RepositoryReviewRequest::where('status', 'pending_review')->count();
-        $pendingRepositoriesCount = Schema::hasTable('question_banks')
-            ? QuestionBank::whereIn('status', ['pending', 'pending_approval'])->count()
+
+        // Part 8: Total repositories accessible in Explorer
+        $totalRepositoriesCount = Schema::hasTable('question_banks')
+            ? QuestionBank::count()
             : 0;
 
         // PART A & PART E: Shared AssessmentWorkflowService Metrics (Single Source of Truth)
@@ -65,11 +71,36 @@ class RepositoryManagerController extends Controller
             ->take(8)
             ->get();
 
-        $urgentAlerts = [
-            ['title' => 'Pending Assessment Queue', 'count' => $pendingAssessmentsCount, 'type' => 'urgent', 'link' => route('admin.repository-manager.assessment-approval')],
-            ['title' => 'Pending Media Revisions', 'count' => $pendingMediaCount, 'type' => 'warning', 'link' => route('admin.repository-manager.media-approval')],
-            ['title' => 'Question Banks Awaiting Review', 'count' => $pendingQuestionsCount, 'type' => 'urgent', 'link' => route('admin.repository-manager.questions-approval')],
-        ];
+        // PART 4: Refactored Urgent Academic Alerts (Excludes normal pending approvals)
+        $irqaFailedCount = Schema::hasTable('repository_findings')
+            ? \App\Models\RepositoryFinding::where('severity', 'high')->where('status', 'OPEN')->count()
+            : 0;
+
+        $urgentAlerts = [];
+        if ($irqaFailedCount > 0) {
+            $urgentAlerts[] = [
+                'title' => 'Critical IRQA Findings Requiring Review',
+                'count' => $irqaFailedCount,
+                'type'  => 'urgent',
+                'link'  => route('admin.academic-library.quality'),
+            ];
+        }
+        if ($pendingMediaCount > 0) {
+            $urgentAlerts[] = [
+                'title' => 'Pending Media Review Requests',
+                'count' => $pendingMediaCount,
+                'type'  => 'warning',
+                'link'  => route('admin.repository-manager.media-approval'),
+            ];
+        }
+        if ($duplicatesCount > 0) {
+            $urgentAlerts[] = [
+                'title' => 'Duplicate Content Detected',
+                'count' => $duplicatesCount,
+                'type'  => 'warning',
+                'link'  => route('admin.repository-manager.duplicates'),
+            ];
+        }
 
         $teacherSubmissionsQueue = RepositoryReviewRequest::with(['submitter'])
             ->where('status', 'pending_review')
@@ -95,17 +126,10 @@ class RepositoryManagerController extends Controller
                 ->get()
             : collect([]);
 
-        if (Schema::hasTable('governance_approval_tasks')) {
-            $governanceApprovalCount = \App\Models\GovernanceApprovalTask::where('status', 'OPEN')->count();
-            if ($governanceApprovalCount > 0) {
-                $pendingQuestionsCount = $governanceApprovalCount;
-            }
-        }
-
         return view('admin.repository_manager.dashboard', compact(
             'pendingQuestionsCount',
             'pendingMediaCount',
-            'pendingRepositoriesCount',
+            'totalRepositoriesCount',
             'pendingAssessmentsCount',
             'approvedAssessmentsToday',
             'needsRevisionCount',
