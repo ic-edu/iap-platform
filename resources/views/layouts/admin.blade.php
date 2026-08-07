@@ -381,7 +381,57 @@
                 loadNotificationFeed();
             }
         }
+
+        // Back to Top Scroll Control Logic
+        (function() {
+            document.addEventListener('DOMContentLoaded', function() {
+                const backToTopBtn = document.getElementById('back-to-top-btn');
+                if (!backToTopBtn) return;
+
+                let isTicking = false;
+
+                function checkScrollPosition() {
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                    if (scrollTop > 500) {
+                        backToTopBtn.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                        backToTopBtn.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+                    } else {
+                        backToTopBtn.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+                        backToTopBtn.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                    }
+                    isTicking = false;
+                }
+
+                window.addEventListener('scroll', function() {
+                    if (!isTicking) {
+                        window.requestAnimationFrame(checkScrollPosition);
+                        isTicking = true;
+                    }
+                }, { passive: true });
+
+                window.scrollToTop = function() {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                };
+            });
+        })();
     </script>
+
+    <!-- Floating Back to Top Control -->
+    <button id="back-to-top-btn" 
+            type="button" 
+            aria-label="Back to top" 
+            title="Back to top"
+            onclick="scrollToTop()"
+            class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 p-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-full shadow-xl shadow-indigo-950/50 border border-indigo-400/30 transition-all duration-300 ease-in-out opacity-0 pointer-events-none translate-y-4 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center justify-center group"
+            style="width: 44px; height: 44px;">
+        <svg class="w-5 h-5 transition-transform group-hover:-translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+        </svg>
+    </button>
+
     @stack('scripts')
 </body>
 </html>
