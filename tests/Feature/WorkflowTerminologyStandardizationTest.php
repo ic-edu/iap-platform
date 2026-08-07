@@ -98,7 +98,7 @@ class WorkflowTerminologyStandardizationTest extends TestCase
         $res->assertStatus(200);
 
         $res->assertSee('Resubmit for Review');
-        $res->assertSee('Resubmit this Assessment for Repository Review?');
+        $res->assertSee('Resubmit Assessment for Review?');
         $res->assertDontSee('Submit Again for Review');
     }
 

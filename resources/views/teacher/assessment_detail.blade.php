@@ -154,10 +154,12 @@
 
                     {{-- Resubmit Button --}}
                     @if(in_array($test->status, ['needs_revision', 'revision_requested', 'draft']))
-                    <form method="POST" action="{{ route('teacher.tests.resubmit', $test->id) }}" style="display:inline;">
+                    <form id="resubmit-assessment-form" method="POST" action="{{ route('teacher.tests.resubmit', $test->id) }}" style="display:inline;">
                         @csrf
                         @if($validationResult['is_valid'])
-                        <button type="submit" onclick="return confirm('Resubmit this Assessment for Repository Review?')" style="padding:.75rem 1.5rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 14px rgba(99,102,241,.35);">
+                        <button type="button" 
+                                onclick="openResubmitModal()" 
+                                style="padding:.75rem 1.5rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 14px rgba(99,102,241,.35);">
                             🚀 {{ $test->status === 'draft' ? 'Submit for Review' : 'Resubmit for Review' }}
                         </button>
                         @else
@@ -293,4 +295,108 @@
         </div>
     </div>
 </div>
+
+{{-- Custom IAP Resubmission Confirmation Modal --}}
+<div id="resubmit-confirmation-modal" 
+     class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="resubmit-modal-title">
+    
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 text-left transform transition-all">
+        
+        {{-- Modal Header --}}
+        <div class="flex justify-between items-start">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-extrabold text-lg shadow-inner flex-shrink-0">
+                    🚀
+                </div>
+                <div>
+                    <h3 id="resubmit-modal-title" class="text-base font-bold text-white leading-tight">
+                        Resubmit Assessment for Review?
+                    </h3>
+                    <p class="text-xs text-indigo-400 font-semibold mt-0.5">
+                        {{ $test->title }}
+                    </p>
+                </div>
+            </div>
+            <button type="button" 
+                    onclick="closeResubmitModal()" 
+                    class="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-700" 
+                    aria-label="Close modal">
+                ✕
+            </button>
+        </div>
+
+        {{-- Modal Body Messages --}}
+        <div class="space-y-3 text-xs text-slate-300">
+            <p class="leading-relaxed">
+                Your assessment has passed the Validation Assistant checks and is ready to be resubmitted to the Repository Manager for governance review.
+            </p>
+            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-slate-400 flex items-start gap-2.5">
+                <span class="text-indigo-400 text-sm flex-shrink-0">ℹ️</span>
+                <span class="leading-normal text-[11px]">
+                    After resubmission, the Repository Manager will review the assessment and its linked repository requirements.
+                </span>
+            </div>
+        </div>
+
+        {{-- Modal Footer Actions --}}
+        <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-800/80">
+            <button type="button" 
+                    onclick="closeResubmitModal()" 
+                    class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-600">
+                Cancel
+            </button>
+            <button type="button" 
+                    id="confirm-resubmit-btn"
+                    onclick="confirmAndSubmitResubmit()" 
+                    class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900 inline-flex items-center gap-1.5">
+                🚀 {{ $test->status === 'draft' ? 'Submit for Review' : 'Resubmit for Review' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openResubmitModal() {
+        const modal = document.getElementById('resubmit-confirmation-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            const confirmBtn = document.getElementById('confirm-resubmit-btn');
+            if (confirmBtn) confirmBtn.focus();
+        }
+    }
+
+    function closeResubmitModal() {
+        const modal = document.getElementById('resubmit-confirmation-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    }
+
+    function confirmAndSubmitResubmit() {
+        const form = document.getElementById('resubmit-assessment-form');
+        const btn = document.getElementById('confirm-resubmit-btn');
+        if (btn) {
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btn.innerHTML = '🚀 Submitting...';
+        }
+        if (form) {
+            form.submit();
+        }
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('resubmit-confirmation-modal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closeResubmitModal();
+            }
+        }
+    });
+</script>
 @endsection
