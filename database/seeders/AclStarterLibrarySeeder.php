@@ -1374,8 +1374,8 @@ class AclStarterLibrarySeeder extends Seeder
                     'description'     => $bankInfo['description'],
                     'acl_category_id' => $cat->id,
                     'created_by'      => $teacher->id,
-                    'status'          => 'published',
-                    'is_published'    => true,
+                    'status'          => $bankInfo['status'] ?? 'published',
+                    'is_published'    => ($bankInfo['status'] ?? 'published') === 'published',
                     'current_version' => '1.0',
                 ]
             );

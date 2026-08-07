@@ -92,7 +92,7 @@ class QuestionBank extends Model
 
     public function isRevisionRequested(): bool
     {
-        return $this->status === 'rejected' || $this->status === 'revision_requested';
+        return in_array($this->status, ['needs_revision', 'revision_requested', 'rejected']);
     }
 
     public function isArchived(): bool

@@ -246,22 +246,44 @@ class RepositoryQualityService
         foreach ($banks as $bank) {
             $audit = $this->validateRepository($bank);
 
-            // Attach latest review audit trail metadata
-            $latestLog = \App\Models\RepositoryActivityLog::where('resource_type', 'QuestionBank')
+            $bankStatus = is_object($bank->status) ? $bank->status->value : (string)($bank->status ?? 'draft');
+
+            // Governance decision actions in RepositoryActivityLog
+            $governanceActions = [
+                'approved',
+                'revision_requested',
+                'rejected',
+                'repository_manager_approved_repository',
+                'repository_manager_requested_revision',
+            ];
+
+            $latestGovernanceLog = \App\Models\RepositoryActivityLog::where('resource_type', 'QuestionBank')
+                ->where('resource_id', $bank->id)
+                ->whereIn('action', $governanceActions)
+                ->with(['actor', 'reviewer'])
+                ->latest()
+                ->first();
+
+            $hasCompletedGovernanceTask = \App\Models\GovernanceApprovalTask::where('question_bank_id', $bank->id)
+                ->where('status', 'COMPLETED')
+                ->exists();
+
+            $isCanonicalReviewedState = in_array($bankStatus, ['published', 'approved', 'needs_revision', 'rejected', 'archived']);
+
+            $isReviewed = $isCanonicalReviewedState || $hasCompletedGovernanceTask || ($latestGovernanceLog !== null);
+
+            $displayLog = $latestGovernanceLog ?? \App\Models\RepositoryActivityLog::where('resource_type', 'QuestionBank')
                 ->where('resource_id', $bank->id)
                 ->with(['actor', 'reviewer'])
                 ->latest()
                 ->first();
 
-            $bankStatus = is_object($bank->status) ? $bank->status->value : (string)($bank->status ?? 'draft');
-            $isReviewed = in_array($bankStatus, ['published', 'approved', 'needs_revision', 'rejected', 'archived']) || ($latestLog !== null);
-
             $audit['is_reviewed'] = $isReviewed;
             $audit['review_details'] = [
-                'reviewer_name' => $latestLog?->reviewer?->name ?? $latestLog?->actor?->name ?? 'Repository Manager',
-                'reviewed_at'   => $latestLog?->created_at ? $latestLog->created_at->format('d M Y, H:i') : ($bank->updated_at ? $bank->updated_at->format('d M Y') : 'N/A'),
+                'reviewer_name' => $displayLog?->reviewer?->name ?? $displayLog?->actor?->name ?? 'Repository Manager',
+                'reviewed_at'   => $displayLog?->created_at ? $displayLog->created_at->format('d M Y, H:i') : ($bank->updated_at ? $bank->updated_at->format('d M Y') : 'N/A'),
                 'decision'      => strtoupper(str_replace('_', ' ', $bankStatus)),
-                'approval_note' => $latestLog?->approval_note ?? 'Governance review completed.',
+                'approval_note' => $displayLog?->approval_note ?? 'Governance review completed.',
             ];
 
             // 1. Search Filter
@@ -281,7 +303,7 @@ class RepositoryQualityService
                 'healthy'           => !$audit['needs_improvement'],
                 'needs_improvement' => $hasIssues && !$isReviewed,
                 'awaiting_approval' => in_array($bankStatus, ['pending_approval', 'submitted']),
-                'reviewed_issues'   => $isReviewed && ($hasIssues || $latestLog !== null),
+                'reviewed_issues'   => $isReviewed && ($hasIssues || $latestGovernanceLog !== null || $hasCompletedGovernanceTask),
                 'archived'          => $bankStatus === 'archived' || $bankStatus === 'rejected',
                 default             => true,
             };
