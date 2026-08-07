@@ -243,7 +243,7 @@
             <div>
                 <div class="rm-panel__header">
                     <h3 class="rm-panel__title">🚨 Urgent Academic Alerts</h3>
-                    <a href="{{ route('admin.repository-manager.assessment-approval') }}" style="font-size:.78rem;color:#f87171;font-weight:700;text-decoration:none;">Alert Center →</a>
+                    <a href="{{ route('admin.academic-library.quality') }}" style="font-size:.78rem;color:#f87171;font-weight:700;text-decoration:none;">Alert Center →</a>
                 </div>
 
                 @php

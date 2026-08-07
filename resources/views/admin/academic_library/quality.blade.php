@@ -89,7 +89,7 @@
 
     {{-- Breadcrumb & Navigation --}}
     <div style="display:flex;justify-content:space-between;align-items:center;">
-        <a href="{{ route('admin.repository-manager.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
     </div>
