@@ -283,24 +283,52 @@ class RepositoryQualityService
         $audits = [];
         $totalRepositories = $banks->count();
         $healthyCount = 0;
-        $needsImprovementCount = 0;
+        $needsImprovementUnreviewedCount = 0;
+        $reviewedIssuesCount = 0;
         $pendingApprovalCount = 0;
         $sumHealthScore = 0;
         $allWarnings = [];
+
+        $governanceActions = [
+            'approved',
+            'revision_requested',
+            'rejected',
+            'repository_manager_approved_repository',
+            'repository_manager_requested_revision',
+        ];
 
         foreach ($banks as $bank) {
             $audit = $this->validateRepository($bank);
             $audits[] = $audit;
 
             $sumHealthScore += $audit['health_score'];
+            $bankStatus = is_object($bank->status) ? $bank->status->value : (string)($bank->status ?? 'draft');
 
-            if ($audit['health_score'] >= 75 && count($audit['warnings']) === 0) {
+            $latestGovernanceLog = \App\Models\RepositoryActivityLog::where('resource_type', 'QuestionBank')
+                ->where('resource_id', $bank->id)
+                ->whereIn('action', $governanceActions)
+                ->latest()
+                ->first();
+
+            $hasCompletedGovernanceTask = \App\Models\GovernanceApprovalTask::where('question_bank_id', $bank->id)
+                ->where('status', 'COMPLETED')
+                ->exists();
+
+            $isCanonicalReviewedState = in_array($bankStatus, ['published', 'approved', 'needs_revision', 'rejected', 'archived']);
+            $isReviewed = $isCanonicalReviewedState || $hasCompletedGovernanceTask || ($latestGovernanceLog !== null);
+            $hasIssues = $audit['needs_improvement'] || count($audit['warnings']) > 0;
+
+            if (!$hasIssues) {
                 $healthyCount++;
-            } else {
-                $needsImprovementCount++;
+            } elseif (!$isReviewed) {
+                $needsImprovementUnreviewedCount++;
             }
 
-            if (in_array($bank->status, ['pending_approval', 'submitted'])) {
+            if ($isReviewed && ($hasIssues || $latestGovernanceLog !== null || $hasCompletedGovernanceTask)) {
+                $reviewedIssuesCount++;
+            }
+
+            if (in_array($bankStatus, ['pending_approval', 'submitted'])) {
                 $pendingApprovalCount++;
             }
 
@@ -313,14 +341,15 @@ class RepositoryQualityService
         $duplicates = $this->detectDuplicates($banks);
 
         return [
-            'total_repositories'      => $totalRepositories,
-            'healthy_count'           => $healthyCount,
-            'needs_improvement_count' => $needsImprovementCount,
-            'pending_approval_count'  => $pendingApprovalCount,
-            'avg_health_score'        => $avgHealthScore,
-            'audits'                  => $audits,
-            'all_warnings'            => $allWarnings,
-            'duplicates'              => $duplicates,
+            'total_repositories'           => $totalRepositories,
+            'healthy_count'                => $healthyCount,
+            'needs_improvement_count'      => $needsImprovementUnreviewedCount,
+            'reviewed_issues_count'        => $reviewedIssuesCount,
+            'pending_approval_count'       => $pendingApprovalCount,
+            'avg_health_score'             => $avgHealthScore,
+            'audits'                       => $audits,
+            'all_warnings'                 => $allWarnings,
+            'duplicates'                   => $duplicates,
         ];
     }
 

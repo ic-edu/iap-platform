@@ -75,6 +75,7 @@
 .irqa-count--indigo  { color: #818cf8; }
 .irqa-count--emerald { color: #34d399; }
 .irqa-count--rose    { color: #fb7185; }
+.irqa-count--purple  { color: #c084fc; }
 .irqa-count--amber   { color: #fbbf24; }
 .irqa-count--sky     { color: #38bdf8; }
 
@@ -110,40 +111,53 @@
     {{-- Global Quality Metrics Grid (PART 11 & TASK 1) --}}
     <div class="irqa-kpi-grid">
         {{-- Card 1: Total Repositories --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'all']) }}" class="irqa-kpi">
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'all']) }}" class="irqa-kpi" title="View all institutional repositories">
             <div class="irqa-kpi__count irqa-count--indigo">{{ $summary['total_repositories'] }}</div>
             <div class="irqa-kpi__label">Total Repositories →</div>
+            <div class="irqa-kpi__sub">All institutional banks</div>
         </a>
 
         {{-- Card 2: Healthy Repositories --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'healthy']) }}" class="irqa-kpi">
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'healthy']) }}" class="irqa-kpi" title="View healthy repositories with zero issues">
             <div class="irqa-kpi__count irqa-count--emerald">{{ $summary['healthy_count'] }}</div>
             <div class="irqa-kpi__label">Healthy Repositories →</div>
+            <div class="irqa-kpi__sub">Zero active issues</div>
         </a>
 
-        {{-- Card 3: Needs Improvement (TASK 1.3 & TASK 3: Lowest Health Score First) --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc']) }}" class="irqa-kpi">
+        {{-- Card 3: Unreviewed Needs Improvement --}}
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc']) }}" class="irqa-kpi" title="Active IRQA issues awaiting governance review">
             <div class="irqa-kpi__count irqa-count--rose">{{ $summary['needs_improvement_count'] }}</div>
             <div class="irqa-kpi__label">Needing Improvement →</div>
+            <div class="irqa-kpi__sub">Unreviewed active issues</div>
         </a>
 
-        {{-- Card 4: Awaiting Approval (TASK 1.4: Floating Dialog if count == 0) --}}
+        {{-- Card 4: Reviewed Issues --}}
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'reviewed_issues']) }}" class="irqa-kpi" title="Repositories reviewed by Repository Manager with tracked quality issues">
+            <div class="irqa-kpi__count irqa-count--purple">{{ $summary['reviewed_issues_count'] ?? 0 }}</div>
+            <div class="irqa-kpi__label">Reviewed Issues →</div>
+            <div class="irqa-kpi__sub">Reviewed with findings</div>
+        </a>
+
+        {{-- Card 5: Awaiting Approval --}}
         @if($summary['pending_approval_count'] > 0)
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval']) }}" class="irqa-kpi">
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval']) }}" class="irqa-kpi" title="Repositories submitted and pending governance approval">
             <div class="irqa-kpi__count irqa-count--amber">{{ $summary['pending_approval_count'] }}</div>
             <div class="irqa-kpi__label">Awaiting Approval →</div>
+            <div class="irqa-kpi__sub">Pending RM decision</div>
         </a>
         @else
         <button type="button" onclick="openNoApprovalModal()" class="irqa-kpi" style="text-align:left;background:#0f172a;border:1px solid #1e293b;">
             <div class="irqa-kpi__count irqa-count--amber">{{ $summary['pending_approval_count'] }}</div>
             <div class="irqa-kpi__label">Awaiting Approval ⓘ</div>
+            <div class="irqa-kpi__sub">No pending submissions</div>
         </button>
         @endif
 
-        {{-- Card 5: Average Health Score (TASK 1.5: Opens IRQA Analytics) --}}
-        <a href="{{ route('admin.academic-library.analytics') }}" class="irqa-kpi">
+        {{-- Card 6: Average Health Score --}}
+        <a href="{{ route('admin.academic-library.analytics') }}" class="irqa-kpi" title="Open IRQA Quality Analytics">
             <div class="irqa-kpi__count irqa-count--sky">{{ $summary['avg_health_score'] }} <span style="font-size:.85rem;color:#64748b;">/ 100</span></div>
             <div class="irqa-kpi__label">Average Health Score 📊</div>
+            <div class="irqa-kpi__sub">Overall quality metric</div>
         </a>
     </div>
 

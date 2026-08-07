@@ -70,7 +70,7 @@
 
             <div style="display:flex;gap:.5rem;align-items:center;">
                 <span style="padding:.4rem .9rem;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;border-radius:.6rem;font-size:.78rem;font-weight:800;text-transform:uppercase;">
-                    Status: {{ $questionBank->status ?? 'Awaiting Review' }}
+                    Status: {{ is_object($questionBank->status) ? strtoupper($questionBank->status->value) : strtoupper($questionBank->status ?? 'Awaiting Review') }}
                 </span>
             </div>
         </div>
@@ -112,6 +112,29 @@
                     @endforeach
                 </div>
                 @endif
+            </div>
+            @endif
+
+            @php
+                $activeFindings = \App\Models\RepositoryFinding::where('question_bank_id', $questionBank->id)->get();
+            @endphp
+            @if($activeFindings->count() > 0)
+            <div class="qbw-card" style="border-color:#fb7185;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+                    <h3 style="font-size:1rem;font-weight:800;color:#fff;margin:0;">
+                        ⚠️ Tracked IRQA Quality Findings ({{ $activeFindings->where('status', 'OPEN')->count() }} OPEN)
+                    </h3>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:.5rem;">
+                    @foreach($activeFindings as $finding)
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .85rem;background:#1e293b;border-radius:.5rem;font-size:.78rem;color:#e2e8f0;">
+                        <span>⚠️ {{ $finding->title }}</span>
+                        <span style="padding:.15rem .5rem;border-radius:.3rem;font-size:.68rem;font-weight:800;text-transform:uppercase;{{ $finding->status === 'OPEN' ? 'background:rgba(244,63,94,.2);color:#fb7185;' : 'background:rgba(52,211,153,.2);color:#34d399;' }}">
+                            {{ $finding->status }}
+                        </span>
+                    </div>
+                    @endforeach
+                </div>
             </div>
             @endif
 
