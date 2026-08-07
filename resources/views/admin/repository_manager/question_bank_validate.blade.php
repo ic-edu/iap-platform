@@ -53,11 +53,17 @@
 @section('content')
 <div class="qbw-container">
 
-    {{-- PART 3: BACK NAVIGATION (Part 14: Explicit route destination) --}}
+    {{-- PART 3: BACK NAVIGATION (Part 14: Context-aware route destination) --}}
     <div>
+        @if(request('from') === 'explorer')
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => request('filter', 'reviewed_issues')]) }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+            ← Back
+        </a>
+        @else
         <a href="{{ route('admin.repository-manager.questions-approval') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
+        @endif
         <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.5rem;flex-wrap:wrap;">
             <div>
                 <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:0 0 .25rem;">
