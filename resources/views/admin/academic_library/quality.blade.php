@@ -91,8 +91,10 @@
     {{-- Breadcrumb & Navigation --}}
     @php
         $qBackUrl = match(request('from')) {
+            'explorer'         => route('admin.academic-library.explorer', ['filter' => request('filter', 'all')]),
             'academic_library' => route('admin.academic-library.index'),
             'admin_dashboard'  => route('admin.dashboard'),
+            'dashboard'        => route('admin.repository-manager.dashboard'),
             default            => route('admin.repository-manager.dashboard'),
         };
     @endphp

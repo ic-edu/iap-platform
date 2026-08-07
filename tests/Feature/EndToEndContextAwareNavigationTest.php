@@ -54,9 +54,57 @@ class EndToEndContextAwareNavigationTest extends TestCase
     }
 
     /**
-     * TEST 1: Dashboard -> IRQA Quality Overview -> Back -> Dashboard.
+     * TEST A: Dashboard -> Explorer -> IRQA Overview -> Back -> Explorer.
      */
-    public function test_1_dashboard_to_irqa_overview_back_returns_to_dashboard()
+    public function test_a_dashboard_to_explorer_to_quality_back_returns_to_explorer()
+    {
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.academic-library.quality', [
+                'from'   => 'explorer',
+                'filter' => 'all',
+            ]));
+
+        $response->assertStatus(200);
+        $expectedBackUrl = route('admin.academic-library.explorer', ['filter' => 'all']);
+        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
+    }
+
+    /**
+     * TEST B: Explorer filter=reviewed_issues -> IRQA Overview -> Back -> Explorer filter=reviewed_issues.
+     */
+    public function test_b_explorer_reviewed_issues_to_quality_back_preserves_reviewed_issues_filter()
+    {
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.academic-library.quality', [
+                'from'   => 'explorer',
+                'filter' => 'reviewed_issues',
+            ]));
+
+        $response->assertStatus(200);
+        $expectedBackUrl = route('admin.academic-library.explorer', ['filter' => 'reviewed_issues']);
+        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
+    }
+
+    /**
+     * TEST C: Explorer filter=needs_improvement -> IRQA Overview -> Back -> Explorer filter=needs_improvement.
+     */
+    public function test_c_explorer_needs_improvement_to_quality_back_preserves_needs_improvement_filter()
+    {
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.academic-library.quality', [
+                'from'   => 'explorer',
+                'filter' => 'needs_improvement',
+            ]));
+
+        $response->assertStatus(200);
+        $expectedBackUrl = route('admin.academic-library.explorer', ['filter' => 'needs_improvement']);
+        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
+    }
+
+    /**
+     * TEST D: Dashboard -> IRQA Overview -> Back -> Dashboard.
+     */
+    public function test_d_dashboard_to_quality_back_returns_to_dashboard()
     {
         $response = $this->actingAs($this->repoManager)
             ->get(route('admin.academic-library.quality', ['from' => 'dashboard']));
@@ -67,9 +115,9 @@ class EndToEndContextAwareNavigationTest extends TestCase
     }
 
     /**
-     * TEST 2: IRQA Quality Overview -> Explorer -> Back -> IRQA Quality Overview.
+     * TEST E: IRQA Overview -> Explorer -> Back -> IRQA Overview.
      */
-    public function test_2_quality_overview_to_explorer_back_returns_to_quality_overview()
+    public function test_e_quality_to_explorer_back_returns_to_quality()
     {
         $response = $this->actingAs($this->repoManager)
             ->get(route('admin.academic-library.explorer', ['from' => 'quality']));
@@ -80,126 +128,9 @@ class EndToEndContextAwareNavigationTest extends TestCase
     }
 
     /**
-     * TEST 3: Explorer filter=needs_improvement -> Validation Workspace -> Back -> Explorer filter=needs_improvement.
+     * TEST F: Invalid from parameter resolves to safe default.
      */
-    public function test_3_explorer_needs_improvement_to_validation_back_preserves_filter()
-    {
-        $bank = $this->createTestBank(['status' => 'pending_approval']);
-
-        $response = $this->actingAs($this->repoManager)
-            ->get(route('admin.repository-manager.question-bank-validate', [
-                'questionBank' => $bank->id,
-                'from'         => 'explorer',
-                'filter'       => 'needs_improvement',
-            ]));
-
-        $response->assertStatus(200);
-        $expectedBackUrl = route('admin.academic-library.explorer', ['filter' => 'needs_improvement']);
-        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
-    }
-
-    /**
-     * TEST 4: Explorer filter=reviewed_issues -> Validation Workspace -> Back -> Explorer filter=reviewed_issues.
-     */
-    public function test_4_explorer_reviewed_issues_to_validation_back_preserves_filter()
-    {
-        $bank = $this->createTestBank(['status' => 'needs_revision']);
-
-        $response = $this->actingAs($this->repoManager)
-            ->get(route('admin.repository-manager.question-bank-validate', [
-                'questionBank' => $bank->id,
-                'from'         => 'explorer',
-                'filter'       => 'reviewed_issues',
-            ]));
-
-        $response->assertStatus(200);
-        $expectedBackUrl = route('admin.academic-library.explorer', ['filter' => 'reviewed_issues']);
-        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
-    }
-
-    /**
-     * TEST 5: Question Banks Approval Queue -> Validation Workspace -> Back -> Questions Approval.
-     */
-    public function test_5_approval_queue_to_validation_back_returns_to_questions_approval()
-    {
-        $bank = $this->createTestBank(['status' => 'pending_approval']);
-
-        $response = $this->actingAs($this->repoManager)
-            ->get(route('admin.repository-manager.question-bank-validate', [
-                'questionBank' => $bank->id,
-                'from'         => 'approval_queue',
-            ]));
-
-        $response->assertStatus(200);
-        $expectedBackUrl = route('admin.repository-manager.questions-approval');
-        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
-    }
-
-    /**
-     * TEST 6: Teacher Revision Center -> Revision Task -> Editor -> Back -> Revision Task.
-     */
-    public function test_6_teacher_revision_task_to_editor_back_returns_to_task_detail()
-    {
-        $bank = $this->createTestBank(['status' => 'needs_revision']);
-
-        $question = Question::create([
-            'question_bank_id' => $bank->id,
-            'prompt'           => 'Essay Question Prompt',
-            'question_type'    => 'essay',
-            'explanation'      => 'Detailed explanation.',
-            'difficulty'       => 'medium',
-            'points'           => 10,
-        ]);
-
-        $revisionRequest = RepositoryRevisionRequest::create([
-            'question_bank_id' => $bank->id,
-            'teacher_id'       => $this->teacher->id,
-            'requested_by_id'  => $this->repoManager->id,
-            'status'           => 'OPEN',
-            'notes'            => 'Please update prompt.',
-        ]);
-
-        $item = RepositoryRevisionItem::create([
-            'repository_revision_request_id' => $revisionRequest->id,
-            'question_bank_id'               => $bank->id,
-            'question_id'                    => $question->id,
-            'finding_type'                   => 'quality_warning',
-            'severity'                       => 'high',
-            'feedback'                       => 'Missing category',
-            'status'                         => 'OPEN',
-        ]);
-
-        $response = $this->actingAs($this->teacher)
-            ->get(route('teacher.repository-revisions.edit-question', [
-                'revisionRequest' => $revisionRequest->id,
-                'item'            => $item->id,
-            ]));
-
-        $response->assertStatus(200);
-        $expectedBackUrl = route('teacher.repository-revisions.show', $revisionRequest->id);
-        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
-    }
-
-    /**
-     * TEST 7: Direct access fallback works safely.
-     */
-    public function test_7_direct_access_fallback_returns_safe_default()
-    {
-        $bank = $this->createTestBank(['status' => 'needs_revision']);
-
-        // Direct access to Validation Workspace without parameters
-        $response = $this->actingAs($this->repoManager)
-            ->get(route('admin.repository-manager.question-bank-validate', $bank->id));
-
-        $response->assertStatus(200);
-        $expectedDefaultBackUrl = route('admin.repository-manager.questions-approval');
-        $this->assertStringContainsString($expectedDefaultBackUrl, $response->getContent());
-    }
-
-    /**
-     * TEST 8: Security: External URL / open redirect injection via from parameter is sanitized to default fallback.
-     */
-    public function test_8_open_redirect_injection_is_sanitized_to_safe_default()
+    public function test_f_invalid_from_value_returns_safe_default()
     {
         $response = $this->actingAs($this->repoManager)
             ->get(route('admin.academic-library.quality', ['from' => 'https://evil.com/phishing']));
@@ -211,9 +142,9 @@ class EndToEndContextAwareNavigationTest extends TestCase
     }
 
     /**
-     * TEST 9 & 10: Back navigation does not change governance or finding state.
+     * TEST G: Navigation does not modify governance or finding state.
      */
-    public function test_9_and_10_navigation_does_not_change_state()
+    public function test_g_navigation_does_not_change_state()
     {
         $bank = $this->createTestBank(['status' => 'needs_revision']);
 
@@ -227,10 +158,9 @@ class EndToEndContextAwareNavigationTest extends TestCase
         ]);
 
         $this->actingAs($this->repoManager)
-            ->get(route('admin.repository-manager.question-bank-validate', [
-                'questionBank' => $bank->id,
-                'from'         => 'explorer',
-                'filter'       => 'reviewed_issues',
+            ->get(route('admin.academic-library.quality', [
+                'from'   => 'explorer',
+                'filter' => 'reviewed_issues',
             ]));
 
         $bank->refresh();

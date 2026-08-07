@@ -100,7 +100,7 @@
             <p class="exp-hero__sub">Browse, search, and audit institutional repositories with quality problem priority highlighting.</p>
         </div>
         <div>
-            <a href="{{ route('admin.academic-library.quality') }}" style="padding:.6rem 1.2rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#e2e8f0;font-size:.85rem;font-weight:700;text-decoration:none;">
+            <a href="{{ route('admin.academic-library.quality', ['from' => 'explorer', 'filter' => $explorerData['filter']]) }}" style="padding:.6rem 1.2rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#e2e8f0;font-size:.85rem;font-weight:700;text-decoration:none;">
                 🛡 IRQA Overview
             </a>
         </div>
