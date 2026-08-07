@@ -170,8 +170,8 @@ class QuestionBankController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
-            abort(403, 'Administrators are Content Operators and cannot create question banks directly.');
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin') || $user->hasRole('repository-manager'))) {
+            abort(403, 'Repository Managers are Governance Authorities and cannot create question banks directly.');
         }
 
         $validated = $request->validate([

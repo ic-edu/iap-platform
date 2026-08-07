@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-manager'])->prefix('admin/question-banks')->group(function () {
     Route::get('/', [QuestionBankController::class, 'index'])->name('admin.question-banks.index');
-    Route::post('/', [QuestionBankController::class, 'store'])->name('admin.question-banks.store');
+    Route::post('/', [QuestionBankController::class, 'store'])->middleware('role:teacher')->name('admin.question-banks.store');
     Route::get('/{questionBank}', [QuestionBankController::class, 'show'])->name('admin.question-banks.show');
     Route::put('/{questionBank}', [QuestionBankController::class, 'update'])->name('admin.question-banks.update');
     Route::post('/{questionBank}/submit', [QuestionBankController::class, 'submitForApproval'])->name('admin.question-banks.submit');

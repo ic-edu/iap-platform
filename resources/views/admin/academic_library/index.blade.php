@@ -227,7 +227,9 @@
         </p>
         <div style="display:flex;gap:.75rem;">
             <button type="button" onclick="closeNoRepoModal()" style="flex:1;padding:.75rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.6rem;font-weight:700;cursor:pointer;">Close</button>
-            <a id="no-repo-create-btn" href="{{ route('admin.question-banks.index') }}" style="flex:1.5;padding:.75rem;background:#6366f1;color:#fff;border-radius:.6rem;font-weight:700;text-decoration:none;display:inline-block;">Create Question Bank</a>
+            @if(auth()->user()?->hasRole('teacher'))
+            <a id="no-repo-create-btn" href="{{ route('teacher.question-banks.index') }}" style="flex:1.5;padding:.75rem;background:#6366f1;color:#fff;border-radius:.6rem;font-weight:700;text-decoration:none;display:inline-block;">Create Question Bank</a>
+            @endif
         </div>
     </div>
 </div>
