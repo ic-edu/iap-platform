@@ -318,13 +318,25 @@ class RepositoryQualityService
             $isReviewed = $isCanonicalReviewedState || $hasCompletedGovernanceTask || ($latestGovernanceLog !== null);
             $hasIssues = $audit['needs_improvement'] || count($audit['warnings']) > 0;
 
+            $findingRecordsSummary = \Illuminate\Support\Facades\Schema::hasTable('repository_findings')
+                ? \App\Models\RepositoryFinding::where('question_bank_id', $bank->id)
+                    ->whereIn('status', ['OPEN', 'FIXED', 'VERIFIED', 'CLOSED'])
+                    ->get()
+                    ->reject(function ($f) {
+                        return str_contains(strtolower($f->title), 'has no answer choices attached');
+                    })
+                : collect([]);
+
+            $hasFindingHistory = $findingRecordsSummary->count() > 0;
+            $hasHistoricalOrActiveFindings = $hasIssues || $hasFindingHistory;
+
             if (!$hasIssues) {
                 $healthyCount++;
             } elseif (!$isReviewed) {
                 $needsImprovementUnreviewedCount++;
             }
 
-            if ($isReviewed && ($hasIssues || $latestGovernanceLog !== null || $hasCompletedGovernanceTask)) {
+            if ($isReviewed && $hasHistoricalOrActiveFindings) {
                 $reviewedIssuesCount++;
             }
 
@@ -401,7 +413,21 @@ class RepositoryQualityService
                 ->latest()
                 ->first();
 
+            $findingRecords = \Illuminate\Support\Facades\Schema::hasTable('repository_findings')
+                ? \App\Models\RepositoryFinding::where('question_bank_id', $bank->id)
+                    ->whereIn('status', ['OPEN', 'FIXED', 'VERIFIED', 'CLOSED'])
+                    ->get()
+                    ->reject(function ($f) {
+                        return str_contains(strtolower($f->title), 'has no answer choices attached');
+                    })
+                : collect([]);
+
+            $hasFindingHistory = $findingRecords->count() > 0;
+            $hasIssues = $audit['needs_improvement'] || count($audit['warnings']) > 0;
+            $hasHistoricalOrActiveFindings = $hasIssues || $hasFindingHistory;
+
             $audit['is_reviewed'] = $isReviewed;
+            $audit['finding_history'] = $findingRecords;
             $audit['review_details'] = [
                 'reviewer_name' => $displayLog?->reviewer?->name ?? $displayLog?->actor?->name ?? 'Repository Manager',
                 'reviewed_at'   => $displayLog?->created_at ? $displayLog->created_at->format('d M Y, H:i') : ($bank->updated_at ? $bank->updated_at->format('d M Y') : 'N/A'),
@@ -420,13 +446,11 @@ class RepositoryQualityService
             }
 
             // 2. Status / Lifecycle Filter
-            $hasIssues = $audit['needs_improvement'] || count($audit['warnings']) > 0;
-
             $passFilter = match ($filter) {
-                'healthy'           => !$audit['needs_improvement'],
+                'healthy'           => !$audit['needs_improvement'] && count($audit['warnings']) === 0,
                 'needs_improvement' => $hasIssues && !$isReviewed,
                 'awaiting_approval' => in_array($bankStatus, ['pending_approval', 'submitted']),
-                'reviewed_issues'   => $isReviewed && ($hasIssues || $latestGovernanceLog !== null || $hasCompletedGovernanceTask),
+                'reviewed_issues'   => $isReviewed && $hasHistoricalOrActiveFindings,
                 'archived'          => $bankStatus === 'archived' || $bankStatus === 'rejected',
                 default             => true,
             };

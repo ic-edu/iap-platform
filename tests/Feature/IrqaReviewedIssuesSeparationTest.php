@@ -71,6 +71,36 @@ class IrqaReviewedIssuesSeparationTest extends TestCase
     }
 
     /**
+     * TEST 1 & 6: Reviewed + published + zero findings -> Excluded from Reviewed Issues, classified as Healthy.
+     */
+    public function test_reviewed_repository_with_zero_findings_excluded_from_reviewed_issues()
+    {
+        $category = \App\Models\AclCategory::create(['name' => 'Speaking', 'slug' => 'speaking', 'is_active' => true]);
+        $bank = $this->createValidBank([
+            'title'           => 'IELTS Speaking Interview & Cue Card Prompts',
+            'status'          => 'published',
+            'acl_category_id' => $category->id,
+        ]);
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $bank->id,
+            'actor_id'      => $this->repoManager->id,
+            'reviewer_id'   => $this->repoManager->id,
+            'action'        => 'approved',
+        ]);
+
+        $summary = $this->qualityService->getGlobalQualitySummary();
+        $explorerRev = $this->qualityService->getExplorerAudits(['filter' => 'reviewed_issues']);
+        $explorerHealthy = $this->qualityService->getExplorerAudits(['filter' => 'healthy']);
+
+        $this->assertEquals(0, $summary['reviewed_issues_count']);
+        $this->assertEquals(1, $summary['healthy_count']);
+        $this->assertCount(0, $explorerRev['audits']);
+        $this->assertCount(1, $explorerHealthy['audits']);
+    }
+
+    /**
      * TEST A: Unreviewed repository with OPEN high finding -> Needs Improvement.
      */
     public function test_a_unreviewed_repository_with_open_high_finding_classified_as_needs_improvement()

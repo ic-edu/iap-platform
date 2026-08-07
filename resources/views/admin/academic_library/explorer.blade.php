@@ -208,6 +208,15 @@
                     <span class="exp-problem-tag">⚠️ {{ $w }}</span>
                     @endforeach
                 </div>
+                @elseif(!empty($audit['finding_history']) && count($audit['finding_history']) > 0)
+                <div class="exp-problems">
+                    <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;color:#818cf8;margin-top:.4rem;">Preserved Issue History:</div>
+                    @foreach($audit['finding_history'] as $fh)
+                    <span class="exp-problem-tag" style="color:#818cf8;background:rgba(129,140,248,.1);border-color:rgba(129,140,248,.2);">
+                        ✓ {{ $fh->title }} ({{ $fh->status }})
+                    </span>
+                    @endforeach
+                </div>
                 @else
                 <div style="font-size:.72rem;color:#34d399;margin-top:.6rem;font-weight:700;">✓ Pass All Quality Audits</div>
                 @endif
