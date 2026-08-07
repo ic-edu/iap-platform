@@ -206,7 +206,7 @@ test('repository manager can approve question bank and log audit entry', functio
         'notes' => 'Verified academic quality and compliance.',
     ]);
 
-    $response->assertRedirect('/admin/repository-manager/questions');
+    $response->assertRedirect(route('admin.repository-manager.review-complete', $qb->id));
 
     $qb->refresh();
     expect($qb->status)->toBe('published');

@@ -60,7 +60,7 @@ class RepositoryRevisionTaskDeliveryTest extends TestCase
                 'notes' => 'Please add explanation for question #1 and select a category.',
             ]);
 
-        $response->assertRedirect(route('admin.repository-manager.questions-approval'));
+        $response->assertRedirect(route('admin.repository-manager.review-complete', $this->bank->id));
 
         // 2. Verify Repository status updated to needs_revision
         $this->assertDatabaseHas('question_banks', [

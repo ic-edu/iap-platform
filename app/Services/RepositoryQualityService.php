@@ -235,15 +235,34 @@ class RepositoryQualityService
      */
     public function getExplorerAudits(array $options = []): array
     {
-        $filter = $options['filter'] ?? 'all';
-        $search = strtolower(trim($options['search'] ?? ''));
-        $sort   = $options['sort'] ?? ($filter === 'needs_improvement' ? 'health_asc' : 'health_desc');
+        $filter   = $options['filter'] ?? 'all';
+        $decision = $options['decision'] ?? 'all';
+        $search   = strtolower(trim($options['search'] ?? ''));
+        $sort     = $options['sort'] ?? ($filter === 'needs_improvement' ? 'health_asc' : 'health_desc');
 
         $banks = QuestionBank::with(['questions.choices', 'aclCategory', 'creator'])->get();
         $audits = [];
 
         foreach ($banks as $bank) {
             $audit = $this->validateRepository($bank);
+
+            // Attach latest review audit trail metadata
+            $latestLog = \App\Models\RepositoryActivityLog::where('resource_type', 'QuestionBank')
+                ->where('resource_id', $bank->id)
+                ->with(['actor', 'reviewer'])
+                ->latest()
+                ->first();
+
+            $bankStatus = is_object($bank->status) ? $bank->status->value : (string)($bank->status ?? 'draft');
+            $isReviewed = in_array($bankStatus, ['published', 'approved', 'needs_revision', 'rejected', 'archived']) || ($latestLog !== null);
+
+            $audit['is_reviewed'] = $isReviewed;
+            $audit['review_details'] = [
+                'reviewer_name' => $latestLog?->reviewer?->name ?? $latestLog?->actor?->name ?? 'Repository Manager',
+                'reviewed_at'   => $latestLog?->created_at ? $latestLog->created_at->format('d M Y, H:i') : ($bank->updated_at ? $bank->updated_at->format('d M Y') : 'N/A'),
+                'decision'      => strtoupper(str_replace('_', ' ', $bankStatus)),
+                'approval_note' => $latestLog?->approval_note ?? 'Governance review completed.',
+            ];
 
             // 1. Search Filter
             if (!empty($search)) {
@@ -255,22 +274,35 @@ class RepositoryQualityService
                 }
             }
 
-            // 2. Status Filter
-            $bankStatus = is_object($bank->status) ? $bank->status->value : (string)($bank->status ?? 'draft');
+            // 2. Status / Lifecycle Filter
+            $hasIssues = $audit['needs_improvement'] || count($audit['warnings']) > 0;
+
             $passFilter = match ($filter) {
                 'healthy'           => !$audit['needs_improvement'],
-                'needs_improvement' => $audit['needs_improvement'],
+                'needs_improvement' => $hasIssues && !$isReviewed,
                 'awaiting_approval' => in_array($bankStatus, ['pending_approval', 'submitted']),
-                'archived'          => $bankStatus === 'archived',
+                'reviewed_issues'   => $isReviewed && ($hasIssues || $latestLog !== null),
+                'archived'          => $bankStatus === 'archived' || $bankStatus === 'rejected',
                 default             => true,
             };
+
+            // 3. Decision sub-filter for reviewed_issues
+            if ($filter === 'reviewed_issues' && !empty($decision) && $decision !== 'all') {
+                if ($decision === 'published' && !in_array($bankStatus, ['published', 'approved'])) {
+                    $passFilter = false;
+                } elseif ($decision === 'needs_revision' && $bankStatus !== 'needs_revision') {
+                    $passFilter = false;
+                } elseif ($decision === 'rejected' && !in_array($bankStatus, ['rejected', 'archived'])) {
+                    $passFilter = false;
+                }
+            }
 
             if ($passFilter) {
                 $audits[] = $audit;
             }
         }
 
-        // 3. Sorting
+        // 4. Sorting
         usort($audits, function ($a, $b) use ($sort) {
             return match ($sort) {
                 'health_asc'     => $a['health_score'] <=> $b['health_score'],
@@ -283,6 +315,7 @@ class RepositoryQualityService
 
         return [
             'filter'       => $filter,
+            'decision'     => $decision,
             'search'       => $search,
             'sort'         => $sort,
             'total_found'  => count($audits),

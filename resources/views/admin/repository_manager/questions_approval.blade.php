@@ -16,9 +16,9 @@
 @section('content')
 <div class="qa-container">
 
-    {{-- Header --}}
+    {{-- Header (Part 14: Explicit route destination) --}}
     <div>
-        <a href="{{ route('admin.repository-manager.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
         <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:.25rem 0 0;">

@@ -111,7 +111,7 @@ class GovernanceApprovalTaskWorkflowTest extends TestCase
                 'notes' => 'Approved for institutional repository.',
             ]);
 
-        $approveResponse->assertRedirect(route('admin.repository-manager.questions-approval'));
+        $approveResponse->assertRedirect(route('admin.repository-manager.review-complete', $this->bank->id));
 
         // Verify task updated to COMPLETED
         $this->assertDatabaseHas('governance_approval_tasks', [
@@ -134,7 +134,7 @@ class GovernanceApprovalTaskWorkflowTest extends TestCase
                 'notes' => 'Please add explanation for question #1.',
             ]);
 
-        $revisionResponse->assertRedirect(route('admin.repository-manager.questions-approval'));
+        $revisionResponse->assertRedirect(route('admin.repository-manager.review-complete', $this->bank->id));
 
         // Verify Approval Task COMPLETED
         $this->assertDatabaseHas('governance_approval_tasks', [

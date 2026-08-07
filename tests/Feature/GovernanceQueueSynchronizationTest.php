@@ -118,7 +118,7 @@ class GovernanceQueueSynchronizationTest extends TestCase
                 'notes' => 'Please revise rubrics and cue card prompts.',
             ]);
 
-        $response->assertRedirect(route('admin.repository-manager.questions-approval'));
+        $response->assertRedirect(route('admin.repository-manager.review-complete', $this->bank->id));
 
         // Assert QuestionBank status is needs_revision
         $this->bank->refresh();

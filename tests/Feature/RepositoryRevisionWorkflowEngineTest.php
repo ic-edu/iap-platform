@@ -83,7 +83,7 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
                 'notes' => 'Please add category association and double check questions.',
             ]);
 
-        $response->assertRedirect(route('admin.repository-manager.questions-approval'));
+        $response->assertRedirect(route('admin.repository-manager.review-complete', $this->bank->id));
 
         $this->assertDatabaseHas('question_banks', [
             'id'     => $this->bank->id,

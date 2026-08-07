@@ -416,6 +416,19 @@ class RepositoryManagerController extends Controller
         return view('admin.repository_manager.question_bank_validate', compact('questionBank', 'logs'));
     }
 
+    public function reviewComplete(QuestionBank $questionBank): View
+    {
+        $questionBank->load(['creator', 'questions']);
+
+        $latestLog = RepositoryActivityLog::where('resource_type', 'QuestionBank')
+            ->where('resource_id', $questionBank->id)
+            ->with(['actor', 'reviewer'])
+            ->latest()
+            ->first();
+
+        return view('admin.repository_manager.review_complete', compact('questionBank', 'latestLog'));
+    }
+
     public function approveQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $user = $request->user();
@@ -449,7 +462,7 @@ class RepositoryManagerController extends Controller
                 ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
         }
 
-        return redirect()->route('admin.repository-manager.questions-approval')
+        return redirect()->route('admin.repository-manager.review-complete', $questionBank->id)
             ->with('success', 'Question bank successfully approved and published to academic repository.');
     }
 
@@ -610,7 +623,7 @@ class RepositoryManagerController extends Controller
             }
         }
 
-        return redirect()->route('admin.repository-manager.questions-approval')
+        return redirect()->route('admin.repository-manager.review-complete', $questionBank->id)
             ->with('warning', 'Revision requested from author for Question Bank and linked Assessments.');
     }
 
@@ -632,7 +645,7 @@ class RepositoryManagerController extends Controller
             'approval_note' => $note,
         ]);
 
-        return redirect()->route('admin.repository-manager.questions-approval')
+        return redirect()->route('admin.repository-manager.review-complete', $questionBank->id)
             ->with('danger', 'Question bank repository rejected and archived.');
     }
 

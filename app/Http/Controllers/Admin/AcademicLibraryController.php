@@ -127,9 +127,10 @@ class AcademicLibraryController extends Controller
     {
         $qualityService = app(\App\Services\RepositoryQualityService::class);
         $explorerData   = $qualityService->getExplorerAudits([
-            'filter' => $request->input('filter', 'all'),
-            'search' => $request->input('search', ''),
-            'sort'   => $request->input('sort', ''),
+            'filter'   => $request->input('filter', 'all'),
+            'decision' => $request->input('decision', 'all'),
+            'search'   => $request->input('search', ''),
+            'sort'     => $request->input('sort', ''),
         ]);
 
         return view('admin.academic_library.explorer', compact('explorerData'));

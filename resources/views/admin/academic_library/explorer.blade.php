@@ -79,9 +79,9 @@
 @section('content')
 <div class="exp-workspace">
 
-    {{-- Navigation Breadcrumb --}}
+    {{-- Navigation Breadcrumb (Part 14: Explicit route destination) --}}
     <div style="display:flex;justify-content:space-between;align-items:center;">
-        <a href="{{ route('admin.academic-library.quality') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
     </div>
@@ -99,7 +99,7 @@
         </div>
     </div>
 
-    {{-- Search & Filter Controls (TASK 1.1 - 1.4) --}}
+    {{-- Search & Filter Controls (TASK 1.1 - 1.4 & PART 6/7) --}}
     <div class="exp-controls">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
             <div class="exp-filters">
@@ -115,14 +115,27 @@
                 <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval', 'search' => request('search')]) }}" class="exp-filter-btn {{ $explorerData['filter'] === 'awaiting_approval' ? 'exp-filter-btn--active' : '' }}">
                     ⏳ Awaiting Approval
                 </a>
+                <a href="{{ route('admin.academic-library.explorer', ['filter' => 'reviewed_issues', 'search' => request('search')]) }}" class="exp-filter-btn {{ $explorerData['filter'] === 'reviewed_issues' ? 'exp-filter-btn--active' : '' }}">
+                    📋 Reviewed Issues
+                </a>
                 <a href="{{ route('admin.academic-library.explorer', ['filter' => 'archived', 'search' => request('search')]) }}" class="exp-filter-btn {{ $explorerData['filter'] === 'archived' ? 'exp-filter-btn--active' : '' }}">
                     📁 Archived
                 </a>
             </div>
 
-            <form method="GET" action="{{ route('admin.academic-library.explorer') }}" style="display:flex;gap:.5rem;align-items:center;">
+            <form method="GET" action="{{ route('admin.academic-library.explorer') }}" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
                 <input type="hidden" name="filter" value="{{ $explorerData['filter'] }}">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title or program..." style="background:#1e293b;border:1px solid #334155;color:#fff;padding:.45rem .85rem;border-radius:.5rem;font-size:.8rem;">
+                
+                @if($explorerData['filter'] === 'reviewed_issues')
+                <select name="decision" onchange="this.form.submit()" style="background:#1e293b;border:1px solid #334155;color:#fff;padding:.45rem .85rem;border-radius:.5rem;font-size:.8rem;">
+                    <option value="all" {{ ($explorerData['decision'] ?? 'all') === 'all' ? 'selected' : '' }}>All Decisions</option>
+                    <option value="published" {{ ($explorerData['decision'] ?? '') === 'published' ? 'selected' : '' }}>Published</option>
+                    <option value="needs_revision" {{ ($explorerData['decision'] ?? '') === 'needs_revision' ? 'selected' : '' }}>Needs Revision</option>
+                    <option value="rejected" {{ ($explorerData['decision'] ?? '') === 'rejected' ? 'selected' : '' }}>Rejected / Archived</option>
+                </select>
+                @endif
+
                 <select name="sort" onchange="this.form.submit()" style="background:#1e293b;border:1px solid #334155;color:#fff;padding:.45rem .85rem;border-radius:.5rem;font-size:.8rem;">
                     <option value="health_asc" {{ $explorerData['sort'] === 'health_asc' ? 'selected' : '' }}>Lowest Health Score (Priority)</option>
                     <option value="health_desc" {{ $explorerData['sort'] === 'health_desc' ? 'selected' : '' }}>Highest Health Score</option>
@@ -134,7 +147,7 @@
         </div>
     </div>
 
-    {{-- Repositories List Grid (TASK 1.3 & TASK 3) --}}
+    {{-- Repositories List Grid (TASK 1.3 & PART 4/7) --}}
     @if(count($explorerData['audits']) === 0)
     <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:3rem;text-align:center;">
         <div style="font-size:2.5rem;margin-bottom:.5rem;">🔍</div>
@@ -156,7 +169,17 @@
                         </div>
                     </div>
                     <div>
-                        @if($audit['needs_improvement'])
+                        @if($audit['is_reviewed'] || $explorerData['filter'] === 'reviewed_issues')
+                            @php
+                                $d = $audit['review_details']['decision'] ?? 'PUBLISHED';
+                                $bStyle = match($d) {
+                                    'PUBLISHED', 'APPROVED' => 'background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);',
+                                    'NEEDS REVISION' => 'background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);',
+                                    default => 'background:rgba(244,63,94,.15);color:#f43f5e;border:1px solid rgba(244,63,94,.3);',
+                                };
+                            @endphp
+                            <span class="exp-badge" style="{{ $bStyle }}">Decided: {{ $d }}</span>
+                        @elseif($audit['needs_improvement'])
                         <span class="exp-badge exp-badge--warning">Score: {{ $audit['health_score'] }}</span>
                         @elseif($audit['health_score'] >= 90)
                         <span class="exp-badge exp-badge--excellent">Score: {{ $audit['health_score'] }}</span>
@@ -171,10 +194,16 @@
                     <span>💡 <strong>{{ $audit['explanation_pct'] }}%</strong> explanations</span>
                 </div>
 
-                {{-- Detected Quality Problems List (TASK 1.3) --}}
+                @if($audit['is_reviewed'] || $explorerData['filter'] === 'reviewed_issues')
+                <div style="font-size:.72rem;color:#94a3b8;margin-top:.5rem;background:#080f1d;padding:.4rem .6rem;border-radius:.4rem;border:1px solid #1e293b;">
+                    Reviewed by <strong>{{ $audit['review_details']['reviewer_name'] }}</strong> on {{ $audit['review_details']['reviewed_at'] }}
+                </div>
+                @endif
+
+                {{-- Detected Quality Problems List (TASK 1.3 & PART 5: Preserved Issue History) --}}
                 @if(count($audit['warnings']) > 0)
                 <div class="exp-problems">
-                    <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;color:#fb7185;margin-top:.4rem;">Detected Issues:</div>
+                    <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;color:#fb7185;margin-top:.4rem;">Detected Issues (Preserved History):</div>
                     @foreach($audit['warnings'] as $w)
                     <span class="exp-problem-tag">⚠️ {{ $w }}</span>
                     @endforeach
