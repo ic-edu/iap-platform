@@ -169,4 +169,101 @@ class EndToEndContextAwareNavigationTest extends TestCase
         $this->assertEquals('needs_revision', is_object($bank->status) ? $bank->status->value : $bank->status);
         $this->assertEquals('OPEN', $finding->status);
     }
+
+    /**
+     * TEST H: Explorer filter=needs_improvement -> Validation Workspace -> Back -> Explorer filter=needs_improvement.
+     */
+    public function test_h_explorer_needs_improvement_to_validation_back_preserves_filter()
+    {
+        $bank = $this->createTestBank(['status' => 'pending_approval']);
+
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.question-bank-validate', [
+                'questionBank' => $bank->id,
+                'from'         => 'explorer',
+                'filter'       => 'needs_improvement',
+            ]));
+
+        $response->assertStatus(200);
+        $expectedBackUrl = route('admin.academic-library.explorer', ['filter' => 'needs_improvement']);
+        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
+    }
+
+    /**
+     * TEST I: Question Banks Approval Queue -> Validation Workspace -> Back -> Questions Approval.
+     */
+    public function test_i_approval_queue_to_validation_back_returns_to_questions_approval()
+    {
+        $bank = $this->createTestBank(['status' => 'pending_approval']);
+
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.question-bank-validate', [
+                'questionBank' => $bank->id,
+                'from'         => 'approval_queue',
+            ]));
+
+        $response->assertStatus(200);
+        $expectedBackUrl = route('admin.repository-manager.questions-approval');
+        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
+    }
+
+    /**
+     * TEST J: Teacher Revision Task -> Focused Question Editor -> Back -> Revision Task.
+     */
+    public function test_j_teacher_revision_task_to_editor_back_returns_to_task_detail()
+    {
+        $bank = $this->createTestBank(['status' => 'needs_revision']);
+
+        $question = Question::create([
+            'question_bank_id' => $bank->id,
+            'prompt'           => 'Essay Question Prompt',
+            'question_type'    => 'essay',
+            'explanation'      => 'Detailed explanation.',
+            'difficulty'       => 'medium',
+            'points'           => 10,
+        ]);
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Please update prompt.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $bank->id,
+            'question_id'                    => $question->id,
+            'finding_type'                   => 'quality_warning',
+            'severity'                       => 'high',
+            'feedback'                       => 'Missing category',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [
+                'revisionRequest' => $revisionRequest->id,
+                'item'            => $item->id,
+            ]));
+
+        $response->assertStatus(200);
+        $expectedBackUrl = route('teacher.repository-revisions.show', $revisionRequest->id);
+        $this->assertStringContainsString($expectedBackUrl, $response->getContent());
+    }
+
+    /**
+     * TEST K: Direct access fallback without parameters returns safe default.
+     */
+    public function test_k_direct_access_validation_workspace_fallback()
+    {
+        $bank = $this->createTestBank(['status' => 'needs_revision']);
+
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.question-bank-validate', $bank->id));
+
+        $response->assertStatus(200);
+        $expectedDefaultBackUrl = route('admin.repository-manager.questions-approval');
+        $this->assertStringContainsString($expectedDefaultBackUrl, $response->getContent());
+    }
 }
