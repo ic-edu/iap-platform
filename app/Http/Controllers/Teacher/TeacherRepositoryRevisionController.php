@@ -284,7 +284,7 @@ class TeacherRepositoryRevisionController extends Controller
 
         // 4. Execute Automatic IRQA Re-Scan
         $qualityService = app(RepositoryQualityService::class);
-        $rescanAudit = $qualityService->validateRepository($bank);
+        $rescanAudit = $qualityService->syncRepositoryFindings($bank);
         $currentWarnings = $rescanAudit['warnings'] ?? [];
 
         // Audit Log: Automatic IRQA Scan Completed

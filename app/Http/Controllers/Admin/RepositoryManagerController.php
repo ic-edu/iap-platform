@@ -493,7 +493,7 @@ class RepositoryManagerController extends Controller
         ]);
 
         $qualityService = app(\App\Services\RepositoryQualityService::class);
-        $audit = $qualityService->validateRepository($questionBank);
+        $audit = $qualityService->syncRepositoryFindings($questionBank);
 
         if (!empty($audit['warnings'])) {
             foreach ($audit['warnings'] as $warning) {
@@ -505,15 +505,6 @@ class RepositoryManagerController extends Controller
                     'feedback'                       => $warning,
                     'suggested_fix'                  => 'Please review and update this repository item.',
                     'status'                         => 'OPEN',
-                ]);
-
-                \App\Models\RepositoryFinding::create([
-                    'question_bank_id' => $questionBank->id,
-                    'finding_code'     => 'IRQA_WARN',
-                    'title'            => $warning,
-                    'description'      => $warning,
-                    'severity'         => 'high',
-                    'status'           => 'OPEN',
                 ]);
             }
         } else {

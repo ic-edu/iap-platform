@@ -75,8 +75,11 @@ class RepositoryQualityService
                     $warnings[] = "Incomplete question found (ID: {$q->id}) - missing prompt";
                 }
 
-                // Check choices for MCQs
-                if (in_array($q->question_type->value ?? $q->question_type, ['multiple_choice', 'listening', 'reading'])) {
+                // Check choices for choice-based questions (prevent false positives for oral/essay/speaking prompts)
+                $qTypeVal = is_object($q->question_type) ? $q->question_type->value : (string) $q->question_type;
+                $nonChoiceTypes = ['essay', 'speaking', 'writing', 'short_answer'];
+
+                if (in_array($qTypeVal, ['multiple_choice', 'multiple_response', 'true_false']) || (!in_array($qTypeVal, $nonChoiceTypes) && $q->choices->count() > 0)) {
                     if ($q->choices->count() === 0) {
                         $incompleteQuestions++;
                         $warnings[] = "Question '{$q->prompt}' has no answer choices attached";
@@ -177,6 +180,97 @@ class RepositoryQualityService
             ],
             'governance'         => $governance,
         ];
+    }
+
+    /**
+     * Synchronize and reconcile IRQA Findings for a QuestionBank repository.
+     * Prevents duplicate OPEN findings during re-scans and resolves findings when issues disappear.
+     */
+    public function syncRepositoryFindings(QuestionBank $bank): array
+    {
+        $audit = $this->validateRepository($bank);
+        $currentWarnings = $audit['warnings'] ?? [];
+
+        if (!\Illuminate\Support\Facades\Schema::hasTable('repository_findings')) {
+            return $audit;
+        }
+
+        // 1. Get existing OPEN findings for this repository
+        $existingOpenFindings = \App\Models\RepositoryFinding::where('question_bank_id', $bank->id)
+            ->where('status', 'OPEN')
+            ->get();
+
+        $activeFindingIds = [];
+
+        // 2. Process current validation warnings
+        foreach ($currentWarnings as $warning) {
+            $findingCode = 'IRQA_WARN';
+            $severity = 'high';
+
+            // Check if an equivalent OPEN finding already exists (deduplication)
+            $existingFinding = $existingOpenFindings->first(function ($f) use ($warning) {
+                return $f->title === $warning || $f->description === $warning;
+            });
+
+            if ($existingFinding) {
+                // Retain existing finding (do not create duplicate), touch updated_at
+                $existingFinding->touch();
+                $activeFindingIds[] = $existingFinding->id;
+            } else {
+                // Check if a FIXED or CLOSED finding exists that can be re-opened
+                $resolvedFinding = \App\Models\RepositoryFinding::where('question_bank_id', $bank->id)
+                    ->whereIn('status', ['FIXED', 'CLOSED', 'VERIFIED', 'DISMISSED'])
+                    ->where(function ($q) use ($warning) {
+                        $q->where('title', $warning)->orWhere('description', $warning);
+                    })
+                    ->first();
+
+                if ($resolvedFinding) {
+                    $resolvedFinding->status = 'OPEN';
+                    $resolvedFinding->save();
+                    $activeFindingIds[] = $resolvedFinding->id;
+                } else {
+                    // Create new OPEN finding
+                    $newFinding = \App\Models\RepositoryFinding::create([
+                        'question_bank_id' => $bank->id,
+                        'finding_code'     => $findingCode,
+                        'title'            => $warning,
+                        'description'      => $warning,
+                        'severity'         => $severity,
+                        'status'           => 'OPEN',
+                    ]);
+                    $activeFindingIds[] = $newFinding->id;
+                }
+            }
+        }
+
+        // 3. Mark previous OPEN findings that are NO LONGER present as FIXED
+        foreach ($existingOpenFindings as $openFinding) {
+            if (!in_array($openFinding->id, $activeFindingIds)) {
+                $openFinding->status = 'FIXED';
+                $openFinding->save();
+            }
+        }
+
+        // 4. Deduplicate any remaining OPEN findings for identical warnings
+        $openFindingsGrouped = \App\Models\RepositoryFinding::where('question_bank_id', $bank->id)
+            ->where('status', 'OPEN')
+            ->get()
+            ->groupBy('title');
+
+        foreach ($openFindingsGrouped as $title => $group) {
+            if ($group->count() > 1) {
+                $keep = $group->sortByDesc('created_at')->first();
+                foreach ($group as $item) {
+                    if ($item->id !== $keep->id) {
+                        $item->status = 'FIXED';
+                        $item->save();
+                    }
+                }
+            }
+        }
+
+        return $audit;
     }
 
     /**
