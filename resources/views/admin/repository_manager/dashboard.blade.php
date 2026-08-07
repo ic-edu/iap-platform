@@ -159,7 +159,7 @@
             </button>
 
             {{-- 2. IRQA Repository Explorer --}}
-            <a href="{{ route('admin.academic-library.explorer') }}" style="padding:.7rem 1.2rem;background:#1e293b;border:1px solid #334155;color:#e0e7ff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('admin.academic-library.explorer', ['from' => 'dashboard']) }}" style="padding:.7rem 1.2rem;background:#1e293b;border:1px solid #334155;color:#e0e7ff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
                 🔍 IRQA Explorer
             </a>
 
@@ -204,7 +204,7 @@
         </a>
 
         {{-- Card 4: Repository Explorer --}}
-        <a href="{{ route('admin.academic-library.explorer') }}" class="rm-kpi-card">
+        <a href="{{ route('admin.academic-library.explorer', ['from' => 'dashboard']) }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Repository Explorer</span>
                 <span style="font-size:1.5rem;">🏛</span>
@@ -214,7 +214,7 @@
         </a>
 
         {{-- Card 5: Metadata Compliance --}}
-        <a href="{{ route('admin.academic-library.quality') }}" class="rm-kpi-card">
+        <a href="{{ route('admin.academic-library.quality', ['from' => 'dashboard']) }}" class="rm-kpi-card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span class="rm-kpi-lbl">Metadata Compliance</span>
                 <span style="font-size:1.5rem;">✅</span>

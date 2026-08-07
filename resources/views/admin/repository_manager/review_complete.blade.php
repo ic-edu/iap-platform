@@ -77,9 +77,15 @@
         </div>
 
         {{-- CTAs --}}
+        @php
+            $rcPrimaryUrl = match(request('from')) {
+                'approval_queue' => route('admin.repository-manager.questions-approval'),
+                default          => route('admin.academic-library.explorer', ['filter' => request('filter', 'reviewed_issues')]),
+            };
+        @endphp
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-            <a href="{{ route('admin.academic-library.explorer') }}" style="padding:.75rem 1.5rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);">
-                🔍 Return to IRQA Repository Explorer
+            <a href="{{ $rcPrimaryUrl }}" style="padding:.75rem 1.5rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);">
+                🔍 Return to Origin
             </a>
             <a href="{{ route('admin.repository-manager.questions-approval') }}" style="padding:.75rem 1.5rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;">
                 ⚡ Open Governance Queue

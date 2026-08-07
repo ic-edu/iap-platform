@@ -64,8 +64,14 @@
 <div class="an-workspace">
 
     {{-- Breadcrumb Navigation --}}
+    @php
+        $anBackUrl = match(request('from')) {
+            'explorer' => route('admin.academic-library.explorer'),
+            default    => route('admin.academic-library.quality'),
+        };
+    @endphp
     <div style="display:flex;justify-content:space-between;align-items:center;">
-        <a href="{{ route('admin.academic-library.quality') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ $anBackUrl }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
         <span style="padding:.25rem .75rem;background:#1e293b;color:#94a3b8;border-radius:99px;font-size:.7rem;font-weight:700;">INSTITUTIONAL QUALITY ANALYTICS</span>

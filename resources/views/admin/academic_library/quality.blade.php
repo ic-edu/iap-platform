@@ -89,8 +89,15 @@
 <div class="irqa-workspace">
 
     {{-- Breadcrumb & Navigation --}}
+    @php
+        $qBackUrl = match(request('from')) {
+            'academic_library' => route('admin.academic-library.index'),
+            'admin_dashboard'  => route('admin.dashboard'),
+            default            => route('admin.repository-manager.dashboard'),
+        };
+    @endphp
     <div style="display:flex;justify-content:space-between;align-items:center;">
-        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ $qBackUrl }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
     </div>
@@ -106,28 +113,28 @@
     {{-- Global Quality Metrics Grid (PART 11 & TASK 1) --}}
     <div class="irqa-kpi-grid">
         {{-- Card 1: Total Repositories --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'all']) }}" class="irqa-kpi" title="View all institutional repositories">
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'all', 'from' => 'quality']) }}" class="irqa-kpi" title="View all institutional repositories">
             <div class="irqa-kpi__count irqa-count--indigo">{{ $summary['total_repositories'] }}</div>
             <div class="irqa-kpi__label">Total Repositories →</div>
             <div class="irqa-kpi__sub">All institutional banks</div>
         </a>
 
         {{-- Card 2: Healthy Repositories --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'healthy']) }}" class="irqa-kpi" title="View healthy repositories with zero issues">
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'healthy', 'from' => 'quality']) }}" class="irqa-kpi" title="View healthy repositories with zero issues">
             <div class="irqa-kpi__count irqa-count--emerald">{{ $summary['healthy_count'] }}</div>
             <div class="irqa-kpi__label">Healthy Repositories →</div>
             <div class="irqa-kpi__sub">Zero active issues</div>
         </a>
 
         {{-- Card 3: Unreviewed Needs Improvement --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc']) }}" class="irqa-kpi" title="Active IRQA issues awaiting governance review">
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc', 'from' => 'quality']) }}" class="irqa-kpi" title="Active IRQA issues awaiting governance review">
             <div class="irqa-kpi__count irqa-count--rose">{{ $summary['needs_improvement_count'] }}</div>
             <div class="irqa-kpi__label">Needing Improvement →</div>
             <div class="irqa-kpi__sub">Unreviewed active issues</div>
         </a>
 
         {{-- Card 4: Reviewed Issues --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'reviewed_issues']) }}" class="irqa-kpi" title="Repositories reviewed by Repository Manager with tracked quality issues">
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'reviewed_issues', 'from' => 'quality']) }}" class="irqa-kpi" title="Repositories reviewed by Repository Manager with tracked quality issues">
             <div class="irqa-kpi__count irqa-count--purple">{{ $summary['reviewed_issues_count'] ?? 0 }}</div>
             <div class="irqa-kpi__label">Reviewed Issues →</div>
             <div class="irqa-kpi__sub">Reviewed with findings</div>
@@ -135,7 +142,7 @@
 
         {{-- Card 5: Awaiting Approval --}}
         @if($summary['pending_approval_count'] > 0)
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval']) }}" class="irqa-kpi" title="Repositories submitted and pending governance approval">
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval', 'from' => 'quality']) }}" class="irqa-kpi" title="Repositories submitted and pending governance approval">
             <div class="irqa-kpi__count irqa-count--amber">{{ $summary['pending_approval_count'] }}</div>
             <div class="irqa-kpi__label">Awaiting Approval →</div>
             <div class="irqa-kpi__sub">Pending RM decision</div>
