@@ -2,6 +2,7 @@
 
 namespace App\Modules\QuestionBank\Database\Seeders;
 
+use App\Models\RepositoryRevisionRequest;
 use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\QuestionBank\Enums\QuestionType;
@@ -11,15 +12,27 @@ use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class QuestionBankSeeder extends Seeder
 {
     public function run(): void
     {
-        $teacher = User::where('email', 'teacher@icedu.org')->first() ?? User::role('teacher')->first() ?? User::first();
+        $teacher = User::where('email', 'teacher@icedu.org')->first()
+            ?? User::role('teacher')->first();
 
         if (!$teacher) {
-            return;
+            $teacher = User::create([
+                'name'     => 'Teacher Instructor',
+                'email'    => 'teacher@icedu.org',
+                'password' => Hash::make('password'),
+                'status'   => 'active',
+            ]);
+            $teacher->assignRole('teacher');
+        }
+
+        if (!$teacher->hasRole('teacher')) {
+            throw new \RuntimeException('QuestionBank creator must possess the teacher role.');
         }
 
         $category = CourseCategory::first();
@@ -33,6 +46,17 @@ class QuestionBankSeeder extends Seeder
             'test_type' => TestType::Toeic,
             'description' => 'Official TOEIC listening and reading question pool.',
         ]);
+
+        // Remediation: Ensure created_by belongs to Teacher
+        if ($bank->created_by !== $teacher->id) {
+            $bank->created_by = $teacher->id;
+            $bank->save();
+        }
+
+        // Remediation: Reconcile active RepositoryRevisionRequest teacher_id to match author
+        RepositoryRevisionRequest::where('question_bank_id', $bank->id)
+            ->where('teacher_id', '!=', $teacher->id)
+            ->update(['teacher_id' => $teacher->id]);
 
         // Create sample listening question
         $q1 = Question::firstOrCreate([

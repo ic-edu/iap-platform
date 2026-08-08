@@ -282,4 +282,52 @@ class RepositoryCreationRoleBoundaryTest extends TestCase
         $response->assertStatus(200);
         $this->assertStringContainsString('IRQA', $response->getContent());
     }
+
+    /**
+     * TEST 16: QuestionBankSeeder guarantees creator has teacher role and never resolves to RM.
+     */
+    public function test_16_question_bank_seeder_assigns_teacher_role_creator()
+    {
+        $this->seed(\App\Modules\QuestionBank\Database\Seeders\QuestionBankSeeder::class);
+
+        $toeicBank = QuestionBank::where('slug', 'toeic-official-bank-vol-1')->first();
+        $this->assertNotNull($toeicBank);
+
+        $creator = User::find($toeicBank->created_by);
+        $this->assertNotNull($creator);
+        $this->assertTrue($creator->hasRole('teacher'));
+        $this->assertFalse($creator->hasRole('repository-manager'));
+    }
+
+    /**
+     * TEST 17: RepositoryRevisionRequest recipient teacher_id matches repository author, requested_by_id matches RM.
+     */
+    public function test_17_revision_request_recipient_reconciliation()
+    {
+        $bank = QuestionBank::create([
+            'title'           => 'Reconciliation Bank',
+            'slug'            => 'reconcile-bank-' . uniqid(),
+            'test_type'       => 'toeic',
+            'current_version' => '1.0',
+            'status'          => 'pending_approval',
+            'created_by'      => $this->teacher->id,
+        ]);
+
+        $this->actingAs($this->repoManager)
+            ->post(route('admin.repository-manager.question-bank-revision', $bank->id), ['notes' => 'Revision note']);
+
+        $revReq = RepositoryRevisionRequest::where('question_bank_id', $bank->id)->first();
+        $this->assertNotNull($revReq);
+        $this->assertEquals($this->teacher->id, $revReq->teacher_id);
+        $this->assertEquals($this->repoManager->id, $revReq->requested_by_id);
+
+        $dashboardResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.dashboard'));
+        $dashboardResponse->assertStatus(200);
+
+        $revisionCenterResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.index'));
+        $revisionCenterResponse->assertStatus(200);
+        $this->assertStringContainsString('Reconciliation Bank', $revisionCenterResponse->getContent());
+    }
 }

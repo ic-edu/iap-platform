@@ -11,7 +11,18 @@ class MediaInstitutionalRepositorySeeder extends Seeder
 {
     public function run(): void
     {
-        $teacher = User::where('email', 'teacher@icedu.org')->first() ?? User::role('teacher')->first() ?? User::first();
+        $teacher = User::where('email', 'teacher@icedu.org')->first()
+            ?? User::role('teacher')->first();
+
+        if (!$teacher) {
+            $teacher = User::create([
+                'name'     => 'Teacher Instructor',
+                'email'    => 'teacher@icedu.org',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'status'   => 'active',
+            ]);
+            $teacher->assignRole('teacher');
+        }
 
         // Ensure physical storage directories exist
         $mediaDir = storage_path('app/public/media');

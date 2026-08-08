@@ -53,7 +53,18 @@ class AclStarterLibrarySeeder extends Seeder
         }
 
         // Get Teacher user for creator attribution
-        $teacher = User::where('email', 'teacher@icedu.org')->first() ?? User::role('teacher')->first() ?? User::first();
+        $teacher = User::where('email', 'teacher@icedu.org')->first()
+            ?? User::role('teacher')->first();
+
+        if (!$teacher) {
+            $teacher = User::create([
+                'name'     => 'Teacher Instructor',
+                'email'    => 'teacher@icedu.org',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'status'   => 'active',
+            ]);
+            $teacher->assignRole('teacher');
+        }
 
         // Definition of 17 Starter Repositories with 5 Representative Questions each
         $seedRepositories = [
