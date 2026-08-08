@@ -483,39 +483,55 @@ class RepositoryManagerController extends Controller
 
         $teacherId = $questionBank->created_by ?: ($questionBank->creator?->id ?? $user->id);
 
-        // HOTFIX GOVERNANCE WORKFLOW: Create RepositoryRevisionRequest & RepositoryRevisionTask
-        $revisionRequest = \App\Models\RepositoryRevisionRequest::create([
-            'question_bank_id' => $questionBank->id,
-            'teacher_id'       => $teacherId,
-            'requested_by_id'  => $user->id,
-            'status'           => 'OPEN',
-            'notes'            => $note,
-        ]);
+        // HOTFIX GOVERNANCE WORKFLOW: Reuse existing active RepositoryRevisionRequest if present (prevent duplicate active tasks)
+        $revisionRequest = \App\Models\RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+            ->latest()
+            ->first();
+
+        if ($revisionRequest) {
+            $revisionRequest->update([
+                'teacher_id'       => $teacherId,
+                'requested_by_id'  => $user->id,
+                'status'           => 'OPEN',
+                'notes'            => $note,
+            ]);
+        } else {
+            $revisionRequest = \App\Models\RepositoryRevisionRequest::create([
+                'question_bank_id' => $questionBank->id,
+                'teacher_id'       => $teacherId,
+                'requested_by_id'  => $user->id,
+                'status'           => 'OPEN',
+                'notes'            => $note,
+            ]);
+        }
 
         $qualityService = app(\App\Services\RepositoryQualityService::class);
         $audit = $qualityService->syncRepositoryFindings($questionBank);
 
         if (!empty($audit['warnings'])) {
             foreach ($audit['warnings'] as $warning) {
-                \App\Models\RepositoryRevisionItem::create([
+                \App\Models\RepositoryRevisionItem::firstOrCreate([
                     'repository_revision_request_id' => $revisionRequest->id,
                     'question_bank_id'               => $questionBank->id,
-                    'finding_type'                   => 'quality_warning',
-                    'severity'                       => 'high',
                     'feedback'                       => $warning,
-                    'suggested_fix'                  => 'Please review and update this repository item.',
-                    'status'                         => 'OPEN',
+                ], [
+                    'finding_type'  => 'quality_warning',
+                    'severity'      => 'high',
+                    'suggested_fix' => 'Please review and update this repository item.',
+                    'status'        => 'OPEN',
                 ]);
             }
         } else {
-            \App\Models\RepositoryRevisionItem::create([
+            \App\Models\RepositoryRevisionItem::firstOrCreate([
                 'repository_revision_request_id' => $revisionRequest->id,
                 'question_bank_id'               => $questionBank->id,
-                'finding_type'                   => 'reviewer_feedback',
-                'severity'                       => 'medium',
                 'feedback'                       => $note,
-                'suggested_fix'                  => 'Address reviewer notes in repository.',
-                'status'                         => 'OPEN',
+            ], [
+                'finding_type'  => 'reviewer_feedback',
+                'severity'      => 'medium',
+                'suggested_fix' => 'Address reviewer notes in repository.',
+                'status'        => 'OPEN',
             ]);
         }
 

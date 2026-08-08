@@ -34,6 +34,7 @@ class TeacherRepositoryRevisionController extends Controller
                       $bq->where('created_by', $teacherId);
                   });
             })
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS', 'RESUBMITTED'])
             ->latest()
             ->paginate(12);
 

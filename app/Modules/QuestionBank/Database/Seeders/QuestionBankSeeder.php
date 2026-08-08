@@ -53,10 +53,22 @@ class QuestionBankSeeder extends Seeder
             $bank->save();
         }
 
-        // Remediation: Reconcile active RepositoryRevisionRequest teacher_id to match author
-        RepositoryRevisionRequest::where('question_bank_id', $bank->id)
-            ->where('teacher_id', '!=', $teacher->id)
-            ->update(['teacher_id' => $teacher->id]);
+        // Remediation: Reconcile RepositoryRevisionRequests - ensure only ONE active request (OPEN/IN_PROGRESS) exists
+        $activeRequests = RepositoryRevisionRequest::where('question_bank_id', $bank->id)
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        if ($activeRequests->count() > 1) {
+            $newest = $activeRequests->first();
+            $newest->update(['teacher_id' => $teacher->id]);
+
+            foreach ($activeRequests->slice(1) as $older) {
+                $older->update(['status' => 'COMPLETED', 'teacher_id' => $teacher->id]);
+            }
+        } else if ($activeRequests->count() === 1) {
+            $activeRequests->first()->update(['teacher_id' => $teacher->id]);
+        }
 
         // Create sample listening question
         $q1 = Question::firstOrCreate([

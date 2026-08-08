@@ -330,4 +330,62 @@ class RepositoryCreationRoleBoundaryTest extends TestCase
         $revisionCenterResponse->assertStatus(200);
         $this->assertStringContainsString('Reconciliation Bank', $revisionCenterResponse->getContent());
     }
+
+    /**
+     * TEST 18: RM repeating Request Revision reuses active request and prevents duplicate active tasks.
+     */
+    public function test_18_repeated_request_revision_reuses_active_request()
+    {
+        $bank = QuestionBank::create([
+            'title'           => 'Idempotency Target Bank',
+            'slug'            => 'idempotency-bank-' . uniqid(),
+            'test_type'       => 'toeic',
+            'current_version' => '1.0',
+            'status'          => 'pending_approval',
+            'created_by'      => $this->teacher->id,
+        ]);
+
+        // First revision request
+        $this->actingAs($this->repoManager)
+            ->post(route('admin.repository-manager.question-bank-revision', $bank->id), [
+                'notes' => 'First revision note',
+            ]);
+
+        $activeCountInitial = RepositoryRevisionRequest::where('question_bank_id', $bank->id)
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+            ->count();
+        $this->assertEquals(1, $activeCountInitial);
+
+        $initialRequest = RepositoryRevisionRequest::where('question_bank_id', $bank->id)
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+            ->first();
+
+        // Second repeated revision request for the SAME bank while OPEN
+        $this->actingAs($this->repoManager)
+            ->post(route('admin.repository-manager.question-bank-revision', $bank->id), [
+                'notes' => 'Second updated revision note',
+            ]);
+
+        $activeCountAfterSecond = RepositoryRevisionRequest::where('question_bank_id', $bank->id)
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+            ->count();
+        $this->assertEquals(1, $activeCountAfterSecond);
+
+        $reusedRequest = RepositoryRevisionRequest::where('question_bank_id', $bank->id)
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+            ->first();
+
+        // Assert request ID was reused and notes updated
+        $this->assertEquals($initialRequest->id, $reusedRequest->id);
+        $this->assertEquals('Second updated revision note', $reusedRequest->notes);
+
+        // Assert Teacher Revision Center shows EXACTLY ONE active task card for this bank
+        $revisionCenterResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.index'));
+        $revisionCenterResponse->assertStatus(200);
+
+        // Count occurrences of card ID/title for this bank in Revision Center content
+        $content = $revisionCenterResponse->getContent();
+        $this->assertEquals(1, substr_count($content, 'Idempotency Target Bank'));
+    }
 }
