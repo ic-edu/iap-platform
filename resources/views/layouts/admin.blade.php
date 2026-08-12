@@ -350,19 +350,29 @@
                     }
 
                     const csrfToken = document.querySelector('meta[name=csrf-token]')?.content || '';
-                    listEl.innerHTML = json.data.map(item => `
+                    listEl.innerHTML = json.data.map(item => {
+                        let cta = 'Click to view →';
+                        if (item.title && item.title.toLowerCase().includes('resubmit')) cta = 'Review Repository →';
+                        else if (item.title && item.title.toLowerCase().includes('revision')) cta = 'View Revision Task →';
+                        else if (item.title && item.title.toLowerCase().includes('irqa')) cta = 'Inspect Governance →';
+
+                        return `
                         <form action="/notifications/${item.id}/read" method="POST" class="m-0 p-0 block">
                             <input type="hidden" name="_token" value="${csrfToken}">
-                            <button type="submit" class="w-full text-left p-3 ${item.unread ? 'bg-indigo-950/20' : ''} hover:bg-slate-800/50 transition-colors block border-none cursor-pointer">
-                                <div class="font-semibold ${item.unread ? 'text-white' : 'text-slate-300'} flex items-center justify-between">
-                                    <span>${escapeHtml(item.title)}</span>
-                                    ${item.unread ? '<span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>' : ''}
+                            <button type="submit" class="w-full text-left p-3 ${item.unread ? 'bg-indigo-950/40 border-l-2 border-indigo-500' : ''} hover:bg-slate-800/70 transition-all block border-none cursor-pointer group">
+                                <div class="font-semibold ${item.unread ? 'text-white' : 'text-slate-300'} flex items-center justify-between text-xs">
+                                    <span class="truncate pr-2">${escapeHtml(item.title)}</span>
+                                    ${item.unread ? '<span class="px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-500 text-white flex-shrink-0">NEW</span>' : ''}
                                 </div>
-                                <div class="text-slate-400 text-[11px] mt-0.5 line-clamp-2">${escapeHtml(item.message)}</div>
-                                <div class="text-[9px] text-slate-500 mt-1">${escapeHtml(item.time_ago || '')}</div>
+                                <div class="text-slate-400 text-[11px] mt-1 line-clamp-2 leading-relaxed">${escapeHtml(item.message)}</div>
+                                <div class="text-[10px] text-indigo-400 font-semibold mt-1.5 flex items-center justify-between">
+                                    <span class="text-slate-500 font-normal">${escapeHtml(item.time_ago || '')}</span>
+                                    <span class="group-hover:translate-x-0.5 transition-transform">${cta}</span>
+                                </div>
                             </button>
                         </form>
-                    `).join('');
+                    `;
+                    }).join('');
                 }
             } catch(e) { /* silent */ }
         }

@@ -11,6 +11,65 @@ use Illuminate\View\View;
 class NotificationController extends Controller
 {
     /**
+     * Resolve the canonical target URL for a notification, respecting user authorization & fallbacks.
+     */
+    public function resolveTargetUrl(object $notification, mixed $user = null): string
+    {
+        $data = is_array($notification->data) ? $notification->data : (json_decode($notification->data ?? '[]', true) ?? []);
+
+        // 1. Check direct target_url / url / link from notification payload
+        $rawUrl = $data['target_url'] ?? $data['url'] ?? $data['link'] ?? null;
+
+        if ($rawUrl) {
+            // Normalize full URLs (e.g. http://localhost:8000/admin/...) to relative paths so port mismatches don't break routing
+            $parsed = parse_url($rawUrl);
+            $path = $parsed['path'] ?? $rawUrl;
+            if (!empty($parsed['query'])) {
+                $path .= '?' . $parsed['query'];
+            }
+
+            // Role-Aware Destination Safeguard
+            if ($user) {
+                // If notification points to RM governance route but user is Teacher:
+                if (str_starts_with($path, '/admin/repository-manager/') && $user->hasRole('teacher') && !$user->hasRole(['repository-manager', 'super-admin'])) {
+                    return route('teacher.repository-revisions.index');
+                }
+                // If notification points to Teacher revision route but user is RM/Admin:
+                if (str_starts_with($path, '/teacher/repository-revisions') && $user->hasRole(['repository-manager', 'super-admin']) && !$user->hasRole('teacher')) {
+                    if (!empty($data['question_bank_id'])) {
+                        return route('admin.repository-manager.question-bank-validate', $data['question_bank_id']);
+                    }
+                    return route('admin.repository-manager.dashboard');
+                }
+            }
+
+            return $path;
+        }
+
+        // 2. Entity-Based Fallback Resolution
+        $entityType = $data['entity_type'] ?? null;
+        $entityId   = $data['entity_id'] ?? $data['question_bank_id'] ?? null;
+
+        if ($user && ($entityType || $entityId || !empty($data['revision_request_id']))) {
+            if ($user->hasRole(['repository-manager', 'super-admin'])) {
+                if ($entityId && (str_contains(strtolower((string)$entityType), 'repository') || $entityType === 'QuestionBank')) {
+                    return route('admin.repository-manager.question-bank-validate', $entityId);
+                }
+                return route('admin.repository-manager.dashboard');
+            }
+
+            if ($user->hasRole('teacher')) {
+                if (!empty($data['revision_request_id'])) {
+                    return route('teacher.repository-revisions.show', $data['revision_request_id']);
+                }
+                return route('teacher.repository-revisions.index');
+            }
+        }
+
+        return route('notifications.index');
+    }
+
+    /**
      * JSON feed for top-nav notification bell (ADMIN-OPS-001 Section 7 & NOTIFICATION-001).
      */
     public function feed(Request $request): JsonResponse
@@ -23,18 +82,18 @@ class NotificationController extends Controller
 
         $dbNotifications = $user->notifications()->take(15)->get();
 
-        $formatted = $dbNotifications->map(function ($n) {
-            $data = $n->data;
+        $formatted = $dbNotifications->map(function ($n) use ($user) {
+            $data = is_array($n->data) ? $n->data : (json_decode($n->data ?? '[]', true) ?? []);
 
             return [
                 'id' => $n->id,
                 'title' => $data['title'] ?? 'System Alert',
                 'message' => $data['message'] ?? '',
-                'notification_type' => $data['notification_type'] ?? 'SYSTEM_ALERT',
+                'notification_type' => $data['notification_type'] ?? $n->type ?? 'SYSTEM_ALERT',
                 'priority' => $data['priority'] ?? 'NORMAL',
                 'entity_type' => $data['entity_type'] ?? null,
                 'entity_id' => $data['entity_id'] ?? null,
-                'target_url' => $data['target_url'] ?? $data['url'] ?? route('notifications.index'),
+                'target_url' => $this->resolveTargetUrl($n, $user),
                 'timestamp' => $n->created_at?->toIso8601String(),
                 'time_ago' => $n->created_at?->diffForHumans(),
                 'unread' => is_null($n->read_at),
@@ -105,10 +164,7 @@ class NotificationController extends Controller
             properties: ['notification_id' => $id, 'title' => $notification->data['title'] ?? '']
         );
 
-        // Resolve deep link target URL (fallback to notification history)
-        $targetUrl = $notification->data['target_url']
-            ?? $notification->data['url']
-            ?? route('notifications.index');
+        $targetUrl = $this->resolveTargetUrl($notification, $user);
 
         if ($request->expectsJson()) {
             return response()->json([
