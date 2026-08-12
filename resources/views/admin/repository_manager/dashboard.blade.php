@@ -163,9 +163,9 @@
                 🔍 IRQA Explorer
             </a>
 
-            {{-- 3. Aggregated Governance Queue --}}
-            <a href="{{ route('admin.repository-manager.assessment-approval') }}" style="padding:.7rem 1.25rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);display:inline-flex;align-items:center;gap:.4rem;">
-                ⚡ Governance Queue ({{ $pendingAssessmentsCount + $pendingMediaCount + $pendingQuestionsCount }})
+            {{-- 3. Question Bank Governance Queue --}}
+            <a href="{{ route('admin.repository-manager.questions-approval') }}" style="padding:.7rem 1.25rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);display:inline-flex;align-items:center;gap:.4rem;">
+                📚 Question Bank Governance ({{ $pendingQuestionsCount }})
             </a>
         </div>
     </div>
@@ -173,14 +173,24 @@
     {{-- PRIORITY 1: ACTIONABLE MISSION CONTROL KPI CARDS (PART 2 & PART 5) --}}
     <div class="rm-kpi-grid">
         
-        {{-- Card 1: Pending Assessment Reviews --}}
-        <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="rm-kpi-card" style="border-color:#6366f1;">
+        {{-- Card 1: Question Bank Governance --}}
+        <a href="{{ route('admin.repository-manager.questions-approval') }}" class="rm-kpi-card" style="border-color:#6366f1;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span class="rm-kpi-lbl">Pending Assessments</span>
+                <span class="rm-kpi-lbl">Question Bank Governance</span>
+                <span style="font-size:1.5rem;">📚</span>
+            </div>
+            <div class="rm-kpi-val" style="color:#6366f1;">{{ $pendingQuestionsCount }}</div>
+            <div class="rm-kpi-sub">Governance Queue →</div>
+        </a>
+
+        {{-- Card 2: Assessment Approval --}}
+        <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="rm-kpi-card" style="border-color:#38bdf8;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="rm-kpi-lbl">Assessment Approval</span>
                 <span style="font-size:1.5rem;">📋</span>
             </div>
-            <div class="rm-kpi-val" style="color:#6366f1;">{{ $pendingAssessmentsCount }}</div>
-            <div class="rm-kpi-sub">Review Queue →</div>
+            <div class="rm-kpi-val" style="color:#38bdf8;">{{ $pendingAssessmentsCount }}</div>
+            <div class="rm-kpi-sub">Assessment Queue →</div>
         </a>
 
         {{-- Card 2: Pending Media Reviews --}}
@@ -329,11 +339,11 @@
     {{-- PRIORITY 2: RECENTLY UPDATED REPOSITORIES & AUDIT LOG (PART 3 & PART 9) --}}
     <div class="rm-section-grid">
 
-        {{-- Panel 3: Open Governance Approval Queue (Task-Driven Governance Queue) --}}
+        {{-- Panel 3: Open Repository Governance Queue --}}
         <div class="rm-panel">
             <div>
                 <div class="rm-panel__header">
-                    <h3 class="rm-panel__title">⚡ Open Governance Approval Queue</h3>
+                    <h3 class="rm-panel__title">⚡ Open Repository Governance Queue</h3>
                     <span style="font-size:.7rem;color:#64748b;font-weight:600;">(Recently Updated Repositories)</span>
                     <a href="{{ route('admin.repository-manager.questions-approval') }}" style="font-size:.78rem;color:#818cf8;font-weight:700;text-decoration:none;">Open Queue →</a>
                 </div>

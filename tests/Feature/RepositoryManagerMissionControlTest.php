@@ -49,7 +49,7 @@ class RepositoryManagerMissionControlTest extends TestCase
             'title'      => 'MC Bank 01',
             'slug'       => 'mc-bank-01',
             'test_type'  => 'toeic',
-            'status'     => 'published',
+            'status'     => 'pending_approval',
             'created_by' => $this->teacher->id,
         ]);
 
@@ -74,8 +74,9 @@ class RepositoryManagerMissionControlTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('🔔 Notifications');
         $response->assertSee('🔍 IRQA Explorer');
-        $response->assertSee('⚡ Governance Queue');
-        $response->assertSee('Recently Updated Repositories');
+        $response->assertSee('📚 Question Bank Governance');
+        $response->assertSee('⚡ Open Repository Governance Queue');
+        $response->assertSee('(Recently Updated Repositories)');
     }
 
     /**
@@ -90,26 +91,57 @@ class RepositoryManagerMissionControlTest extends TestCase
     }
 
     /**
-     * TEST 3: Actionability rule - Every KPI card has an actionable link/CTA.
+     * TEST 3: Actionability rule - Every KPI card has an explicit, distinct destination.
      */
-    public function test_3_kpi_cards_and_widgets_have_actionable_ctas()
+    public function test_3_kpi_cards_and_widgets_have_distinct_actionable_ctas()
     {
         $response = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('Review Queue →');
-        $response->assertDontSee('Question Queue →');
+        $response->assertSee('Question Bank Governance');
+        $response->assertSee('Assessment Approval');
+        $response->assertSee('Governance Queue →');
+        $response->assertSee('Assessment Queue →');
         $response->assertSee('Media Queue →');
         $response->assertSee('Duplicate Center →');
         $response->assertSee('Total Repositories →');
         $response->assertSee('Metadata Validator →');
         $response->assertSee('Full Analytics →');
+
+        // Question Bank Governance KPI target must be Question Banks Approval Queue
+        $response->assertSee(route('admin.repository-manager.questions-approval'));
+        // Assessment Approval KPI target must be Assessment Approval Queue
+        $response->assertSee(route('admin.repository-manager.assessment-approval'));
     }
 
     /**
-     * TEST 4: IRQA Detail Page uses global context-aware ← Back navigation.
+     * TEST 4: Domain routing matrix verification - Question Bank vs Assessment approval paths.
      */
-    public function test_4_irqa_detail_page_uses_context_aware_back_navigation()
+    public function test_4_governance_domain_routing_matrix_consistency()
+    {
+        $response = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
+
+        $response->assertStatus(200);
+
+        // 1. Question Bank Governance CTA points to questions approval route
+        $questionsApprovalUrl = route('admin.repository-manager.questions-approval');
+        $assessmentApprovalUrl = route('admin.repository-manager.assessment-approval');
+
+        $response->assertSee($questionsApprovalUrl);
+        $response->assertSee($assessmentApprovalUrl);
+
+        // 2. Open Repository Governance Queue CTA points to questions approval route
+        $response->assertSee('⚡ Open Repository Governance Queue');
+
+        // 3. Question Bank validation workspace links point to validateQuestionBank route
+        $validationUrl = route('admin.repository-manager.question-bank-validate', $this->bank->id);
+        $response->assertSee($validationUrl);
+    }
+
+    /**
+     * TEST 5: IRQA Detail Page uses global context-aware ← Back navigation.
+     */
+    public function test_5_irqa_detail_page_uses_context_aware_back_navigation()
     {
         $category = \App\Models\AclCategory::firstOrCreate(
             ['slug' => 'toefl-reading-mc'],

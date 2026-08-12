@@ -61,7 +61,7 @@ class RepositoryManagerDashboardGovernanceUxTest extends TestCase
         $response = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('Governance Queue (1)');
+        $response->assertSee('Question Bank Governance (1)');
         $response->assertSee('TOEIC Listening Practice &amp; Audio Transcripts', false);
     }
 
@@ -74,7 +74,7 @@ class RepositoryManagerDashboardGovernanceUxTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertDontSee('Pending Question Banks');
-        $response->assertSee('Pending Assessments');
+        $response->assertSee('Assessment Approval');
         $response->assertSee('Pending Media');
         $response->assertSee('Repository Explorer');
     }
