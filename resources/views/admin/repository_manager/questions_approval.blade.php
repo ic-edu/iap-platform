@@ -16,11 +16,17 @@
 @section('content')
 <div class="qa-container">
 
-    {{-- Header (Part 14: Explicit route destination) --}}
+    {{-- Header (Context-aware route destination) --}}
     <div>
+        @if(request('from') === 'notifications')
+        <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+            ← Back to Notifications
+        </a>
+        @else
         <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
+        @endif
         <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:.25rem 0 0;">
             Question Banks Approval Queue
         </h1>

@@ -30,9 +30,15 @@
 
     {{-- Breadcrumbs / Back Navigation --}}
     <div style="display:flex;gap:1.25rem;align-items:center;margin-bottom:1rem;">
+        @if(request('from') === 'notifications')
+        <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back to Notifications
+        </a>
+        @else
         <a href="{{ route('teacher.repository-revisions.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back to Revision Tasks
         </a>
+        @endif
         <a href="{{ route('teacher.dashboard') }}" style="color:#cbd5e1;font-size:.82rem;font-weight:700;text-decoration:none;">
             🏠 Dashboard
         </a>
@@ -43,10 +49,10 @@
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
             <div>
                 <span style="font-size:.72rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;">Repository Revision Task</span>
-                <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin:.25rem 0 .25rem;">
+                <h1 style="font-size:1.5rem;font-weight:900;color:#fff;margin:.2rem 0 .25rem;">
                     {{ $revisionRequest->questionBank?->title }}
                 </h1>
-                <p style="font-size:.85rem;color:#94a3b8;margin:0;">
+                <p style="font-size:.82rem;color:#94a3b8;margin:0;">
                     Exam Type: <strong style="color:#34d399;text-transform:uppercase;">{{ $revisionRequest->questionBank?->test_type }}</strong> • Requested By Reviewer: <strong style="color:#e2e8f0;">{{ $revisionRequest->requestedBy?->name ?? 'Repository Manager' }}</strong>
                 </p>
             </div>
@@ -88,13 +94,13 @@
             </div>
 
             @if($item->suggested_fix)
-            <div style="font-size:.8rem;color:#cbd5e1;margin-bottom:.75rem;">
-                💡 <strong>Suggested Fix:</strong> {{ $item->suggested_fix }}
-            </div>
+            <p style="font-size:.82rem;color:#cbd5e1;margin:0 0 .5rem;">
+                <strong style="color:#818cf8;">Suggested Fix:</strong> {{ $item->suggested_fix }}
+            </p>
             @endif
 
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem;">
-                <a href="{{ route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]) }}" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-sm">
+                <a href="{{ route('teacher.repository-revisions.edit-question', array_filter([$revisionRequest->id, $item->id, 'from' => request('from')])) }}" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-sm">
                     🛠 Open Focused Question Editor →
                 </a>
             </div>

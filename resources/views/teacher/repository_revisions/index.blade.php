@@ -57,9 +57,15 @@
 
     {{-- Navigation Breadcrumbs --}}
     <div style="display:flex;gap:1.25rem;align-items:center;margin-bottom:1rem;">
+        @if(request('from') === 'notifications')
+        <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back to Notifications
+        </a>
+        @else
         <a href="{{ route('teacher.dashboard') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back
         </a>
+        @endif
     </div>
 
     {{-- Hero Header --}}
@@ -119,7 +125,7 @@
                 </div>
             </div>
 
-            <a href="{{ route('teacher.repository-revisions.show', $rr->id) }}" style="display:block;text-align:center;padding:.65rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.82rem;font-weight:800;text-decoration:none;">
+            <a href="{{ route('teacher.repository-revisions.show', array_filter([$rr->id, 'from' => request('from')])) }}" style="display:block;text-align:center;padding:.65rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.82rem;font-weight:800;text-decoration:none;">
                 Open Revision Workspace →
             </a>
         </div>

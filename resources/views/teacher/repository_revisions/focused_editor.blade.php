@@ -67,9 +67,15 @@
 
     {{-- Navigation Breadcrumbs --}}
     <div style="display:flex;gap:1.25rem;align-items:center;margin-bottom:1rem;">
+        @if(request('from') === 'notifications')
+        <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back to Notifications
+        </a>
+        @else
         <a href="{{ route('teacher.repository-revisions.show', $revisionRequest->id) }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back to Revision Task
         </a>
+        @endif
         <a href="{{ route('teacher.dashboard') }}" style="color:#cbd5e1;font-size:.82rem;font-weight:700;text-decoration:none;">
             🏠 Dashboard
         </a>

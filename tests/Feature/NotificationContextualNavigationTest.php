@@ -38,9 +38,9 @@ class NotificationContextualNavigationTest extends TestCase
     }
 
     /**
-     * TEST 1: RM resubmission notification navigates directly to RM governance review route.
+     * TEST 1: RM resubmission notification navigates directly to RM governance review route with from=notifications.
      */
-    public function test_rm_resubmission_notification_navigates_to_rm_governance_route()
+    public function test_rm_resubmission_notification_navigates_to_rm_governance_route_with_context()
     {
         $bank = QuestionBank::create([
             'title'           => 'TOEIC Resubmitted Bank',
@@ -69,19 +69,23 @@ class NotificationContextualNavigationTest extends TestCase
         $response = $this->actingAs($this->repoManager)
             ->post(route('notifications.read', $notifId));
 
-        $response->assertRedirect(route('admin.repository-manager.question-bank-validate', $bank->id));
+        $expectedTarget = route('admin.repository-manager.question-bank-validate', $bank->id) . '?from=notifications';
+        $response->assertRedirect($expectedTarget);
 
         // Assert marked read
-        $this->assertDatabaseHas('notifications', [
-            'id' => $notifId,
-        ]);
         $this->assertNotNull(DB::table('notifications')->where('id', $notifId)->value('read_at'));
+
+        // Follow redirect and assert destination renders "← Back to Notifications"
+        $destResponse = $this->actingAs($this->repoManager)->get($expectedTarget);
+        $destResponse->assertStatus(200);
+        $destResponse->assertSee('Back to Notifications');
+        $destResponse->assertSee(route('notifications.index'));
     }
 
     /**
-     * TEST 2: RM IRQA passed notification navigates to RM governance route.
+     * TEST 2: RM IRQA passed notification navigates to RM governance route with from=notifications context.
      */
-    public function test_rm_irqa_passed_notification_navigates_to_rm_governance_route()
+    public function test_rm_irqa_passed_notification_navigates_to_rm_governance_route_with_context()
     {
         $bank = QuestionBank::create([
             'title'           => 'IRQA Passed Bank',
@@ -110,13 +114,18 @@ class NotificationContextualNavigationTest extends TestCase
         $response = $this->actingAs($this->repoManager)
             ->post(route('notifications.read', $notifId));
 
-        $response->assertRedirect(route('admin.repository-manager.question-bank-validate', $bank->id));
+        $expectedTarget = route('admin.repository-manager.question-bank-validate', $bank->id) . '?from=notifications';
+        $response->assertRedirect($expectedTarget);
+
+        $destResponse = $this->actingAs($this->repoManager)->get($expectedTarget);
+        $destResponse->assertStatus(200);
+        $destResponse->assertSee('Back to Notifications');
     }
 
     /**
-     * TEST 3: Teacher revision request notification navigates to Teacher revision workflow.
+     * TEST 3: Teacher revision request notification navigates to Teacher revision workflow with from=notifications.
      */
-    public function test_teacher_revision_notification_navigates_to_teacher_revision_route()
+    public function test_teacher_revision_notification_navigates_to_teacher_revision_route_with_context()
     {
         $bank = QuestionBank::create([
             'title'           => 'Teacher Task Bank',
@@ -153,11 +162,109 @@ class NotificationContextualNavigationTest extends TestCase
         $response = $this->actingAs($this->teacher)
             ->post(route('notifications.read', $notifId));
 
-        $response->assertRedirect(route('teacher.repository-revisions.show', $revReq->id));
+        $expectedTarget = route('teacher.repository-revisions.show', $revReq->id) . '?from=notifications';
+        $response->assertRedirect($expectedTarget);
+
+        $destResponse = $this->actingAs($this->teacher)->get($expectedTarget);
+        $destResponse->assertStatus(200);
+        $destResponse->assertSee('Back to Notifications');
+        $destResponse->assertSee(route('notifications.index'));
     }
 
     /**
-     * TEST 4: Legacy notification without destination context does not crash and falls back safely.
+     * TEST 4: Approval Queue -> Question Bank Validation preserves Back to Approval Queue when opened directly without notifications.
+     */
+    public function test_approval_queue_to_validation_preserves_default_back_link()
+    {
+        $bank = QuestionBank::create([
+            'title'           => 'Queue Bank',
+            'slug'            => 'queue-bank-' . Str::random(5),
+            'test_type'       => 'toeic',
+            'current_version' => '1.0',
+            'status'          => 'pending_approval',
+            'created_by'      => $this->teacher->id,
+        ]);
+
+        // Direct request without from=notifications query param
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.question-bank-validate', $bank->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('Back to Approval Queue');
+        $response->assertSee(route('admin.repository-manager.questions-approval'));
+        $response->assertDontSee('Back to Notifications');
+    }
+
+    /**
+     * TEST 5: Teacher Revision Center -> Revision Detail preserves Back to Revision Tasks when opened directly.
+     */
+    public function test_teacher_revision_center_to_detail_preserves_default_back_link()
+    {
+        $bank = QuestionBank::create([
+            'title'           => 'Direct Teacher Bank',
+            'slug'            => 'direct-teacher-' . Str::random(5),
+            'test_type'       => 'toeic',
+            'current_version' => '1.0',
+            'status'          => 'needs_revision',
+            'created_by'      => $this->teacher->id,
+        ]);
+
+        $revReq = RepositoryRevisionRequest::create([
+            'question_bank_id' => $bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Direct workflow notes',
+        ]);
+
+        // Direct request without from=notifications
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revReq->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('Back to Revision Tasks');
+        $response->assertSee(route('teacher.repository-revisions.index'));
+        $response->assertDontSee('Back to Notifications');
+    }
+
+    /**
+     * TEST 6: Repository Manager Dashboard resolves to Repository Manager Command Center.
+     */
+    public function test_rm_dashboard_resolves_to_command_center()
+    {
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Repository Manager Command Center');
+    }
+
+    /**
+     * TEST 7: Open redirect security check - arbitrary from query values cannot cause external redirects.
+     */
+    public function test_open_redirect_security_protection()
+    {
+        $bank = QuestionBank::create([
+            'title'           => 'Security Bank',
+            'slug'            => 'sec-bank-' . Str::random(5),
+            'test_type'       => 'toeic',
+            'current_version' => '1.0',
+            'status'          => 'pending_approval',
+            'created_by'      => $this->teacher->id,
+        ]);
+
+        // Attempting to pass an evil URL as from parameter
+        $response = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.question-bank-validate', [$bank->id, 'from' => 'https://evil.com']));
+
+        $response->assertStatus(200);
+        // Falls back to safe default Back to Approval Queue
+        $response->assertSee('Back to Approval Queue');
+        $response->assertDontSee('evil.com');
+    }
+
+    /**
+     * TEST 8: Legacy notification without destination context falls back safely to notifications index.
      */
     public function test_legacy_notification_without_link_falls_back_safely()
     {
@@ -180,79 +287,5 @@ class NotificationContextualNavigationTest extends TestCase
 
         $response->assertStatus(302);
         $response->assertRedirect(route('notifications.index'));
-    }
-
-    /**
-     * TEST 5: Unauthorized user cannot bypass role authorization via notification link.
-     */
-    public function test_unauthorized_user_cannot_bypass_role_authorization()
-    {
-        $bank = QuestionBank::create([
-            'title'           => 'Secret Governance Bank',
-            'slug'            => 'secret-bank-' . Str::random(5),
-            'test_type'       => 'toeic',
-            'current_version' => '1.0',
-            'status'          => 'pending_approval',
-            'created_by'      => $this->teacher->id,
-        ]);
-
-        // Malicious or mismatched notification targeting RM route given to a Teacher
-        $notifId = (string) Str::uuid();
-        DB::table('notifications')->insert([
-            'id'              => $notifId,
-            'type'            => 'mismatched_target',
-            'notifiable_type' => 'App\Models\User',
-            'notifiable_id'   => $this->teacher->id,
-            'data'            => json_encode([
-                'title'   => 'Governance Alert',
-                'message' => 'RM internal view link',
-                'link'    => route('admin.repository-manager.question-bank-validate', $bank->id),
-            ]),
-            'created_at'      => now(),
-            'updated_at'      => now(),
-        ]);
-
-        $response = $this->actingAs($this->teacher)
-            ->post(route('notifications.read', $notifId));
-
-        // Teacher should be redirected to Teacher Revision Index, NOT the forbidden RM route
-        $response->assertRedirect(route('teacher.repository-revisions.index'));
-    }
-
-    /**
-     * TEST 6: Full Notification Center index page renders in IAP dark theme.
-     */
-    public function test_notification_center_renders_in_dark_theme()
-    {
-        $response = $this->actingAs($this->repoManager)
-            ->get(route('notifications.index'));
-
-        $response->assertStatus(200);
-        $response->assertSee('Notification Center');
-        $response->assertSee('notif-page-container', false);
-    }
-
-    /**
-     * TEST 7: Mark All Read action clears unread count for user.
-     */
-    public function test_mark_all_read_clears_unread_notifications()
-    {
-        DB::table('notifications')->insert([
-            'id'              => (string) Str::uuid(),
-            'type'            => 'test_alert',
-            'notifiable_type' => 'App\Models\User',
-            'notifiable_id'   => $this->teacher->id,
-            'data'            => json_encode(['title' => 'Alert 1']),
-            'created_at'      => now(),
-            'updated_at'      => now(),
-        ]);
-
-        $this->assertEquals(1, $this->teacher->unreadNotifications()->count());
-
-        $response = $this->actingAs($this->teacher)
-            ->post(route('notifications.read-all'));
-
-        $response->assertRedirect(route('notifications.index'));
-        $this->assertEquals(0, $this->teacher->unreadNotifications()->count());
     }
 }

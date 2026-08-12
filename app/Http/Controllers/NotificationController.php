@@ -19,6 +19,7 @@ class NotificationController extends Controller
 
         // 1. Check direct target_url / url / link from notification payload
         $rawUrl = $data['target_url'] ?? $data['url'] ?? $data['link'] ?? null;
+        $resolved = null;
 
         if ($rawUrl) {
             // Normalize full URLs (e.g. http://localhost:8000/admin/...) to relative paths so port mismatches don't break routing
@@ -37,36 +38,49 @@ class NotificationController extends Controller
                 // If notification points to Teacher revision route but user is RM/Admin:
                 if (str_starts_with($path, '/teacher/repository-revisions') && $user->hasRole(['repository-manager', 'super-admin']) && !$user->hasRole('teacher')) {
                     if (!empty($data['question_bank_id'])) {
-                        return route('admin.repository-manager.question-bank-validate', $data['question_bank_id']);
+                        $resolved = route('admin.repository-manager.question-bank-validate', $data['question_bank_id']);
+                    } else {
+                        $resolved = route('admin.repository-manager.dashboard');
                     }
-                    return route('admin.repository-manager.dashboard');
                 }
             }
 
-            return $path;
+            if (!$resolved) {
+                $resolved = $path;
+            }
+        } else {
+            // 2. Entity-Based Fallback Resolution
+            $entityType = $data['entity_type'] ?? null;
+            $entityId   = $data['entity_id'] ?? $data['question_bank_id'] ?? null;
+
+            if ($user && ($entityType || $entityId || !empty($data['revision_request_id']))) {
+                if ($user->hasRole(['repository-manager', 'super-admin'])) {
+                    if ($entityId && (str_contains(strtolower((string)$entityType), 'repository') || $entityType === 'QuestionBank')) {
+                        $resolved = route('admin.repository-manager.question-bank-validate', $entityId);
+                    } else {
+                        $resolved = route('admin.repository-manager.dashboard');
+                    }
+                } elseif ($user->hasRole('teacher')) {
+                    if (!empty($data['revision_request_id'])) {
+                        $resolved = route('teacher.repository-revisions.show', $data['revision_request_id']);
+                    } else {
+                        $resolved = route('teacher.repository-revisions.index');
+                    }
+                }
+            }
         }
 
-        // 2. Entity-Based Fallback Resolution
-        $entityType = $data['entity_type'] ?? null;
-        $entityId   = $data['entity_id'] ?? $data['question_bank_id'] ?? null;
-
-        if ($user && ($entityType || $entityId || !empty($data['revision_request_id']))) {
-            if ($user->hasRole(['repository-manager', 'super-admin'])) {
-                if ($entityId && (str_contains(strtolower((string)$entityType), 'repository') || $entityType === 'QuestionBank')) {
-                    return route('admin.repository-manager.question-bank-validate', $entityId);
-                }
-                return route('admin.repository-manager.dashboard');
-            }
-
-            if ($user->hasRole('teacher')) {
-                if (!empty($data['revision_request_id'])) {
-                    return route('teacher.repository-revisions.show', $data['revision_request_id']);
-                }
-                return route('teacher.repository-revisions.index');
-            }
+        if (!$resolved) {
+            return route('notifications.index');
         }
 
-        return route('notifications.index');
+        // Append from=notifications query parameter for safe contextual return navigation
+        if (!str_contains($resolved, 'from=notifications') && !str_contains($resolved, '/notifications')) {
+            $separator = str_contains($resolved, '?') ? '&' : '?';
+            $resolved .= $separator . 'from=notifications';
+        }
+
+        return $resolved;
     }
 
     /**
