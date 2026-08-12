@@ -162,11 +162,6 @@
             <a href="{{ route('admin.academic-library.explorer', ['from' => 'dashboard']) }}" style="padding:.7rem 1.2rem;background:#1e293b;border:1px solid #334155;color:#e0e7ff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
                 🔍 IRQA Explorer
             </a>
-
-            {{-- 3. Question Bank Governance Queue --}}
-            <a href="{{ route('admin.repository-manager.questions-approval') }}" style="padding:.7rem 1.25rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);display:inline-flex;align-items:center;gap:.4rem;">
-                📚 Question Bank Governance ({{ $pendingQuestionsCount }})
-            </a>
         </div>
     </div>
 

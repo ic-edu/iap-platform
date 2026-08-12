@@ -74,7 +74,6 @@ class RepositoryManagerMissionControlTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('🔔 Notifications');
         $response->assertSee('🔍 IRQA Explorer');
-        $response->assertSee('📚 Question Bank Governance');
         $response->assertSee('⚡ Open Repository Governance Queue');
         $response->assertSee('(Recently Updated Repositories)');
     }
@@ -153,5 +152,29 @@ class RepositoryManagerMissionControlTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('← Back');
         $response->assertDontSee('Back to Question Banks');
+    }
+
+    /**
+     * TEST 6: Non-redundant UI/UX rule - Header action area does not render duplicate KPI CTA.
+     */
+    public function test_6_header_action_area_has_no_redundant_kpi_duplicates()
+    {
+        $response = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
+
+        $response->assertStatus(200);
+
+        // Header actions are clean and non-redundant
+        $response->assertSee('🔔 Notifications');
+        $response->assertSee('🔍 IRQA Explorer');
+
+        // Redundant header CTA is eliminated
+        $response->assertDontSee('Question Bank Governance (1)');
+        $response->assertDontSee('Question Bank Governance (2)');
+
+        // KPI card remains the authoritative navigation entry
+        $response->assertSee('Question Bank Governance');
+        $response->assertSee(route('admin.repository-manager.questions-approval'));
+        $response->assertSee('Assessment Approval');
+        $response->assertSee(route('admin.repository-manager.assessment-approval'));
     }
 }

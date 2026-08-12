@@ -74,7 +74,7 @@ class GovernanceQueueSynchronizationTest extends TestCase
         // Assert Repository Manager Dashboard shows Governance Queue = 1 and does NOT duplicate Pending Question Banks card
         $rmDashboard = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
         $rmDashboard->assertStatus(200);
-        $rmDashboard->assertSee('Question Bank Governance (1)');
+        $rmDashboard->assertSee('Question Bank Governance');
         $rmDashboard->assertDontSee('Pending Question Banks');
         $rmDashboard->assertSee('IELTS Speaking Interview &amp; Cue Card Prompts', false);
     }
@@ -172,7 +172,7 @@ class GovernanceQueueSynchronizationTest extends TestCase
         // Assert RM Dashboard reflects Governance Queue = 1
         $rmDashboard = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
         $rmDashboard->assertStatus(200);
-        $rmDashboard->assertSee('Question Bank Governance (1)');
+        $rmDashboard->assertSee('Question Bank Governance');
     }
 
     /**
@@ -252,6 +252,6 @@ class GovernanceQueueSynchronizationTest extends TestCase
             ->first();
 
         $this->assertNotNull($repairedTask);
-        $rmDashboard->assertSee('Question Bank Governance (1)');
+        $rmDashboard->assertSee('Question Bank Governance');
     }
 }
