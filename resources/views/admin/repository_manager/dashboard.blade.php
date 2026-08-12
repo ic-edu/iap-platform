@@ -151,14 +151,9 @@
             </p>
         </div>
 
-        {{-- PART 1: MISSION CONTROL PRIMARY HEADER BUTTONS --}}
+        {{-- PART 1: MISSION CONTROL PRIMARY HERO ACTION --}}
         <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
-            {{-- 1. Notifications Center Button --}}
-            <button type="button" onclick="if (typeof toggleNotificationsDropdown === 'function') { toggleNotificationsDropdown(); } else { window.location.href='#'; }" style="padding:.7rem 1.2rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;">
-                🔔 Notifications
-            </button>
-
-            {{-- 2. IRQA Repository Explorer --}}
+            {{-- IRQA Repository Explorer --}}
             <a href="{{ route('admin.academic-library.explorer', ['from' => 'dashboard']) }}" style="padding:.7rem 1.2rem;background:#1e293b;border:1px solid #334155;color:#e0e7ff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
                 🔍 IRQA Explorer
             </a>

@@ -65,14 +65,13 @@ class RepositoryManagerMissionControlTest extends TestCase
     }
 
     /**
-     * TEST 1: Mission Control Header Buttons & Actionability.
+     * TEST 1: Mission Control Hero & Contextual Actionability.
      */
-    public function test_1_dashboard_renders_mission_control_header_action_buttons()
+    public function test_1_dashboard_renders_mission_control_hero_action_buttons()
     {
         $response = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('🔔 Notifications');
         $response->assertSee('🔍 IRQA Explorer');
         $response->assertSee('⚡ Open Repository Governance Queue');
         $response->assertSee('(Recently Updated Repositories)');
@@ -155,21 +154,23 @@ class RepositoryManagerMissionControlTest extends TestCase
     }
 
     /**
-     * TEST 6: Non-redundant UI/UX rule - Header action area does not render duplicate KPI CTA.
+     * TEST 6: Non-redundant Hero UI rule - Hero contains ONLY IRQA Explorer contextual action.
      */
-    public function test_6_header_action_area_has_no_redundant_kpi_duplicates()
+    public function test_6_hero_has_no_redundant_notifications_button()
     {
         $response = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
 
         $response->assertStatus(200);
 
-        // Header actions are clean and non-redundant
-        $response->assertSee('🔔 Notifications');
+        // Hero contextual action is strictly IRQA Explorer
         $response->assertSee('🔍 IRQA Explorer');
 
-        // Redundant header CTA is eliminated
-        $response->assertDontSee('Question Bank Governance (1)');
-        $response->assertDontSee('Question Bank Governance (2)');
+        // Global navbar still renders the authoritative notification bell
+        $response->assertSee('toggleNotificationsDropdown');
+
+        // Hero section does NOT contain a duplicate Notifications CTA button
+        $response->assertDontSee('PART 1: MISSION CONTROL PRIMARY HEADER BUTTONS');
+        $response->assertDontSee('Notifications Center Button');
 
         // KPI card remains the authoritative navigation entry
         $response->assertSee('Question Bank Governance');
