@@ -359,6 +359,7 @@
                         return `
                         <form action="/notifications/${item.id}/read" method="POST" class="m-0 p-0 block">
                             <input type="hidden" name="_token" value="${csrfToken}">
+                            <input type="hidden" name="return_url" value="${encodeURIComponent(window.location.pathname + window.location.search)}">
                             <button type="submit" class="w-full text-left p-3 ${item.unread ? 'bg-indigo-950/40 border-l-2 border-indigo-500' : ''} hover:bg-slate-800/70 transition-all block border-none cursor-pointer group">
                                 <div class="font-semibold ${item.unread ? 'text-white' : 'text-slate-300'} flex items-center justify-between text-xs">
                                     <span class="truncate pr-2">${escapeHtml(item.title)}</span>

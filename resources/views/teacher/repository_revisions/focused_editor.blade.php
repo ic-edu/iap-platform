@@ -71,6 +71,10 @@
         <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back to Notifications
         </a>
+        @elseif(request('from_url') && str_starts_with(request('from_url'), '/') && !str_starts_with(request('from_url'), '//') && !str_contains(request('from_url'), '://'))
+        <a href="{{ request('from_url') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+            ← Back
+        </a>
         @else
         <a href="{{ route('teacher.repository-revisions.show', $revisionRequest->id) }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
             ← Back to Revision Task

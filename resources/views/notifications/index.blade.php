@@ -85,6 +85,7 @@
         @endphp
         <form action="{{ route('notifications.read', $notification->id) }}" method="POST" class="notif-card-form">
             @csrf
+            <input type="hidden" name="from" value="notifications">
             <button type="submit" class="notif-card-btn {{ $isUnread ? 'notif-card-unread' : 'notif-card-read' }}">
                 <div class="notif-card-icon-col">
                     <span class="notif-card-icon">{{ $icon }}</span>

@@ -74,13 +74,50 @@ class NotificationController extends Controller
             return route('notifications.index');
         }
 
-        // Append from=notifications query parameter for safe contextual return navigation
-        if (!str_contains($resolved, 'from=notifications') && !str_contains($resolved, '/notifications')) {
-            $separator = str_contains($resolved, '?') ? '&' : '?';
-            $resolved .= $separator . 'from=notifications';
+        return $resolved;
+    }
+
+    /**
+     * Attach safe return context to target URL for contextual Back navigation.
+     */
+    public function attachReturnContext(string $targetUrl, ?string $from = null, ?string $returnUrl = null): string
+    {
+        // 1. If target URL is already notification index, return as is
+        if ($targetUrl === route('notifications.index') || str_ends_with(parse_url($targetUrl, PHP_URL_PATH) ?? '', '/notifications')) {
+            return $targetUrl;
         }
 
-        return $resolved;
+        // Clean any existing return parameters first to avoid duplication
+        $cleaned = preg_replace('/([?&])(from|from_url)=[^&]*&?/', '$1', $targetUrl);
+        $cleaned = rtrim($cleaned, '?&');
+        $separator = str_contains($cleaned, '?') ? '&' : '?';
+
+        // 2. Explicit 'from=notifications' origin (e.g. from Notification Center page)
+        if ($from === 'notifications') {
+            return $cleaned . $separator . 'from=notifications';
+        }
+
+        // 3. Contextual return_url provided (e.g. from navbar notification dropdown overlay)
+        if ($returnUrl) {
+            $decodedUrl = urldecode($returnUrl);
+            // Open Redirect Safeguard: Must be internal relative path starting with '/' and NOT starting with '//' or containing '://'
+            if (str_starts_with($decodedUrl, '/') && !str_starts_with($decodedUrl, '//') && !str_contains($decodedUrl, '://')) {
+                $pathOnly = parse_url($decodedUrl, PHP_URL_PATH) ?? '';
+
+                if ($pathOnly === '/notifications' || str_ends_with($pathOnly, '/notifications')) {
+                    return $cleaned . $separator . 'from=notifications';
+                }
+
+                return $cleaned . $separator . 'from_url=' . urlencode($decodedUrl);
+            }
+        }
+
+        // 4. Default fallback when no return_url/from parameter was provided (e.g. direct notification resolve)
+        if (!str_contains($targetUrl, 'from=') && !str_contains($targetUrl, 'from_url=')) {
+            return $cleaned . $separator . 'from=notifications';
+        }
+
+        return $targetUrl;
     }
 
     /**
@@ -178,17 +215,21 @@ class NotificationController extends Controller
             properties: ['notification_id' => $id, 'title' => $notification->data['title'] ?? '']
         );
 
-        $targetUrl = $this->resolveTargetUrl($notification, $user);
+        $rawTargetUrl = $this->resolveTargetUrl($notification, $user);
+        $from = $request->input('from');
+        $returnUrl = $request->input('return_url') ?? $request->input('from_url');
+
+        $finalTargetUrl = $this->attachReturnContext($rawTargetUrl, $from, $returnUrl);
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'target_url' => $targetUrl,
+                'target_url' => $finalTargetUrl,
                 'unread_count' => $user->unreadNotifications()->count(),
             ]);
         }
 
-        return redirect()->to($targetUrl);
+        return redirect()->to($finalTargetUrl);
     }
 
     /**
