@@ -157,6 +157,7 @@
         $highlightExplanation = str_contains($fbLower, 'explanation');
         $highlightMedia       = str_contains($fbLower, 'media') || str_contains($fbLower, 'attachment');
         $qTypeVal             = $question->question_type->value ?? $question->question_type ?? 'multiple_choice';
+        $qDiffVal             = is_object($question->difficulty ?? null) ? $question->difficulty->value : ($question->difficulty ?? 'medium');
     @endphp
 
     <div class="fre-panel">
@@ -226,9 +227,9 @@
                     <div>
                         <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Difficulty</label>
                         <select name="difficulty" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
-                            <option value="easy" {{ ($question->difficulty ?? '') === 'easy' ? 'selected' : '' }}>Easy</option>
-                            <option value="medium" {{ ($question->difficulty ?? '') === 'medium' ? 'selected' : '' }}>Medium</option>
-                            <option value="hard" {{ ($question->difficulty ?? '') === 'hard' ? 'selected' : '' }}>Hard</option>
+                            <option value="easy" {{ $qDiffVal === 'easy' ? 'selected' : '' }}>Easy</option>
+                            <option value="medium" {{ $qDiffVal === 'medium' ? 'selected' : '' }}>Medium</option>
+                            <option value="hard" {{ $qDiffVal === 'hard' ? 'selected' : '' }}>Hard</option>
                         </select>
                     </div>
                     <div>

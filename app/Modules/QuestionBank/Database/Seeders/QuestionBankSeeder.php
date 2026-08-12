@@ -5,6 +5,7 @@ namespace App\Modules\QuestionBank\Database\Seeders;
 use App\Models\RepositoryRevisionRequest;
 use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
+use App\Modules\QuestionBank\Enums\DifficultyLevel;
 use App\Modules\QuestionBank\Enums\QuestionType;
 use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\QuestionBank\Enums\TestType;
@@ -70,7 +71,7 @@ class QuestionBankSeeder extends Seeder
             $activeRequests->first()->update(['teacher_id' => $teacher->id]);
         }
 
-        // Create sample listening question
+        // Create sample listening question (Easy difficulty for balanced distribution)
         $q1 = Question::firstOrCreate([
             'question_bank_id' => $bank->id,
             'prompt' => 'Listen to the audio and select the statement that best describes the picture.',
@@ -78,9 +79,13 @@ class QuestionBankSeeder extends Seeder
             'section' => SectionType::Listening,
             'part_number' => 1,
             'question_type' => QuestionType::MultipleChoice,
+            'difficulty' => DifficultyLevel::Easy,
             'points' => 5,
             'explanation' => 'Option (A) accurately depicts the person operating the equipment.',
         ]);
+
+        $q1->difficulty = DifficultyLevel::Easy;
+        $q1->save();
 
         $choices1 = [
             ['label' => 'A', 'content' => 'He is operating heavy machinery in a warehouse.', 'is_correct' => true],
@@ -99,7 +104,7 @@ class QuestionBankSeeder extends Seeder
             ]);
         }
 
-        // Create sample reading question
+        // Create sample reading question (Medium difficulty)
         $q2 = Question::firstOrCreate([
             'question_bank_id' => $bank->id,
             'prompt' => 'Choose the word that best completes the sentence: "The quarterly financial report must be ______ by Friday."',
@@ -107,9 +112,13 @@ class QuestionBankSeeder extends Seeder
             'section' => SectionType::Reading,
             'part_number' => 5,
             'question_type' => QuestionType::MultipleChoice,
+            'difficulty' => DifficultyLevel::Medium,
             'points' => 5,
             'explanation' => '"Submitted" is the grammatically correct past participle adjective needed.',
         ]);
+
+        $q2->difficulty = DifficultyLevel::Medium;
+        $q2->save();
 
         $choices2 = [
             ['label' => 'A', 'content' => 'submitting', 'is_correct' => false],
@@ -126,6 +135,24 @@ class QuestionBankSeeder extends Seeder
                 'content' => $choice['content'],
                 'is_correct' => $choice['is_correct'],
             ]);
+        }
+
+        // Perform IRQA Re-Scan & Reconcile Revision Items
+        $qualityService = app(\App\Services\RepositoryQualityService::class);
+        $qualityService->syncRepositoryFindings($bank);
+
+        $activeReq = RepositoryRevisionRequest::where('question_bank_id', $bank->id)
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+            ->latest()
+            ->first();
+
+        if ($activeReq) {
+            foreach ($activeReq->items as $item) {
+                if (str_contains(strtolower($item->feedback), 'difficulty')) {
+                    $item->status = 'CLOSED';
+                    $item->save();
+                }
+            }
         }
     }
 }

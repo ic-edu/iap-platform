@@ -388,4 +388,79 @@ class RepositoryCreationRoleBoundaryTest extends TestCase
         $content = $revisionCenterResponse->getContent();
         $this->assertEquals(1, substr_count($content, 'Idempotency Target Bank'));
     }
+
+    /**
+     * TEST 19: Focused editor correctly renders DifficultyLevel Enum and balanced difficulty closes finding #2.
+     */
+    public function test_19_focused_editor_renders_difficulty_enum_correctly_and_balances_finding()
+    {
+        $bank = QuestionBank::create([
+            'title'           => 'Enum Render Test Bank',
+            'slug'            => 'enum-render-bank-' . uniqid(),
+            'test_type'       => 'toeic',
+            'current_version' => '1.0',
+            'status'          => 'needs_revision',
+            'created_by'      => $this->teacher->id,
+        ]);
+
+        $q1 = Question::create([
+            'question_bank_id' => $bank->id,
+            'prompt'           => 'Prompt 1',
+            'question_type'    => 'multiple_choice',
+            'difficulty'       => 'medium',
+            'points'           => 5,
+        ]);
+
+        $q2 = Question::create([
+            'question_bank_id' => $bank->id,
+            'prompt'           => 'Prompt 2',
+            'question_type'    => 'multiple_choice',
+            'difficulty'       => 'medium',
+            'points'           => 5,
+        ]);
+
+        $revReq = RepositoryRevisionRequest::create([
+            'question_bank_id' => $bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Balance difficulty',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revReq->id,
+            'question_bank_id'               => $bank->id,
+            'question_id'                    => $q1->id,
+            'finding_type'                   => 'quality_warning',
+            'severity'                       => 'high',
+            'feedback'                       => 'Repository needs more balanced question difficulty (currently 100% medium)',
+            'status'                         => 'OPEN',
+        ]);
+
+        // 1. Verify Focused Editor HTML renders 'selected' on option value="medium" (NOT easy)
+        $editorResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [$revReq->id, $item->id]));
+
+        $editorResponse->assertStatus(200);
+        $editorResponse->assertSee('<option value="medium" selected', false);
+
+        // 2. Update Question #1 to 'easy' via updateQuestion endpoint
+        $updateResponse = $this->actingAs($this->teacher)
+            ->post(route('teacher.repository-revisions.update-question', [$revReq->id, $item->id]), [
+                'question_id'    => $q1->id,
+                'prompt'         => $q1->prompt,
+                'question_type'  => 'multiple_choice',
+                'difficulty'     => 'easy',
+                'points'         => 5,
+            ]);
+
+        $updateResponse->assertStatus(302);
+
+        $q1->refresh();
+        $this->assertEquals('easy', is_object($q1->difficulty) ? $q1->difficulty->value : $q1->difficulty);
+
+        // Assert item status updated to CLOSED
+        $item->refresh();
+        $this->assertEquals('CLOSED', $item->status);
+    }
 }
