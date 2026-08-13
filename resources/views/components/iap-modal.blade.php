@@ -12,30 +12,35 @@
          class="fixed inset-0 bg-slate-950/85 backdrop-blur-md transition-opacity duration-200"
          style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999998;"></div>
 
-    <!-- Centered Floating Modal Panel Card -->
+    <!-- Centered Floating Modal Panel Card (Vertical Flex Container) -->
     <div id="iap-modal-panel" 
-         class="relative w-full max-w-lg p-6 sm:p-7 text-left bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[1000000] my-auto transform transition-all"
-         style="position: relative; width: 100%; max-width: 32rem; max-height: calc(100vh - 3rem); overflow-y: auto; margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 1000000; padding: 1.5rem; box-sizing: border-box;">
+         class="relative w-full max-w-lg text-left bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[1000000] my-auto flex flex-col overflow-hidden transform transition-all"
+         style="position: relative; width: 100%; max-width: 32rem; max-height: calc(100vh - 3rem); margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 1000000; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;">
         
-        <!-- Header Icon & Title -->
-        <div class="flex items-start gap-4" style="display: flex; align-items: flex-start; gap: 1rem;">
-            <div id="iap-modal-icon-badge" 
-                 class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold bg-indigo-500/10 border border-indigo-500/30 text-indigo-400"
-                 style="flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700;">
-                <span id="iap-modal-icon">⚡</span>
-            </div>
-            <div class="flex-1 min-w-0" style="flex: 1; min-width: 0;">
-                <h3 id="iap-modal-title" class="text-base font-bold text-slate-100 leading-snug" style="margin: 0; font-size: 1rem; font-weight: 700; color: #f8fafc; line-height: 1.375;">
-                    Confirm Action
-                </h3>
-                <p id="iap-modal-desc" class="mt-2 text-xs text-slate-400 leading-relaxed break-words whitespace-pre-line" style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #94a3b8; line-height: 1.6; word-break: break-word;">
-                    Are you sure you want to proceed?
-                </p>
+        <!-- 1. Scrollable Modal Body Region -->
+        <div id="iap-modal-body" class="p-6 sm:p-7 overflow-y-auto flex-1" style="padding: 1.5rem; overflow-y: auto; flex: 1 1 auto; min-height: 0;">
+            <!-- Header Icon & Title -->
+            <div class="flex items-start gap-4" style="display: flex; align-items: flex-start; gap: 1rem;">
+                <div id="iap-modal-icon-badge" 
+                     class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold bg-indigo-500/10 border border-indigo-500/30 text-indigo-400"
+                     style="flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700;">
+                    <span id="iap-modal-icon">⚡</span>
+                </div>
+                <div class="flex-1 min-w-0" style="flex: 1; min-width: 0;">
+                    <h3 id="iap-modal-title" class="text-base font-bold text-slate-100 leading-snug" style="margin: 0; font-size: 1rem; font-weight: 700; color: #f8fafc; line-height: 1.375;">
+                        Confirm Action
+                    </h3>
+                    <p id="iap-modal-desc" class="mt-2 text-xs text-slate-400 leading-relaxed break-words whitespace-pre-line" style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #94a3b8; line-height: 1.6; word-break: break-word;">
+                        Are you sure you want to proceed?
+                    </p>
+                </div>
             </div>
         </div>
 
-        <!-- Modal Action Buttons -->
-        <div class="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-slate-800/80" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(30, 41, 59, 0.8); display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
+        <!-- 2. Non-Shrinking Sticky Action Footer (Always Visible at Card Base) -->
+        <div id="iap-modal-actions" 
+             class="px-6 py-4 bg-slate-900/95 border-t border-slate-800/80 flex items-center justify-end gap-3 flex-shrink-0"
+             style="padding: 1rem 1.5rem; background-color: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(30, 41, 59, 0.8); display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; flex-shrink: 0;">
             <button id="iap-modal-cancel-btn" 
                     type="button" 
                     class="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-800/80 hover:bg-slate-700 active:bg-slate-800 border border-slate-700 rounded-xl transition-all cursor-pointer"
