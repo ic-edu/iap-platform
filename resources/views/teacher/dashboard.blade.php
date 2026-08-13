@@ -484,9 +484,6 @@ a.tw-hero__pill:hover { opacity: .8; }
         <div style="font-size:2.25rem;opacity:.8;">🎉</div>
         <div style="font-size:1.05rem;font-weight:800;color:#f1f5f9;">You're all caught up.</div>
         <div style="font-size:.82rem;color:#94a3b8;max-width:420px;line-height:1.45;">No unfinished authoring work. Create a new Question Bank or contribute to Institutional Library.</div>
-        <button type="button" onclick="openCreateModal()" class="tw-qa-btn tw-qa-btn--primary" style="margin-top:.25rem;">
-            ＋ Create Question Bank
-        </button>
     </div>
     @endif
 

@@ -109,4 +109,25 @@ class TeacherDashboardWorkflowStateTest extends TestCase
         $response->assertSee("You're all caught up", false);
         $response->assertSee('No unfinished authoring work');
     }
+
+    /**
+     * ACCEPTANCE TEST 3: Non-redundant UI rule — Hero CTA "+ New Question Bank" is retained as primary action; empty-state panel does NOT render duplicate "+ Create Question Bank" button.
+     */
+    public function test_3_empty_state_panel_does_not_contain_duplicate_create_cta()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
+
+        $response->assertStatus(200);
+
+        // Hero CTA is rendered as primary action
+        $response->assertSee('＋ New Question Bank');
+        $response->assertSee('openCreateModal()');
+
+        // Empty-state status text is retained
+        $response->assertSee("You're all caught up", false);
+        $response->assertSee('No unfinished authoring work');
+
+        // Duplicate empty-state CTA is ELIMINATED
+        $response->assertDontSee('＋ Create Question Bank');
+    }
 }
