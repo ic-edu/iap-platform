@@ -15,7 +15,7 @@
     <!-- Centered Floating Modal Panel Card -->
     <div id="iap-modal-panel" 
          class="relative w-full max-w-lg p-6 sm:p-7 text-left bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[1000000] my-auto transform transition-all"
-         style="position: relative; width: 100%; max-width: 32rem; margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 1000000; padding: 1.5rem; box-sizing: border-box;">
+         style="position: relative; width: 100%; max-width: 32rem; max-height: calc(100vh - 3rem); overflow-y: auto; margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 1000000; padding: 1.5rem; box-sizing: border-box;">
         
         <!-- Header Icon & Title -->
         <div class="flex items-start gap-4" style="display: flex; align-items: flex-start; gap: 1rem;">
@@ -95,9 +95,11 @@
         if (cancelBtn) {
             cancelBtn.textContent = cancelText;
             cancelBtn.style.display = options.alertOnly ? 'none' : 'inline-flex';
+            cancelBtn.style.visibility = 'visible';
         }
         if (confirmBtn) {
             confirmBtn.style.display = 'inline-flex';
+            confirmBtn.style.visibility = 'visible';
             confirmBtn.style.color = '#ffffff';
         }
 

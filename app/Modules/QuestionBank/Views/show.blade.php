@@ -71,7 +71,8 @@
                 </button>
 
                 @if (in_array($questionBank->status, ['draft', 'rejected', null]))
-                    <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline">
+                    <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline"
+                          onsubmit="event.preventDefault(); iapConfirm({ title: 'Submit Question Bank for Approval?', message: 'Submit \'{{ addslashes($questionBank->title) }}\' for Super Admin approval?', confirmText: 'Submit for Approval', variant: 'primary', form: this });">
                         @csrf
                         <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
                             🚀 Submit for Approval

@@ -113,7 +113,29 @@ class GlobalIapModalInfrastructureTest extends TestCase
     }
 
     /**
-     * TEST 5: Static check ensuring no native window.confirm or window.alert remain in workflow templates.
+     * TEST 5: Test Builder Workspace show view header form uses iapConfirm interceptor.
+     */
+    public function test_test_builder_workspace_show_view_header_uses_iap_confirm()
+    {
+        $qb = QuestionBank::create([
+            'title' => 'Test Builder Draft QB',
+            'code' => 'QB-TB-DRAFT-001',
+            'slug' => 'test-builder-draft-qb',
+            'status' => 'draft',
+            'created_by' => $this->teacher->id,
+            'author_id' => $this->teacher->id,
+        ]);
+
+        $response = $this->actingAs($this->teacher)->get(route('admin.question-banks.show', $qb->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('iapConfirm({ title: \'Submit Question Bank for Approval?\'', false);
+        $response->assertSee('confirmText: \'Submit for Approval\'', false);
+        $response->assertDontSee('onsubmit="return confirm(');
+    }
+
+    /**
+     * TEST 6: Static check ensuring no native window.confirm or window.alert remain in workflow templates.
      */
     public function test_zero_native_dialogs_in_workflow_templates()
     {
