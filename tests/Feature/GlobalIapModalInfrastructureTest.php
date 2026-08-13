@@ -136,8 +136,10 @@ class GlobalIapModalInfrastructureTest extends TestCase
         $response = $this->actingAs($this->teacher)->get(route('admin.question-banks.show', $qb->id));
 
         $response->assertStatus(200);
-        $response->assertSee('iapConfirm({ title: \'Submit Question Bank for Approval?\'', false);
-        $response->assertSee('confirmText: \'Submit for Approval\'', false);
+        $response->assertSee('id="submit-trigger-btn"', false);
+        $response->assertSee('id="inline-submit-panel"', false);
+        $response->assertSee('Submit \'Test Builder Draft QB\' for Super Admin approval?', false);
+        $response->assertSee('id="confirm-submit-btn"', false);
         $response->assertDontSee('onsubmit="return confirm(');
     }
 

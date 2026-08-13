@@ -71,12 +71,23 @@
                 </button>
 
                 @if (in_array($questionBank->status, ['draft', 'rejected', null]))
-                    <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline"
-                          onsubmit="event.preventDefault(); iapConfirm({ title: 'Submit Question Bank for Approval?', message: 'Submit \'{{ addslashes($questionBank->title) }}\' for Super Admin approval?', confirmText: 'Submit for Approval', variant: 'primary', form: this });">
+                    <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline">
                         @csrf
-                        <button type="submit" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
+                        <button type="button" id="submit-trigger-btn" onclick="document.getElementById('inline-submit-panel').classList.remove('hidden'); this.classList.add('hidden');" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
                             🚀 Submit for Approval
                         </button>
+
+                        <div id="inline-submit-panel" class="hidden inline-flex items-center gap-2.5 p-2 bg-slate-900 border border-amber-500/50 rounded-xl shadow-lg">
+                            <span class="text-xs text-slate-200 font-medium">
+                                Submit '{{ $questionBank->title }}' for Super Admin approval?
+                            </span>
+                            <button type="button" onclick="document.getElementById('inline-submit-panel').classList.add('hidden'); document.getElementById('submit-trigger-btn').classList.remove('hidden');" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" id="confirm-submit-btn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow transition-colors">
+                                Submit for Approval
+                            </button>
+                        </div>
                     </form>
                 @endif
 
