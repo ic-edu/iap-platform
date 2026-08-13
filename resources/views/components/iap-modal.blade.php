@@ -7,12 +7,12 @@
      aria-labelledby="iap-modal-title" 
      aria-describedby="iap-modal-desc">
     
-    <!-- Full-Viewport Backdrop Overlay -->
+    <!-- Full-Viewport Backdrop Overlay (No Click Dismissal) -->
     <div id="iap-modal-backdrop" 
          class="fixed inset-0 bg-slate-950/85 backdrop-blur-md transition-opacity duration-200"
          style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999998;"></div>
 
-    <!-- Centered Floating Modal Panel Card (Vertical Flex Container) -->
+    <!-- Centered Floating Modal Panel Card (Static Vertical Flex Container) -->
     <div id="iap-modal-panel" 
          class="relative w-full max-w-lg text-left bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[1000000] my-auto flex flex-col overflow-hidden transform transition-all"
          style="position: relative; width: 100%; max-width: 32rem; max-height: calc(100vh - 3rem); margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 1000000; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;">
@@ -73,8 +73,6 @@
     window.iapConfirm = function(options) {
         const modal = document.getElementById('iap-global-modal');
         if (!modal) return false;
-
-        ensureDocumentBodyPlacement(modal);
 
         lastActiveElement = document.activeElement;
         options = options || {};
@@ -198,7 +196,6 @@
 
         const confirmBtn = document.getElementById('iap-modal-confirm-btn');
         const cancelBtn = document.getElementById('iap-modal-cancel-btn');
-        const backdrop = document.getElementById('iap-modal-backdrop');
 
         confirmBtn?.addEventListener('click', function() {
             if (pendingForm) {
@@ -215,11 +212,6 @@
         });
 
         cancelBtn?.addEventListener('click', closeIapModal);
-        backdrop?.addEventListener('click', function(e) {
-            if (e.target === backdrop) {
-                closeIapModal();
-            }
-        });
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && modal.style.display !== 'none' && !modal.classList.contains('hidden')) {
