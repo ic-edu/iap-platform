@@ -1,21 +1,21 @@
 <!-- IAP Design System Global Modal Component (GLOBAL-MODAL-001) -->
 <div id="iap-global-modal" 
-     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto" 
-     style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 99999; display: none; align-items: center; justify-content: center; padding: 1rem;"
+     class="hidden fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" 
+     style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 999999; display: none; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box;"
      role="dialog" 
      aria-modal="true" 
      aria-labelledby="iap-modal-title" 
      aria-describedby="iap-modal-desc">
     
-    <!-- Backdrop Overlay -->
+    <!-- Full-Viewport Backdrop Overlay -->
     <div id="iap-modal-backdrop" 
-         class="fixed inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity duration-200"
-         style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 99999;"></div>
+         class="fixed inset-0 bg-slate-950/85 backdrop-blur-md transition-opacity duration-200"
+         style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999998;"></div>
 
-    <!-- Centered Modal Panel -->
+    <!-- Centered Floating Modal Panel Card -->
     <div id="iap-modal-panel" 
-         class="relative w-full max-w-lg p-6 sm:p-7 text-left bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-10 my-auto transform transition-all"
-         style="position: relative; width: 100%; max-width: 32rem; margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 100000; padding: 1.5rem;">
+         class="relative w-full max-w-lg p-6 sm:p-7 text-left bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[1000000] my-auto transform transition-all"
+         style="position: relative; width: 100%; max-width: 32rem; margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 1000000; padding: 1.5rem; box-sizing: border-box;">
         
         <!-- Header Icon & Title -->
         <div class="flex items-start gap-4" style="display: flex; align-items: flex-start; gap: 1rem;">
@@ -57,10 +57,19 @@
     let pendingForm = null;
     let pendingCallback = null;
     let lastActiveElement = null;
+    let originalBodyOverflow = '';
+
+    function ensureDocumentBodyPlacement(modal) {
+        if (modal && document.body && modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+        }
+    }
 
     window.iapConfirm = function(options) {
         const modal = document.getElementById('iap-global-modal');
         if (!modal) return false;
+
+        ensureDocumentBodyPlacement(modal);
 
         lastActiveElement = document.activeElement;
         options = options || {};
@@ -132,6 +141,7 @@
         pendingForm = options.form || null;
         pendingCallback = options.onConfirm || null;
 
+        originalBodyOverflow = document.body.style.overflow;
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -156,7 +166,7 @@
         if (modal) {
             modal.classList.add('hidden');
             modal.style.display = 'none';
-            document.body.style.overflow = '';
+            document.body.style.overflow = originalBodyOverflow || '';
         }
         pendingForm = null;
         pendingCallback = null;
@@ -168,6 +178,8 @@
     document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('iap-global-modal');
         if (!modal) return;
+
+        ensureDocumentBodyPlacement(modal);
 
         const confirmBtn = document.getElementById('iap-modal-confirm-btn');
         const cancelBtn = document.getElementById('iap-modal-cancel-btn');
