@@ -1,5 +1,8 @@
 <!-- IAP Design System Global Native Dialog Component (GLOBAL-MODAL-001) -->
 <style>
+    #iap-global-dialog:not([open]) {
+        display: none !important;
+    }
     #iap-global-dialog {
         width: min(32rem, calc(100vw - 2rem));
         max-height: calc(100dvh - 2rem);

@@ -35,10 +35,21 @@ class RepositoryManagerController extends Controller
                     'submitted_at' => $bank->updated_at ?? now(),
                 ]);
             }
+
+            // Close any orphan OPEN tasks for non-pending banks (archived, rejected, approved, etc.)
+            \App\Models\GovernanceApprovalTask::where('status', 'OPEN')
+                ->whereHas('questionBank', function ($q) {
+                    $q->whereNotIn('status', ['pending', 'pending_approval']);
+                })
+                ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
         }
 
         $pendingGovernanceTaskCount = Schema::hasTable('governance_approval_tasks')
-            ? \App\Models\GovernanceApprovalTask::where('status', 'OPEN')->count()
+            ? \App\Models\GovernanceApprovalTask::where('status', 'OPEN')
+                ->whereHas('questionBank', function ($q) {
+                    $q->whereIn('status', ['pending', 'pending_approval']);
+                })
+                ->count()
             : 0;
 
         $pendingQuestionsCount = $pendingGovernanceTaskCount > 0
@@ -121,6 +132,9 @@ class RepositoryManagerController extends Controller
         $openApprovalTasks = Schema::hasTable('governance_approval_tasks')
             ? \App\Models\GovernanceApprovalTask::with(['questionBank', 'teacher'])
                 ->where('status', 'OPEN')
+                ->whereHas('questionBank', function ($q) {
+                    $q->whereIn('status', ['pending', 'pending_approval']);
+                })
                 ->latest()
                 ->take(10)
                 ->get()
@@ -642,6 +656,12 @@ class RepositoryManagerController extends Controller
         $questionBank->status = 'archived';
         $questionBank->is_published = false;
         $questionBank->save();
+
+        if (Schema::hasTable('governance_approval_tasks')) {
+            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+                ->where('status', 'OPEN')
+                ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
+        }
 
         RepositoryActivityLog::create([
             'resource_type' => 'QuestionBank',

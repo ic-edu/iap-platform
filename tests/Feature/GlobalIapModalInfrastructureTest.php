@@ -242,4 +242,57 @@ class GlobalIapModalInfrastructureTest extends TestCase
         ]);
         $importResp->assertStatus(403);
     }
+
+    /**
+     * TEST 8: Global dialog component contains explicit closed-state rule #iap-global-dialog:not([open]) { display: none !important; }.
+     */
+    public function test_global_dialog_closed_state_has_display_none_rule()
+    {
+        $componentPath = resource_path('views/components/iap-modal.blade.php');
+        $content = file_get_contents($componentPath);
+
+        $this->assertStringContainsString('#iap-global-dialog:not([open])', $content);
+        $this->assertStringContainsString('display: none !important;', $content);
+    }
+
+    /**
+     * TEST 9: Rejecting a QuestionBank closes active GovernanceApprovalTask and excludes it from RM Dashboard KPI.
+     */
+    public function test_reject_question_bank_closes_governance_task_and_removes_from_rm_kpi()
+    {
+        $rmUser = User::factory()->create();
+        $rmUser->assignRole('repository-manager');
+
+        $qb = QuestionBank::create([
+            'title' => 'QB To Be Rejected',
+            'code' => 'QB-REJECT-001',
+            'slug' => 'qb-to-be-rejected',
+            'status' => 'pending_approval',
+            'created_by' => $this->teacher->id,
+            'author_id' => $this->teacher->id,
+        ]);
+
+        $task = \App\Models\GovernanceApprovalTask::create([
+            'question_bank_id' => $qb->id,
+            'teacher_id' => $this->teacher->id,
+            'workflow' => 'APPROVAL',
+            'status' => 'OPEN',
+            'submitted_at' => now(),
+        ]);
+
+        $rejectResp = $this->actingAs($rmUser)->post(route('admin.repository-manager.question-bank-reject', $qb->id), [
+            'notes' => 'Content rejected due to institutional policy.',
+        ]);
+
+        $rejectResp->assertStatus(302);
+        $this->assertEquals('archived', $qb->fresh()->status);
+        $this->assertEquals('COMPLETED', $task->fresh()->status);
+
+        $dashboardResp = $this->actingAs($rmUser)->get(route('admin.repository-manager.dashboard'));
+        $dashboardResp->assertStatus(200);
+
+        // Verify that open approval tasks query in dashboard does not include archived QB
+        $openTasks = $dashboardResp->viewData('openApprovalTasks');
+        $this->assertFalse($openTasks->contains('question_bank_id', $qb->id));
+    }
 }
