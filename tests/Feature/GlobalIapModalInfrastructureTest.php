@@ -45,6 +45,9 @@ class GlobalIapModalInfrastructureTest extends TestCase
         $response->assertSee('flex items-center justify-center', false);
         $response->assertSee('id="iap-modal-backdrop"', false);
         $response->assertSee('id="iap-modal-panel"', false);
+        $response->assertSee('id="iap-modal-cancel-btn"', false);
+        $response->assertSee('id="iap-modal-confirm-btn"', false);
+        $response->assertSee('display: inline-flex', false);
         $response->assertSee('ensureDocumentBodyPlacement', false);
         $response->assertSee('window.iapConfirm');
         $response->assertSee('window.iapAlert');

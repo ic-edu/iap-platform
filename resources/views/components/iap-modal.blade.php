@@ -39,13 +39,13 @@
             <button id="iap-modal-cancel-btn" 
                     type="button" 
                     class="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-800/80 hover:bg-slate-700 active:bg-slate-800 border border-slate-700 rounded-xl transition-all cursor-pointer"
-                    style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; background-color: rgba(30, 41, 59, 0.8); border: 1px solid #334155; border-radius: 0.75rem; cursor: pointer;">
+                    style="display: inline-flex; align-items: center; justify-content: center; min-height: 2.25rem; min-width: 5rem; padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; background-color: rgba(30, 41, 59, 0.8); border: 1px solid #334155; border-radius: 0.75rem; cursor: pointer; opacity: 1; visibility: visible;">
                 Cancel
             </button>
             <button id="iap-modal-confirm-btn" 
                     type="button" 
                     class="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 border border-indigo-500/40 rounded-xl shadow-lg shadow-indigo-950/50 transition-all cursor-pointer inline-flex items-center gap-2"
-                    style="padding: 0.5rem 1.25rem; font-size: 0.75rem; font-weight: 700; color: #ffffff; background-color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 0.75rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    style="display: inline-flex; align-items: center; justify-content: center; min-height: 2.25rem; min-width: 5rem; padding: 0.5rem 1.25rem; font-size: 0.75rem; font-weight: 700; color: #ffffff; background-color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 0.75rem; cursor: pointer; gap: 0.5rem; opacity: 1; visibility: visible;">
                 <span id="iap-modal-confirm-text">Confirm</span>
             </button>
         </div>
@@ -96,6 +96,10 @@
             cancelBtn.textContent = cancelText;
             cancelBtn.style.display = options.alertOnly ? 'none' : 'inline-flex';
         }
+        if (confirmBtn) {
+            confirmBtn.style.display = 'inline-flex';
+            confirmBtn.style.color = '#ffffff';
+        }
 
         // Variant styling
         if (confirmBtn && iconBadge && icon) {
@@ -103,6 +107,7 @@
                 confirmBtn.className = 'px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 active:bg-rose-700 border border-rose-500/40 rounded-xl shadow-lg shadow-rose-950/50 transition-all cursor-pointer inline-flex items-center gap-2';
                 confirmBtn.style.backgroundColor = '#e11d48';
                 confirmBtn.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+                confirmBtn.style.display = 'inline-flex';
                 iconBadge.className = 'flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold bg-rose-500/10 border border-rose-500/30 text-rose-400';
                 iconBadge.style.backgroundColor = 'rgba(244, 63, 94, 0.1)';
                 iconBadge.style.borderColor = 'rgba(244, 63, 94, 0.3)';
@@ -112,6 +117,7 @@
                 confirmBtn.className = 'px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 active:bg-amber-700 border border-amber-500/40 rounded-xl shadow-lg shadow-amber-950/50 transition-all cursor-pointer inline-flex items-center gap-2';
                 confirmBtn.style.backgroundColor = '#d97706';
                 confirmBtn.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                confirmBtn.style.display = 'inline-flex';
                 iconBadge.className = 'flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold bg-amber-500/10 border border-amber-500/30 text-amber-400';
                 iconBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
                 iconBadge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
@@ -121,6 +127,7 @@
                 confirmBtn.className = 'px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 border border-emerald-500/40 rounded-xl shadow-lg shadow-emerald-950/50 transition-all cursor-pointer inline-flex items-center gap-2';
                 confirmBtn.style.backgroundColor = '#059669';
                 confirmBtn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                confirmBtn.style.display = 'inline-flex';
                 iconBadge.className = 'flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';
                 iconBadge.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
                 iconBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
@@ -130,6 +137,7 @@
                 confirmBtn.className = 'px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 border border-indigo-500/40 rounded-xl shadow-lg shadow-indigo-950/50 transition-all cursor-pointer inline-flex items-center gap-2';
                 confirmBtn.style.backgroundColor = '#4f46e5';
                 confirmBtn.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+                confirmBtn.style.display = 'inline-flex';
                 iconBadge.className = 'flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold bg-indigo-500/10 border border-indigo-500/30 text-indigo-400';
                 iconBadge.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
                 iconBadge.style.borderColor = 'rgba(99, 102, 241, 0.3)';
