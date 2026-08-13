@@ -18,7 +18,7 @@
          style="position: relative; width: 100%; max-width: 32rem; max-height: calc(100vh - 3rem); margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 1000000; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;">
         
         <!-- 1. Scrollable Modal Body Region -->
-        <div id="iap-modal-body" class="p-6 sm:p-7 overflow-y-auto flex-1" style="padding: 1.5rem; overflow-y: auto; flex: 1 1 auto; min-height: 0;">
+        <div id="iap-modal-body" class="p-6 sm:p-7 overflow-y-auto flex-1" style="position: relative; padding: 1.5rem; overflow-y: auto; flex: 1 1 auto; min-height: 0;">
             <!-- Header Icon & Title -->
             <div class="flex items-start gap-4" style="display: flex; align-items: flex-start; gap: 1rem;">
                 <div id="iap-modal-icon-badge" 
@@ -37,10 +37,10 @@
             </div>
         </div>
 
-        <!-- 2. Non-Shrinking Sticky Action Footer (Always Visible at Card Base) -->
+        <!-- 2. Non-Shrinking Sticky Action Footer (Always Locked Inside Card Base) -->
         <div id="iap-modal-actions" 
              class="px-6 py-4 bg-slate-900/95 border-t border-slate-800/80 flex items-center justify-end gap-3 flex-shrink-0"
-             style="padding: 1rem 1.5rem; background-color: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(30, 41, 59, 0.8); display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; flex-shrink: 0;">
+             style="position: relative; width: 100%; padding: 1rem 1.5rem; background-color: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(30, 41, 59, 0.8); display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; flex-shrink: 0;">
             <button id="iap-modal-cancel-btn" 
                     type="button" 
                     class="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-800/80 hover:bg-slate-700 active:bg-slate-800 border border-slate-700 rounded-xl transition-all cursor-pointer"
@@ -158,7 +158,7 @@
 
         originalBodyOverflow = document.body.style.overflow;
         modal.classList.remove('hidden');
-        modal.style.display = 'flex';
+        modal.style.setProperty('display', 'flex', 'important');
         document.body.style.overflow = 'hidden';
 
         setTimeout(() => {
@@ -180,7 +180,7 @@
         const modal = document.getElementById('iap-global-modal');
         if (modal) {
             modal.classList.add('hidden');
-            modal.style.display = 'none';
+            modal.style.setProperty('display', 'none', 'important');
             document.body.style.overflow = originalBodyOverflow || '';
         }
         pendingForm = null;
@@ -215,7 +215,11 @@
         });
 
         cancelBtn?.addEventListener('click', closeIapModal);
-        backdrop?.addEventListener('click', closeIapModal);
+        backdrop?.addEventListener('click', function(e) {
+            if (e.target === backdrop) {
+                closeIapModal();
+            }
+        });
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && modal.style.display !== 'none' && !modal.classList.contains('hidden')) {
