@@ -51,6 +51,11 @@ class GlobalIapModalInfrastructureTest extends TestCase
         $response->assertSee('id="iap-modal-cancel-btn"', false);
         $response->assertSee('id="iap-modal-confirm-btn"', false);
         $response->assertSee('display: inline-flex', false);
+        $response->assertSee('min-height: 2.25rem', false);
+        $response->assertSee('min-width: 5rem', false);
+        $response->assertSee('background-color: #1e293b', false);
+        $response->assertSee('background-color: #4f46e5', false);
+        $response->assertSee('confirmBtn.style.backgroundColor = \'#e11d48\'', false);
         $response->assertSee('ensureDocumentBodyPlacement', false);
         $response->assertSee('window.iapConfirm');
         $response->assertSee('window.iapAlert');
