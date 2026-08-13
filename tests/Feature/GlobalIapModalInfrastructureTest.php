@@ -295,4 +295,56 @@ class GlobalIapModalInfrastructureTest extends TestCase
         $openTasks = $dashboardResp->viewData('openApprovalTasks');
         $this->assertFalse($openTasks->contains('question_bank_id', $qb->id));
     }
+
+    /**
+     * TEST 10: Validation Workspace contains contextual Back navigation with history.back() and safe local fallbacks.
+     */
+    public function test_validation_workspace_back_navigation_context_and_fallback()
+    {
+        $rmUser = User::factory()->create();
+        $rmUser->assignRole('repository-manager');
+
+        $qb = QuestionBank::create([
+            'title' => 'Validation Back Test Bank',
+            'code' => 'QB-BACK-001',
+            'slug' => 'validation-back-test-bank',
+            'status' => 'pending_approval',
+            'created_by' => $this->teacher->id,
+            'author_id' => $this->teacher->id,
+        ]);
+
+        // Default back link check
+        $response = $this->actingAs($rmUser)->get(route('admin.repository-manager.question-bank-validate', $qb->id));
+        $response->assertStatus(200);
+        $response->assertSee('id="validation-back-link"', false);
+        $response->assertSee('window.history.back()', false);
+        $response->assertSee('href="' . route('admin.repository-manager.questions-approval') . '"', false);
+
+        // Safe local from_url check
+        $localResp = $this->actingAs($rmUser)->get(route('admin.repository-manager.question-bank-validate', [$qb->id, 'from_url' => '/admin/repository-manager/dashboard']));
+        $localResp->assertStatus(200);
+        $localResp->assertSee('href="/admin/repository-manager/dashboard"', false);
+
+        // Unsafe external from_url check (must reject external redirect and fallback to default approval queue)
+        $externalResp = $this->actingAs($rmUser)->get(route('admin.repository-manager.question-bank-validate', [$qb->id, 'from_url' => 'https://evil.com/phish']));
+        $externalResp->assertStatus(200);
+        $externalResp->assertDontSee('href="https://evil.com/phish"', false);
+        $externalResp->assertSee('href="' . route('admin.repository-manager.questions-approval') . '"', false);
+    }
+
+    /**
+     * TEST 11: Global modal closed state and descendant hierarchy integrity.
+     */
+    public function test_global_modal_closed_state_and_descendant_hierarchy()
+    {
+        $componentPath = resource_path('views/components/iap-modal.blade.php');
+        $content = file_get_contents($componentPath);
+
+        $this->assertStringContainsString('#iap-global-dialog:not([open])', $content);
+        $this->assertStringContainsString('#iap-global-dialog[open]', $content);
+        $this->assertStringContainsString('display: none !important;', $content);
+
+        // Confirm buttons are descendants of #iap-modal-actions -> #iap-modal-panel -> #iap-global-dialog
+        $this->assertMatchesRegularExpression('/<dialog id="iap-global-dialog".*?<div id="iap-modal-panel".*?<div id="iap-modal-actions".*?<button id="iap-modal-cancel-btn".*?<button id="iap-modal-confirm-btn"/s', $content);
+    }
 }

@@ -53,25 +53,32 @@
 @section('content')
 <div class="qbw-container">
 
-    {{-- PART 3: BACK NAVIGATION (Context-aware route destination) --}}
+    {{-- PART 3: BACK NAVIGATION (Context-aware browser history & safe route fallback) --}}
     <div>
-        @if(request('from') === 'notifications')
-        <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
-            ← Back to Notifications
+        @php
+            $fallbackUrl = route('admin.repository-manager.questions-approval');
+            $backText = '← Back to Approval Queue';
+            if (request('from') === 'notifications') {
+                $fallbackUrl = route('notifications.index');
+                $backText = '← Back to Notifications';
+            } elseif (request('from') === 'dashboard') {
+                $fallbackUrl = route('admin.repository-manager.dashboard');
+                $backText = '← Back';
+            } elseif (request('from') === 'explorer') {
+                $fallbackUrl = route('admin.academic-library.explorer', ['filter' => request('filter', 'reviewed_issues')]);
+                $backText = '← Back';
+            } elseif (request('from_url') && str_starts_with(request('from_url'), '/') && !str_starts_with(request('from_url'), '//') && !str_contains(request('from_url'), '://')) {
+                $fallbackUrl = request('from_url');
+                $backText = '← Back';
+            }
+        @endphp
+
+        <a href="{{ $fallbackUrl }}" 
+           id="validation-back-link" 
+           onclick="if (window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1 && document.referrer !== window.location.href) { event.preventDefault(); window.history.back(); }" 
+           style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+            {{ $backText }}
         </a>
-        @elseif(request('from_url') && str_starts_with(request('from_url'), '/') && !str_starts_with(request('from_url'), '//') && !str_contains(request('from_url'), '://'))
-        <a href="{{ request('from_url') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
-            ← Back
-        </a>
-        @elseif(request('from') === 'explorer')
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => request('filter', 'reviewed_issues')]) }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
-            ← Back
-        </a>
-        @else
-        <a href="{{ route('admin.repository-manager.questions-approval') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
-            ← Back to Approval Queue
-        </a>
-        @endif
         <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.5rem;flex-wrap:wrap;">
             <div>
                 <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:0 0 .25rem;">

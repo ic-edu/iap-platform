@@ -3,7 +3,8 @@
     #iap-global-dialog:not([open]) {
         display: none !important;
     }
-    #iap-global-dialog {
+    #iap-global-dialog[open] {
+        display: block !important;
         width: min(32rem, calc(100vw - 2rem));
         max-height: calc(100dvh - 2rem);
         border: 0;
