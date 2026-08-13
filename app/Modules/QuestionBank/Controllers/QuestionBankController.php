@@ -222,8 +222,13 @@ class QuestionBankController extends Controller
     {
         $user = $request->user();
 
-        if ($user && $user->hasRole('teacher') && $questionBank->created_by !== $user->id) {
-            abort(403, 'You can only update your own question banks.');
+        if ($user && $user->hasRole('teacher')) {
+            if ((int) $questionBank->created_by !== (int) $user->id) {
+                abort(403, 'You can only update your own question banks.');
+            }
+            if (!in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null], true)) {
+                abort(403, 'Repository is locked while awaiting governance approval.');
+            }
         }
 
         $validated = $request->validate([
@@ -265,8 +270,13 @@ class QuestionBankController extends Controller
     {
         $user = request()->user();
 
-        if ($user && $user->hasRole('teacher') && $questionBank->created_by !== $user->id) {
-            abort(403);
+        if ($user && $user->hasRole('teacher')) {
+            if ((int) $questionBank->created_by !== (int) $user->id) {
+                abort(403);
+            }
+            if (in_array($questionBank->status, ['pending_approval', 'approved', 'published'], true)) {
+                abort(403, 'Question Bank has already been submitted for governance approval.');
+            }
         }
 
         $questionBank->update(['status' => 'pending_approval']);
@@ -552,6 +562,15 @@ class QuestionBankController extends Controller
             abort(403, 'Administrators are Content Operators and cannot author questions directly.');
         }
 
+        if ($user && $user->hasRole('teacher')) {
+            if ((int) $questionBank->created_by !== (int) $user->id) {
+                abort(403, 'Unauthorized access to question bank.');
+            }
+            if (!in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null], true)) {
+                abort(403, 'Repository is locked while awaiting governance approval.');
+            }
+        }
+
         $validated = $request->validate([
             'prompt'                => ['required', 'string'],
             'question_type'         => ['required', 'string'],
@@ -601,6 +620,16 @@ class QuestionBankController extends Controller
             abort(403, 'Administrators are Content Operators and cannot edit questions directly.');
         }
 
+        $questionBank = $question->questionBank;
+        if ($user && $user->hasRole('teacher')) {
+            if ($questionBank && (int) $questionBank->created_by !== (int) $user->id) {
+                abort(403, 'Unauthorized access to question.');
+            }
+            if ($questionBank && !in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null], true)) {
+                abort(403, 'Repository is locked while awaiting governance approval.');
+            }
+        }
+
         $validated = $request->validate([
             'prompt'                => ['required', 'string'],
             'question_type'         => ['required', 'string'],
@@ -648,6 +677,16 @@ class QuestionBankController extends Controller
         $user = $request->user();
         if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
             abort(403, 'Administrators are Content Operators and cannot duplicate/author questions directly.');
+        }
+
+        $questionBank = $question->questionBank;
+        if ($user && $user->hasRole('teacher')) {
+            if ($questionBank && (int) $questionBank->created_by !== (int) $user->id) {
+                abort(403, 'Unauthorized access to question.');
+            }
+            if ($questionBank && !in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null], true)) {
+                abort(403, 'Repository is locked while awaiting governance approval.');
+            }
         }
 
         $newQ = $question->replicate();
@@ -780,5 +819,70 @@ class QuestionBankController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Bulk import CSV questions into a question bank.
+     */
+    public function importQuestions(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot import questions directly.');
+        }
+
+        if ($user && $user->hasRole('teacher')) {
+            if ((int) $questionBank->created_by !== (int) $user->id) {
+                abort(403, 'Unauthorized access to question bank.');
+            }
+            if (!in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null], true)) {
+                abort(403, 'Repository is locked while awaiting governance approval.');
+            }
+        }
+
+        $csvContent = $request->input('csv_content', '');
+        if (empty(trim($csvContent))) {
+            return redirect()->back()->with('error', 'CSV content cannot be empty.');
+        }
+
+        $lines = explode("\n", str_replace("\r", "", $csvContent));
+        $count = 0;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+            $parts = array_map('trim', explode(',', $line));
+            if (count($parts) >= 6) {
+                $prompt = $parts[0];
+                $choiceA = $parts[1];
+                $choiceB = $parts[2];
+                $choiceC = $parts[3];
+                $choiceD = $parts[4];
+                $correctIdx = (int) $parts[5];
+
+                $question = Question::create([
+                    'question_bank_id' => $questionBank->id,
+                    'prompt'           => $prompt,
+                    'question_type'    => 'single_choice',
+                    'difficulty'        => 'medium',
+                    'points'            => 1,
+                ]);
+
+                $choices = [$choiceA, $choiceB, $choiceC, $choiceD];
+                foreach ($choices as $idx => $content) {
+                    QuestionChoice::create([
+                        'question_id' => (string) $question->id,
+                        'label'       => chr(65 + $idx),
+                        'content'     => $content,
+                        'is_correct'  => ($idx === $correctIdx),
+                    ]);
+                }
+                $count++;
+            }
+        }
+
+        return redirect()->route('admin.question-banks.show', $questionBank->id)
+            ->with('status', "Imported {$count} questions successfully.");
     }
 }

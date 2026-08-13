@@ -66,11 +66,11 @@
         <div class="flex flex-wrap items-center gap-2">
             @if (Auth::user()?->hasRole('teacher'))
                 <!-- Teacher Content Creator Actions -->
-                <button onclick="document.getElementById('edit-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
-                    ✏ Edit Bank Details
-                </button>
+                @if (in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null]))
+                    <button onclick="document.getElementById('edit-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                        ✏ Edit Bank Details
+                    </button>
 
-                @if (in_array($questionBank->status, ['draft', 'rejected', null]))
                     <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline">
                         @csrf
                         <button type="button" id="submit-trigger-btn" onclick="document.getElementById('inline-submit-panel').classList.remove('hidden'); this.classList.add('hidden');" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
@@ -89,14 +89,18 @@
                             </button>
                         </div>
                     </form>
-                @endif
 
-                <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
-                    📥 Bulk Import
-                </button>
-                <button onclick="openCreateQuestionModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
-                    + Add Question
-                </button>
+                    <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                        📥 Bulk Import
+                    </button>
+                    <button onclick="openCreateQuestionModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
+                        + Add Question
+                    </button>
+                @else
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg">
+                        🔒 Repository locked while awaiting governance approval.
+                    </span>
+                @endif
             @endif
 
             @if (Auth::user()?->hasRole('admin') && !Auth::user()?->hasRole('super-admin'))
@@ -191,7 +195,7 @@
                             <button type="button" onclick='openViewQuestionModal({{ json_encode($q) }})' class="text-xs text-slate-300 hover:text-white font-semibold">
                                 👁 View
                             </button>
-                            @if (Auth::user()?->hasRole('teacher'))
+                            @if (Auth::user()?->hasRole('teacher') && in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null]))
                                 <button type="button" onclick='openEditQuestionModal({{ json_encode($q) }})' class="text-xs text-indigo-400 hover:underline font-semibold">
                                     ✏ Edit
                                 </button>

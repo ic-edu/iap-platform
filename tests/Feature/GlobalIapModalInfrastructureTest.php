@@ -178,4 +178,68 @@ class GlobalIapModalInfrastructureTest extends TestCase
             }
         }
     }
+
+    /**
+     * TEST 7: Teacher cannot mutate QuestionBank or Questions when status is PENDING_APPROVAL.
+     */
+    public function test_pending_approval_repository_is_read_only_for_teacher()
+    {
+        $qb = QuestionBank::create([
+            'title' => 'Pending Approval Repository',
+            'code' => 'QB-PENDING-001',
+            'slug' => 'pending-approval-repository',
+            'status' => 'pending_approval',
+            'created_by' => $this->teacher->id,
+            'author_id' => $this->teacher->id,
+        ]);
+
+        $q = \App\Modules\QuestionBank\Models\Question::create([
+            'question_bank_id' => $qb->id,
+            'prompt' => 'Question inside pending approval bank',
+            'question_type' => \App\Modules\QuestionBank\Enums\QuestionType::MultipleChoice,
+            'difficulty' => 'medium',
+            'points' => 1,
+        ]);
+
+        // UI check: show view hides mutation actions and displays locked banner
+        $response = $this->actingAs($this->teacher)->get(route('admin.question-banks.show', $qb->id));
+        $response->assertStatus(200);
+        $response->assertSee('🔒 Repository locked while awaiting governance approval.', false);
+        $response->assertDontSee('✏ Edit Bank Details', false);
+        $response->assertDontSee('+ Add Question', false);
+        $response->assertDontSee('📥 Bulk Import', false);
+        $response->assertSee('👁 View', false);
+        $response->assertDontSee('✏ Edit', false);
+
+        // Backend HTTP 403 checks for mutations
+        $updateResp = $this->actingAs($this->teacher)->put(route('admin.question-banks.update', $qb->id), [
+            'title' => 'Attempted Title Change',
+            'test_type' => 'UTBK',
+        ]);
+        $updateResp->assertStatus(403);
+
+        $addQResp = $this->actingAs($this->teacher)->post(route('admin.question-banks.store-question', $qb->id), [
+            'prompt' => 'New Question Attempt',
+            'question_type' => 'multiple_choice',
+            'difficulty' => 'easy',
+            'points' => 1,
+        ]);
+        $addQResp->assertStatus(403);
+
+        $editQResp = $this->actingAs($this->teacher)->put(route('admin.question-banks.update-question', $q->id), [
+            'prompt' => 'Edited Question Attempt',
+            'question_type' => 'multiple_choice',
+            'difficulty' => 'hard',
+            'points' => 2,
+        ]);
+        $editQResp->assertStatus(403);
+
+        $dupeQResp = $this->actingAs($this->teacher)->post(route('admin.question-banks.duplicate-question', $q->id));
+        $dupeQResp->assertStatus(403);
+
+        $importResp = $this->actingAs($this->teacher)->post(route('admin.question-banks.import', $qb->id), [
+            'csv_content' => 'Sample, A, B, C, D, 0',
+        ]);
+        $importResp->assertStatus(403);
+    }
 }
