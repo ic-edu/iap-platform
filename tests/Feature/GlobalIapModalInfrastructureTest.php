@@ -346,5 +346,10 @@ class GlobalIapModalInfrastructureTest extends TestCase
 
         // Confirm buttons are descendants of #iap-modal-actions -> #iap-modal-panel -> #iap-global-dialog
         $this->assertMatchesRegularExpression('/<dialog id="iap-global-dialog".*?<div id="iap-modal-panel".*?<div id="iap-modal-actions".*?<button id="iap-modal-cancel-btn".*?<button id="iap-modal-confirm-btn"/s', $content);
+
+        // Verify layout HTML parsing integrity: back-to-top-btn is properly closed before x-iap-modal
+        $layoutPath = resource_path('views/layouts/admin.blade.php');
+        $layoutContent = file_get_contents($layoutPath);
+        $this->assertMatchesRegularExpression('/id="back-to-top-btn".*?<\/button>\s*<!-- Global IAP Modal System -->\s*<x-iap-modal \/>/s', $layoutContent);
     }
 }
