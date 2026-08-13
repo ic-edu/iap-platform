@@ -749,10 +749,21 @@ a.tw-hero__pill:hover { opacity: .8; }
                                         @if(in_array($status, ['draft', 'rejected']))
                                         <form method="POST"
                                               action="{{ route('admin.question-banks.submit', $bank->id) }}"
-                                              style="display:inline;"
-                                              onsubmit="event.preventDefault(); iapConfirm({ title: 'Submit Question Bank for Approval?', message: 'Submit \'{{ addslashes($bank->title) }}\' for Super Admin approval?', confirmText: 'Submit for Approval', variant: 'primary', form: this });">
+                                              style="display:inline;">
                                             @csrf
-                                            <button type="submit" class="tw-act tw-act--submit">📤 Submit</button>
+                                            <button type="button" id="submit-trigger-btn-dash-{{ $bank->id }}" onclick="document.getElementById('inline-submit-panel-dash-{{ $bank->id }}').classList.remove('hidden'); this.classList.add('hidden');" class="tw-act tw-act--submit">📤 Submit</button>
+
+                                            <div id="inline-submit-panel-dash-{{ $bank->id }}" class="hidden inline-flex items-center gap-2 p-1.5 bg-slate-900 border border-amber-500/50 rounded-xl shadow-lg">
+                                                <span class="text-xs text-slate-200 font-medium">
+                                                    Submit '{{ $bank->title }}' for Super Admin approval?
+                                                </span>
+                                                <button type="button" onclick="document.getElementById('inline-submit-panel-dash-{{ $bank->id }}').classList.add('hidden'); document.getElementById('submit-trigger-btn-dash-{{ $bank->id }}').classList.remove('hidden');" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" class="px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow transition-colors">
+                                                    Submit for Approval
+                                                </button>
+                                            </div>
                                         </form>
                                         @endif
 

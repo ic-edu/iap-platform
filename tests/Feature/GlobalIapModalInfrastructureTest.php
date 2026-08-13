@@ -77,7 +77,9 @@ class GlobalIapModalInfrastructureTest extends TestCase
         $response = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('iapConfirm({ title: \'Submit Question Bank for Approval?\'', false);
+        $response->assertSee('id="submit-trigger-btn-dash-', false);
+        $response->assertSee('id="inline-submit-panel-dash-', false);
+        $response->assertSee('Submit \'Draft QB for Teacher\' for Super Admin approval?', false);
         $response->assertSee('iapConfirm({ title: \'Duplicate Question Bank?\'', false);
         $response->assertDontSee('onsubmit="return confirm(');
     }
