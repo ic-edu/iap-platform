@@ -92,7 +92,7 @@
                     <td class="td-actions">
                         {{-- ADMIN-OPS-001: Admin can only PUBLISH or REQUEST ARCHIVE. No authoring. --}}
                         @if($bank->status === 'approved')
-                        <form action="{{ route('admin.publications.question-banks.publish', $bank->id) }}" method="POST" onsubmit="return confirm('Publish \'{{ addslashes($bank->title) }}\' live?');">
+                        <form action="{{ route('admin.publications.question-banks.publish', $bank->id) }}" method="POST" onsubmit="event.preventDefault(); iapConfirm({ title: 'Publish Question Bank Live?', message: 'Publish \'{{ addslashes($bank->title) }}\' live? Candidates will be able to access this repository.', confirmText: 'Publish Live', variant: 'success', form: this });">
                             @csrf
                             <button type="submit" class="btn btn--sm btn--green">Publish</button>
                         </form>

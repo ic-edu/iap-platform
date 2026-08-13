@@ -147,7 +147,7 @@
                 </button>
 
                 {{-- Reject Action --}}
-                <button type="submit" formaction="{{ route('admin.repository-manager.media-reject', $reviewRequest->id) }}" onclick="return confirm('Are you sure you want to reject this teacher revision request?')" style="padding:.75rem 1.5rem;background:#ef4444;color:#fff;border:none;border-radius:.6rem;font-size:.85rem;font-weight:800;cursor:pointer;">
+                <button type="button" onclick="iapConfirm({ title: 'Reject Revision Request?', message: 'Are you sure you want to reject this teacher revision request?', confirmText: 'Reject Revision', variant: 'danger', onConfirm: () => { const btn = document.createElement('button'); btn.type='submit'; btn.name='action'; btn.formaction='{{ route('admin.repository-manager.media-reject', $reviewRequest->id) }}'; const form = document.querySelector('form'); form.appendChild(btn); btn.click(); } })" style="padding:.75rem 1.5rem;background:#ef4444;color:#fff;border:none;border-radius:.6rem;font-size:.85rem;font-weight:800;cursor:pointer;">
                     ❌ Reject Revision
                 </button>
             </div>

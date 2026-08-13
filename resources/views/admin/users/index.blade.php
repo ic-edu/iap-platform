@@ -162,7 +162,7 @@
                                     <!-- Toggle Status (Disabled for self) -->
                                     @if (! $isSelf)
                                         <form action="{{ route('admin.users.toggle-status', $user->id) }}" method="POST" class="inline" 
-                                              onsubmit="return confirm('Are you sure you want to {{ $user->status === 'inactive' ? 'ACTIVATE' : 'DEACTIVATE' }} {{ $user->name }}?')">
+                                              onsubmit="event.preventDefault(); iapConfirm({ title: '{{ $user->status === 'inactive' ? 'Activate User Account?' : 'Deactivate User Account?' }}', message: 'Are you sure you want to {{ $user->status === 'inactive' ? 'ACTIVATE' : 'DEACTIVATE' }} {{ addslashes($user->name) }}?', confirmText: '{{ $user->status === 'inactive' ? 'Activate Account' : 'Deactivate Account' }}', variant: '{{ $user->status === 'inactive' ? 'success' : 'warning' }}', form: this });">
                                             @csrf
                                             <button type="submit" class="px-2 py-1 {{ $user->status === 'inactive' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30' }} rounded transition-colors">
                                                 {{ $user->status === 'inactive' ? '⚡ Activate' : '⏸ Deactivate' }}
@@ -188,7 +188,7 @@
                                         @elseif ($actorIsSuperAdmin)
                                             <!-- Super Admin: Direct Soft Delete or Request Delete -->
                                             <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline" 
-                                                  onsubmit="return confirm('⚠️ WARNING: Soft delete user {{ $user->email }}?')">
+                                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Soft Delete User Account?', message: '⚠️ WARNING: Are you sure you want to soft delete user {{ addslashes($user->email) }}?', confirmText: 'Delete User Account', variant: 'danger', form: this });">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="px-2 py-1 bg-rose-500/10 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 border border-rose-500/20 rounded transition-colors">

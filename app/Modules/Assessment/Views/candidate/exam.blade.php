@@ -23,7 +23,7 @@
                 <span id="countdown-timer" class="text-lg font-mono font-bold text-emerald-400">--:--:--</span>
             </div>
 
-            <form method="POST" action="{{ route('candidate.exam.submit', $attempt) }}" onsubmit="return confirm('Are you sure you want to finalize and submit your test answers?');">
+            <form method="POST" action="{{ route('candidate.exam.submit', $attempt) }}" onsubmit="event.preventDefault(); iapConfirm({ title: 'Finalize and Submit Test?', message: 'Are you sure you want to finalize and submit your test answers?', confirmText: 'Final Submit', variant: 'success', form: this });">
                 @csrf
                 <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-md shadow-emerald-600/30">
                     Final Submit &rarr;
@@ -123,7 +123,9 @@
         function updateTimerDisplay() {
             if (remainingSeconds <= 0) {
                 document.getElementById('countdown-timer').innerText = "00:00:00";
-                alert("Time has expired! Submitting test session automatically.");
+                iapAlert({ title: 'Time Expired', message: 'Time has expired! Submitting test session automatically.', okText: 'View Review', variant: 'warning', onOk: () => { window.location.href = "{{ route('candidate.review', $attempt) }}"; } });
+                return;
+            }
                 window.location.href = "{{ route('candidate.review', $attempt) }}";
                 return;
             }
@@ -189,6 +191,6 @@
             if (e.key === 'n' || e.key === 'N') navigateQuestion(currentQuestionIdx + 1);
             if (e.key === 'p' || e.key === 'P') navigateQuestion(currentQuestionIdx - 1);
         });
-    </script>
+    <x-iap-modal />
 </body>
 </html>

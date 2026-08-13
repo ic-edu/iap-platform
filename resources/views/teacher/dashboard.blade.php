@@ -750,7 +750,7 @@ a.tw-hero__pill:hover { opacity: .8; }
                                         <form method="POST"
                                               action="{{ route('admin.question-banks.submit', $bank->id) }}"
                                               style="display:inline;"
-                                              onsubmit="return confirm('Submit \'{{ addslashes($bank->title) }}\' for Super Admin approval?');">
+                                              onsubmit="event.preventDefault(); iapConfirm({ title: 'Submit Question Bank for Approval?', message: 'Submit \'{{ addslashes($bank->title) }}\' for Super Admin approval?', confirmText: 'Submit for Approval', variant: 'primary', form: this });">
                                             @csrf
                                             <button type="submit" class="tw-act tw-act--submit">📤 Submit</button>
                                         </form>
@@ -760,7 +760,7 @@ a.tw-hero__pill:hover { opacity: .8; }
                                         <form method="POST"
                                               action="{{ route('admin.question-banks.duplicate', $bank->id) }}"
                                               style="display:inline;"
-                                              onsubmit="return confirm('Duplicate \'{{ addslashes($bank->title) }}\'?');">
+                                              onsubmit="event.preventDefault(); iapConfirm({ title: 'Duplicate Question Bank?', message: 'Duplicate \'{{ addslashes($bank->title) }}\'?', confirmText: 'Duplicate Repository', variant: 'info', form: this });">
                                             @csrf
                                             <button type="submit" class="tw-act tw-act--dupe">⧉ Dupe</button>
                                         </form>

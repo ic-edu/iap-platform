@@ -346,7 +346,7 @@
 // Copy URL
 function copyAssetUrl(url) {
     navigator.clipboard.writeText(url);
-    alert('✅ Internal Asset URL Copied to Clipboard!\n\n' + url);
+    iapAlert({ title: 'URL Copied', message: '✅ Internal Asset URL Copied to Clipboard!\n\n' + url, variant: 'success' });
 }
 
 // Teacher Edit Modal

@@ -142,7 +142,7 @@
             <a href="{{ route('admin.question-banks.index') }}" style="padding:.6rem 1.25rem;background:#6366f1;color:#fff;border-radius:.5rem;font-size:.82rem;font-weight:700;text-decoration:none;">
                 ＋ Create Question Bank
             </a>
-            <button type="button" onclick="alert('Request sent to Super Admin to initialize {{ addslashes($category->name) }} institutional library.');" style="padding:.6rem 1.25rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.5rem;font-size:.82rem;font-weight:700;cursor:pointer;">
+            <button type="button" onclick="iapAlert({ title: 'Institutional Library Requested', message: 'Request sent to Super Admin to initialize {{ addslashes($category->name) }} institutional library.', variant: 'info' })" style="padding:.6rem 1.25rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.5rem;font-size:.82rem;font-weight:700;cursor:pointer;">
                 🏛 Request Institutional Library
             </button>
         </div>

@@ -126,7 +126,7 @@
                         <td class="td-meta">{{ $test->updated_at?->diffForHumans() }}</td>
                         <td class="td-actions">
                             <form action="{{ route('admin.publications.assessments.unpublish', $test->id) }}" method="POST"
-                                  onsubmit="return confirm('Unpublish \'{{ addslashes($test->title) }}\'?');">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Unpublish Assessment?', message: 'Unpublish \'{{ addslashes($test->title) }}\'? Candidates will lose access.', confirmText: 'Unpublish Assessment', variant: 'warning', form: this });">
                                 @csrf
                                 <button type="submit" class="btn btn--sm btn--outline-orange">Unpublish</button>
                             </form>

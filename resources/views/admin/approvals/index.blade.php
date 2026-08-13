@@ -101,14 +101,14 @@
                         <td class="p-4 text-xs text-slate-400">{{ $bank->updated_at?->format('Y-m-d H:i') }}</td>
                         <td class="p-4 text-right space-x-2">
                             <form action="{{ route('admin.approvals.question-banks.approve', $bank->id) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Approve Question Bank {{ $bank->title }}?')">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Approve Question Bank?', message: 'Approve Question Bank {{ addslashes($bank->title) }}?', confirmText: 'Approve & Publish', variant: 'success', form: this });">
                                 @csrf
                                 <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
                                     ✓ Approve
                                 </button>
                             </form>
                             <form action="{{ route('admin.approvals.question-banks.reject', $bank->id) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Reject Question Bank {{ $bank->title }}?')">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Reject Question Bank?', message: 'Reject Question Bank {{ addslashes($bank->title) }}?', confirmText: 'Reject Repository', variant: 'danger', form: this });">
                                 @csrf
                                 <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
                                     ✗ Reject
@@ -166,14 +166,14 @@
                         <td class="p-4 text-xs text-slate-400">{{ $archReq->created_at?->format('Y-m-d H:i') }}</td>
                         <td class="p-4 text-right space-x-2">
                             <form action="{{ route('admin.approvals.question-banks.archives.approve', $archReq->id) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Approve archive of Question Bank {{ $bank?->title }}?')">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Approve Archive Request?', message: 'Approve archive of Question Bank {{ addslashes($bank?->title) }}?', confirmText: 'Approve Archive', variant: 'warning', form: this });">
                                 @csrf
                                 <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
                                     ✓ Approve Archive
                                 </button>
                             </form>
                             <form action="{{ route('admin.approvals.question-banks.archives.reject', $archReq->id) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Reject archive request for Question Bank {{ $bank?->title }}?')">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Reject Archive Request?', message: 'Reject archive request for Question Bank {{ addslashes($bank?->title) }}?', confirmText: 'Reject Request', variant: 'danger', form: this });">
                                 @csrf
                                 <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
                                     ✗ Reject
@@ -242,14 +242,14 @@
                         <td class="p-4 text-xs text-slate-400">{{ $createReq->created_at?->format('Y-m-d H:i') }}</td>
                         <td class="p-4 text-right space-x-2">
                             <form action="{{ route('admin.approvals.users.creation.approve', $createReq->id) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Approve and activate staff user account {{ $target?->email }}?')">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Approve Staff User Creation?', message: 'Approve and activate staff user account {{ addslashes($target?->email) }}?', confirmText: 'Approve & Activate', variant: 'success', form: this });">
                                 @csrf
                                 <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
                                     ✓ Approve &amp; Activate
                                 </button>
                             </form>
                             <form action="{{ route('admin.approvals.users.creation.reject', $createReq->id) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Reject staff user creation request for {{ $target?->email }}?')">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Reject Staff User Request?', message: 'Reject staff user creation request for {{ addslashes($target?->email) }}?', confirmText: 'Reject Request', variant: 'danger', form: this });">
                                 @csrf
                                 <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
                                     ✗ Reject
@@ -312,14 +312,14 @@
                         <td class="p-4 text-xs text-slate-400">{{ $delReq->created_at?->format('Y-m-d H:i') }}</td>
                         <td class="p-4 text-right space-x-2">
                             <form action="{{ route('admin.approvals.users.approve', $delReq->id) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Confirm soft deletion of user {{ $target?->email }}?')">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Approve User Deletion?', message: 'Confirm soft deletion of user {{ addslashes($target?->email) }}?', confirmText: 'Soft Delete User', variant: 'danger', form: this });">
                                 @csrf
                                 <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
                                     ✓ Approve &amp; Soft Delete
                                 </button>
                             </form>
                             <form action="{{ route('admin.approvals.users.reject', $delReq->id) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Reject deletion request for {{ $target?->email }}?')">
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Reject Deletion Request?', message: 'Reject deletion request for {{ addslashes($target?->email) }}?', confirmText: 'Reject Request', variant: 'warning', form: this });">
                                 @csrf
                                 <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
                                     ✗ Reject

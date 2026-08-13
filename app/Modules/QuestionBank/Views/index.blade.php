@@ -524,7 +524,7 @@
                                 {{-- Submit for Approval --}}
                                 @if(Auth::user()?->hasRole('teacher') && in_array($status, ['draft', 'rejected', 'revision_requested', null]))
                                 <form method="POST" action="{{ route('admin.question-banks.submit', $bank->id) }}" style="display:inline;"
-                                      onsubmit="return confirm('Submit \'{{ addslashes($bank->title) }}\' for Super Admin approval?');">
+                                      onsubmit="event.preventDefault(); iapConfirm({ title: 'Submit Question Bank for Approval?', message: 'Submit \'{{ addslashes($bank->title) }}\' for Super Admin approval?', confirmText: 'Submit for Approval', variant: 'primary', form: this });">
                                     @csrf
                                     <button type="submit" class="acl-act acl-act--submit">📤 Submit</button>
                                 </form>

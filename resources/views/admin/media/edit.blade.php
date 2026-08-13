@@ -131,9 +131,9 @@
             <button type="submit" form="editMediaForm" style="padding:.55rem 1.1rem;background:#312e81;border:1px solid #4338ca;color:#a5b4fc;border-radius:.6rem;font-size:.8rem;font-weight:800;cursor:pointer;">
                 💾 Save Draft (Working Copy)
             </button>
-            <form action="{{ route('admin.media.submit-review', $media->id) }}" method="POST" style="display:inline;">
+            <form action="{{ route('admin.media.submit-review', $media->id) }}" method="POST" style="display:inline;" onsubmit="event.preventDefault(); iapConfirm({ title: 'Submit for Review?', message: 'Submit this working copy candidate to Repository Manager for Quality Assurance Review?', confirmText: 'Submit for Review', variant: 'primary', form: this });">
                 @csrf
-                <button type="submit" onclick="return confirm('Submit this working copy candidate to Repository Manager for Quality Assurance Review?')" style="padding:.55rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.8rem;font-weight:800;cursor:pointer;">
+                <button type="submit" style="padding:.55rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.8rem;font-weight:800;cursor:pointer;">
                     🚀 Submit for Review
                 </button>
             </form>

@@ -111,13 +111,13 @@
                     <td class="td-actions">
                         @if($test->status === 'approved' && !$test->is_published)
                         <form action="{{ route('admin.publications.assessments.publish', $test->id) }}" method="POST"
-                              onsubmit="return confirm('Publish \'{{ addslashes($test->title) }}\' live? Candidates will be able to access this assessment.');">
+                              onsubmit="event.preventDefault(); iapConfirm({ title: 'Publish Assessment Live?', message: 'Publish \'{{ addslashes($test->title) }}\' live? Candidates will be able to access this assessment.', confirmText: 'Publish Live', variant: 'success', form: this });">
                             @csrf
                             <button type="submit" class="btn btn--sm btn--green">Publish</button>
                         </form>
                         @elseif($test->is_published)
                         <form action="{{ route('admin.publications.assessments.unpublish', $test->id) }}" method="POST"
-                              onsubmit="return confirm('Unpublish \'{{ addslashes($test->title) }}\'? Candidates will lose access.');">
+                              onsubmit="event.preventDefault(); iapConfirm({ title: 'Unpublish Assessment?', message: 'Unpublish \'{{ addslashes($test->title) }}\'? Candidates will lose access.', confirmText: 'Unpublish Assessment', variant: 'warning', form: this });">
                             @csrf
                             <button type="submit" class="btn btn--sm btn--outline-orange">Unpublish</button>
                         </form>

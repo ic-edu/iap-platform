@@ -189,7 +189,7 @@
                                 </form>
                             @endif
                             @if (!Auth::user()?->hasRole('teacher'))
-                                <form action="{{ route('admin.question-banks.destroy-question', $q->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete this question?')">
+                                <form action="{{ route('admin.question-banks.destroy-question', $q->id) }}" method="POST" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Delete Question?', message: 'Are you sure you want to delete this question? This action cannot be undone.', confirmText: 'Delete Question', variant: 'danger', form: this });">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-xs text-rose-400 hover:underline font-semibold">🗑 Delete</button>

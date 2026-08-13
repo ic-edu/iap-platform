@@ -33,7 +33,7 @@
                 <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">Simulated Duplicate Flagged Items</h3>
                 <div style="font-size:.78rem;color:#94a3b8;">High-similarity content detected across TOEFL and IELTS repositories.</div>
             </div>
-            <button type="button" onclick="alert('⚡ Automated Full Repository Scan Triggered. Scanning 1,420 items...')" style="padding:.55rem 1.1rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
+            <button type="button" onclick="iapAlert({ title: 'Full Repository Scan', message: '⚡ Automated Full Repository Scan Triggered. Scanning 1,420 items...', variant: 'info' })" style="padding:.55rem 1.1rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
                 ⚡ Run Full Repository Scan
             </button>
         </div>
@@ -50,8 +50,8 @@
                 <strong style="color:#fb923c;">Duplicate Candidate:</strong> "Based on paragraph 2, what was the primary reason early Mesopotamian societies built ziggurats?"
             </div>
             <div style="display:flex;gap:.5rem;margin-top:1rem;">
-                <button type="button" onclick="alert('Merged candidate into master question item.')" style="padding:.35rem .8rem;background:#10b981;color:#fff;border:none;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Merge Items</button>
-                <button type="button" onclick="alert('Flag dismissed as false positive.')" style="padding:.35rem .8rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Dismiss Flag</button>
+                <button type="button" onclick="iapAlert({ title: 'Items Merged', message: 'Merged candidate into master question item.', variant: 'success' })" style="padding:.35rem .8rem;background:#10b981;color:#fff;border:none;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Merge Items</button>
+                <button type="button" onclick="iapAlert({ title: 'Flag Dismissed', message: 'Flag dismissed as false positive.', variant: 'info' })" style="padding:.35rem .8rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Dismiss Flag</button>
             </div>
         </div>
 
@@ -67,8 +67,8 @@
                 <strong style="color:#fb923c;">Duplicate Candidate:</strong> "Micro-Grid Financial Models for Industrial Renewable Power Integration"
             </div>
             <div style="display:flex;gap:.5rem;margin-top:1rem;">
-                <button type="button" onclick="alert('Merged passage versions.')" style="padding:.35rem .8rem;background:#10b981;color:#fff;border:none;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Merge Passages</button>
-                <button type="button" onclick="alert('Flag dismissed.')" style="padding:.35rem .8rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Dismiss Flag</button>
+                <button type="button" onclick="iapAlert({ title: 'Passages Merged', message: 'Merged passage versions.', variant: 'success' })" style="padding:.35rem .8rem;background:#10b981;color:#fff;border:none;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Merge Passages</button>
+                <button type="button" onclick="iapAlert({ title: 'Flag Dismissed', message: 'Flag dismissed.', variant: 'info' })" style="padding:.35rem .8rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Dismiss Flag</button>
             </div>
         </div>
 

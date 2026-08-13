@@ -351,9 +351,9 @@
                 <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
 
                 {{-- Reject Form --}}
-                <form action="{{ route('admin.repository-manager.assessment-reject', $test->id) }}" method="POST">
+                <form action="{{ route('admin.repository-manager.assessment-reject', $test->id) }}" method="POST" onsubmit="event.preventDefault(); iapConfirm({ title: 'Reject Assessment Test?', message: 'Are you sure you want to reject this assessment test? Rejecting will return it for author revision.', confirmText: 'Reject Assessment', variant: 'danger', form: this });">
                     @csrf
-                    <button type="submit" style="width:100%;padding:.6rem;background:#ef4444;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.8rem;" onclick="return confirm('Are you sure you want to reject this assessment test?')">
+                    <button type="submit" style="width:100%;padding:.6rem;background:#ef4444;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.8rem;">
                         ✖ Reject Assessment
                     </button>
                 </form>

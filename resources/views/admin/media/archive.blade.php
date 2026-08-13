@@ -229,12 +229,12 @@
 
                                     {{-- Permanent Delete Request --}}
                                     @if(!$hasPendingDel)
-                                    <form method="POST" action="{{ route('admin.media.request-delete', $asset->id) }}"
-                                          style="display:inline;"
-                                          onsubmit="return confirm('Request PERMANENT deletion of \'{{ addslashes(Str::limit($asset->original_name,25)) }}\'? Super Admin approval required.');">
-                                        @csrf
-                                        <button type="submit" class="ma-act ma-act--delete">🗑 Req. Delete</button>
-                                    </form>
+                                     <form method="POST" action="{{ route('admin.media.request-delete', $asset->id) }}"
+                                           style="display:inline;"
+                                           onsubmit="event.preventDefault(); iapConfirm({ title: 'Request Permanent Deletion?', message: 'Request PERMANENT deletion of \'{{ addslashes(Str::limit($asset->original_name,25)) }}\'? Super Admin approval required.', confirmText: 'Request Permanent Deletion', variant: 'danger', form: this });">
+                                         @csrf
+                                         <button type="submit" class="ma-act ma-act--delete">🗑 Req. Delete</button>
+                                     </form>
                                     @else
                                     <span class="ma-act ma-act--disabled">🗑 Pending</span>
                                     @endif
