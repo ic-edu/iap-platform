@@ -1,21 +1,32 @@
-<!-- IAP Design System Global Modal Component (GLOBAL-MODAL-001) -->
-<div id="iap-global-modal" 
-     class="hidden fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" 
-     style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 999999; display: none; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box;"
-     role="dialog" 
-     aria-modal="true" 
-     aria-labelledby="iap-modal-title" 
-     aria-describedby="iap-modal-desc">
-    
-    <!-- Full-Viewport Backdrop Overlay (No Click Dismissal) -->
-    <div id="iap-modal-backdrop" 
-         class="fixed inset-0 bg-slate-950/85 backdrop-blur-md transition-opacity duration-200"
-         style="position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999998;"></div>
+<!-- IAP Design System Global Native Dialog Component (GLOBAL-MODAL-001) -->
+<style>
+    #iap-global-dialog {
+        width: min(32rem, calc(100vw - 2rem));
+        max-height: calc(100dvh - 2rem);
+        border: 0;
+        padding: 0;
+        margin: auto;
+        background: transparent;
+        overflow: visible;
+        color: inherit;
+    }
+    #iap-global-dialog::backdrop {
+        background: rgba(2, 6, 23, 0.85);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+</style>
 
+<dialog id="iap-global-dialog"
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="iap-modal-title" 
+        aria-describedby="iap-modal-desc">
+    
     <!-- Centered Floating Modal Panel Card (Static Vertical Flex Container) -->
     <div id="iap-modal-panel" 
-         class="relative w-full max-w-lg text-left bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[1000000] my-auto flex flex-col overflow-hidden transform transition-all"
-         style="position: relative; width: 100%; max-width: 32rem; max-height: calc(100vh - 3rem); margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); z-index: 1000000; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;">
+         class="relative w-full max-w-lg text-left bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transform transition-all"
+         style="position: relative; width: 100%; max-width: 32rem; max-height: calc(100vh - 3rem); margin: auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75); display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;">
         
         <!-- 1. Scrollable Modal Body Region -->
         <div id="iap-modal-body" class="p-6 sm:p-7 overflow-y-auto flex-1" style="position: relative; padding: 1.5rem; overflow-y: auto; flex: 1 1 auto; min-height: 0;">
@@ -55,24 +66,21 @@
             </button>
         </div>
     </div>
-</div>
+</dialog>
 
 <script>
 (function() {
     let pendingForm = null;
     let pendingCallback = null;
     let lastActiveElement = null;
-    let originalBodyOverflow = '';
 
-    function ensureDocumentBodyPlacement(modal) {
-        if (modal && document.body && modal.parentNode !== document.body) {
-            document.body.appendChild(modal);
-        }
+    function getDialog() {
+        return document.getElementById('iap-global-dialog') || document.getElementById('iap-global-modal');
     }
 
     window.iapConfirm = function(options) {
-        const modal = document.getElementById('iap-global-modal');
-        if (!modal) return false;
+        const dialog = getDialog();
+        if (!dialog) return false;
 
         lastActiveElement = document.activeElement;
         options = options || {};
@@ -108,7 +116,7 @@
             confirmBtn.style.color = '#ffffff';
         }
 
-        // Variant inline styling (without wiping static className strings)
+        // Variant inline styling
         if (confirmBtn && iconBadge && icon) {
             if (variant === 'danger' || variant === 'destructive') {
                 confirmBtn.style.backgroundColor = '#e11d48';
@@ -148,10 +156,13 @@
         pendingForm = options.form || null;
         pendingCallback = options.onConfirm || null;
 
-        originalBodyOverflow = document.body.style.overflow;
-        modal.classList.remove('hidden');
-        modal.style.setProperty('display', 'flex', 'important');
-        document.body.style.overflow = 'hidden';
+        if (typeof dialog.showModal === 'function') {
+            if (!dialog.open) {
+                dialog.showModal();
+            }
+        } else {
+            dialog.style.display = 'block';
+        }
 
         setTimeout(() => {
             if (confirmBtn) confirmBtn.focus();
@@ -169,11 +180,13 @@
     };
 
     window.closeIapModal = function() {
-        const modal = document.getElementById('iap-global-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.style.setProperty('display', 'none', 'important');
-            document.body.style.overflow = originalBodyOverflow || '';
+        const dialog = getDialog();
+        if (dialog) {
+            if (typeof dialog.close === 'function') {
+                if (dialog.open) dialog.close();
+            } else {
+                dialog.style.display = 'none';
+            }
         }
         pendingForm = null;
         pendingCallback = null;
@@ -183,10 +196,8 @@
     };
 
     document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById('iap-global-modal');
-        if (!modal) return;
-
-        ensureDocumentBodyPlacement(modal);
+        const dialog = getDialog();
+        if (!dialog) return;
 
         const confirmBtn = document.getElementById('iap-modal-confirm-btn');
         const cancelBtn = document.getElementById('iap-modal-cancel-btn');
@@ -207,10 +218,8 @@
 
         cancelBtn?.addEventListener('click', closeIapModal);
 
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modal.style.display !== 'none' && !modal.classList.contains('hidden')) {
-                closeIapModal();
-            }
+        dialog.addEventListener('cancel', function(e) {
+            closeIapModal();
         });
     });
 })();

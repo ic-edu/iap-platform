@@ -41,9 +41,8 @@ class GlobalIapModalInfrastructureTest extends TestCase
         $response = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('id="iap-global-modal"', false);
-        $response->assertSee('flex items-center justify-center', false);
-        $response->assertSee('id="iap-modal-backdrop"', false);
+        $response->assertSee('<dialog id="iap-global-dialog"', false);
+        $response->assertSee('#iap-global-dialog::backdrop', false);
         $response->assertSee('id="iap-modal-panel"', false);
         $response->assertSee('id="iap-modal-body"', false);
         $response->assertSee('id="iap-modal-actions"', false);
@@ -56,7 +55,7 @@ class GlobalIapModalInfrastructureTest extends TestCase
         $response->assertSee('background-color: #1e293b', false);
         $response->assertSee('background-color: #4f46e5', false);
         $response->assertSee('confirmBtn.style.backgroundColor = \'#e11d48\'', false);
-        $response->assertSee('ensureDocumentBodyPlacement', false);
+        $response->assertSee('showModal', false);
         $response->assertSee('window.iapConfirm');
         $response->assertSee('window.iapAlert');
     }
