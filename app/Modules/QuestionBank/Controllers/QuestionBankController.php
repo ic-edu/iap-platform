@@ -493,34 +493,114 @@ class QuestionBankController extends Controller
     public function requestRestore(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $user = $request->user();
+        if (!$user) {
+            abort(401, 'Unauthenticated.');
+        }
+
+        // Authorization: Owner Teacher or Super Admin ONLY (RM and non-owner Teacher forbidden)
+        $isOwner = $questionBank->created_by === $user->id;
+        $isSuperAdmin = $user->hasRole('super-admin');
+
+        if (!$isOwner && !$isSuperAdmin) {
+            abort(403, 'Unauthorized. Only the repository owner or Super Admin can request restoration.');
+        }
+
+        // State Guard: Source state MUST be archived
+        if ($questionBank->status !== 'archived') {
+            return redirect()->back()->with('danger', "Only ARCHIVED question banks can be requested for restoration. Current status: '{$questionBank->status}'.");
+        }
+
+        $reason = trim($request->input('reason', $request->input('restoration_reason', '')) ?: 'Requested restoration from archive');
 
         $questionBank->update(['status' => 'pending_restore_approval']);
+
+        // Task Synchronization: Create GovernanceApprovalTask for restoration
+        if (class_exists(\App\Models\GovernanceApprovalTask::class)) {
+            \App\Models\GovernanceApprovalTask::create([
+                'question_bank_id' => $questionBank->id,
+                'teacher_id'       => $questionBank->created_by ?: $user->id,
+                'workflow'         => 'APPROVAL',
+                'status'           => 'OPEN',
+                'submitted_at'     => now(),
+            ]);
+        }
 
         AclAuditTrail::create([
             'resource_type'        => 'QuestionBank',
             'resource_id'          => $questionBank->id,
             'action'               => 'restore_requested',
-            'actor_id'             => $user?->id,
-            'restore_requested_by' => $user?->id,
+            'actor_id'             => $user->id,
+            'restore_requested_by' => $user->id,
             'version'              => $questionBank->current_version ?? '1.0',
-            'reason'               => 'Requested restoration from archive',
+            'reason'               => $reason,
         ]);
 
-        return redirect()->route('admin.question-banks.index')
+        if (class_exists(\App\Models\RepositoryActivityLog::class)) {
+            \App\Models\RepositoryActivityLog::create([
+                'resource_type' => 'QuestionBank',
+                'resource_id'   => $questionBank->id,
+                'actor_id'      => $user->id,
+                'action'        => 'restore_requested',
+                'approval_note' => $reason,
+            ]);
+        }
+
+        // Notify Super Admin recipient(s)
+        if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+            $superAdmins = \App\Models\User::role('super-admin')->get();
+            foreach ($superAdmins as $superAdmin) {
+                \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                    'id'              => (string) \Illuminate\Support\Str::uuid(),
+                    'type'            => 'question_bank_restoration_requested',
+                    'notifiable_type' => 'App\Models\User',
+                    'notifiable_id'   => $superAdmin->id,
+                    'data'            => json_encode([
+                        'title'            => 'Question Bank Restoration Requested',
+                        'message'          => "'{$user->name}' requested restoration for '{$questionBank->title}'. Reason: {$reason}",
+                        'reason'           => $reason,
+                        'question_bank_id' => $questionBank->id,
+                        'link'             => route('admin.approvals.index'),
+                        'priority'         => 'HIGH',
+                    ]),
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+            }
+        }
+
+        return redirect()->back()
             ->with('status', "Restore request for '{$questionBank->title}' submitted for Super Admin approval.");
     }
 
     /**
      * Super Admin Approves Restore.
      */
-    public function approveRestore(QuestionBank $questionBank): RedirectResponse
+    public function approveRestore(Request $request, QuestionBank $questionBank): RedirectResponse
     {
-        $user = request()->user();
+        $user = $request->user() ?: request()->user();
         if (!$user || !$user->hasRole('super-admin')) {
             abort(403, 'Only Super Admin can approve restoration.');
         }
 
-        $questionBank->update(['status' => 'approved']);
+        // State Guard: Source state MUST be pending_restore_approval
+        if ($questionBank->status !== 'pending_restore_approval') {
+            return redirect()->back()->with('danger', "Cannot approve restore for Question Bank not in pending_restore_approval status. Current status: '{$questionBank->status}'.");
+        }
+
+        $questionBank->update([
+            'status'       => 'approved',
+            'is_published' => false,
+        ]);
+
+        // Resolve restoration task
+        if (class_exists(\App\Models\GovernanceApprovalTask::class)) {
+            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+                ->whereIn('status', ['OPEN', 'PENDING'])
+                ->update([
+                    'status'       => 'COMPLETED',
+                    'completed_at' => now(),
+                ]);
+        }
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
@@ -532,8 +612,115 @@ class QuestionBankController extends Controller
             'reason'        => 'Approved restoration to active repository',
         ]);
 
-        return redirect()->route('admin.question-banks.index')
+        if (class_exists(\App\Models\RepositoryActivityLog::class)) {
+            \App\Models\RepositoryActivityLog::create([
+                'resource_type' => 'QuestionBank',
+                'resource_id'   => $questionBank->id,
+                'actor_id'      => $user->id,
+                'action'        => 'restore_approved',
+                'approval_note' => 'Super Admin approved repository restoration',
+            ]);
+        }
+
+        // Notify Repository Author
+        $authorId = $questionBank->created_by;
+        if ($authorId && \Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+            \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                'id'              => (string) \Illuminate\Support\Str::uuid(),
+                'type'            => 'question_bank_restoration_approved',
+                'notifiable_type' => 'App\Models\User',
+                'notifiable_id'   => $authorId,
+                'data'            => json_encode([
+                    'title'            => 'Repository Restoration Approved',
+                    'message'          => "Super Admin approved restoration for '{$questionBank->title}'. Status is now Approved.",
+                    'question_bank_id' => $questionBank->id,
+                    'link'             => route('admin.question-banks.show', $questionBank->id),
+                    'priority'         => 'HIGH',
+                ]),
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
+        }
+
+        return redirect()->back()
             ->with('status', "Question Bank '{$questionBank->title}' restored to approved status.");
+    }
+
+    /**
+     * Super Admin Rejects Restore.
+     */
+    public function rejectRestore(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('super-admin')) {
+            abort(403, 'Only Super Admin can reject restoration.');
+        }
+
+        // State Guard: Source state MUST be pending_restore_approval
+        if ($questionBank->status !== 'pending_restore_approval') {
+            return redirect()->back()->with('danger', "Cannot reject restore for Question Bank not in pending_restore_approval status. Current status: '{$questionBank->status}'.");
+        }
+
+        $reason = trim($request->input('reason', $request->input('restoration_rejection_reason', '')) ?: 'Restoration request rejected by Super Admin');
+
+        $questionBank->update([
+            'status'       => 'archived',
+            'is_published' => false,
+        ]);
+
+        // Resolve restoration task as REJECTED
+        if (class_exists(\App\Models\GovernanceApprovalTask::class)) {
+            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+                ->whereIn('status', ['OPEN', 'PENDING'])
+                ->update([
+                    'status'       => 'REJECTED',
+                    'completed_at' => now(),
+                ]);
+        }
+
+        AclAuditTrail::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $questionBank->id,
+            'action'        => 'restore_rejected',
+            'actor_id'      => $user->id,
+            'approver_id'   => $user->id,
+            'version'       => $questionBank->current_version ?? '1.0',
+            'reason'        => $reason,
+        ]);
+
+        if (class_exists(\App\Models\RepositoryActivityLog::class)) {
+            \App\Models\RepositoryActivityLog::create([
+                'resource_type' => 'QuestionBank',
+                'resource_id'   => $questionBank->id,
+                'actor_id'      => $user->id,
+                'action'        => 'restore_rejected',
+                'approval_note' => $reason,
+            ]);
+        }
+
+        // Notify Repository Author with rejection reason
+        $authorId = $questionBank->created_by;
+        if ($authorId && \Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+            \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                'id'              => (string) \Illuminate\Support\Str::uuid(),
+                'type'            => 'question_bank_restoration_rejected',
+                'notifiable_type' => 'App\Models\User',
+                'notifiable_id'   => $authorId,
+                'data'            => json_encode([
+                    'title'            => 'Repository Restoration Rejected',
+                    'message'          => "Super Admin rejected restoration for '{$questionBank->title}'. Reason: {$reason}",
+                    'rejection_reason' => $reason,
+                    'question_bank_id' => $questionBank->id,
+                    'link'             => route('admin.question-banks.show', $questionBank->id),
+                    'priority'         => 'HIGH',
+                ]),
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
+        }
+
+        return redirect()->back()
+            ->with('status', "Restoration request for '{$questionBank->title}' rejected. Status returned to Archived.");
     }
 
     /**

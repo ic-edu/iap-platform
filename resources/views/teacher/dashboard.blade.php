@@ -700,17 +700,19 @@ a.tw-hero__pill:hover { opacity: .8; }
                             @php
                                 $status = $bank->status ?? 'draft';
                                 $badgeClass = match($status) {
-                                    'published'              => 'tw-badge--published',
-                                    'approved'               => 'tw-badge--approved',
+                                    'published'                => 'tw-badge--published',
+                                    'approved'                 => 'tw-badge--approved',
                                     'pending_approval',
-                                    'pending_archive_approval' => 'tw-badge--pending',
-                                    'archived'               => 'tw-badge--archived',
-                                    'rejected'               => 'tw-badge--rejected',
-                                    default                  => 'tw-badge--draft',
+                                    'pending_archive_approval',
+                                    'pending_restore_approval' => 'tw-badge--pending',
+                                    'archived'                 => 'tw-badge--archived',
+                                    'rejected'                 => 'tw-badge--rejected',
+                                    default                    => 'tw-badge--draft',
                                 };
                                 $statusLabel = match($status) {
                                     'pending_approval'         => 'Pending',
                                     'pending_archive_approval' => 'Arch. Pending',
+                                    'pending_restore_approval' => 'Pending Restore',
                                     default => ucfirst(str_replace('_', ' ', $status)),
                                 };
                             @endphp
@@ -749,6 +751,16 @@ a.tw-hero__pill:hover { opacity: .8; }
                                         {{-- View/Author --}}
                                         <a href="{{ route('admin.question-banks.show', $bank->id) }}"
                                            class="tw-act tw-act--view">{{ $isEditableState ? '✏️ Author' : '👁 View' }}</a>
+
+                                        {{-- Request Restore Action for Archived repositories (Owner Teacher or Super Admin ONLY) --}}
+                                        @if($status === 'archived' && (Auth::user()?->hasRole('super-admin') || (Auth::user()?->hasRole('teacher') && $bank->created_by === Auth::user()->id)))
+                                        <form method="POST" action="{{ route('admin.question-banks.request-restore', $bank->id) }}" style="display:inline;"
+                                              onsubmit="event.preventDefault(); const reason = prompt('Request restoration of \'{{ addslashes($bank->title) }}\' for Super Admin approval?\n\nPlease enter restoration reason:'); if (reason !== null) { this.reason.value = reason; this.submit(); }">
+                                            @csrf
+                                            <input type="hidden" name="reason" value="">
+                                            <button type="submit" class="tw-act tw-act--restore" style="color:#818cf8;border:1px solid rgba(129,140,248,.3);" title="Request restoration for Super Admin approval">↻ Request Restore</button>
+                                        </form>
+                                        @endif
 
                                         {{-- Submit — only draft or rejected --}}
                                         @if($isEditableState)

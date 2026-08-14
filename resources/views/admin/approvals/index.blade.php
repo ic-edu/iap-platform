@@ -190,6 +190,75 @@
         </table>
     </div>
 
+    <!-- Pending Question Bank Restoration Requests Table -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+            <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span>🔄</span> Question Bank Restoration Approval Queue
+                </h2>
+                <p class="text-xs text-slate-400">Review pending question bank restoration requests submitted from archive for Super Admin authorization.</p>
+            </div>
+            <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                {{ $pendingRestorationCount ?? 0 }} Pending Restorations
+            </span>
+        </div>
+        <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
+                <tr>
+                    <th class="p-4">Repository Title</th>
+                    <th class="p-4">Teacher / Author</th>
+                    <th class="p-4">Restoration Reason</th>
+                    <th class="p-4">Requested Date</th>
+                    <th class="p-4 text-right">Restoration Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+                @forelse ($pendingRestorationRequests ?? [] as $bank)
+                    <tr>
+                        <td class="p-4 font-semibold text-white">
+                            <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="hover:text-indigo-400">
+                                {{ $bank->title }}
+                            </a>
+                            <div class="text-xs text-slate-400 font-normal">Category: {{ $bank->aclCategory?->name ?? 'General' }} | Items: {{ $bank->questions->count() }}</div>
+                        </td>
+                        <td class="p-4 text-xs text-slate-300">
+                            {{ $bank->creator?->name ?? 'Teacher Author' }}
+                            <div class="text-slate-500 font-mono">{{ $bank->creator?->email }}</div>
+                        </td>
+                        <td class="p-4 text-xs text-slate-300 max-w-xs">
+                            <span class="italic bg-slate-950 p-2 rounded border border-slate-800 block text-indigo-200">
+                                {{ $bank->activityLogs()->where('action', 'restore_requested')->latest()->first()?->approval_note ?? 'Requested restoration from archive' }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-xs text-slate-400">{{ $bank->updated_at?->format('Y-m-d H:i') }}</td>
+                        <td class="p-4 text-right space-x-2">
+                            <form action="{{ route('admin.question-banks.approve-restore', $bank->id) }}" method="POST" class="inline"
+                                  onsubmit="event.preventDefault(); iapConfirm({ title: 'Approve Restoration Request?', message: 'Approve restoration of Question Bank {{ addslashes($bank->title) }} to active Approved status?', confirmText: 'Approve Restoration', variant: 'success', form: this });">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
+                                    ✓ Approve Restore
+                                </button>
+                            </form>
+                            <form action="{{ route('admin.question-banks.reject-restore', $bank->id) }}" method="POST" class="inline"
+                                  onsubmit="event.preventDefault(); const reason = prompt('Please specify rejection reason:'); if (reason) { this.reason.value = reason; this.submit(); }">
+                                @csrf
+                                <input type="hidden" name="reason" value="">
+                                <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
+                                    ✗ Reject Restore
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-slate-500">No pending Question Bank restoration requests in approval queue. All requests have been processed.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
     <!-- Pending Staff Creation Requests Table (UAC-003) -->
     <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
         <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">

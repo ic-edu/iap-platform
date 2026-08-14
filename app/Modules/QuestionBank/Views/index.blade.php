@@ -467,7 +467,7 @@
                         $badgeClass = match($status) {
                             'published' => 'acl-badge--published',
                             'approved'  => 'acl-badge--approved',
-                            'pending_approval', 'submitted', 'pending_archive_approval' => 'acl-badge--pending',
+                            'pending_approval', 'submitted', 'pending_archive_approval', 'pending_restore_approval' => 'acl-badge--pending',
                             'rejected', 'revision_requested' => 'acl-badge--rejected',
                             'archived'  => 'acl-badge--archived',
                             default     => 'acl-badge--draft',
@@ -477,6 +477,7 @@
                             'approved'  => 'Approved',
                             'pending_approval', 'submitted' => 'Pending Approval',
                             'pending_archive_approval' => 'Pending Archive',
+                            'pending_restore_approval' => 'Pending Restore',
                             'rejected', 'revision_requested' => 'Needs Revision',
                             'archived'  => 'Archived',
                             default     => 'Draft',
@@ -550,6 +551,31 @@
                                 <form method="POST" action="{{ route('admin.question-banks.duplicate', $bank->id) }}" style="display:inline;">
                                     @csrf
                                     <button type="submit" class="acl-act acl-act--duplicate" title="Duplicate repository into a new draft">⧉ Dupe</button>
+                                </form>
+                                @endif
+
+                                {{-- Request Restore Action for Archived repositories (Owner Teacher or Super Admin ONLY) --}}
+                                @if($status === 'archived' && (Auth::user()?->hasRole('super-admin') || (Auth::user()?->hasRole('teacher') && $bank->created_by === Auth::user()->id)))
+                                <form method="POST" action="{{ route('admin.question-banks.request-restore', $bank->id) }}" style="display:inline;"
+                                      onsubmit="event.preventDefault(); const reason = prompt('Request restoration of \'{{ addslashes($bank->title) }}\' for Super Admin approval?\n\nPlease enter restoration reason:'); if (reason !== null) { this.reason.value = reason; this.submit(); }">
+                                    @csrf
+                                    <input type="hidden" name="reason" value="">
+                                    <button type="submit" class="acl-act acl-act--restore" style="color:#818cf8;border:1px solid rgba(129,140,248,.3);" title="Request restoration for Super Admin approval">↻ Request Restore</button>
+                                </form>
+                                @endif
+
+                                {{-- Super Admin Approve / Reject Restore Actions --}}
+                                @if($status === 'pending_restore_approval' && Auth::user()?->hasRole('super-admin'))
+                                <form method="POST" action="{{ route('admin.question-banks.approve-restore', $bank->id) }}" style="display:inline;"
+                                      onsubmit="event.preventDefault(); iapConfirm({ title: 'Approve Restoration Request?', message: 'Approve restoration of Question Bank \'{{ addslashes($bank->title) }}\' to active Approved status?', confirmText: 'Approve Restoration', variant: 'success', form: this });">
+                                    @csrf
+                                    <button type="submit" class="acl-act acl-act--approve" style="color:#34d399;border:1px solid rgba(52,211,153,.3);" title="Approve restoration request">✓ Approve Restore</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.question-banks.reject-restore', $bank->id) }}" style="display:inline;"
+                                      onsubmit="event.preventDefault(); const reason = prompt('Please specify rejection reason:'); if (reason) { this.reason.value = reason; this.submit(); }">
+                                    @csrf
+                                    <input type="hidden" name="reason" value="">
+                                    <button type="submit" class="acl-act acl-act--reject" style="color:#fb7185;border:1px solid rgba(251,113,133,.3);" title="Reject restoration request">✗ Reject Restore</button>
                                 </form>
                                 @endif
 

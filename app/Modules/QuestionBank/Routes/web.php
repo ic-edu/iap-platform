@@ -16,6 +16,7 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-man
     Route::post('/{questionBank}/request-archive', [QuestionBankController::class, 'requestArchive'])->name('admin.question-banks.request-archive');
     Route::post('/{questionBank}/request-restore', [QuestionBankController::class, 'requestRestore'])->name('admin.question-banks.request-restore');
     Route::post('/{questionBank}/approve-restore', [QuestionBankController::class, 'approveRestore'])->name('admin.question-banks.approve-restore');
+    Route::post('/{questionBank}/reject-restore', [QuestionBankController::class, 'rejectRestore'])->name('admin.question-banks.reject-restore');
     Route::post('/versions/{version}/rollback', [QuestionBankController::class, 'rollbackVersion'])->name('admin.question-banks.rollback-version');
 
     Route::post('/{questionBank}/questions', [QuestionBankController::class, 'storeQuestion'])->name('admin.question-banks.store-question');

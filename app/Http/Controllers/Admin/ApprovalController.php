@@ -47,10 +47,16 @@ class ApprovalController extends Controller
             ->latest()
             ->get();
 
+        $pendingRestorationRequests = QuestionBank::with(['creator', 'aclCategory'])
+            ->where('status', 'pending_restore_approval')
+            ->latest()
+            ->get();
+
         $publishedCount = Test::where('is_published', true)->count();
         $pendingCount = Test::where('status', 'pending_approval')->count();
         $pendingQuestionBankCount = $pendingQuestionBanks->count();
         $pendingQuestionBankArchiveCount = $pendingArchiveRequests->count();
+        $pendingRestorationCount = $pendingRestorationRequests->count();
         $pendingUserCreationCount = $userCreationRequests->count();
         $pendingUserDeletionCount = $userDeletionRequests->count();
 
@@ -62,6 +68,8 @@ class ApprovalController extends Controller
             'pendingQuestionBankCount',
             'pendingArchiveRequests',
             'pendingQuestionBankArchiveCount',
+            'pendingRestorationRequests',
+            'pendingRestorationCount',
             'userCreationRequests',
             'pendingUserCreationCount',
             'userDeletionRequests',
