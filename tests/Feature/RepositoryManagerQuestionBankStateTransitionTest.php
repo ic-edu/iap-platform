@@ -406,4 +406,25 @@ class RepositoryManagerQuestionBankStateTransitionTest extends TestCase
         $readResponse->assertStatus(302);
         $readResponse->assertRedirect(route('teacher.question-banks.show', $qb->id) . '?from=notifications');
     }
+
+    /** 17. Archived QuestionBank status is rendered as 'Archived' with 'acl-badge--archived' in Teacher Question Bank index. */
+    public function test_archived_question_bank_renders_as_archived_in_teacher_authoring_workspace()
+    {
+        $qb = QuestionBank::create([
+            'title' => 'Archived Render Test Bank 005',
+            'code' => 'QB-ARC-RND-005',
+            'slug' => 'archived-render-test-bank-005',
+            'status' => 'archived',
+            'created_by' => $this->teacher->id,
+            'author_id' => $this->teacher->id,
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.question-banks.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Archived Render Test Bank 005');
+        $response->assertSee('acl-badge--archived');
+        $response->assertSee('Archived');
+    }
 }

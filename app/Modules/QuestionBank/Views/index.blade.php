@@ -293,6 +293,7 @@
 .acl-badge--approved  { background: rgba(99,102,241,.12); color: #818cf8; border-color: rgba(99,102,241,.3); }
 .acl-badge--published { background: rgba(52,211,153,.12); color: #34d399; border-color: rgba(52,211,153,.3); }
 .acl-badge--rejected  { background: rgba(251,113,133,.12); color: #fb7185; border-color: rgba(251,113,133,.3); }
+.acl-badge--archived  { background: rgba(148,163,184,.12); color: #cbd5e1; border-color: rgba(148,163,184,.3); }
 
 /* ── Action buttons ── */
 .acl-act { font-size: .72rem; font-weight: 700; text-decoration: none; border: none; background: none; cursor: pointer; padding: .2rem .55rem; border-radius: .35rem; transition: background .15s; white-space: nowrap; }
@@ -464,6 +465,7 @@
                             'approved'  => 'acl-badge--approved',
                             'pending_approval', 'submitted', 'pending_archive_approval' => 'acl-badge--pending',
                             'rejected', 'revision_requested' => 'acl-badge--rejected',
+                            'archived'  => 'acl-badge--archived',
                             default     => 'acl-badge--draft',
                         };
                         $statusLabel = match($status) {
@@ -472,6 +474,7 @@
                             'pending_approval', 'submitted' => 'Pending Approval',
                             'pending_archive_approval' => 'Pending Archive',
                             'rejected', 'revision_requested' => 'Needs Revision',
+                            'archived'  => 'Archived',
                             default     => 'Draft',
                         };
                     @endphp
