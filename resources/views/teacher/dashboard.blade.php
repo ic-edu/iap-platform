@@ -741,12 +741,17 @@ a.tw-hero__pill:hover { opacity: .8; }
                                 {{-- Actions -- only what the current status permits --}}
                                 <td style="text-align:right;">
                                     <div style="display:flex;gap:.25rem;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
-                                        {{-- View/Author (always available) --}}
+                                        @php
+                                            $isEditableState = in_array($status, ['draft', 'rejected', 'revision_requested', 'needs_revision', null], true);
+                                            $isDuplicableState = in_array($status, ['draft', 'rejected', 'revision_requested', 'needs_revision', 'published', null], true);
+                                        @endphp
+
+                                        {{-- View/Author --}}
                                         <a href="{{ route('admin.question-banks.show', $bank->id) }}"
-                                           class="tw-act tw-act--view">✏️ Author</a>
+                                           class="tw-act tw-act--view">{{ $isEditableState ? '✏️ Author' : '👁 View' }}</a>
 
                                         {{-- Submit — only draft or rejected --}}
-                                        @if(in_array($status, ['draft', 'rejected']))
+                                        @if($isEditableState)
                                         <form method="POST"
                                               action="{{ route('admin.question-banks.submit', $bank->id) }}"
                                               style="display:inline;">
@@ -767,7 +772,8 @@ a.tw-hero__pill:hover { opacity: .8; }
                                         </form>
                                         @endif
 
-                                        {{-- Duplicate (always) --}}
+                                        {{-- Duplicate --}}
+                                        @if($isDuplicableState)
                                         <form method="POST"
                                               action="{{ route('admin.question-banks.duplicate', $bank->id) }}"
                                               style="display:inline;"
@@ -775,6 +781,7 @@ a.tw-hero__pill:hover { opacity: .8; }
                                             @csrf
                                             <button type="submit" class="tw-act tw-act--dupe">⧉ Dupe</button>
                                         </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

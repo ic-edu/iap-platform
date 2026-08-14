@@ -563,4 +563,29 @@ class RepositoryManagerQuestionBankStateTransitionTest extends TestCase
             $this->assertEquals(0, QuestionBank::where('title', 'like', "%{$lockedBank->title} (Copy)%")->count());
         }
     }
+
+    /** 21. Teacher Dashboard Question Bank actions match canonical action matrix. */
+    public function test_teacher_dashboard_question_bank_actions_match_canonical_matrix()
+    {
+        $dashArchived  = QuestionBank::create(['title' => 'Dash Arch Bank', 'slug' => 'dash-arch-bank', 'code' => 'QB-DSH-ARC', 'status' => 'archived', 'created_by' => $this->teacher->id]);
+        $dashPending   = QuestionBank::create(['title' => 'Dash Pend Bank', 'slug' => 'dash-pend-bank', 'code' => 'QB-DSH-PND', 'status' => 'pending_approval', 'created_by' => $this->teacher->id]);
+        $dashApproved  = QuestionBank::create(['title' => 'Dash Appr Bank', 'slug' => 'dash-appr-bank', 'code' => 'QB-DSH-APP', 'status' => 'approved', 'created_by' => $this->teacher->id]);
+        $dashPublished = QuestionBank::create(['title' => 'Dash Pub Bank', 'slug' => 'dash-pub-bank', 'code' => 'QB-DSH-PUB', 'status' => 'published', 'created_by' => $this->teacher->id]);
+        $dashDraft     = QuestionBank::create(['title' => 'Dash Draft Bank', 'slug' => 'dash-draft-bank', 'code' => 'QB-DSH-DFT', 'status' => 'draft', 'created_by' => $this->teacher->id]);
+        $dashRejected  = QuestionBank::create(['title' => 'Dash Rej Bank', 'slug' => 'dash-rej-bank', 'code' => 'QB-DSH-REJ', 'status' => 'rejected', 'created_by' => $this->teacher->id]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.dashboard'));
+
+        $response->assertStatus(200);
+
+        // Verify Dupe button presence/absence per status
+        $response->assertSee(route('admin.question-banks.duplicate', $dashDraft->id));
+        $response->assertSee(route('admin.question-banks.duplicate', $dashRejected->id));
+        $response->assertSee(route('admin.question-banks.duplicate', $dashPublished->id));
+
+        $response->assertDontSee(route('admin.question-banks.duplicate', $dashArchived->id));
+        $response->assertDontSee(route('admin.question-banks.duplicate', $dashPending->id));
+        $response->assertDontSee(route('admin.question-banks.duplicate', $dashApproved->id));
+    }
 }
