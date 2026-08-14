@@ -245,6 +245,9 @@ class RepositoryCreationRoleBoundaryTest extends TestCase
         $bank->refresh();
         $this->assertEquals($this->teacher->id, $bank->created_by);
 
+        // Teacher resubmits for approval
+        $bank->update(['status' => 'pending_approval']);
+
         // RM approves
         $this->actingAs($this->repoManager)
             ->post(route('admin.repository-manager.question-bank-approve', $bank->id), ['decision_notes' => 'Approve note']);

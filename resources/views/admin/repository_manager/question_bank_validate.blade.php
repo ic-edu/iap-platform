@@ -248,41 +248,57 @@
             <div class="qbw-card">
                 <h3 style="font-size:1rem;font-weight:800;color:#fff;margin:0 0 1rem;">🛡 Governance Decision Center</h3>
 
-                {{-- Approve Form --}}
-                <form action="{{ route('admin.repository-manager.question-bank-approve', $questionBank->id) }}" method="POST" style="margin-bottom:1rem;">
-                    @csrf
-                    <div style="margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Approval Academic Remarks:</label>
-                        <textarea name="notes" rows="2" placeholder="Optional notes for institutional approval..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:.5rem;padding:.5rem;color:#fff;font-size:.8rem;"></textarea>
-                    </div>
-                    <button type="submit" style="width:100%;padding:.75rem;background:#10b981;color:#fff;border:none;border-radius:.65rem;font-size:.85rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);">
-                        ✓ Approve & Publish Repository
-                    </button>
-                </form>
+                @if(in_array($questionBank->status, ['pending', 'pending_approval', 'submitted'], true))
+                    {{-- Approve Form --}}
+                    <form action="{{ route('admin.repository-manager.question-bank-approve', $questionBank->id) }}" method="POST" style="margin-bottom:1rem;">
+                        @csrf
+                        <div style="margin-bottom:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Approval Academic Remarks:</label>
+                            <textarea name="notes" rows="2" placeholder="Optional notes for institutional approval..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:.5rem;padding:.5rem;color:#fff;font-size:.8rem;"></textarea>
+                        </div>
+                        <button type="submit" style="width:100%;padding:.75rem;background:#10b981;color:#fff;border:none;border-radius:.65rem;font-size:.85rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                            ✓ Approve & Publish Repository
+                        </button>
+                    </form>
 
-                {{-- Revision Request Form --}}
-                <form action="{{ route('admin.repository-manager.question-bank-revision', $questionBank->id) }}" method="POST" style="margin-bottom:1rem;">
-                    @csrf
-                    <div style="margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Revision Requirements / Feedback:</label>
-                        <textarea name="notes" rows="3" required placeholder="Specify exact items for author to address..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:.5rem;padding:.5rem;color:#fff;font-size:.8rem;"></textarea>
-                    </div>
-                    <button type="submit" style="width:100%;padding:.7rem;background:#f59e0b;color:#fff;border:none;border-radius:.65rem;font-size:.82rem;font-weight:800;cursor:pointer;">
-                        ⚠️ Request Revision from Author
-                    </button>
-                </form>
+                    {{-- Revision Request Form --}}
+                    <form action="{{ route('admin.repository-manager.question-bank-revision', $questionBank->id) }}" method="POST" style="margin-bottom:1rem;">
+                        @csrf
+                        <div style="margin-bottom:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Revision Requirements / Feedback:</label>
+                            <textarea name="notes" rows="3" required placeholder="Specify exact items for author to address..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:.5rem;padding:.5rem;color:#fff;font-size:.8rem;"></textarea>
+                        </div>
+                        <button type="submit" style="width:100%;padding:.7rem;background:#f59e0b;color:#fff;border:none;border-radius:.65rem;font-size:.82rem;font-weight:800;cursor:pointer;">
+                            ⚠️ Request Revision from Author
+                        </button>
+                    </form>
 
-                {{-- Reject Form --}}
-                <form action="{{ route('admin.repository-manager.question-bank-reject', $questionBank->id) }}" method="POST">
-                    @csrf
-                    <div style="margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Rejection Reason:</label>
-                        <textarea name="notes" rows="2" required placeholder="Reason for rejecting repository..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:.5rem;padding:.5rem;color:#fff;font-size:.8rem;"></textarea>
+                    {{-- Reject Form --}}
+                    <form action="{{ route('admin.repository-manager.question-bank-reject', $questionBank->id) }}" method="POST">
+                        @csrf
+                        <div style="margin-bottom:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Rejection Reason:</label>
+                            <textarea name="notes" rows="2" required placeholder="Reason for rejecting repository..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:.5rem;padding:.5rem;color:#fff;font-size:.8rem;"></textarea>
+                        </div>
+                        <button type="submit" style="width:100%;padding:.65rem;background:#ef4444;color:#fff;border:none;border-radius:.65rem;font-size:.8rem;font-weight:800;cursor:pointer;">
+                            🚫 Reject & Archive Repository
+                        </button>
+                    </form>
+                @else
+                    <div style="padding:1.25rem 1rem;background:#1e293b;border:1px solid #334155;border-radius:.75rem;text-align:center;">
+                        <div style="font-size:1.5rem;margin-bottom:.5rem;">🔒</div>
+                        <h4 style="font-size:.9rem;font-weight:800;color:#f8fafc;margin:0 0 .35rem;">Repository Governance Locked</h4>
+                        <p style="font-size:.78rem;color:#94a3b8;margin:0 0 .5rem;">
+                            Status: <strong style="color:#e2e8f0;text-transform:uppercase;">{{ is_object($questionBank->status) ? strtoupper($questionBank->status->value) : strtoupper($questionBank->status ?? 'LOCKED') }}</strong>
+                        </p>
+                        <p style="font-size:.75rem;color:#64748b;margin:0;line-height:1.4;">
+                            This repository is not currently eligible for governance decisions.
+                            @if($questionBank->status === 'archived')
+                                <br><span style="color:#a78bfa;">Restoration requires the formal Super Admin restoration workflow.</span>
+                            @endif
+                        </p>
                     </div>
-                    <button type="submit" style="width:100%;padding:.65rem;background:#ef4444;color:#fff;border:none;border-radius:.65rem;font-size:.8rem;font-weight:800;cursor:pointer;">
-                        🚫 Reject & Archive Repository
-                    </button>
-                </form>
+                @endif
             </div>
 
             {{-- Metadata Summary --}}

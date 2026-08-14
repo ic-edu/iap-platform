@@ -175,7 +175,7 @@ test('repository manager can open dedicated question bank validation workspace',
         'title' => 'TOEFL Grammar Governance Review Bank',
         'slug'  => 'toefl-grammar-governance-review-bank',
         'test_type' => 'toefl',
-        'status' => 'draft',
+        'status' => 'pending_approval',
         'created_by' => $repoManager->id,
     ]);
 
@@ -198,7 +198,7 @@ test('repository manager can approve question bank and log audit entry', functio
         'title' => 'IELTS Reading Governance Test',
         'slug'  => 'ielts-reading-governance-test',
         'test_type' => 'ielts',
-        'status' => 'draft',
+        'status' => 'pending_approval',
         'created_by' => $teacher->id,
     ]);
 

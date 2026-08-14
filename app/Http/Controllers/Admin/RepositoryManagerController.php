@@ -445,6 +445,14 @@ class RepositoryManagerController extends Controller
 
     public function approveQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
+        $governanceStates = ['pending', 'pending_approval', 'submitted'];
+        if (! in_array($questionBank->status, $governanceStates, true)) {
+            return redirect()->back()->with(
+                'danger',
+                'Governance decisions can only be made for repositories awaiting approval.'
+            );
+        }
+
         $user = $request->user();
         $note = $request->input('notes', 'Question bank approved for institutional publishing.');
 
@@ -482,6 +490,14 @@ class RepositoryManagerController extends Controller
 
     public function requestQuestionBankRevision(Request $request, QuestionBank $questionBank): RedirectResponse
     {
+        $governanceStates = ['pending', 'pending_approval', 'submitted', 'needs_revision'];
+        if (! in_array($questionBank->status, $governanceStates, true)) {
+            return redirect()->back()->with(
+                'danger',
+                'Governance decisions can only be made for repositories awaiting approval.'
+            );
+        }
+
         $user = $request->user();
         $note = $request->input('notes', 'Revision requested. Please fix specified items.');
 
@@ -650,6 +666,14 @@ class RepositoryManagerController extends Controller
 
     public function rejectQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
+        $governanceStates = ['pending', 'pending_approval', 'submitted'];
+        if (! in_array($questionBank->status, $governanceStates, true)) {
+            return redirect()->back()->with(
+                'danger',
+                'Governance decisions can only be made for repositories awaiting approval.'
+            );
+        }
+
         $user = $request->user();
         $note = $request->input('notes', 'Question bank repository rejected and archived.');
 
