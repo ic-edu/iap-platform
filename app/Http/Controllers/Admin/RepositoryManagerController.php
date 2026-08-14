@@ -696,6 +696,26 @@ class RepositoryManagerController extends Controller
             'approval_note' => $note,
         ]);
 
+        $authorId = $questionBank->created_by ?: ($questionBank->creator?->id ?? null);
+        if ($authorId && Schema::hasTable('notifications')) {
+            \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                'id'              => (string) \Illuminate\Support\Str::uuid(),
+                'type'            => 'repository_rejected',
+                'notifiable_type' => 'App\Models\User',
+                'notifiable_id'   => $authorId,
+                'data'            => json_encode([
+                    'title'            => 'Repository Rejected & Archived',
+                    'message'          => "Repository Manager rejected '{$questionBank->title}'. Reason: {$note}",
+                    'rejection_reason' => $note,
+                    'question_bank_id' => $questionBank->id,
+                    'link'             => route('teacher.question-banks.show', $questionBank->id),
+                    'priority'         => 'HIGH',
+                ]),
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
+        }
+
         return redirect()->route('admin.repository-manager.review-complete', $questionBank->id)
             ->with('danger', 'Question bank repository rejected and archived.');
     }

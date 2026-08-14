@@ -63,6 +63,8 @@ class NotificationController extends Controller
                 } elseif ($user->hasRole('teacher')) {
                     if (!empty($data['revision_request_id'])) {
                         $resolved = route('teacher.repository-revisions.show', $data['revision_request_id']);
+                    } elseif (!empty($data['question_bank_id'])) {
+                        $resolved = route('teacher.question-banks.show', $data['question_bank_id']);
                     } else {
                         $resolved = route('teacher.repository-revisions.index');
                     }

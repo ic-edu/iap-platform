@@ -65,7 +65,11 @@
             $badgeTheme = 'indigo';
             $actionLabel = 'View Details →';
 
-            if (str_contains(strtolower($type), 'resubmitted') || str_contains(strtolower($title), 'resubmit')) {
+            if (str_contains(strtolower($type), 'rejected') || str_contains(strtolower($title), 'rejected')) {
+                $icon = '🚫';
+                $badgeTheme = 'rose';
+                $actionLabel = 'Inspect Repository →';
+            } elseif (str_contains(strtolower($type), 'resubmitted') || str_contains(strtolower($title), 'resubmit')) {
                 $icon = '📥';
                 $badgeTheme = 'indigo';
                 $actionLabel = 'Review Repository →';
@@ -102,6 +106,11 @@
                     </div>
                     @if($message)
                     <p class="notif-card-message">{{ $message }}</p>
+                    @endif
+                    @if(!empty($data['rejection_reason']))
+                    <div style="margin-top:.35rem;padding:.4rem .65rem;background:rgba(225,29,72,0.1);border:1px solid rgba(244,63,94,0.25);border-radius:.4rem;font-size:.78rem;color:#fecdd3;line-height:1.4;text-align:left;">
+                        <strong style="color:#fb7185;">Rejection Reason:</strong> {{ $data['rejection_reason'] }}
+                    </div>
                     @endif
                     <div class="notif-card-bottom-row">
                         <span class="notif-card-time">⏱ {{ $notification->created_at?->diffForHumans() }}</span>

@@ -353,6 +353,7 @@
                     listEl.innerHTML = json.data.map(item => {
                         let cta = 'Click to view →';
                         if (item.title && item.title.toLowerCase().includes('resubmit')) cta = 'Review Repository →';
+                        else if (item.title && item.title.toLowerCase().includes('reject')) cta = 'Inspect Rejection →';
                         else if (item.title && item.title.toLowerCase().includes('revision')) cta = 'View Revision Task →';
                         else if (item.title && item.title.toLowerCase().includes('irqa')) cta = 'Inspect Governance →';
 
