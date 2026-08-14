@@ -427,4 +427,140 @@ class RepositoryManagerQuestionBankStateTransitionTest extends TestCase
         $response->assertSee('acl-badge--archived');
         $response->assertSee('Archived');
     }
+
+    /** 18. Status-Aware Question Bank Actions Matrix rendering test. */
+    public function test_question_bank_index_renders_canonical_action_matrix()
+    {
+        // 1. DRAFT -> Author + Dupe
+        $draftBank = QuestionBank::create([
+            'title' => 'Matrix Draft Bank',
+            'code' => 'QB-MX-DFT',
+            'slug' => 'matrix-draft-bank',
+            'status' => 'draft',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        // 2. NEEDS_REVISION -> Author + Dupe
+        $revisionBank = QuestionBank::create([
+            'title' => 'Matrix Revision Bank',
+            'code' => 'QB-MX-REV',
+            'slug' => 'matrix-revision-bank',
+            'status' => 'revision_requested',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        // 3. PENDING_APPROVAL -> View only
+        $pendingBank = QuestionBank::create([
+            'title' => 'Matrix Pending Bank',
+            'code' => 'QB-MX-PND',
+            'slug' => 'matrix-pending-bank',
+            'status' => 'pending_approval',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        // 4. SUBMITTED -> View only
+        $submittedBank = QuestionBank::create([
+            'title' => 'Matrix Submitted Bank',
+            'code' => 'QB-MX-SUB',
+            'slug' => 'matrix-submitted-bank',
+            'status' => 'submitted',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        // 5. APPROVED -> View only
+        $approvedBank = QuestionBank::create([
+            'title' => 'Matrix Approved Bank',
+            'code' => 'QB-MX-APP',
+            'slug' => 'matrix-approved-bank',
+            'status' => 'approved',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        // 6. PUBLISHED -> View + Dupe
+        $publishedBank = QuestionBank::create([
+            'title' => 'Matrix Published Bank',
+            'code' => 'QB-MX-PUB',
+            'slug' => 'matrix-published-bank',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        // 7. ARCHIVED -> View only
+        $archivedBank = QuestionBank::create([
+            'title' => 'Matrix Archived Bank',
+            'code' => 'QB-MX-ARC',
+            'slug' => 'matrix-archived-bank',
+            'status' => 'archived',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.question-banks.index'));
+
+        $response->assertStatus(200);
+
+        // Verify Draft rendering
+        $response->assertSee(route('admin.question-banks.duplicate', $draftBank->id));
+        // Verify Revision rendering
+        $response->assertSee(route('admin.question-banks.duplicate', $revisionBank->id));
+        // Verify Published rendering
+        $response->assertSee(route('admin.question-banks.duplicate', $publishedBank->id));
+
+        // Verify read-only statuses hide duplicate button
+        $response->assertDontSee(route('admin.question-banks.duplicate', $pendingBank->id));
+        $response->assertDontSee(route('admin.question-banks.duplicate', $submittedBank->id));
+        $response->assertDontSee(route('admin.question-banks.duplicate', $approvedBank->id));
+        $response->assertDontSee(route('admin.question-banks.duplicate', $archivedBank->id));
+    }
+
+    /** 19. Duplicate of PUBLISHED creates a NEW DRAFT and does not modify source. */
+    public function test_duplicate_of_published_creates_new_draft_repository()
+    {
+        $publishedBank = QuestionBank::create([
+            'title' => 'Canonical Source Repository 100',
+            'code' => 'QB-PUB-SRC-100',
+            'slug' => 'canonical-source-repository-100',
+            'status' => 'published',
+            'is_published' => true,
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->post(route('admin.question-banks.duplicate', $publishedBank->id));
+
+        $response->assertStatus(302);
+
+        // Source repository remains unchanged
+        $this->assertEquals('published', $publishedBank->fresh()->status);
+        $this->assertTrue((bool) $publishedBank->fresh()->is_published);
+
+        // New QuestionBank created in draft status
+        $duplicatedBank = QuestionBank::where('created_by', $this->teacher->id)
+            ->where('title', 'Canonical Source Repository 100 (Copy)')
+            ->first();
+
+        $this->assertNotNull($duplicatedBank);
+        $this->assertEquals('draft', $duplicatedBank->status);
+        $this->assertFalse((bool) $duplicatedBank->is_published);
+        $this->assertNotEquals($publishedBank->id, $duplicatedBank->id);
+    }
+
+    /** 20. Direct duplicate requests for locked statuses are rejected. */
+    public function test_direct_duplicate_request_for_locked_statuses_is_rejected()
+    {
+        $archived = QuestionBank::create(['title' => 'Locked Archived', 'slug' => 'locked-archived', 'code' => 'QB-LKC-ARC', 'status' => 'archived', 'created_by' => $this->teacher->id]);
+        $pending  = QuestionBank::create(['title' => 'Locked Pending', 'slug' => 'locked-pending', 'code' => 'QB-LKC-PND', 'status' => 'pending_approval', 'created_by' => $this->teacher->id]);
+        $approved = QuestionBank::create(['title' => 'Locked Approved', 'slug' => 'locked-approved', 'code' => 'QB-LKC-APP', 'status' => 'approved', 'created_by' => $this->teacher->id]);
+
+        foreach ([$archived, $pending, $approved] as $lockedBank) {
+            $response = $this->actingAs($this->teacher)
+                ->post(route('admin.question-banks.duplicate', $lockedBank->id));
+
+            $response->assertStatus(302);
+            $response->assertSessionHas('danger');
+
+            // Verify no duplicate was created
+            $this->assertEquals(0, QuestionBank::where('title', 'like', "%{$lockedBank->title} (Copy)%")->count());
+        }
+    }
 }

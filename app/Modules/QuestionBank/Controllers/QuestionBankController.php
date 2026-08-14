@@ -762,6 +762,63 @@ class QuestionBankController extends Controller
     }
 
     /**
+     * Duplicate a question bank repository (QB-003: Status-Aware Duplicate).
+     */
+    public function duplicate(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+
+        // Governance Matrix Guard: Only draft, needs_revision, rejected, published are duplicable
+        $allowedStatuses = ['draft', 'needs_revision', 'rejected', 'published'];
+        if (! in_array($questionBank->status, $allowedStatuses, true)) {
+            if ($request->expectsJson()) {
+                abort(403, 'Question Bank cannot be duplicated in its current governance state.');
+            }
+
+            return redirect()->back()->with('danger', 'Question Bank cannot be duplicated in its current governance state.');
+        }
+
+        // Create new Question Bank in DRAFT status
+        $newTitle = $questionBank->title . ' (Copy)';
+        $newBank  = QuestionBank::create([
+            'title'           => $newTitle,
+            'slug'            => Str::slug($newTitle) . '-' . Str::random(5),
+            'test_type'       => $questionBank->test_type,
+            'description'     => $questionBank->description,
+            'category_id'     => $questionBank->category_id,
+            'acl_category_id' => $questionBank->acl_category_id,
+            'status'          => 'draft',
+            'current_version' => '1.0',
+            'created_by'      => $user?->id,
+            'is_published'    => false,
+        ]);
+
+        // Deep copy questions and choices
+        $questionBank->load(['questions.choices']);
+        foreach ($questionBank->questions as $oldQ) {
+            $newQ = $newBank->questions()->create([
+                'prompt'        => $oldQ->prompt,
+                'question_type' => $oldQ->question_type,
+                'difficulty'    => $oldQ->difficulty,
+                'points'        => $oldQ->points,
+            ]);
+
+            foreach ($oldQ->choices as $oldC) {
+                $newQ->choices()->create([
+                    'label'      => $oldC->label,
+                    'content'    => $oldC->content,
+                    'is_correct' => $oldC->is_correct,
+                ]);
+            }
+        }
+
+        ActivityLogger::log('question_bank_duplicated', "Duplicated question bank: {$questionBank->title} into {$newBank->title}", $user);
+
+        return redirect()->route('admin.question-banks.show', $newBank->id)
+            ->with('status', "Question bank '{$questionBank->title}' duplicated into new draft '{$newBank->title}'.");
+    }
+
+    /**
      * Helper to save choices for a question based on its question_type.
      */
     private function saveChoicesForQuestion(Question $question, string $qType, array $validated): void

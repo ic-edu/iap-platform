@@ -299,6 +299,10 @@
 .acl-act { font-size: .72rem; font-weight: 700; text-decoration: none; border: none; background: none; cursor: pointer; padding: .2rem .55rem; border-radius: .35rem; transition: background .15s; white-space: nowrap; }
 .acl-act--author  { color: #818cf8; }
 .acl-act--author:hover  { background: rgba(99,102,241,.12); }
+.acl-act--view    { color: #38bdf8; }
+.acl-act--view:hover    { background: rgba(56,189,248,.12); }
+.acl-act--duplicate { color: #f59e0b; }
+.acl-act--duplicate:hover { background: rgba(245,158,11,.12); }
 .acl-act--submit  { color: #fbbf24; }
 .acl-act--submit:hover  { background: rgba(251,191,36,.1); }
 .acl-act--publish { color: #34d399; }
@@ -519,13 +523,38 @@
                         {{-- Actions --}}
                         <td style="text-align:right;">
                             <div style="display:flex;gap:.25rem;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
-                                {{-- Preview / Author Items --}}
-                                <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="acl-act acl-act--author">
-                                    {{ Auth::user()?->hasRole('teacher') ? '✏️ Author Items' : '👁 View Items' }}
-                                </a>
+                                @php
+                                    $isEditableState = in_array($status, ['draft', 'rejected', 'revision_requested', 'needs_revision', null], true);
+                                    $isDuplicableState = in_array($status, ['draft', 'rejected', 'revision_requested', 'needs_revision', 'published', null], true);
+                                @endphp
+
+                                {{-- Author / View Action --}}
+                                @if(Auth::user()?->hasRole('teacher'))
+                                    @if($isEditableState)
+                                    <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="acl-act acl-act--author">
+                                        ✏️ Author
+                                    </a>
+                                    @else
+                                    <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="acl-act acl-act--view">
+                                        👁 View
+                                    </a>
+                                    @endif
+                                @else
+                                    <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="acl-act acl-act--view">
+                                        👁 View
+                                    </a>
+                                @endif
+
+                                {{-- Duplicate Repository Action --}}
+                                @if($isDuplicableState)
+                                <form method="POST" action="{{ route('admin.question-banks.duplicate', $bank->id) }}" style="display:inline;">
+                                    @csrf
+                                    <button type="submit" class="acl-act acl-act--duplicate" title="Duplicate repository into a new draft">⧉ Dupe</button>
+                                </form>
+                                @endif
 
                                 {{-- Submit for Approval --}}
-                                @if(Auth::user()?->hasRole('teacher') && in_array($status, ['draft', 'rejected', 'revision_requested', null]))
+                                @if(Auth::user()?->hasRole('teacher') && $isEditableState)
                                 <form method="POST" action="{{ route('admin.question-banks.submit', $bank->id) }}" style="display:inline;">
                                     @csrf
                                     <button type="button" id="submit-trigger-btn-idx-{{ $bank->id }}" onclick="document.getElementById('inline-submit-panel-idx-{{ $bank->id }}').classList.remove('hidden'); this.classList.add('hidden');" class="acl-act acl-act--submit">📤 Submit</button>
