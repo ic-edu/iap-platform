@@ -145,9 +145,9 @@ class IrqaReviewedIssuesSeparationTest extends TestCase
         $explorerNeeds = $this->qualityService->getExplorerAudits(['filter' => 'needs_improvement']);
         $explorerReviewed = $this->qualityService->getExplorerAudits(['filter' => 'reviewed_issues']);
 
-        $this->assertEquals(0, $summary['needs_improvement_count']);
+        $this->assertEquals(1, $summary['needs_improvement_count']);
         $this->assertEquals(1, $summary['reviewed_issues_count']);
-        $this->assertCount(0, $explorerNeeds['audits']);
+        $this->assertCount(1, $explorerNeeds['audits']);
         $this->assertCount(1, $explorerReviewed['audits']);
         $this->assertEquals($bank->id, $explorerReviewed['audits'][0]['bank_id']);
     }
@@ -299,10 +299,10 @@ class IrqaReviewedIssuesSeparationTest extends TestCase
         $explorerNeeds = $this->qualityService->getExplorerAudits(['filter' => 'needs_improvement']);
         $explorerReviewed = $this->qualityService->getExplorerAudits(['filter' => 'reviewed_issues']);
 
-        // Assert Needs Improvement = 0, Reviewed Issues = 1
-        $this->assertEquals(0, $summary['needs_improvement_count']);
+        // Assert Needs Improvement = 1, Reviewed Issues = 1
+        $this->assertEquals(1, $summary['needs_improvement_count']);
         $this->assertEquals(1, $summary['reviewed_issues_count']);
-        $this->assertCount(0, $explorerNeeds['audits']);
+        $this->assertCount(1, $explorerNeeds['audits']);
         $this->assertCount(1, $explorerReviewed['audits']);
 
         // Assert Validation Workspace renders status NEEDS_REVISION and active OPEN findings
@@ -315,5 +315,85 @@ class IrqaReviewedIssuesSeparationTest extends TestCase
 
         // Assert findings remain OPEN (2 findings: Missing Category & Difficulty Unbalanced)
         $this->assertEquals(2, RepositoryFinding::where('question_bank_id', $toeicBank->id)->where('status', 'OPEN')->count());
+    }
+
+    /**
+     * TEST M: Needs Improvement filter includes all repositories with quality issues regardless of governance status (unreviewed, reviewed, published, archived).
+     */
+    public function test_m_needs_improvement_filter_includes_all_repositories_with_quality_issues()
+    {
+        // 1. Quality warnings + isReviewed = false
+        $unreviewedWithIssues = $this->createValidBank([
+            'title' => 'Unreviewed Issues Bank',
+            'status' => 'draft',
+            'acl_category_id' => null,
+        ]);
+
+        // 2. Quality warnings + isReviewed = true (Published)
+        $publishedWithIssues = $this->createValidBank([
+            'title' => 'Published Issues Bank',
+            'status' => 'published',
+            'acl_category_id' => null,
+        ]);
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $publishedWithIssues->id,
+            'actor_id'      => $this->repoManager->id,
+            'reviewer_id'   => $this->repoManager->id,
+            'action'        => 'approved',
+        ]);
+
+        // 3. Quality warnings + isReviewed = true (Archived)
+        $archivedWithIssues = $this->createValidBank([
+            'title' => 'Archived Issues Bank',
+            'status' => 'archived',
+            'acl_category_id' => null,
+        ]);
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $archivedWithIssues->id,
+            'actor_id'      => $this->repoManager->id,
+            'reviewer_id'   => $this->repoManager->id,
+            'action'        => 'rejected',
+        ]);
+
+        // 4. Healthy reviewed repository (No warnings)
+        $category = \App\Models\AclCategory::create(['name' => 'Healthy Category', 'slug' => 'healthy-category', 'is_active' => true]);
+        $healthyReviewed = $this->createValidBank([
+            'title' => 'Healthy Reviewed Bank',
+            'status' => 'published',
+            'acl_category_id' => $category->id,
+        ]);
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $healthyReviewed->id,
+            'actor_id'      => $this->repoManager->id,
+            'reviewer_id'   => $this->repoManager->id,
+            'action'        => 'approved',
+        ]);
+
+        // Query Explorer for needs_improvement
+        $explorerNeeds = $this->qualityService->getExplorerAudits(['filter' => 'needs_improvement']);
+        $bankIdsInNeeds = collect($explorerNeeds['audits'])->pluck('bank_id')->all();
+
+        // 1 & 2 & 3: Included in Needs Improvement
+        $this->assertContains($unreviewedWithIssues->id, $bankIdsInNeeds);
+        $this->assertContains($publishedWithIssues->id, $bankIdsInNeeds);
+        $this->assertContains($archivedWithIssues->id, $bankIdsInNeeds);
+
+        // 4: Healthy reviewed repository excluded
+        $this->assertNotContains($healthyReviewed->id, $bankIdsInNeeds);
+
+        // Governance status remains intact
+        $this->assertEquals('draft', $unreviewedWithIssues->fresh()->status);
+        $this->assertEquals('published', $publishedWithIssues->fresh()->status);
+        $this->assertEquals('archived', $archivedWithIssues->fresh()->status);
+
+        // Other filters remain intact
+        $explorerAwaiting = $this->qualityService->getExplorerAudits(['filter' => 'awaiting_approval']);
+        $explorerArchived = $this->qualityService->getExplorerAudits(['filter' => 'archived']);
+
+        $this->assertNotContains($publishedWithIssues->id, collect($explorerAwaiting['audits'])->pluck('bank_id')->all());
+        $this->assertContains($archivedWithIssues->id, collect($explorerArchived['audits'])->pluck('bank_id')->all());
     }
 }

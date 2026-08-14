@@ -283,7 +283,7 @@ class RepositoryQualityService
         $audits = [];
         $totalRepositories = $banks->count();
         $healthyCount = 0;
-        $needsImprovementUnreviewedCount = 0;
+        $needsImprovementCount = 0;
         $reviewedIssuesCount = 0;
         $pendingApprovalCount = 0;
         $sumHealthScore = 0;
@@ -332,8 +332,8 @@ class RepositoryQualityService
 
             if (!$hasIssues) {
                 $healthyCount++;
-            } elseif (!$isReviewed) {
-                $needsImprovementUnreviewedCount++;
+            } else {
+                $needsImprovementCount++;
             }
 
             if ($isReviewed && $hasHistoricalOrActiveFindings) {
@@ -355,7 +355,7 @@ class RepositoryQualityService
         return [
             'total_repositories'           => $totalRepositories,
             'healthy_count'                => $healthyCount,
-            'needs_improvement_count'      => $needsImprovementUnreviewedCount,
+            'needs_improvement_count'      => $needsImprovementCount,
             'reviewed_issues_count'        => $reviewedIssuesCount,
             'pending_approval_count'       => $pendingApprovalCount,
             'avg_health_score'             => $avgHealthScore,
@@ -448,7 +448,7 @@ class RepositoryQualityService
             // 2. Status / Lifecycle Filter
             $passFilter = match ($filter) {
                 'healthy'           => !$audit['needs_improvement'] && count($audit['warnings']) === 0,
-                'needs_improvement' => $hasIssues && !$isReviewed,
+                'needs_improvement' => $hasIssues,
                 'awaiting_approval' => in_array($bankStatus, ['pending_approval', 'submitted']),
                 'reviewed_issues'   => $isReviewed && $hasHistoricalOrActiveFindings,
                 'archived'          => $bankStatus === 'archived' || $bankStatus === 'rejected',
