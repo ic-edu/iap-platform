@@ -181,9 +181,9 @@ class NotificationDropdownUxTest extends TestCase
         $resWithUnread = $this->actingAs($this->teacher)->get(route('teacher.question-banks.index'));
         $resWithUnread->assertOk();
 
-        // Navbar bell has red dot
+        // Navbar bell has green dot (#22C55E)
         $resWithUnread->assertSee('id="notif-badge-dot"', false);
-        $resWithUnread->assertSee('bg-rose-500', false);
+        $resWithUnread->assertSee('bg-[#22C55E]', false);
         $resWithUnread->assertSee('aria-label="Notifications, 1 unread"', false);
 
         // Navbar bell MUST NOT render numeric count inside/beside bell
