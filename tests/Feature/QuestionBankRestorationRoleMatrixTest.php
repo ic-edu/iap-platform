@@ -327,4 +327,31 @@ class QuestionBankRestorationRoleMatrixTest extends TestCase
         $this->assertEquals('archived', $bank->fresh()->status);
         $this->assertFalse((bool) $bank->fresh()->is_published);
     }
+
+    /** 16. RM validation workspace for approved repository renders IAP confirmation interceptors. */
+    public function test_rm_validation_workspace_approved_actions_render_iap_confirm_interceptors(): void
+    {
+        $bank = $this->createBank(['title' => 'UAT Restoration Approve Test Bank', 'status' => 'approved', 'is_published' => false]);
+
+        $res = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.question-bank-validate', $bank->id));
+
+        $res->assertStatus(200);
+
+        // 1. Publish form uses iapConfirm with exact action label and form target
+        $res->assertSee('iapConfirm({ title: \'Publish Repository Live?\'', false);
+        $res->assertSee('confirmText: \'Publish Repository Live\'', false);
+        $res->assertSee(route('admin.repository-manager.question-bank-approve', $bank->id), false);
+
+        // 2. Revision form uses iapConfirm with exact action label and form target
+        $res->assertSee('iapConfirm({ title: \'Request Revision from Author?\'', false);
+        $res->assertSee('confirmText: \'Request Revision\'', false);
+        $res->assertSee(route('admin.repository-manager.question-bank-revision', $bank->id), false);
+
+        // 3. No native window.confirm or prompt
+        $res->assertDontSee('onsubmit="return confirm(');
+        $res->assertDontSee('window.confirm');
+        $res->assertDontSee('window.prompt');
+    }
 }
+

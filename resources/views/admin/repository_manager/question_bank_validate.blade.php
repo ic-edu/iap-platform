@@ -292,7 +292,7 @@
                     </div>
 
                     {{-- Publish Form --}}
-                    <form action="{{ route('admin.repository-manager.question-bank-approve', $questionBank->id) }}" method="POST" style="margin-bottom:1rem;">
+                    <form action="{{ route('admin.repository-manager.question-bank-approve', $questionBank->id) }}" method="POST" style="margin-bottom:1rem;" onsubmit="event.preventDefault(); iapConfirm({ title: 'Publish Repository Live?', message: 'Publish \'{{ addslashes($questionBank->title) }}\' to the live institutional repository?', confirmText: 'Publish Repository Live', variant: 'success', form: this });">
                         @csrf
                         <div style="margin-bottom:.75rem;">
                             <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Publishing Notes:</label>
@@ -304,7 +304,7 @@
                     </form>
 
                     {{-- Revision Request Form --}}
-                    <form action="{{ route('admin.repository-manager.question-bank-revision', $questionBank->id) }}" method="POST">
+                    <form action="{{ route('admin.repository-manager.question-bank-revision', $questionBank->id) }}" method="POST" onsubmit="event.preventDefault(); iapConfirm({ title: 'Request Revision from Author?', message: 'Return \'{{ addslashes($questionBank->title) }}\' to the author for revision?', confirmText: 'Request Revision', variant: 'warning', form: this });">
                         @csrf
                         <div style="margin-bottom:.75rem;">
                             <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Revision Requirements / Feedback:</label>
