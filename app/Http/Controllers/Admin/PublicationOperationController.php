@@ -20,6 +20,11 @@ class PublicationOperationController extends Controller
      */
     public function questionBanksQueue(Request $request): View
     {
+        $actor = $request->user();
+        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+            abort(403, 'Question Bank publication queue is strictly reserved for Repository Managers.');
+        }
+
         $query = QuestionBank::with(['creator', 'category', 'questions', 'archiveRequests']);
 
         if ($search = $request->input('search')) {
@@ -179,13 +184,13 @@ class PublicationOperationController extends Controller
     }
 
     /**
-     * Publish approved Question Bank (Admin Operation - ADMIN-OPS-001 Section 3).
+     * Publish approved Question Bank (Repository Manager Operation - ADMIN-OPS-001 Section 3).
      */
     public function publishQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || (! $actor->hasRole('admin') && ! $actor->hasRole('super-admin'))) {
-            abort(403, 'Publishing Question Banks is reserved for Operational Admins.');
+        if (! $actor || ! $actor->hasRole('repository-manager')) {
+            abort(403, 'Publishing Question Banks is strictly reserved for Repository Managers.');
         }
 
         if ($questionBank->status !== 'approved') {
@@ -208,7 +213,7 @@ class PublicationOperationController extends Controller
             try {
                 $questionBank->creator->notify(new EnterpriseSystemNotification(
                     title: 'Question Bank Published',
-                    message: "Your Question Bank '{$questionBank->title}' has been published live by Operational Admin {$actor->name}.",
+                    message: "Your Question Bank '{$questionBank->title}' has been published live by Repository Manager {$actor->name}.",
                     type: 'QUESTION_BANK_PUBLISHED',
                     priority: 'HIGH',
                     entityType: 'question_bank',
@@ -224,13 +229,13 @@ class PublicationOperationController extends Controller
     }
 
     /**
-     * Unpublish Question Bank (Admin Operation - ADMIN-OPS-001 Section 3).
+     * Unpublish Question Bank (Repository Manager Operation - ADMIN-OPS-001 Section 3).
      */
     public function unpublishQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || (! $actor->hasRole('admin') && ! $actor->hasRole('super-admin'))) {
-            abort(403, 'Unpublishing Question Banks is reserved for Operational Admins.');
+        if (! $actor || ! $actor->hasRole('repository-manager')) {
+            abort(403, 'Unpublishing Question Banks is strictly reserved for Repository Managers.');
         }
 
         $questionBank->update([

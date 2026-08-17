@@ -52,7 +52,7 @@ test('super admin approval center renders pending submissions queue', function (
     $response = $this->actingAs($superAdmin)->get('/admin/approvals');
 
     $response->assertStatus(200)
-        ->assertSee('Super Admin Content Approval Center', false);
+        ->assertSee('Super Admin Content Approval', false);
 });
 
 test('super admin audit logs workspace renders system activity logs', function () {

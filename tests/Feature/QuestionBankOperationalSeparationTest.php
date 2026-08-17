@@ -55,10 +55,13 @@ class QuestionBankOperationalSeparationTest extends TestCase
         $resStoreQ->assertStatus(403);
     }
 
-    public function test_admin_may_publish_and_unpublish_approved_question_bank(): void
+    public function test_repository_manager_may_publish_and_unpublish_approved_question_bank_and_admin_is_forbidden(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
+
+        $repoManager = User::factory()->create();
+        $repoManager->assignRole('repository-manager');
 
         $teacher = User::factory()->create();
         $teacher->assignRole('teacher');
@@ -72,8 +75,11 @@ class QuestionBankOperationalSeparationTest extends TestCase
             'is_published' => false,
         ]);
 
-        // Admin publishes
-        $resPub = $this->actingAs($admin)->post(route('admin.question-banks.publish', $bank->id));
+        // Admin cannot publish
+        $this->actingAs($admin)->post(route('admin.question-banks.publish', $bank->id))->assertForbidden();
+
+        // RM publishes
+        $resPub = $this->actingAs($repoManager)->post(route('admin.question-banks.publish', $bank->id));
         $resPub->assertRedirect();
         $this::assertTrue($bank->fresh()->isPublished());
 
@@ -81,8 +87,11 @@ class QuestionBankOperationalSeparationTest extends TestCase
         $this::assertCount(1, $teacher->fresh()->notifications);
         $this::assertStringContainsString('Published', $teacher->fresh()->notifications->first()->data['title']);
 
-        // Admin unpublishes
-        $resUnpub = $this->actingAs($admin)->post(route('admin.question-banks.unpublish', $bank->id));
+        // Admin cannot unpublish
+        $this->actingAs($admin)->post(route('admin.question-banks.unpublish', $bank->id))->assertForbidden();
+
+        // RM unpublishes
+        $resUnpub = $this->actingAs($repoManager)->post(route('admin.question-banks.unpublish', $bank->id));
         $resUnpub->assertRedirect();
         $this::assertFalse($bank->fresh()->is_published);
     }

@@ -249,6 +249,7 @@
                 <h3 style="font-size:1rem;font-weight:800;color:#fff;margin:0 0 1rem;">🛡 Governance Decision Center</h3>
 
                 @if(in_array($questionBank->status, ['pending', 'pending_approval', 'submitted'], true))
+                    {{-- Normal Governance Controls --}}
                     {{-- Approve Form --}}
                     <form action="{{ route('admin.repository-manager.question-bank-approve', $questionBank->id) }}" method="POST" style="margin-bottom:1rem;">
                         @csrf
@@ -284,6 +285,35 @@
                             🚫 Reject & Archive Repository
                         </button>
                     </form>
+                @elseif($questionBank->status === 'approved')
+                    {{-- Restored / Approved Governance Controls: Publish + Request Revision ONLY --}}
+                    <div style="margin-bottom:1rem;padding:.75rem;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:.5rem;font-size:.78rem;color:#34d399;">
+                        ✅ <strong>Restoration Approved by Super Admin</strong>. Ready for Repository Manager institutional publishing or revision audit.
+                    </div>
+
+                    {{-- Publish Form --}}
+                    <form action="{{ route('admin.repository-manager.question-bank-approve', $questionBank->id) }}" method="POST" style="margin-bottom:1rem;">
+                        @csrf
+                        <div style="margin-bottom:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Publishing Notes:</label>
+                            <textarea name="notes" rows="2" placeholder="Optional notes for institutional publishing..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:.5rem;padding:.5rem;color:#fff;font-size:.8rem;"></textarea>
+                        </div>
+                        <button type="submit" id="rm-publish-btn" style="width:100%;padding:.75rem;background:#10b981;color:#fff;border:none;border-radius:.65rem;font-size:.85rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                            ✓ Publish Repository Live
+                        </button>
+                    </form>
+
+                    {{-- Revision Request Form --}}
+                    <form action="{{ route('admin.repository-manager.question-bank-revision', $questionBank->id) }}" method="POST">
+                        @csrf
+                        <div style="margin-bottom:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Revision Requirements / Feedback:</label>
+                            <textarea name="notes" rows="3" required placeholder="Specify items for author to address before publication..." style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:.5rem;padding:.5rem;color:#fff;font-size:.8rem;"></textarea>
+                        </div>
+                        <button type="submit" id="rm-revision-btn" style="width:100%;padding:.7rem;background:#f59e0b;color:#fff;border:none;border-radius:.65rem;font-size:.82rem;font-weight:800;cursor:pointer;">
+                            ⚠️ Request Revision from Author
+                        </button>
+                    </form>
                 @else
                     <div style="padding:1.25rem 1rem;background:#1e293b;border:1px solid #334155;border-radius:.75rem;text-align:center;">
                         <div style="font-size:1.5rem;margin-bottom:.5rem;">🔒</div>
@@ -293,7 +323,9 @@
                         </p>
                         <p style="font-size:.75rem;color:#64748b;margin:0;line-height:1.4;">
                             This repository is not currently eligible for governance decisions.
-                            @if($questionBank->status === 'archived')
+                            @if($questionBank->status === 'pending_restore_approval')
+                                <br><span style="color:#fbbf24;">Restoration request is pending Super Admin approval.</span>
+                            @elseif($questionBank->status === 'archived')
                                 <br><span style="color:#a78bfa;">Restoration requires the formal Super Admin restoration workflow.</span>
                             @endif
                         </p>

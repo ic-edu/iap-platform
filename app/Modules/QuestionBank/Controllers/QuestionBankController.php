@@ -385,14 +385,14 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Admin publishes approved question bank.
+     * Repository Manager publishes approved question bank.
      */
     public function publish(QuestionBank $questionBank): RedirectResponse
     {
         $user = request()->user();
 
-        if (!$user || !$user->hasRole('admin') || $user->hasRole('super-admin')) {
-            abort(403, 'Publishing Question Banks is strictly reserved for Operational Admins.');
+        if (!$user || !$user->hasRole('repository-manager')) {
+            abort(403, 'Publishing Question Banks is strictly reserved for Repository Managers.');
         }
 
         if ($questionBank->status !== 'approved') {
@@ -420,7 +420,7 @@ class QuestionBankController extends Controller
             try {
                 $questionBank->creator->notify(new SystemAlertNotification(
                     'Question Bank Published',
-                    "Your Question Bank '{$questionBank->title}' has been published live by Operational Admin {$user->name}."
+                    "Your Question Bank '{$questionBank->title}' has been published live by Repository Manager {$user->name}."
                 ));
             } catch (\Throwable $e) {
                 // Silently handle in dev
@@ -432,13 +432,13 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Unpublish a Question Bank (Admin Only).
+     * Unpublish a Question Bank (Repository Manager Only).
      */
     public function unpublish(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $user = $request->user();
-        if (!$user || !$user->hasRole('admin') || $user->hasRole('super-admin')) {
-            abort(403, 'Unpublishing Question Banks is strictly reserved for Operational Admins.');
+        if (!$user || !$user->hasRole('repository-manager')) {
+            abort(403, 'Unpublishing Question Banks is strictly reserved for Repository Managers.');
         }
 
         $questionBank->update([

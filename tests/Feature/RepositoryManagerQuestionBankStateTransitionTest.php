@@ -200,8 +200,8 @@ class RepositoryManagerQuestionBankStateTransitionTest extends TestCase
         $this->assertEquals('published', $qb->fresh()->status);
     }
 
-    /** 9. RM cannot approve approved. */
-    public function test_rm_cannot_approve_approved_question_bank()
+    /** 9. RM can publish approved restored question bank. */
+    public function test_rm_can_publish_approved_question_bank()
     {
         $qb = QuestionBank::create([
             'title' => 'Approved QB',
@@ -215,9 +215,9 @@ class RepositoryManagerQuestionBankStateTransitionTest extends TestCase
         $response = $this->actingAs($this->repoManager)
             ->post(route('admin.repository-manager.question-bank-approve', $qb->id));
 
-        $response->assertStatus(302);
-        $response->assertSessionHas('danger');
-        $this->assertEquals('approved', $qb->fresh()->status);
+        $response->assertRedirect();
+        $this->assertEquals('published', $qb->fresh()->status);
+        $this->assertTrue((bool) $qb->fresh()->is_published);
     }
 
     /** 10 & 11. Invalid transition performs ZERO QuestionBank or GovernanceApprovalTask mutation. */

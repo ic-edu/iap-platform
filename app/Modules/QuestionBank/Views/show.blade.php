@@ -103,8 +103,8 @@
                 @endif
             @endif
 
-            @if (Auth::user()?->hasRole('admin') && !Auth::user()?->hasRole('super-admin'))
-                <!-- Operational Admin Content Operator Actions -->
+            @if (Auth::user()?->hasRole('repository-manager') || Auth::user()?->hasRole('super-admin'))
+                <!-- Repository Manager Quality Operator Actions -->
                 @if ($questionBank->status === 'approved')
                     <form action="{{ route('admin.question-banks.publish', $questionBank->id) }}" method="POST" class="inline">
                         @csrf

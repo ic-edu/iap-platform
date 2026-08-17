@@ -68,9 +68,15 @@
                             <span style="font-weight:700;color:#e2e8f0;">{{ $bank->questions_count ?? 15 }} Items</span>
                         </td>
                         <td>
+                            @if($bank->status === 'approved')
+                            <span style="padding:.2rem .6rem;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:.4rem;font-size:.72rem;font-weight:700;">
+                                Approved (Restored)
+                            </span>
+                            @else
                             <span style="padding:.2rem .6rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:.4rem;font-size:.72rem;font-weight:700;">
                                 Awaiting Approval
                             </span>
+                            @endif
                         </td>
                         <td>
                             <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" style="padding:.4rem .85rem;background:#6366f1;color:#fff;border-radius:.45rem;font-size:.75rem;font-weight:800;text-decoration:none;">

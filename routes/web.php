@@ -157,12 +157,12 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
     });
 });
 
-// Shared Admin & Super Admin Workspaces
-Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
+// Shared Admin, Super Admin & Repository Manager Workspaces
+Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])->group(function () {
     Route::get('/admin/dashboard', [SuperAdminDashboardController::class, 'adminIndex'])
         ->name('admin.dashboard');
 
-    Route::prefix('admin/users')->group(function () {
+    Route::prefix('admin/users')->middleware('role:admin|super-admin')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/', [UserController::class, 'store'])->name('admin.users.store');
         Route::put('/{user}', [UserController::class, 'update'])->name('admin.users.update');
@@ -173,14 +173,20 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () 
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
 
-    // Admin Operations Publication Queues (ADMIN-OPS-001)
+    // Publication Queues (ADMIN-OPS-001)
     Route::prefix('admin/publications')->group(function () {
-        Route::get('/question-banks', [PublicationOperationController::class, 'questionBanksQueue'])->name('admin.publications.question-banks');
+        Route::get('/question-banks', [PublicationOperationController::class, 'questionBanksQueue'])
+            ->middleware('role:repository-manager|super-admin')
+            ->name('admin.publications.question-banks');
         Route::get('/assessments', [PublicationOperationController::class, 'assessmentsQueue'])->name('admin.publications.assessments');
         Route::get('/published', [PublicationOperationController::class, 'publishedContents'])->name('admin.publications.published');
         Route::get('/archive-requests', [PublicationOperationController::class, 'archiveRequests'])->name('admin.publications.archive-requests');
-        Route::post('/question-banks/{questionBank}/publish', [PublicationOperationController::class, 'publishQuestionBank'])->name('admin.publications.question-banks.publish');
-        Route::post('/question-banks/{questionBank}/unpublish', [PublicationOperationController::class, 'unpublishQuestionBank'])->name('admin.publications.question-banks.unpublish');
+        Route::post('/question-banks/{questionBank}/publish', [PublicationOperationController::class, 'publishQuestionBank'])
+            ->middleware('role:repository-manager|super-admin')
+            ->name('admin.publications.question-banks.publish');
+        Route::post('/question-banks/{questionBank}/unpublish', [PublicationOperationController::class, 'unpublishQuestionBank'])
+            ->middleware('role:repository-manager|super-admin')
+            ->name('admin.publications.question-banks.unpublish');
         Route::post('/assessments/{test}/publish', [PublicationOperationController::class, 'publishAssessment'])->name('admin.publications.assessments.publish');
         Route::post('/assessments/{test}/unpublish', [PublicationOperationController::class, 'unpublishAssessment'])->name('admin.publications.assessments.unpublish');
     });

@@ -81,6 +81,9 @@ class QuestionBankGovernanceWorkflowTest extends TestCase
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole('super-admin');
 
+        $repoManager = User::factory()->create();
+        $repoManager->assignRole('repository-manager');
+
         // 1. Teacher creates draft
         $bank = QuestionBank::create([
             'title' => 'IELTS Listening Bank',
@@ -99,25 +102,26 @@ class QuestionBankGovernanceWorkflowTest extends TestCase
         $this->actingAs($teacher)->post(route('admin.approvals.question-banks.approve', $bank->id))->assertForbidden();
         $this->actingAs($teacher)->post(route('admin.question-banks.publish', $bank->id))->assertForbidden();
 
-        // 4. Admin MUST NOT approve
+        // 4. Admin MUST NOT approve or publish
         $this->actingAs($admin)->post(route('admin.approvals.question-banks.approve', $bank->id))->assertForbidden();
+        $this->actingAs($admin)->post(route('admin.question-banks.publish', $bank->id))->assertForbidden();
 
         // 5. Super Admin approves Question Bank
         $this->actingAs($superAdmin)->post(route('admin.approvals.question-banks.approve', $bank->id));
         $this->assertEquals('approved', $bank->fresh()->status);
         $this->assertDatabaseHas('activity_logs', ['action' => 'QUESTION_BANK_APPROVED']);
 
-        // 6. Super Admin MUST NOT publish
+        // 6. Super Admin MUST NOT publish directly
         $this->actingAs($superAdmin)->post(route('admin.question-banks.publish', $bank->id))->assertForbidden();
 
-        // 7. Admin publishes approved Question Bank
-        $this->actingAs($admin)->post(route('admin.question-banks.publish', $bank->id));
+        // 7. Repository Manager publishes approved Question Bank
+        $this->actingAs($repoManager)->post(route('admin.question-banks.publish', $bank->id));
         $this->assertEquals('published', $bank->fresh()->status);
         $this->assertTrue((bool) $bank->fresh()->is_published);
         $this->assertDatabaseHas('activity_logs', ['action' => 'QUESTION_BANK_PUBLISHED']);
 
-        // 8. Admin unpublishes Question Bank
-        $this->actingAs($admin)->post(route('admin.question-banks.unpublish', $bank->id));
+        // 8. Repository Manager unpublishes Question Bank
+        $this->actingAs($repoManager)->post(route('admin.question-banks.unpublish', $bank->id));
         $this->assertEquals('approved', $bank->fresh()->status);
         $this->assertFalse((bool) $bank->fresh()->is_published);
         $this->assertDatabaseHas('activity_logs', ['action' => 'QUESTION_BANK_UNPUBLISHED']);
@@ -164,7 +168,7 @@ class QuestionBankGovernanceWorkflowTest extends TestCase
             'status' => 'pending_approval',
         ]);
 
-        $response = $this->actingAs($superAdmin)->get(route('admin.approvals.index'));
+        $response = $this->actingAs($superAdmin)->get(route('admin.approvals.question-banks'));
 
         $response->assertOk();
         $response->assertSee('Pending Audit Bank');

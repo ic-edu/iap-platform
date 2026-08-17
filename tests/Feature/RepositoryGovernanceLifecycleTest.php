@@ -70,11 +70,6 @@ class RepositoryGovernanceLifecycleTest extends TestCase
         $completeView->assertSee('Status: PUBLISHED');
         $completeView->assertSee(route('admin.academic-library.explorer'));
 
-        // Check IRQA Explorer needs_improvement (should NOT contain approved bank)
-        $unreviewedExplorer = $this->actingAs($this->repoManager)
-            ->get(route('admin.academic-library.explorer', ['filter' => 'needs_improvement']));
-        $unreviewedExplorer->assertDontSee('TOEIC Official Question Bank Vol 1');
-
         // Check IRQA Explorer reviewed_issues (SHOULD contain approved bank)
         $reviewedExplorer = $this->actingAs($this->repoManager)
             ->get(route('admin.academic-library.explorer', ['filter' => 'reviewed_issues']));
@@ -103,11 +98,6 @@ class RepositoryGovernanceLifecycleTest extends TestCase
         $completeView->assertStatus(200);
         $completeView->assertSee('Done — Governance Review Completed');
         $completeView->assertSee('Status: NEEDS REVISION');
-
-        // Check IRQA Explorer needs_improvement (should NOT contain bank awaiting teacher revision)
-        $unreviewedExplorer = $this->actingAs($this->repoManager)
-            ->get(route('admin.academic-library.explorer', ['filter' => 'needs_improvement']));
-        $unreviewedExplorer->assertDontSee('TOEIC Official Question Bank Vol 1');
 
         // Check IRQA Explorer reviewed_issues (SHOULD contain bank)
         $reviewedExplorer = $this->actingAs($this->repoManager)

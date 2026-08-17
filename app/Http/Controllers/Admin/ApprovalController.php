@@ -195,25 +195,25 @@ class ApprovalController extends Controller
             }
         }
 
-        // Notify all Admins: Ready for Publication (ADMIN-OPS-001 Section 8)
-        $admins = User::role('admin')->get();
-        foreach ($admins as $admin) {
+        // Notify all Repository Managers: Ready for Publication
+        $repositoryManagers = User::role('repository-manager')->get();
+        foreach ($repositoryManagers as $rm) {
             try {
-                $admin->notify(new EnterpriseSystemNotification(
+                $rm->notify(new EnterpriseSystemNotification(
                     title: 'Question Bank Ready for Publication',
-                    message: "Question Bank '{$questionBank->title}' was approved by Super Admin {$actor->name} and is ready for publication.",
+                    message: "Question Bank '{$questionBank->title}' was approved by Super Admin {$actor->name} and is ready for Repository Manager publication.",
                     type: 'QUESTION_BANK_APPROVED',
                     priority: 'HIGH',
                     entityType: 'question_bank',
                     entityId: (string) $questionBank->id,
-                    targetUrl: route('admin.publications.question-banks', ['status' => 'approved', 'highlight' => $questionBank->id])
+                    targetUrl: route('admin.repository-manager.question-bank-validate', $questionBank->id)
                 ));
             } catch (\Throwable $e) {
                 // Silently handle in dev
             }
         }
 
-        return redirect()->route('admin.approvals.index')->with('status', "Question Bank '{$questionBank->title}' approved successfully. Admins notified.");
+        return redirect()->route('admin.approvals.index')->with('status', "Question Bank '{$questionBank->title}' approved successfully. Repository Managers notified.");
     }
 
     /**

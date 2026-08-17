@@ -98,7 +98,7 @@ class GlobalIapModalInfrastructureTest extends TestCase
             'author_id' => $this->teacher->id,
         ]);
 
-        $response = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
+        $response = $this->actingAs($this->superAdmin)->get(route('admin.approvals.question-banks'));
 
         $response->assertStatus(200);
         $response->assertSee('iapConfirm({ title: \'Approve Question Bank?\'', false);

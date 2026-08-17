@@ -615,8 +615,8 @@
                                 </form>
                                 @endif
 
-                                {{-- Admin Publish / Unpublish --}}
-                                @if(Auth::user()?->hasRole('admin') && !Auth::user()?->hasRole('super-admin'))
+                                {{-- Repository Manager Publish --}}
+                                @if(Auth::user()?->hasRole('repository-manager') || Auth::user()?->hasRole('super-admin'))
                                     @if($status === 'approved')
                                     <form method="POST" action="{{ route('admin.question-banks.publish', $bank->id) }}" style="display:inline;">
                                         @csrf

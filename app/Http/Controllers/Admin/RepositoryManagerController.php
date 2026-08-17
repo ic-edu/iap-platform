@@ -405,7 +405,7 @@ class RepositoryManagerController extends Controller
     public function questionsApproval(): View
     {
         $questionBanks = Schema::hasTable('question_banks')
-            ? QuestionBank::whereIn('status', ['pending', 'pending_approval', 'submitted'])->latest()->paginate(15)
+            ? QuestionBank::whereIn('status', ['pending', 'pending_approval', 'submitted', 'approved'])->latest()->paginate(15)
             : collect([]);
 
         return view('admin.repository_manager.questions_approval', compact('questionBanks'));
@@ -445,16 +445,20 @@ class RepositoryManagerController extends Controller
 
     public function approveQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
-        $governanceStates = ['pending', 'pending_approval', 'submitted'];
+        $governanceStates = ['pending', 'pending_approval', 'submitted', 'approved'];
         if (! in_array($questionBank->status, $governanceStates, true)) {
             return redirect()->back()->with(
                 'danger',
-                'Governance decisions can only be made for repositories awaiting approval.'
+                'Governance decisions can only be made for repositories awaiting approval or publication.'
             );
         }
 
         $user = $request->user();
-        $note = $request->input('notes', 'Question bank approved for institutional publishing.');
+        $isRestored = ($questionBank->status === 'approved');
+        $defaultNote = $isRestored
+            ? 'Restored question bank approved and published live by Repository Manager.'
+            : 'Question bank approved for institutional publishing.';
+        $note = $request->input('notes', $defaultNote) ?: $defaultNote;
 
         $questionBank->status = 'published';
         $questionBank->is_published = true;
@@ -478,23 +482,71 @@ class RepositoryManagerController extends Controller
             'approval_note' => $note,
         ]);
 
+        if (Schema::hasTable('acl_audit_trails')) {
+            \App\Models\AclAuditTrail::create([
+                'resource_type' => 'QuestionBank',
+                'resource_id'   => (string) $questionBank->id,
+                'action'        => 'published',
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'approver_id'   => $user->id,
+                'published_by'  => $user->id,
+                'created_by'    => $questionBank->created_by,
+                'version'       => $questionBank->current_version ?? '1.0',
+                'reason'        => $note,
+                'ip_address'    => $request->ip(),
+                'metadata'      => [
+                    'decision'   => 'published',
+                    'reviewer'   => $user->name,
+                    'is_restore' => $isRestored,
+                ],
+            ]);
+        }
+
         if (Schema::hasTable('governance_approval_tasks')) {
             \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
                 ->where('status', 'OPEN')
                 ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
         }
 
+        // Notify Teacher Author
+        if ($questionBank->creator && Schema::hasTable('notifications')) {
+            try {
+                \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                    'id'              => (string) \Illuminate\Support\Str::uuid(),
+                    'type'            => 'question_bank_published',
+                    'notifiable_type' => 'App\Models\User',
+                    'notifiable_id'   => $questionBank->created_by,
+                    'data'            => json_encode([
+                        'title'            => 'Question Bank Published',
+                        'message'          => "Your Question Bank '{$questionBank->title}' has been published live by Repository Manager {$user->name}.",
+                        'question_bank_id' => $questionBank->id,
+                        'link'             => route('admin.question-banks.show', $questionBank->id),
+                        'priority'         => 'HIGH',
+                    ]),
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+            } catch (\Throwable $e) {
+                // Silent in dev
+            }
+        }
+
+        $successMsg = $isRestored
+            ? 'Restored Question Bank successfully published to academic repository.'
+            : 'Question bank successfully approved and published to academic repository.';
+
         return redirect()->route('admin.repository-manager.review-complete', $questionBank->id)
-            ->with('success', 'Question bank successfully approved and published to academic repository.');
+            ->with('success', $successMsg);
     }
 
     public function requestQuestionBankRevision(Request $request, QuestionBank $questionBank): RedirectResponse
     {
-        $governanceStates = ['pending', 'pending_approval', 'submitted', 'needs_revision'];
+        $governanceStates = ['pending', 'pending_approval', 'submitted', 'needs_revision', 'approved'];
         if (! in_array($questionBank->status, $governanceStates, true)) {
             return redirect()->back()->with(
                 'danger',
-                'Governance decisions can only be made for repositories awaiting approval.'
+                'Governance decisions can only be made for repositories awaiting approval or active governance review.'
             );
         }
 
