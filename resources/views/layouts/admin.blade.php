@@ -108,17 +108,17 @@
 
                     <!-- Notifications Dropdown (NOTIFICATION-001) -->
                     <div class="relative" id="notifications-bell-container">
-                        <button onclick="toggleNotificationsDropdown()" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-colors relative" title="Notifications">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="button" id="notifications-bell-btn" onclick="toggleNotificationsDropdown()" aria-expanded="false" aria-haspopup="true" aria-controls="notifications-dropdown" class="p-2 rounded-xl text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 shadow-md shadow-slate-950/60 transition-all relative flex items-center justify-center cursor-pointer group" title="Notifications">
+                            <svg class="w-5 h-5 transition-transform group-hover:scale-105 filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                             </svg>
-                            <span id="notif-badge-dot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-slate-950"></span>
+                            <span id="notif-badge-dot" class="hidden absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-slate-950 shadow-sm shadow-rose-950/80"></span>
                         </button>
 
                         <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden">
                             <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-950">
                                 <span class="text-xs font-bold text-white">Notifications</span>
-                                <span id="notif-dropdown-count" class="text-[10px] font-semibold bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">0 New</span>
+                                <span id="notif-dropdown-count" class="text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full">0 New</span>
                             </div>
                             <div id="notif-dropdown-list" class="divide-y divide-slate-800 text-xs max-h-72 overflow-y-auto">
                                 <div class="p-4 text-center text-slate-500 text-xs">Loading alerts…</div>
@@ -384,15 +384,70 @@
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        function toggleNotificationsDropdown() {
-            const dropdown = document.getElementById('notifications-dropdown');
-            if (!dropdown) return;
-            const isHidden = dropdown.classList.contains('hidden');
-            dropdown.classList.toggle('hidden');
-            if (isHidden) {
-                loadNotificationFeed();
+        // Global Notification Dropdown Popover Controller
+        (function() {
+            let listenersInitialized = false;
+
+            function initNotificationListeners() {
+                if (listenersInitialized) return;
+                listenersInitialized = true;
+
+                document.addEventListener('click', function(e) {
+                    const container = document.getElementById('notifications-bell-container');
+                    const dropdown = document.getElementById('notifications-dropdown');
+                    if (!dropdown || dropdown.classList.contains('hidden')) return;
+
+                    if (container && !container.contains(e.target)) {
+                        closeNotificationsDropdown();
+                    }
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' || e.key === 'Esc') {
+                        const dropdown = document.getElementById('notifications-dropdown');
+                        if (dropdown && !dropdown.classList.contains('hidden')) {
+                            closeNotificationsDropdown();
+                        }
+                    }
+                });
             }
-        }
+
+            window.toggleNotificationsDropdown = function() {
+                const dropdown = document.getElementById('notifications-dropdown');
+                if (!dropdown) return;
+                const isHidden = dropdown.classList.contains('hidden');
+                if (isHidden) {
+                    openNotificationsDropdown();
+                } else {
+                    closeNotificationsDropdown();
+                }
+            };
+
+            window.openNotificationsDropdown = function() {
+                const dropdown = document.getElementById('notifications-dropdown');
+                const btn = document.getElementById('notifications-bell-btn');
+                if (!dropdown) return;
+
+                dropdown.classList.remove('hidden');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+                loadNotificationFeed();
+            };
+
+            window.closeNotificationsDropdown = function() {
+                const dropdown = document.getElementById('notifications-dropdown');
+                const btn = document.getElementById('notifications-bell-btn');
+                if (!dropdown) return;
+
+                dropdown.classList.add('hidden');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initNotificationListeners);
+            } else {
+                initNotificationListeners();
+            }
+        })();
 
         // Back to Top Scroll Control Logic
         (function() {
