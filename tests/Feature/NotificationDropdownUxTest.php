@@ -163,10 +163,10 @@ class NotificationDropdownUxTest extends TestCase
         $this->assertCount(3, $resFeed3->json('data'));
     }
 
-    /** 4: Unread bell badge RED visual styling & unread_count visibility toggle behavior. */
+    /** 4: Unread bell badge RED dot indicator (no numeric count on navbar bell) & visibility behavior. */
     public function test_unread_bell_badge_color_and_visibility_behavior(): void
     {
-        // Case A: When unread_count > 0, page HTML includes visible RED badge with count
+        // Case A: When unread_count > 0, page HTML includes visible RED dot and aria-label with unread count
         \Illuminate\Support\Facades\DB::table('notifications')->insert([
             'id'              => (string) \Illuminate\Support\Str::uuid(),
             'type'            => 'system_alert',
@@ -180,15 +180,21 @@ class NotificationDropdownUxTest extends TestCase
 
         $resWithUnread = $this->actingAs($this->teacher)->get(route('teacher.question-banks.index'));
         $resWithUnread->assertOk();
+
+        // Navbar bell has red dot
         $resWithUnread->assertSee('id="notif-badge-dot"', false);
         $resWithUnread->assertSee('bg-rose-500', false);
-        $resWithUnread->assertSee('id="notif-badge-count"', false);
+        $resWithUnread->assertSee('aria-label="Notifications, 1 unread"', false);
 
-        // Case B: When unread_count = 0, badge includes 'hidden' class
+        // Navbar bell MUST NOT render numeric count inside/beside bell
+        $resWithUnread->assertDontSee('id="notif-badge-count"', false);
+
+        // Case B: When unread_count = 0, red dot includes 'hidden' class and aria-label is generic
         $this->teacher->unreadNotifications->markAsRead();
 
         $resZeroUnread = $this->actingAs($this->teacher)->get(route('teacher.question-banks.index'));
         $resZeroUnread->assertOk();
         $resZeroUnread->assertSee('id="notif-badge-dot" class="hidden', false);
+        $resZeroUnread->assertSee('aria-label="Notifications"', false);
     }
 }
