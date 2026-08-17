@@ -47,7 +47,7 @@ class ApprovalController extends Controller
             ->latest()
             ->get();
 
-        $pendingRestorationRequests = QuestionBank::with(['creator', 'aclCategory'])
+        $pendingRestorationRequests = QuestionBank::with(['creator', 'aclCategory', 'activityLogs'])
             ->where('status', 'pending_restore_approval')
             ->latest()
             ->get();

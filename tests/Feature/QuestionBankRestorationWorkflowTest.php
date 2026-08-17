@@ -307,4 +307,29 @@ class QuestionBankRestorationWorkflowTest extends TestCase
             $this->assertStringContainsString('inline-restore-panel', $content);
         }
     }
+
+    /** 24: Super Admin approval page renders pending restoration requests safely without BadMethodCallException activityLogs. */
+    public function test_super_admin_approval_page_renders_restoration_requests_safely_without_activity_logs_exception()
+    {
+        $bank = $this->createBank(['status' => 'pending_restore_approval', 'title' => 'Special Pending Restoration Title']);
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $bank->id,
+            'actor_id'      => $this->ownerTeacher->id,
+            'action'        => 'restore_requested',
+            'approval_note' => 'Restoration reason for UAT verification',
+        ]);
+
+        // Create standard pending QB and Test records
+        $pendingQb = $this->createBank(['status' => 'pending_approval', 'title' => 'Standard Pending QB Title']);
+
+        $response = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
+        $response->assertStatus(200);
+
+        $response->assertSee('Special Pending Restoration Title');
+        $response->assertSee('Restoration reason for UAT verification');
+        $response->assertSee('Standard Pending QB Title');
+        $response->assertSee('Approve Restore');
+        $response->assertSee('Reject Restore');
+    }
 }

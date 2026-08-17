@@ -6,6 +6,7 @@ use App\Models\AclAuditTrail;
 use App\Models\AclCategory;
 use App\Models\AclVersion;
 use App\Models\QuestionBankArchiveRequest;
+use App\Models\RepositoryActivityLog;
 use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\QuestionBank\Enums\TestType;
@@ -178,5 +179,15 @@ class QuestionBank extends Model
     public function auditTrails(): HasMany
     {
         return $this->hasMany(AclAuditTrail::class, 'resource_id')->where('resource_type', 'QuestionBank')->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get repository activity logs for this question bank.
+     *
+     * @return HasMany<RepositoryActivityLog, $this>
+     */
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(RepositoryActivityLog::class, 'resource_id')->where('resource_type', 'QuestionBank')->orderBy('created_at', 'desc');
     }
 }
