@@ -754,11 +754,22 @@ a.tw-hero__pill:hover { opacity: .8; }
 
                                         {{-- Request Restore Action for Archived repositories (Owner Teacher or Super Admin ONLY) --}}
                                         @if($status === 'archived' && (Auth::user()?->hasRole('super-admin') || (Auth::user()?->hasRole('teacher') && $bank->created_by === Auth::user()->id)))
-                                        <form method="POST" action="{{ route('admin.question-banks.request-restore', $bank->id) }}" style="display:inline;"
-                                              onsubmit="event.preventDefault(); const reason = prompt('Request restoration of \'{{ addslashes($bank->title) }}\' for Super Admin approval?\n\nPlease enter restoration reason:'); if (reason !== null) { this.reason.value = reason; this.submit(); }">
+                                        <form method="POST" action="{{ route('admin.question-banks.request-restore', $bank->id) }}" style="display:inline;">
                                             @csrf
-                                            <input type="hidden" name="reason" value="">
-                                            <button type="submit" class="tw-act tw-act--restore" style="color:#818cf8;border:1px solid rgba(129,140,248,.3);" title="Request restoration for Super Admin approval">↻ Request Restore</button>
+                                            <button type="button" id="restore-trigger-btn-dash-{{ $bank->id }}" onclick="document.getElementById('inline-restore-panel-dash-{{ $bank->id }}').classList.remove('hidden'); this.classList.add('hidden');" class="tw-act tw-act--restore" style="color:#818cf8;border:1px solid rgba(129,140,248,.3);" title="Request restoration for Super Admin approval">↻ Request Restore</button>
+
+                                            <div id="inline-restore-panel-dash-{{ $bank->id }}" class="hidden inline-flex items-center gap-2 p-1.5 bg-slate-900 border border-indigo-500/50 rounded-xl shadow-lg">
+                                                <span class="text-xs text-slate-200 font-medium">
+                                                    Request restoration of '{{ $bank->title }}' for Super Admin approval?
+                                                </span>
+                                                <input type="text" name="reason" placeholder="Restoration reason..." class="px-2 py-0.5 bg-slate-950 border border-slate-700 text-xs text-white rounded-lg focus:outline-none focus:border-indigo-500" style="width:160px;">
+                                                <button type="button" onclick="document.getElementById('inline-restore-panel-dash-{{ $bank->id }}').classList.add('hidden'); document.getElementById('restore-trigger-btn-dash-{{ $bank->id }}').classList.remove('hidden');" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" class="px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow transition-colors">
+                                                    Request Restore
+                                                </button>
+                                            </div>
                                         </form>
                                         @endif
 

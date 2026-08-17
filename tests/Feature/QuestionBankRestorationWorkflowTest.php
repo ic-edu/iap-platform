@@ -289,4 +289,22 @@ class QuestionBankRestorationWorkflowTest extends TestCase
         $responseDash->assertStatus(200);
         $responseDash->assertDontSee('Request Restore');
     }
+
+    /** 23: Request Restore UI does not contain native browser dialogs (prompt/confirm) and uses IAP inline confirmation panel. */
+    public function test_request_restore_ui_does_not_contain_native_browser_dialogs_and_uses_iap_confirmation()
+    {
+        $bank = $this->createBank(['status' => 'archived']);
+
+        foreach ([route('admin.question-banks.index'), route('teacher.dashboard')] as $route) {
+            $response = $this->actingAs($this->ownerTeacher)->get($route);
+            $response->assertStatus(200);
+            $content = $response->getContent();
+
+            $this->assertStringNotContainsString('window.prompt', $content);
+            $this->assertStringNotContainsString('window.confirm', $content);
+            $this->assertStringNotContainsString('prompt(', $content);
+            $this->assertStringNotContainsString('confirm(', $content);
+            $this->assertStringContainsString('inline-restore-panel', $content);
+        }
+    }
 }

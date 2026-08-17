@@ -240,13 +240,16 @@
                                     ✓ Approve Restore
                                 </button>
                             </form>
-                            <form action="{{ route('admin.question-banks.reject-restore', $bank->id) }}" method="POST" class="inline"
-                                  onsubmit="event.preventDefault(); const reason = prompt('Please specify rejection reason:'); if (reason) { this.reason.value = reason; this.submit(); }">
+                            <form action="{{ route('admin.question-banks.reject-restore', $bank->id) }}" method="POST" class="inline">
                                 @csrf
-                                <input type="hidden" name="reason" value="">
-                                <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
+                                <button type="button" id="reject-restore-trigger-btn-app-{{ $bank->id }}" onclick="document.getElementById('inline-reject-restore-panel-app-{{ $bank->id }}').classList.remove('hidden'); this.classList.add('hidden');" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-semibold text-xs rounded-lg border border-rose-500/30 transition-colors">
                                     ✗ Reject Restore
                                 </button>
+                                <div id="inline-reject-restore-panel-app-{{ $bank->id }}" class="hidden inline-flex items-center gap-2 p-1.5 bg-slate-900 border border-rose-500/50 rounded-xl shadow-lg">
+                                    <input type="text" name="reason" placeholder="Rejection reason..." class="px-2 py-0.5 bg-slate-950 border border-slate-700 text-xs text-white rounded-lg focus:outline-none focus:border-rose-500" style="width:160px;" required>
+                                    <button type="button" onclick="document.getElementById('inline-reject-restore-panel-app-{{ $bank->id }}').classList.add('hidden'); document.getElementById('reject-restore-trigger-btn-app-{{ $bank->id }}').classList.remove('hidden');" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">Cancel</button>
+                                    <button type="submit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Reject</button>
+                                </div>
                             </form>
                         </td>
                     </tr>
