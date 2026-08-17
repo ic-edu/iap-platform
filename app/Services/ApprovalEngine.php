@@ -30,6 +30,7 @@ class ApprovalEngine
         self::$providers = [
             'question_banks' => fn (): int => QuestionBank::where('status', 'pending_approval')->count(),
             'question_bank_archives' => fn (): int => QuestionBankArchiveRequest::where('status', 'pending')->count(),
+            'question_bank_restorations' => fn (): int => QuestionBank::where('status', 'pending_restore_approval')->count(),
             'tests' => fn (): int => Test::where('status', 'pending')->count(),
             'user_creations' => fn (): int => UserCreationRequest::where('status', 'pending')->count(),
             'user_deletions' => fn (): int => UserDeletionRequest::where('status', 'pending')->count(),

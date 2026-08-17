@@ -45,6 +45,9 @@ class ExecutiveDashboardApprovalSynchronizationTest extends TestCase
         $targetUser = User::factory()->create(['status' => 'pending_delete_approval']);
         UserDeletionRequest::create(['user_id' => $targetUser->id, 'requested_by' => $admin->id, 'reason' => 'Duplicate account', 'status' => 'pending']);
 
+        // Create 1 pending restoration request
+        QuestionBank::create(['title' => 'Restore QB', 'slug' => 'restore-qb', 'created_by' => $teacher->id, 'test_type' => 'toeic', 'status' => 'pending_restore_approval']);
+
         $pendingCounts = ApprovalEngine::getPendingCounts();
         $totalPending = ApprovalEngine::getTotalPendingCount();
 
@@ -52,7 +55,8 @@ class ExecutiveDashboardApprovalSynchronizationTest extends TestCase
         $this::assertEquals(1, $pendingCounts['tests']);
         $this::assertEquals(1, $pendingCounts['user_creations']);
         $this::assertEquals(1, $pendingCounts['user_deletions']);
-        $this::assertEquals(5, $totalPending);
+        $this::assertEquals(1, $pendingCounts['question_bank_restorations']);
+        $this::assertEquals(6, $totalPending);
     }
 
     public function test_executive_dashboard_displays_synchronized_pending_approvals_and_published_banks(): void
@@ -96,6 +100,41 @@ class ExecutiveDashboardApprovalSynchronizationTest extends TestCase
 
         // Check updated dashboard count = 0
         $res2 = $this->actingAs($superAdmin)->get(route('super-admin.dashboard'));
+        $res2->assertViewHas('pendingApprovalsCount', 0);
+    }
+
+    public function test_approval_engine_includes_and_synchronizes_pending_restore_approval_status(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole('super-admin');
+
+        $teacher = User::factory()->create();
+        $teacher->assignRole('teacher');
+
+        // 1. Create a QuestionBank with status pending_restore_approval as the ONLY pending governance item
+        $bank = QuestionBank::create([
+            'title'       => 'Restoration Pending Bank',
+            'slug'        => 'restoration-pending-bank',
+            'created_by'  => $teacher->id,
+            'test_type'   => 'toeic',
+            'status'      => 'pending_restore_approval',
+        ]);
+
+        // Assert total pending count = 1
+        $this::assertEquals(1, ApprovalEngine::getTotalPendingCount());
+
+        $res1 = $this->actingAs($superAdmin)->get(route('super-admin.dashboard'));
+        $res1->assertOk();
+        $res1->assertViewHas('pendingApprovalsCount', 1);
+
+        // 2. Approve restoration
+        $this->actingAs($superAdmin)->post(route('admin.question-banks.approve-restore', $bank->id));
+
+        // Assert total pending count decreases back to 0
+        $this::assertEquals(0, ApprovalEngine::getTotalPendingCount());
+
+        $res2 = $this->actingAs($superAdmin)->get(route('super-admin.dashboard'));
+        $res2->assertOk();
         $res2->assertViewHas('pendingApprovalsCount', 0);
     }
 }
