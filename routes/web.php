@@ -128,6 +128,13 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
 
     Route::prefix('admin/approvals')->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->name('admin.approvals.index');
+        Route::get('/assessments', [ApprovalController::class, 'assessmentsIndex'])->name('admin.approvals.assessments');
+        Route::get('/question-banks', [ApprovalController::class, 'questionBanksIndex'])->name('admin.approvals.question-banks');
+        Route::get('/question-bank-restorations', [ApprovalController::class, 'restorationsIndex'])->name('admin.approvals.question-bank-restorations');
+        Route::get('/question-bank-archives', [ApprovalController::class, 'archivesIndex'])->name('admin.approvals.question-bank-archives');
+        Route::get('/staff-creations', [ApprovalController::class, 'staffCreationsIndex'])->name('admin.approvals.staff-creations');
+        Route::get('/user-deletions', [ApprovalController::class, 'userDeletionsIndex'])->name('admin.approvals.user-deletions');
+
         Route::post('/{test}/approve', [ApprovalController::class, 'approve'])->name('admin.approvals.approve');
         Route::post('/{test}/reject', [ApprovalController::class, 'reject'])->name('admin.approvals.reject');
         Route::post('/question-banks/{questionBank}/approve', [ApprovalController::class, 'approveQuestionBank'])->name('admin.approvals.question-banks.approve');

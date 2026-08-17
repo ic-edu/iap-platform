@@ -559,7 +559,7 @@ class QuestionBankController extends Controller
                         'message'          => "'{$user->name}' requested restoration for '{$questionBank->title}'. Reason: {$reason}",
                         'reason'           => $reason,
                         'question_bank_id' => $questionBank->id,
-                        'link'             => route('admin.approvals.index'),
+                        'link'             => route('admin.approvals.question-bank-restorations', ['from' => 'notifications']),
                         'priority'         => 'HIGH',
                     ]),
                     'created_at'      => now(),

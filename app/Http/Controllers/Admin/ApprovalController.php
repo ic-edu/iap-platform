@@ -78,6 +78,84 @@ class ApprovalController extends Controller
     }
 
     /**
+     * Display Pending Assessments Queue.
+     */
+    public function assessmentsIndex(): View
+    {
+        $pendingTests = Test::with(['creator', 'sections'])
+            ->where('status', 'pending')
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.approvals.assessments', compact('pendingTests'));
+    }
+
+    /**
+     * Display Pending Question Banks Queue.
+     */
+    public function questionBanksIndex(): View
+    {
+        $pendingQuestionBanks = QuestionBank::with(['creator', 'category'])
+            ->where('status', 'pending_approval')
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.approvals.question-banks', compact('pendingQuestionBanks'));
+    }
+
+    /**
+     * Display Question Bank Restoration Approval Queue.
+     */
+    public function restorationsIndex(): View
+    {
+        $pendingRestorationRequests = QuestionBank::with(['creator', 'aclCategory', 'activityLogs'])
+            ->where('status', 'pending_restore_approval')
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.approvals.question-bank-restorations', compact('pendingRestorationRequests'));
+    }
+
+    /**
+     * Display Pending Question Bank Archives Queue.
+     */
+    public function archivesIndex(): View
+    {
+        $pendingArchiveRequests = QuestionBankArchiveRequest::with(['questionBank', 'requester'])
+            ->where('status', 'pending')
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.approvals.question-bank-archives', compact('pendingArchiveRequests'));
+    }
+
+    /**
+     * Display Pending Staff Creations Queue.
+     */
+    public function staffCreationsIndex(): View
+    {
+        $userCreationRequests = UserCreationRequest::with(['targetUser', 'requester'])
+            ->where('status', 'pending')
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.approvals.staff-creations', compact('userCreationRequests'));
+    }
+
+    /**
+     * Display Pending User Deletions Queue.
+     */
+    public function userDeletionsIndex(): View
+    {
+        $userDeletionRequests = UserDeletionRequest::with(['targetUser', 'requester'])
+            ->where('status', 'pending')
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.approvals.user-deletions', compact('userDeletionRequests'));
+    }
+
+    /**
      * Approve a Question Bank (Super Admin Only).
      * Notifies Teacher Author (approved) and all Admins (ready for publication).
      * ADMIN-OPS-001 Section 8: Admin receives "Question Bank Approved – Ready for Publication".

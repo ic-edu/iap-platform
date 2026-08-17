@@ -308,8 +308,8 @@ class QuestionBankRestorationWorkflowTest extends TestCase
         }
     }
 
-    /** 24: Super Admin approval page renders pending restoration requests safely without BadMethodCallException activityLogs. */
-    public function test_super_admin_approval_page_renders_restoration_requests_safely_without_activity_logs_exception()
+    /** 24: Super Admin Command Center renders summary KPIs and does NOT render duplicate detailed tables on index. */
+    public function test_super_admin_command_center_renders_summary_kpis_without_duplicate_tables()
     {
         $bank = $this->createBank(['status' => 'pending_restore_approval', 'title' => 'Special Pending Restoration Title']);
         RepositoryActivityLog::create([
@@ -320,36 +320,51 @@ class QuestionBankRestorationWorkflowTest extends TestCase
             'approval_note' => 'Restoration reason for UAT verification',
         ]);
 
-        // Create standard pending QB and Test records
-        $pendingQb = $this->createBank(['status' => 'pending_approval', 'title' => 'Standard Pending QB Title']);
+        $responseIndex = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
+        $responseIndex->assertStatus(200);
 
-        $response = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
-        $response->assertStatus(200);
+        // Command Center summary contains KPI cards & links
+        $responseIndex->assertSee('Pending Restorations');
+        $responseIndex->assertSee('Pending Assessments');
+        $responseIndex->assertSee('Pending Question Banks');
+        $responseIndex->assertSee(route('admin.approvals.question-bank-restorations'));
 
-        $response->assertSee('Special Pending Restoration Title');
-        $response->assertSee('Restoration reason for UAT verification');
-        $response->assertSee('Standard Pending QB Title');
-        $response->assertSee('Approve Restore');
-        $response->assertSee('Reject Restore');
+        // Command Center index does NOT contain duplicate detailed tables
+        $responseIndex->assertDontSee('Special Pending Restoration Title');
+
+        // Dedicated Restoration Queue page renders detailed request
+        $responseRestoration = $this->actingAs($this->superAdmin)->get(route('admin.approvals.question-bank-restorations'));
+        $responseRestoration->assertStatus(200);
+        $responseRestoration->assertSee('Special Pending Restoration Title');
+        $responseRestoration->assertSee('Restoration reason for UAT verification');
+        $responseRestoration->assertSee('Approve Restore');
+        $responseRestoration->assertSee('Reject Restore');
     }
 
-    /** 25: Super Admin dashboard renders pending restoration KPI card matching queue count and linking to section. */
-    public function test_super_admin_dashboard_renders_pending_restoration_kpi_card_matching_queue_count_and_linking_to_section()
+    /** 25: Contextual Back navigation works for dedicated queue pages. */
+    public function test_contextual_back_navigation_works_for_dedicated_queue_pages()
     {
-        // Case A: 0 pending restorations
-        $response0 = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
-        $response0->assertStatus(200);
-        $response0->assertSee('Pending Restorations');
-        $response0->assertSee('href="#pending-restoration-queue"', false);
-        $response0->assertSee('id="pending-restoration-queue"', false);
+        // Case A: From Notification Center
+        $respNotif = $this->actingAs($this->superAdmin)->get(route('admin.approvals.question-bank-restorations', ['from' => 'notifications']));
+        $respNotif->assertStatus(200);
+        $respNotif->assertSee('Back to Notification Center');
 
-        // Case B: 2 pending restorations
-        $bank1 = $this->createBank(['status' => 'pending_restore_approval', 'title' => 'KPI Bank 1']);
-        $bank2 = $this->createBank(['status' => 'pending_restore_approval', 'title' => 'KPI Bank 2']);
+        // Case B: From Dashboard
+        $respDash = $this->actingAs($this->superAdmin)->get(route('admin.approvals.question-bank-restorations', ['from' => 'dashboard']));
+        $respDash->assertStatus(200);
+        $respDash->assertSee('Back to Dashboard');
 
-        $response2 = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
-        $response2->assertStatus(200);
-        $response2->assertSee('2 Pending Restorations');
-        $response2->assertSee('Restoration Queue');
+        // Case C: Default from Command Center
+        $respDefault = $this->actingAs($this->superAdmin)->get(route('admin.approvals.question-bank-restorations'));
+        $respDefault->assertStatus(200);
+        $respDefault->assertSee('Back to Approval Command Center');
+    }
+
+    /** 26: Dedicated queues render empty states when zero items exist. */
+    public function test_dedicated_queues_render_empty_states_when_zero_items_exist()
+    {
+        $response = $this->actingAs($this->superAdmin)->get(route('admin.approvals.question-bank-restorations'));
+        $response->assertStatus(200);
+        $response->assertSee('No Pending Restoration Requests');
     }
 }
