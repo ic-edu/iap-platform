@@ -107,12 +107,17 @@
                     @endif
 
                     <!-- Notifications Dropdown (NOTIFICATION-001) -->
+                    @php
+                        $initialUnreadCount = auth()->check() ? auth()->user()->unreadNotifications()->count() : 0;
+                    @endphp
                     <div class="relative" id="notifications-bell-container">
                         <button type="button" id="notifications-bell-btn" onclick="toggleNotificationsDropdown()" aria-expanded="false" aria-haspopup="true" aria-controls="notifications-dropdown" class="p-2 rounded-xl text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 shadow-md shadow-slate-950/60 transition-all relative flex items-center justify-center cursor-pointer group" title="Notifications">
                             <svg class="w-5 h-5 transition-transform group-hover:scale-105 filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                             </svg>
-                            <span id="notif-badge-dot" class="hidden absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-slate-950 shadow-sm shadow-rose-950/80"></span>
+                            <span id="notif-badge-dot" class="{{ $initialUnreadCount > 0 ? '' : 'hidden' }} absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-slate-950 shadow-md shadow-rose-950/80 transition-all">
+                                <span id="notif-badge-count">{{ $initialUnreadCount > 99 ? '99+' : $initialUnreadCount }}</span>
+                            </span>
                         </button>
 
                         <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-84 sm:w-96 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden">
@@ -365,13 +370,20 @@
         function updateNotificationHeaderCount(count) {
             const countEl = document.getElementById('notif-dropdown-count');
             const badgeDot = document.getElementById('notif-badge-dot');
+            const badgeCountEl = document.getElementById('notif-badge-count');
             const readAllBtn = document.getElementById('notif-read-all-btn');
 
             const unreadCount = parseInt(count, 10) || 0;
 
             if (badgeDot) {
-                if (unreadCount > 0) badgeDot.classList.remove('hidden');
-                else badgeDot.classList.add('hidden');
+                if (unreadCount > 0) {
+                    badgeDot.classList.remove('hidden');
+                    if (badgeCountEl) {
+                        badgeCountEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    }
+                } else {
+                    badgeDot.classList.add('hidden');
+                }
             }
 
             if (countEl) {

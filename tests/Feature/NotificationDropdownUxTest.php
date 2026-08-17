@@ -162,4 +162,33 @@ class NotificationDropdownUxTest extends TestCase
         $resFeed3->assertJson(['success' => true, 'unread_count' => 0]);
         $this->assertCount(3, $resFeed3->json('data'));
     }
+
+    /** 4: Unread bell badge RED visual styling & unread_count visibility toggle behavior. */
+    public function test_unread_bell_badge_color_and_visibility_behavior(): void
+    {
+        // Case A: When unread_count > 0, page HTML includes visible RED badge with count
+        \Illuminate\Support\Facades\DB::table('notifications')->insert([
+            'id'              => (string) \Illuminate\Support\Str::uuid(),
+            'type'            => 'system_alert',
+            'notifiable_type' => 'App\Models\User',
+            'notifiable_id'   => $this->teacher->id,
+            'data'            => json_encode(['title' => 'Teacher Unread Alert']),
+            'read_at'         => null,
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+
+        $resWithUnread = $this->actingAs($this->teacher)->get(route('teacher.question-banks.index'));
+        $resWithUnread->assertOk();
+        $resWithUnread->assertSee('id="notif-badge-dot"', false);
+        $resWithUnread->assertSee('bg-rose-500', false);
+        $resWithUnread->assertSee('id="notif-badge-count"', false);
+
+        // Case B: When unread_count = 0, badge includes 'hidden' class
+        $this->teacher->unreadNotifications->markAsRead();
+
+        $resZeroUnread = $this->actingAs($this->teacher)->get(route('teacher.question-banks.index'));
+        $resZeroUnread->assertOk();
+        $resZeroUnread->assertSee('id="notif-badge-dot" class="hidden', false);
+    }
 }
