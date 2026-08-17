@@ -115,7 +115,7 @@
                             <svg class="w-5 h-5 transition-transform group-hover:scale-105 filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                             </svg>
-                            <span id="notif-badge-dot" class="{{ $initialUnreadCount > 0 ? '' : 'hidden' }} absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#22C55E] ring-2 ring-slate-950 shadow-sm shadow-emerald-950/80 transition-all"></span>
+                            <span id="notif-badge-dot" class="{{ $initialUnreadCount > 0 ? '' : 'hidden' }} absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-950 shadow-sm shadow-emerald-950/80 transition-all" style="background-color: #22C55E !important;"></span>
                         </button>
 
                         <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-84 sm:w-96 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden">

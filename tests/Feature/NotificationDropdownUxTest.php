@@ -183,7 +183,7 @@ class NotificationDropdownUxTest extends TestCase
 
         // Navbar bell has green dot (#22C55E)
         $resWithUnread->assertSee('id="notif-badge-dot"', false);
-        $resWithUnread->assertSee('bg-[#22C55E]', false);
+        $resWithUnread->assertSee('background-color: #22C55E', false);
         $resWithUnread->assertSee('aria-label="Notifications, 1 unread"', false);
 
         // Navbar bell MUST NOT render numeric count inside/beside bell
