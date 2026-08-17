@@ -332,4 +332,24 @@ class QuestionBankRestorationWorkflowTest extends TestCase
         $response->assertSee('Approve Restore');
         $response->assertSee('Reject Restore');
     }
+
+    /** 25: Super Admin dashboard renders pending restoration KPI card matching queue count and linking to section. */
+    public function test_super_admin_dashboard_renders_pending_restoration_kpi_card_matching_queue_count_and_linking_to_section()
+    {
+        // Case A: 0 pending restorations
+        $response0 = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
+        $response0->assertStatus(200);
+        $response0->assertSee('Pending Restorations');
+        $response0->assertSee('href="#pending-restoration-queue"', false);
+        $response0->assertSee('id="pending-restoration-queue"', false);
+
+        // Case B: 2 pending restorations
+        $bank1 = $this->createBank(['status' => 'pending_restore_approval', 'title' => 'KPI Bank 1']);
+        $bank2 = $this->createBank(['status' => 'pending_restore_approval', 'title' => 'KPI Bank 2']);
+
+        $response2 = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
+        $response2->assertStatus(200);
+        $response2->assertSee('2 Pending Restorations');
+        $response2->assertSee('Restoration Queue');
+    }
 }

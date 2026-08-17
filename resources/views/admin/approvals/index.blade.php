@@ -23,7 +23,7 @@
     @endif
 
     <!-- Metrics Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
                 <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Assessments</span>
@@ -38,6 +38,16 @@
             </div>
             <span class="text-2xl">📂</span>
         </div>
+        <a href="#pending-restoration-queue" class="p-4 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl flex items-center justify-between transition-colors group">
+            <div>
+                <span class="text-[10px] text-slate-400 font-medium uppercase block flex items-center gap-1">
+                    <span>♻️</span> Pending Restorations
+                </span>
+                <span class="text-2xl font-extrabold text-indigo-400 mt-0.5 block">{{ $pendingRestorationCount ?? 0 }}</span>
+                <span class="text-[10px] text-indigo-400 group-hover:underline mt-1 block">Restoration Queue &rarr;</span>
+            </div>
+            <span class="text-2xl">♻️</span>
+        </a>
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
             <div>
                 <span class="text-[10px] text-slate-400 font-medium uppercase block">Pending Bank Archives</span>
@@ -191,7 +201,7 @@
     </div>
 
     <!-- Pending Question Bank Restoration Requests Table -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
+    <div id="pending-restoration-queue" class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
         <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
             <div>
                 <h2 class="text-sm font-bold text-white flex items-center gap-2">
