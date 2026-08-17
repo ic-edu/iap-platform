@@ -81,11 +81,85 @@ class NotificationDropdownUxTest extends TestCase
         $response->assertSee('window.toggleNotificationsDropdown', false);
         $response->assertSee('window.openNotificationsDropdown', false);
         $response->assertSee('window.closeNotificationsDropdown', false);
+        $response->assertSee('window.setNotifFilter', false);
+        $response->assertSee('window.markAllNotificationsRead', false);
+
+        // Verify Filter controls & Read All elements
+        $response->assertSee('id="notif-filter-all"', false);
+        $response->assertSee('id="notif-filter-unread"', false);
+        $response->assertSee('id="notif-filter-read"', false);
+        $response->assertSee('id="notif-read-all-btn"', false);
 
         // Verify Outside Click listener logic
         $response->assertSee('if (container && !container.contains(e.target))', false);
 
         // Verify Escape key listener logic
         $response->assertSee("e.key === 'Escape'", false);
+    }
+
+    /** 3: Notification read/unread state synchronization & Read All API integration. */
+    public function test_notification_read_unread_synchronization_and_read_all(): void
+    {
+        // 1. Create 3 notifications for Super Admin
+        \Illuminate\Support\Facades\DB::table('notifications')->insert([
+            [
+                'id'              => (string) \Illuminate\Support\Str::uuid(),
+                'type'            => 'system_alert',
+                'notifiable_type' => 'App\Models\User',
+                'notifiable_id'   => $this->superAdmin->id,
+                'data'            => json_encode(['title' => 'Alert 1', 'message' => 'Message 1']),
+                'read_at'         => null,
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ],
+            [
+                'id'              => (string) \Illuminate\Support\Str::uuid(),
+                'type'            => 'system_alert',
+                'notifiable_type' => 'App\Models\User',
+                'notifiable_id'   => $this->superAdmin->id,
+                'data'            => json_encode(['title' => 'Alert 2', 'message' => 'Message 2']),
+                'read_at'         => null,
+                'created_at'      => now()->subMinute(),
+                'updated_at'      => now()->subMinute(),
+            ],
+            [
+                'id'              => (string) \Illuminate\Support\Str::uuid(),
+                'type'            => 'system_alert',
+                'notifiable_type' => 'App\Models\User',
+                'notifiable_id'   => $this->superAdmin->id,
+                'data'            => json_encode(['title' => 'Alert 3', 'message' => 'Message 3']),
+                'read_at'         => null,
+                'created_at'      => now()->subMinutes(2),
+                'updated_at'      => now()->subMinutes(2),
+            ],
+        ]);
+
+        // Check initial feed
+        $resFeed1 = $this->actingAs($this->superAdmin)->getJson(route('notifications.feed'));
+        $resFeed1->assertOk();
+        $resFeed1->assertJson(['success' => true, 'unread_count' => 3]);
+
+        $firstNotifId = $resFeed1->json('data.0.id');
+
+        // Mark 1 notification as read via JSON endpoint
+        $resMarkRead = $this->actingAs($this->superAdmin)->postJson(route('notifications.read', $firstNotifId));
+        $resMarkRead->assertOk();
+        $resMarkRead->assertJson(['success' => true, 'unread_count' => 2]);
+
+        // Verify updated feed returns unread_count = 2
+        $resFeed2 = $this->actingAs($this->superAdmin)->getJson(route('notifications.feed'));
+        $resFeed2->assertOk();
+        $resFeed2->assertJson(['success' => true, 'unread_count' => 2]);
+
+        // Mark all as read via JSON endpoint
+        $resMarkAll = $this->actingAs($this->superAdmin)->postJson(route('notifications.read-all'));
+        $resMarkAll->assertOk();
+        $resMarkAll->assertJson(['success' => true, 'unread_count' => 0]);
+
+        // Verify final feed unread_count = 0, but history records still exist (3 total items)
+        $resFeed3 = $this->actingAs($this->superAdmin)->getJson(route('notifications.feed'));
+        $resFeed3->assertOk();
+        $resFeed3->assertJson(['success' => true, 'unread_count' => 0]);
+        $this->assertCount(3, $resFeed3->json('data'));
     }
 }

@@ -115,14 +115,33 @@
                             <span id="notif-badge-dot" class="hidden absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-slate-950 shadow-sm shadow-rose-950/80"></span>
                         </button>
 
-                        <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-84 sm:w-96 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                            <!-- Header -->
                             <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-950">
-                                <span class="text-xs font-bold text-white">Notifications</span>
-                                <span id="notif-dropdown-count" class="text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full">0 New</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-white">Notifications</span>
+                                    <span id="notif-dropdown-count" class="hidden text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full">0 New</span>
+                                </div>
+                                <button type="button" onclick="markAllNotificationsRead(event)" id="notif-read-all-btn" class="hidden text-[11px] font-bold text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer flex items-center gap-1">
+                                    ✓ Read All
+                                </button>
                             </div>
-                            <div id="notif-dropdown-list" class="divide-y divide-slate-800 text-xs max-h-72 overflow-y-auto">
+
+                            <!-- Filter Controls -->
+                            <div class="px-3 py-1.5 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between text-[11px]">
+                                <div class="flex items-center gap-1">
+                                    <button type="button" onclick="setNotifFilter('all')" id="notif-filter-all" class="px-2 py-0.5 rounded font-bold transition-all text-white bg-slate-800 border border-slate-700">All</button>
+                                    <button type="button" onclick="setNotifFilter('unread')" id="notif-filter-unread" class="px-2 py-0.5 rounded font-bold transition-all text-slate-400 hover:text-slate-200 border border-transparent">Unread</button>
+                                    <button type="button" onclick="setNotifFilter('read')" id="notif-filter-read" class="px-2 py-0.5 rounded font-bold transition-all text-slate-400 hover:text-slate-200 border border-transparent">Read</button>
+                                </div>
+                            </div>
+
+                            <!-- Notification List -->
+                            <div id="notif-dropdown-list" class="divide-y divide-slate-800/60 text-xs max-h-72 overflow-y-auto">
                                 <div class="p-4 text-center text-slate-500 text-xs">Loading alerts…</div>
                             </div>
+
+                            <!-- Footer -->
                             <div class="p-2 border-t border-slate-800 bg-slate-950 text-center">
                                 <a href="{{ route('notifications.index') }}" class="text-[11px] font-bold text-indigo-400 hover:underline">View All History →</a>
                             </div>
@@ -325,6 +344,10 @@
             loadNotificationFeed();
         });
 
+        // Global Notification State & Controller
+        window.rawNotificationsFeed = [];
+        window.currentNotifFilter = 'all';
+
         async function loadNotificationFeed() {
             try {
                 const res = await fetch('{{ route('notifications.feed') }}', {
@@ -333,50 +356,157 @@
                 const json = await res.json();
                 if (!json.success) return;
 
-                const countEl = document.getElementById('notif-dropdown-count');
-                const badgeDot = document.getElementById('notif-badge-dot');
-                const listEl = document.getElementById('notif-dropdown-list');
-
-                if (countEl) countEl.textContent = json.unread_count + ' New';
-                if (badgeDot) {
-                    if (json.unread_count > 0) badgeDot.classList.remove('hidden');
-                    else badgeDot.classList.add('hidden');
-                }
-
-                if (listEl) {
-                    if (!json.data || json.data.length === 0) {
-                        listEl.innerHTML = '<div class="p-4 text-center text-slate-500 text-xs">No notifications yet</div>';
-                        return;
-                    }
-
-                    const csrfToken = document.querySelector('meta[name=csrf-token]')?.content || '';
-                    listEl.innerHTML = json.data.map(item => {
-                        let cta = 'Click to view →';
-                        if (item.title && item.title.toLowerCase().includes('resubmit')) cta = 'Review Repository →';
-                        else if (item.title && item.title.toLowerCase().includes('reject')) cta = 'Inspect Rejection →';
-                        else if (item.title && item.title.toLowerCase().includes('revision')) cta = 'View Revision Task →';
-                        else if (item.title && item.title.toLowerCase().includes('irqa')) cta = 'Inspect Governance →';
-
-                        return `
-                        <form action="/notifications/${item.id}/read" method="POST" class="m-0 p-0 block">
-                            <input type="hidden" name="_token" value="${csrfToken}">
-                            <input type="hidden" name="return_url" value="${encodeURIComponent(window.location.pathname + window.location.search)}">
-                            <button type="submit" class="w-full text-left p-3 ${item.unread ? 'bg-indigo-950/40 border-l-2 border-indigo-500' : ''} hover:bg-slate-800/70 transition-all block border-none cursor-pointer group">
-                                <div class="font-semibold ${item.unread ? 'text-white' : 'text-slate-300'} flex items-center justify-between text-xs">
-                                    <span class="truncate pr-2">${escapeHtml(item.title)}</span>
-                                    ${item.unread ? '<span class="px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-500 text-white flex-shrink-0">NEW</span>' : ''}
-                                </div>
-                                <div class="text-slate-400 text-[11px] mt-1 line-clamp-2 leading-relaxed">${escapeHtml(item.message)}</div>
-                                <div class="text-[10px] text-indigo-400 font-semibold mt-1.5 flex items-center justify-between">
-                                    <span class="text-slate-500 font-normal">${escapeHtml(item.time_ago || '')}</span>
-                                    <span class="group-hover:translate-x-0.5 transition-transform">${cta}</span>
-                                </div>
-                            </button>
-                        </form>
-                    `;
-                    }).join('');
-                }
+                window.rawNotificationsFeed = json.data || [];
+                updateNotificationHeaderCount(json.unread_count);
+                renderNotificationList();
             } catch(e) { /* silent */ }
+        }
+
+        function updateNotificationHeaderCount(count) {
+            const countEl = document.getElementById('notif-dropdown-count');
+            const badgeDot = document.getElementById('notif-badge-dot');
+            const readAllBtn = document.getElementById('notif-read-all-btn');
+
+            const unreadCount = parseInt(count, 10) || 0;
+
+            if (badgeDot) {
+                if (unreadCount > 0) badgeDot.classList.remove('hidden');
+                else badgeDot.classList.add('hidden');
+            }
+
+            if (countEl) {
+                if (unreadCount > 0) {
+                    countEl.textContent = unreadCount + ' New';
+                    countEl.classList.remove('hidden');
+                } else {
+                    countEl.classList.add('hidden');
+                }
+            }
+
+            if (readAllBtn) {
+                if (unreadCount > 0) {
+                    readAllBtn.classList.remove('hidden');
+                } else {
+                    readAllBtn.classList.add('hidden');
+                }
+            }
+        }
+
+        window.setNotifFilter = function(filter) {
+            window.currentNotifFilter = filter;
+            ['all', 'unread', 'read'].forEach(f => {
+                const btn = document.getElementById(`notif-filter-${f}`);
+                if (btn) {
+                    if (f === filter) {
+                        btn.className = 'px-2 py-0.5 rounded font-bold transition-all text-white bg-slate-800 border border-slate-700';
+                    } else {
+                        btn.className = 'px-2 py-0.5 rounded font-bold transition-all text-slate-400 hover:text-slate-200 border border-transparent';
+                    }
+                }
+            });
+            renderNotificationList();
+        };
+
+        function renderNotificationList() {
+            const listEl = document.getElementById('notif-dropdown-list');
+            if (!listEl) return;
+
+            const allItems = window.rawNotificationsFeed || [];
+            let filteredItems = allItems;
+
+            if (window.currentNotifFilter === 'unread') {
+                filteredItems = allItems.filter(i => i.unread);
+            } else if (window.currentNotifFilter === 'read') {
+                filteredItems = allItems.filter(i => !i.unread);
+            }
+
+            if (filteredItems.length === 0) {
+                let emptyMsg = 'No notifications.';
+                if (window.currentNotifFilter === 'unread') emptyMsg = 'No unread notifications.';
+                else if (window.currentNotifFilter === 'read') emptyMsg = 'No read notifications.';
+
+                listEl.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs font-medium">✨ ${emptyMsg}</div>`;
+                return;
+            }
+
+            const csrfToken = document.querySelector('meta[name=csrf-token]')?.content || '';
+
+            listEl.innerHTML = filteredItems.map(item => {
+                let cta = 'Click to view →';
+                if (item.title && item.title.toLowerCase().includes('resubmit')) cta = 'Review Repository →';
+                else if (item.title && item.title.toLowerCase().includes('reject')) cta = 'Inspect Rejection →';
+                else if (item.title && item.title.toLowerCase().includes('revision')) cta = 'View Revision Task →';
+                else if (item.title && item.title.toLowerCase().includes('irqa')) cta = 'Inspect Governance →';
+
+                const unreadClasses = item.unread
+                    ? 'bg-slate-900 border-l-2 border-rose-500 hover:bg-slate-850'
+                    : 'bg-slate-950/40 opacity-75 hover:bg-slate-800/60';
+
+                const titleClasses = item.unread ? 'font-semibold text-white' : 'font-normal text-slate-300';
+
+                return `
+                <form action="/notifications/${item.id}/read" method="POST" class="m-0 p-0 block" onsubmit="handleNotificationClick(event, '${item.id}')">
+                    <input type="hidden" name="_token" value="${csrfToken}">
+                    <input type="hidden" name="return_url" value="${encodeURIComponent(window.location.pathname + window.location.search)}">
+                    <button type="submit" class="w-full text-left p-3 ${unreadClasses} transition-all block border-none cursor-pointer group">
+                        <div class="${titleClasses} flex items-center justify-between text-xs">
+                            <span class="truncate pr-2">${escapeHtml(item.title)}</span>
+                            ${item.unread ? '<span class="px-1.5 py-0.5 text-[9px] font-bold rounded bg-rose-500 text-white flex-shrink-0">NEW</span>' : ''}
+                        </div>
+                        <div class="text-slate-400 text-[11px] mt-1 line-clamp-2 leading-relaxed">${escapeHtml(item.message)}</div>
+                        <div class="text-[10px] text-indigo-400 font-semibold mt-1.5 flex items-center justify-between">
+                            <span class="text-slate-500 font-normal">${escapeHtml(item.time_ago || '')}</span>
+                            <span class="group-hover:translate-x-0.5 transition-transform">${cta}</span>
+                        </div>
+                    </button>
+                </form>
+            `;
+            }).join('');
+        }
+
+        window.handleNotificationClick = function(event, notifId) {
+            const item = (window.rawNotificationsFeed || []).find(i => i.id === notifId);
+            if (item && item.unread) {
+                item.unread = false;
+                const newUnreadCount = Math.max(0, (window.rawNotificationsFeed.filter(i => i.unread)).length);
+                updateNotificationHeaderCount(newUnreadCount);
+            }
+        };
+
+        window.markAllNotificationsRead = async function(event) {
+            if (event) event.stopPropagation();
+
+            const csrfToken = document.querySelector('meta[name=csrf-token]')?.content || '';
+
+            try {
+                const res = await fetch('{{ route('notifications.read-all') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken
+                    }
+                });
+
+                const json = await res.json();
+                if (json.success) {
+                    (window.rawNotificationsFeed || []).forEach(i => i.unread = false);
+                    updateNotificationHeaderCount(0);
+                    renderNotificationList();
+
+                    const unreadPageBadge = document.querySelector('.notif-count-badge');
+                    if (unreadPageBadge) {
+                        unreadPageBadge.remove();
+                    }
+                    const readAllForm = document.querySelector('.notif-header-actions form');
+                    if (readAllForm) {
+                        readAllForm.remove();
+                    }
+                }
+            } catch(e) {
+                /* silent */
+            }
         }
 
         function escapeHtml(str) {
