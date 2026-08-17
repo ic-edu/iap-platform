@@ -398,12 +398,6 @@ a.tw-hero__pill:hover { opacity: .8; }
                     ✏️ {{ $draftQuestionBanks }} Drafts
                 </a>
                 @endif
-                @if($unreadNotificationCount > 0)
-                <a href="{{ route('notifications.index') }}"
-                   class="tw-hero__pill tw-hero__pill--rose">
-                    🔔 {{ $unreadNotificationCount }} Unread
-                </a>
-                @endif
             </div>
         </div>
         <div>

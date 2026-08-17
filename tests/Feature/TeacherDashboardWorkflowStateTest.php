@@ -130,4 +130,49 @@ class TeacherDashboardWorkflowStateTest extends TestCase
         // Duplicate empty-state CTA is ELIMINATED
         $response->assertDontSee('＋ Create Question Bank');
     }
+
+    /**
+     * ACCEPTANCE TEST 4: Hero does not render redundant notification badge; retains published badge and navbar bell.
+     */
+    public function test_4_hero_does_not_render_notification_badge_and_retains_published_badge()
+    {
+        // 1. Create published bank for teacher
+        QuestionBank::create([
+            'title'        => 'TOEIC Published Bank',
+            'slug'         => 'toeic-published-bank-test',
+            'test_type'    => 'toeic',
+            'status'       => 'published',
+            'is_published' => true,
+            'created_by'   => $this->teacher->id,
+            'description'  => 'Published bank',
+        ]);
+
+        // 2. Create unread notification for teacher
+        \Illuminate\Support\Facades\DB::table('notifications')->insert([
+            'id'              => (string) \Illuminate\Support\Str::uuid(),
+            'type'            => 'App\Notifications\GenericNotification',
+            'notifiable_type' => 'App\Models\User',
+            'notifiable_id'   => $this->teacher->id,
+            'data'            => json_encode(['title' => 'Test Notification', 'message' => 'You have an update.']),
+            'read_at'         => null,
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+
+        $response = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
+
+        $response->assertStatus(200);
+
+        // 1. Published badge still renders in hero
+        $response->assertSee('🟢 1 Published');
+
+        // 2. Hero no longer renders "Unread" notification badge
+        $response->assertDontSee('🔔 1 Unread');
+        $response->assertDontSee('class="tw-hero__pill tw-hero__pill--rose"', false);
+
+        // 3. Navbar notification bell continues to function
+        $response->assertSee('id="notifications-bell-btn"', false);
+        $response->assertSee('id="notif-badge-dot"', false);
+    }
 }
+
