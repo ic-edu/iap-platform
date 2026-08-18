@@ -479,4 +479,95 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $response->assertDontSee('✖ Correct Answer');
         $response->assertSee('✔ 100% Quality Standards Satisfied');
     }
+
+    /**
+     * TEST 10: Valid explanation synchronizes checklist PASS and hides field-level warning.
+     */
+    public function test_10_valid_explanation_synchronizes_checklist_pass_and_hides_field_warning()
+    {
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Provide detailed explanation.',
+        ]);
+
+        $q = Question::create([
+            'question_bank_id' => $this->bank->id,
+            'prompt'           => 'Explain the process of cellular respiration.',
+            'question_type'    => 'essay',
+            'explanation'      => 'Detailed pedagogical explanation covering glycolysis and Krebs cycle.',
+            'difficulty'       => 'medium',
+            'points'           => 5,
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $q->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question is missing detailed explanation',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]));
+
+        $response->assertStatus(200);
+
+        // Checklist MUST show Explanation as Passed (fre-val-badge--pass)
+        $response->assertSeeInOrder(['id="val-badge-explanation"', 'fre-val-badge--pass', 'Explanation'], false);
+
+        // Field level action-required warning MUST be hidden
+        $response->assertSee('id="explanation-action-required"', false);
+        $response->assertSee('display:none', false);
+
+        // Explanation section MUST NOT have fre-highlight class
+        $response->assertDontSee('id="explanation-section" class="fre-section fre-highlight"', false);
+    }
+
+    /**
+     * TEST 11: Empty / invalid explanation synchronizes checklist FAIL and shows field-level warning.
+     */
+    public function test_11_empty_explanation_synchronizes_checklist_fail_and_shows_field_warning()
+    {
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Missing explanation.',
+        ]);
+
+        $q = Question::create([
+            'question_bank_id' => $this->bank->id,
+            'prompt'           => 'Question without explanation',
+            'question_type'    => 'essay',
+            'explanation'      => '',
+            'difficulty'       => 'medium',
+            'points'           => 5,
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $q->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question is missing detailed explanation',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]));
+
+        $response->assertStatus(200);
+
+        // Checklist MUST show Explanation as Failed (fre-val-badge--fail)
+        $response->assertSeeInOrder(['id="val-badge-explanation"', 'fre-val-badge--fail', 'Explanation'], false);
+
+        // Field level warning MUST be shown (fre-highlight class on explanation-section)
+        $response->assertSee('id="explanation-section" class="fre-section fre-highlight"', false);
+        $response->assertSee('Action Required: Provide Explanation');
+    }
 }

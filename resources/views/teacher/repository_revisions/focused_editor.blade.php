@@ -132,7 +132,7 @@
 
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
             @foreach($vChecks as $key => $check)
-            <span class="fre-val-badge {{ $check['passed'] ? 'fre-val-badge--pass' : 'fre-val-badge--fail' }}">
+            <span id="val-badge-{{ $key }}" class="fre-val-badge {{ $check['passed'] ? 'fre-val-badge--pass' : 'fre-val-badge--fail' }}">
                 {{ $check['passed'] ? '✓' : '✖' }} {{ $check['label'] }}
             </span>
             @endforeach
@@ -159,13 +159,28 @@
 
     {{-- FULL QUESTION EDITOR FORM --}}
     @php
-        $fbLower = strtolower($item->feedback);
-        $highlightPrompt      = str_contains($fbLower, 'prompt');
-        $highlightCategory    = str_contains($fbLower, 'category');
-        $highlightDifficulty  = str_contains($fbLower, 'difficulty');
-        $highlightChoices     = str_contains($fbLower, 'choice') || str_contains($fbLower, 'answer');
-        $highlightExplanation = str_contains($fbLower, 'explanation');
-        $highlightMedia       = str_contains($fbLower, 'media') || str_contains($fbLower, 'attachment');
+        $vChecks = $validationData['checks'] ?? [];
+        $vPassed = $validationData['passed_count'] ?? 0;
+        $vTotal  = $validationData['total_count'] ?? count($vChecks);
+
+        $explanationPassed = $vChecks['explanation']['passed'] ?? true;
+        $promptPassed      = $vChecks['prompt']['passed'] ?? true;
+        $categoryPassed    = $vChecks['category']['passed'] ?? true;
+        $difficultyPassed  = $vChecks['difficulty']['passed'] ?? true;
+        $choicesPassed     = $vChecks['choices']['passed'] ?? true;
+        $correctPassed     = $vChecks['correct_answer']['passed'] ?? true;
+        $mediaPassed       = $vChecks['media']['passed'] ?? true;
+
+        $fbLower = strtolower($item->feedback ?? '');
+
+        // Canonical Validation Sync: Field-level highlighting strictly obeys the live validation result
+        $highlightExplanation = !$explanationPassed && (str_contains($fbLower, 'explanation') || empty(trim($question->explanation ?? '')));
+        $highlightPrompt      = !$promptPassed && (str_contains($fbLower, 'prompt') || empty(trim($question->prompt ?? '')));
+        $highlightCategory    = !$categoryPassed && (str_contains($fbLower, 'category') || empty($bank->acl_category_id));
+        $highlightDifficulty  = !$difficultyPassed && (str_contains($fbLower, 'difficulty') || empty($question->difficulty));
+        $highlightChoices     = (!$choicesPassed || !$correctPassed) && (str_contains($fbLower, 'choice') || str_contains($fbLower, 'answer'));
+        $highlightMedia       = !$mediaPassed && (str_contains($fbLower, 'media') || str_contains($fbLower, 'attachment'));
+
         $qTypeVal             = $question->question_type->value ?? $question->question_type ?? 'multiple_choice';
         $qDiffVal             = is_object($question->difficulty ?? null) ? $question->difficulty->value : ($question->difficulty ?? 'medium');
     @endphp
@@ -370,11 +385,9 @@
             <div id="explanation-section" class="fre-section {{ $highlightExplanation ? 'fre-highlight' : '' }}">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
                     <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">💡 Pedagogical Explanation &amp; Rationale</label>
-                    @if($highlightExplanation)
-                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                    <span id="explanation-action-required" style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;{{ $highlightExplanation ? '' : 'display:none;' }}">
                         ⚠️ Action Required: Provide Explanation
                     </span>
-                    @endif
                 </div>
                 <textarea name="explanation" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Provide detailed academic rationale for the correct choice...">{{ old('explanation', $question->explanation ?? '') }}</textarea>
             </div>
@@ -455,6 +468,33 @@ document.addEventListener("DOMContentLoaded", function() {
     const highlighted = document.querySelector('.fre-highlight');
     if (highlighted) {
         highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Live sync for explanation textarea
+    const explanationTextarea = document.querySelector('textarea[name="explanation"]');
+    const explanationSection = document.getElementById('explanation-section');
+    const explanationBadge = document.getElementById('val-badge-explanation');
+    const explanationActionReq = document.getElementById('explanation-action-required');
+
+    if (explanationTextarea) {
+        explanationTextarea.addEventListener('input', function() {
+            const hasVal = this.value.trim().length > 0;
+            if (hasVal) {
+                if (explanationSection) explanationSection.classList.remove('fre-highlight');
+                if (explanationActionReq) explanationActionReq.style.display = 'none';
+                if (explanationBadge) {
+                    explanationBadge.className = 'fre-val-badge fre-val-badge--pass';
+                    explanationBadge.innerHTML = '✓ Explanation';
+                }
+            } else {
+                if (explanationSection) explanationSection.classList.add('fre-highlight');
+                if (explanationActionReq) explanationActionReq.style.display = 'inline';
+                if (explanationBadge) {
+                    explanationBadge.className = 'fre-val-badge fre-val-badge--fail';
+                    explanationBadge.innerHTML = '✖ Explanation';
+                }
+            }
+        });
     }
 });
 
