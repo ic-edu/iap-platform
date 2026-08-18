@@ -89,6 +89,8 @@ class QuestionBankController extends Controller
                 $query->where(function ($q) {
                     $q->where('status', 'published')->orWhere('status', 'approved');
                 });
+            } elseif (in_array($status, ['needs_revision', 'rejected', 'revision_requested'], true)) {
+                $query->whereIn('status', ['needs_revision', 'rejected', 'revision_requested']);
             } else {
                 $query->where('status', $status);
             }
@@ -114,7 +116,7 @@ class QuestionBankController extends Controller
         $totalBanks           = (clone $myBanksQuery)->count();
         $draftBanks           = (clone $myBanksQuery)->where('status', 'draft')->count();
         $pendingApprovalBanks = (clone $myBanksQuery)->whereIn('status', ['pending_approval', 'submitted', 'pending_archive_approval'])->count();
-        $rejectedBanks        = (clone $myBanksQuery)->whereIn('status', ['rejected', 'revision_requested'])->count();
+        $rejectedBanks        = (clone $myBanksQuery)->whereIn('status', ['needs_revision', 'rejected', 'revision_requested'])->count();
         $approvedBanks        = (clone $myBanksQuery)->whereIn('status', ['approved', 'published'])->count();
 
         // "Continue Working" spotlight card — last edited Question Bank

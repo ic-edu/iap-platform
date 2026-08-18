@@ -986,4 +986,50 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $workspaceResponse->assertSee('+ Add Question');
         $workspaceResponse->assertSee('🚀 Submit for Approval');
     }
+
+    /**
+     * TEST 22: Teacher can filter Question Banks by needs_revision in authoring workspace.
+     */
+    public function test_22_teacher_can_filter_question_banks_by_needs_revision()
+    {
+        $revBank = QuestionBank::create([
+            'title'       => 'Needs Revision Filter Unique Test Bank',
+            'slug'        => 'needs-rev-filter-' . uniqid(),
+            'test_type'   => 'toeic',
+            'status'      => 'needs_revision',
+            'created_by'  => $this->teacher->id,
+            'description' => 'Test bank needing revision',
+        ]);
+
+        $draftBank = QuestionBank::create([
+            'title'       => 'Draft Unique Filter Test Bank',
+            'slug'        => 'draft-bank-' . uniqid(),
+            'test_type'   => 'toeic',
+            'status'      => 'draft',
+            'created_by'  => $this->teacher->id,
+            'description' => 'Draft test bank',
+        ]);
+
+        $publishedBank = QuestionBank::create([
+            'title'       => 'Published Unique Filter Test Bank',
+            'slug'        => 'pub-bank-' . uniqid(),
+            'test_type'   => 'toeic',
+            'status'      => 'published',
+            'created_by'  => $this->teacher->id,
+            'description' => 'Published test bank',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('admin.question-banks.index', ['status' => 'needs_revision']));
+
+        $response->assertStatus(200);
+
+        // MUST see needs_revision bank and badge
+        $response->assertSee('Needs Revision Filter Unique Test Bank');
+        $response->assertSee('Needs Revision');
+
+        // MUST NOT see draft or published banks in the filtered result
+        $response->assertDontSee('Draft Unique Filter Test Bank');
+        $response->assertDontSee('Published Unique Filter Test Bank');
+    }
 }

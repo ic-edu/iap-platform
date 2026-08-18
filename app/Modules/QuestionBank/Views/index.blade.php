@@ -422,8 +422,8 @@
                        class="acl-fpill {{ request('status') === 'draft' ? 'acl-fpill--active' : '' }}">Draft</a>
                     <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}"
                        class="acl-fpill {{ request('status') === 'pending_approval' ? 'acl-fpill--active' : '' }}">Pending</a>
-                    <a href="{{ route('admin.question-banks.index', ['status' => 'rejected']) }}"
-                       class="acl-fpill {{ request('status') === 'rejected' ? 'acl-fpill--active' : '' }}">Needs Revision</a>
+                    <a href="{{ route('admin.question-banks.index', ['status' => 'needs_revision']) }}"
+                       class="acl-fpill {{ in_array(request('status'), ['needs_revision', 'rejected', 'revision_requested'], true) ? 'acl-fpill--active' : '' }}">Needs Revision</a>
                     <a href="{{ route('admin.question-banks.index', ['status' => 'approved']) }}"
                        class="acl-fpill {{ request('status') === 'approved' ? 'acl-fpill--active' : '' }}">Approved</a>
                     <a href="{{ route('admin.question-banks.index', ['status' => 'published']) }}"
@@ -468,7 +468,7 @@
                             'published' => 'acl-badge--published',
                             'approved'  => 'acl-badge--approved',
                             'pending_approval', 'submitted', 'pending_archive_approval', 'pending_restore_approval' => 'acl-badge--pending',
-                            'rejected', 'revision_requested' => 'acl-badge--rejected',
+                            'needs_revision', 'rejected', 'revision_requested' => 'acl-badge--rejected',
                             'archived'  => 'acl-badge--archived',
                             default     => 'acl-badge--draft',
                         };
@@ -478,7 +478,7 @@
                             'pending_approval', 'submitted' => 'Pending Approval',
                             'pending_archive_approval' => 'Pending Archive',
                             'pending_restore_approval' => 'Pending Restore',
-                            'rejected', 'revision_requested' => 'Needs Revision',
+                            'needs_revision', 'rejected', 'revision_requested' => 'Needs Revision',
                             'archived'  => 'Archived',
                             default     => 'Draft',
                         };
