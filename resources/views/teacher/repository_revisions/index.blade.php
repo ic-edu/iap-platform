@@ -91,6 +91,25 @@
     @if($revisionRequests->count() > 0)
     <div class="trr-grid">
         @foreach($revisionRequests as $rr)
+        @php
+            $bank = $rr->questionBank;
+            $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
+                || in_array($rr->status, ['RESUBMITTED', 'CLOSED'], true);
+            $totCount = $rr->items->count();
+            $clsCount = $rr->items->where('status', 'CLOSED')->count();
+            $openCount = max(0, $totCount - $clsCount);
+
+            if ($rr->status === 'RESUBMITTED' || $isBankLocked) {
+                $cardStatusLabel = 'RESUBMITTED — AWAITING REVIEW';
+                $badgeClass = 'trr-badge--resubmitted';
+            } elseif ($totCount > 0 && $openCount === 0) {
+                $cardStatusLabel = 'READY FOR RESUBMISSION';
+                $badgeClass = 'trr-badge--ready';
+            } else {
+                $cardStatusLabel = 'OPEN';
+                $badgeClass = 'trr-badge--open';
+            }
+        @endphp
         <div class="trr-card">
             <div>
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;margin-bottom:.75rem;">
@@ -102,20 +121,9 @@
                             ID: {{ substr($rr->id, 0, 13) }} • {{ $rr->created_at?->diffForHumans() }}
                         </div>
                     </div>
-                    @php
-                        $totCount = $rr->items->count();
-                        $clsCount = $rr->items->where('status', 'CLOSED')->count();
-                        $isReadyResubmit = $totCount > 0 && $clsCount >= $totCount;
-                    @endphp
-                    @if($isReadyResubmit)
-                    <span style="padding:.25rem .65rem;border-radius:99px;font-size:.68rem;font-weight:800;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);">
-                        ✔ All Findings Resolved — Ready For Resubmission
+                    <span class="trr-badge {{ $badgeClass }}">
+                        {{ $cardStatusLabel }}
                     </span>
-                    @else
-                    <span class="trr-badge trr-badge--{{ strtolower($rr->status) }}">
-                        {{ $rr->status }}
-                    </span>
-                    @endif
                 </div>
 
                 <div style="font-size:.82rem;color:#cbd5e1;background:#080f1d;padding:.85rem 1rem;border-radius:.65rem;border:1px solid #1e293b;margin-bottom:1rem;">
@@ -123,10 +131,34 @@
                     "{{ Str::limit($rr->notes, 120) ?: 'Please review and fix indicated repository items.' }}"
                 </div>
 
-                <div style="font-size:.78rem;color:#94a3b8;display:flex;gap:1rem;">
-                    <span>⚠️ <strong>{{ $rr->items->count() }}</strong> Actionable Issues</span>
-                    <span>✅ <strong>{{ $rr->items->where('status', 'CLOSED')->count() }}</strong> Fixed</span>
+                @if($rr->status === 'RESUBMITTED' || $isBankLocked)
+                <div style="margin-bottom:.5rem;">
+                    <div style="font-size:.78rem;color:#fbbf24;display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem;">
+                        <span>🔒</span>
+                        <span>Repository has been resubmitted and is awaiting governance review.</span>
+                    </div>
+                    <div style="font-size:.74rem;color:#64748b;">
+                        <span>📋 <strong>{{ $totCount }}</strong> Total Findings</span> •
+                        <span style="color:#34d399;">✅ <strong>{{ $clsCount }}</strong> Fixed</span>
+                    </div>
                 </div>
+                @elseif($openCount === 0)
+                <div style="margin-bottom:.5rem;">
+                    <div style="font-size:.78rem;color:#34d399;display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem;">
+                        <span>✔</span>
+                        <span>All findings resolved. Ready for resubmission.</span>
+                    </div>
+                    <div style="font-size:.74rem;color:#94a3b8;">
+                        <span><strong>0</strong> Findings Remaining</span> •
+                        <span>✅ <strong>{{ $clsCount }}</strong> Fixed</span>
+                    </div>
+                </div>
+                @else
+                <div style="font-size:.78rem;color:#94a3b8;display:flex;gap:1rem;margin-bottom:.5rem;">
+                    <span>⚠️ <strong>{{ $openCount }}</strong> Findings Remaining</span>
+                    <span>✅ <strong>{{ $clsCount }}</strong> Fixed</span>
+                </div>
+                @endif
             </div>
 
             <a href="{{ route('teacher.repository-revisions.show', array_filter([$rr->id, 'from' => request('from')])) }}" style="display:block;text-align:center;padding:.65rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.82rem;font-weight:800;text-decoration:none;">

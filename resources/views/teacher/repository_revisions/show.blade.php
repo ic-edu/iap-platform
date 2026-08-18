@@ -48,6 +48,26 @@
         </a>
     </div>
 
+    @php
+        $bank = $revisionRequest->questionBank;
+        $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
+            || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
+        $totCount = $revisionRequest->items->count();
+        $clsCount = $revisionRequest->items->where('status', 'CLOSED')->count();
+        $openCount = max(0, $totCount - $clsCount);
+
+        if ($revisionRequest->status === 'RESUBMITTED' || $isBankLocked) {
+            $topStatusLabel = 'RESUBMITTED — AWAITING REVIEW';
+            $topBadgeStyle = 'background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;';
+        } elseif ($totCount > 0 && $openCount === 0) {
+            $topStatusLabel = 'READY FOR RESUBMISSION';
+            $topBadgeStyle = 'background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;';
+        } else {
+            $topStatusLabel = 'OPEN';
+            $topBadgeStyle = 'background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;';
+        }
+    @endphp
+
     {{-- Repository Header Card --}}
     <div class="trr-panel">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
@@ -62,11 +82,18 @@
             </div>
 
             <div style="display:flex;gap:.65rem;align-items:center;">
-                <span style="padding:.4rem .9rem;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;border-radius:.6rem;font-size:.78rem;font-weight:800;text-transform:uppercase;">
-                    Status: {{ $revisionRequest->status }}
+                <span style="padding:.4rem .9rem;border-radius:.6rem;font-size:.78rem;font-weight:800;text-transform:uppercase;{{ $topBadgeStyle }}">
+                    Status: {{ $topStatusLabel }}
                 </span>
             </div>
         </div>
+
+        @if($isBankLocked)
+        <div style="margin-top:1rem;padding:.75rem 1rem;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:.6rem;display:flex;align-items:center;gap:.6rem;font-size:.82rem;color:#fbbf24;">
+            <span>🔒</span>
+            <span><strong>Repository locked while awaiting governance review.</strong> Editing actions are disabled.</span>
+        </div>
+        @endif
 
         <div style="margin-top:1.25rem;padding:1rem 1.25rem;background:#1e293b;border-left:4px solid #6366f1;border-radius:.65rem;">
             <div style="font-size:.72rem;font-weight:800;color:#818cf8;text-transform:uppercase;margin-bottom:.25rem;">Reviewer Feedback Notes:</div>
@@ -79,17 +106,26 @@
     {{-- Actionable Issues & Findings List (PART 3) --}}
     <div class="trr-panel">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+            @if($isBankLocked)
             <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;">
-                ⚠️ Actionable Quality Findings ({{ $revisionRequest->items->count() }})
+                📋 Repository Findings ({{ $totCount }})
             </h3>
-            <span style="font-size:.78rem;color:#94a3b8;">Fix issues below and resubmit for automatic IRQA verification.</span>
+            <span style="font-size:.78rem;color:#fbbf24;">Repository has been resubmitted and is awaiting governance review.</span>
+            @elseif($openCount === 0)
+            <h3 style="font-size:1.1rem;font-weight:800;color:#34d399;margin:0;">
+                ✔ All Findings Resolved ({{ $totCount }})
+            </h3>
+            <span style="font-size:.78rem;color:#34d399;">All issues fixed. You can now resubmit the repository below.</span>
+            @else
+            <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;">
+                ⚠️ Actionable Quality Findings ({{ $openCount }} remaining)
+            </h3>
+            <span style="font-size:.78rem;color:#94a3b8;">Fix remaining issues below and resubmit for automatic IRQA verification.</span>
+            @endif
         </div>
 
         @foreach($revisionRequest->items as $index => $item)
         @php
-            $bank = $revisionRequest->questionBank;
-            $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
-                || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
             $isQuestionFinding = !empty($item->question_id);
             $fbLower = strtolower($item->feedback ?? '');
         @endphp
@@ -151,29 +187,7 @@
     </div>
 
     {{-- Bottom Resubmit Section (PART 3 & PART 6) --}}
-    @php
-        $bank = $revisionRequest->questionBank;
-        $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
-            || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
-    @endphp
-
-    @if(!$isBankLocked)
-    <div class="trr-panel" style="border-color:#3730a3;background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
-            <div>
-                <h3 style="font-size:1.15rem;font-weight:900;color:#fff;margin:0 0 .25rem;">Ready to Resubmit Repository?</h3>
-                <p style="font-size:.82rem;color:#94a3b8;margin:0;">Submitting will automatically execute an IRQA re-scan, close resolved findings, and notify the Repository Manager.</p>
-            </div>
-
-            <form method="POST" action="{{ route('teacher.repository-revisions.resubmit', $revisionRequest->id) }}">
-                @csrf
-                <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all inline-flex items-center gap-2">
-                    🚀 Resubmit Repository &amp; Trigger IRQA Re-Scan
-                </button>
-            </form>
-        </div>
-    </div>
-    @else
+    @if($isBankLocked)
     <div class="trr-panel" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.05);">
         <div style="display:flex;align-items:center;gap:.85rem;">
             <span style="font-size:1.4rem;">🔒</span>
@@ -181,6 +195,35 @@
                 <h4 style="font-size:.95rem;font-weight:800;color:#fbbf24;margin:0 0 .2rem;">Repository Locked For Governance Approval</h4>
                 <p style="font-size:.8rem;color:#94a3b8;margin:0;">This repository is currently awaiting governance review. Editing is disabled until a Repository Manager acts on the submission.</p>
             </div>
+        </div>
+    </div>
+    @elseif($openCount === 0)
+    <div class="trr-panel" style="border-color:#059669;background:linear-gradient(135deg, #0f172a 0%, #064e3b 100%);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+            <div>
+                <h3 style="font-size:1.15rem;font-weight:900;color:#fff;margin:0 0 .25rem;">✔ All Findings Resolved — Ready to Resubmit</h3>
+                <p style="font-size:.82rem;color:#a7f3d0;margin:0;">Submitting will automatically execute an IRQA re-scan, lock the repository, and notify the Repository Manager.</p>
+            </div>
+
+            <form method="POST" action="{{ route('teacher.repository-revisions.resubmit', $revisionRequest->id) }}">
+                @csrf
+                <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-950/50 transition-all inline-flex items-center gap-2 cursor-pointer">
+                    🚀 Resubmit Repository &amp; Trigger IRQA Re-Scan
+                </button>
+            </form>
+        </div>
+    </div>
+    @else
+    <div class="trr-panel" style="border-color:#334155;background:#0f172a;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+            <div>
+                <h3 style="font-size:1.05rem;font-weight:800;color:#cbd5e1;margin:0 0 .25rem;">Resolve All Findings to Resubmit</h3>
+                <p style="font-size:.82rem;color:#64748b;margin:0;">There are <strong>{{ $openCount }}</strong> outstanding finding(s) remaining. Fix all findings to enable resubmission.</p>
+            </div>
+
+            <button type="button" disabled class="px-6 py-3 bg-slate-800 text-slate-500 font-extrabold text-xs rounded-xl border border-slate-700 cursor-not-allowed inline-flex items-center gap-2" title="All findings must be resolved before resubmitting">
+                🔒 Resubmit Disabled ({{ $openCount }} Remaining)
+            </button>
         </div>
     </div>
     @endif

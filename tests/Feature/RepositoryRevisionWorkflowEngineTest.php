@@ -1032,4 +1032,112 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $response->assertDontSee('Draft Unique Filter Test Bank');
         $response->assertDontSee('Published Unique Filter Test Bank');
     }
+
+    /**
+     * TEST 23: Complete synchronization of Revision Task Card and Workspace status presentation.
+     */
+    public function test_23_revision_status_synchronization_across_card_and_workspace()
+    {
+        // ── SCENARIO A: Revision in progress with open findings (OPEN / needs_revision)
+        $this->bank->status = 'needs_revision';
+        $this->bank->save();
+
+        $revReq = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Please revise Question 1.',
+        ]);
+
+        $itemOpen = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revReq->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question 1 explanation missing.',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Verify Index Card
+        $indexResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('OPEN');
+        $indexResponse->assertSee('1</strong> Findings Remaining', false);
+        $indexResponse->assertDontSee('READY FOR RESUBMISSION');
+        $indexResponse->assertDontSee('RESUBMITTED — AWAITING REVIEW');
+
+        // Verify Detail Workspace
+        $showResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revReq->id));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('Status: OPEN');
+        $showResponse->assertSee('Actionable Quality Findings (1 remaining)');
+        $showResponse->assertSee('Resubmit Disabled (1 Remaining)');
+        $showResponse->assertDontSee('Status: RESUBMITTED — AWAITING REVIEW');
+
+        // ── SCENARIO B: All findings resolved (READY FOR RESUBMISSION)
+        $itemOpen->status = 'CLOSED';
+        $itemOpen->save();
+
+        // Verify Index Card
+        $indexResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('READY FOR RESUBMISSION');
+        $indexResponse->assertSee('0</strong> Findings Remaining', false);
+        $indexResponse->assertSee('All findings resolved. Ready for resubmission.');
+        $indexResponse->assertDontSee('Actionable Issues');
+        $indexResponse->assertDontSee('RESUBMITTED — AWAITING REVIEW');
+
+        // Verify Detail Workspace
+        $showResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revReq->id));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('Status: READY FOR RESUBMISSION');
+        $showResponse->assertSee('All Findings Resolved (1)');
+        $showResponse->assertSee('Resubmit Repository &amp; Trigger IRQA Re-Scan', false);
+        $showResponse->assertDontSee('Status: RESUBMITTED — AWAITING REVIEW');
+
+        // ── SCENARIO C: After Resubmission (RESUBMITTED / pending_approval)
+        $revReq->status = 'RESUBMITTED';
+        $revReq->save();
+        $this->bank->status = 'pending_approval';
+        $this->bank->save();
+
+        // Create an unclosed finding to verify it renders as SUBMITTED — AWAITING REVIEW
+        $itemAwaiting = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revReq->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Historical finding under review',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Verify Index Card
+        $indexResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('RESUBMITTED — AWAITING REVIEW');
+        $indexResponse->assertSee('Repository has been resubmitted and is awaiting governance review.');
+        $indexResponse->assertDontSee('Findings Remaining');
+        $indexResponse->assertDontSee('Actionable Issues');
+        $indexResponse->assertDontSee('READY FOR RESUBMISSION');
+        $indexResponse->assertDontSee('All Findings Resolved — Ready For Resubmission');
+
+        // Verify Detail Workspace
+        $showResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revReq->id));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('Status: RESUBMITTED — AWAITING REVIEW');
+        $showResponse->assertSee('Repository locked while awaiting governance review.');
+        $showResponse->assertSee('Repository Findings (2)');
+        $showResponse->assertSee('SUBMITTED — AWAITING REVIEW');
+        $showResponse->assertSee('Repository Locked For Governance Approval');
+        $showResponse->assertDontSee('Status: OPEN');
+        $showResponse->assertDontSee('Actionable Quality Findings');
+        $showResponse->assertDontSee('Ready to Resubmit Repository?');
+    }
 }
