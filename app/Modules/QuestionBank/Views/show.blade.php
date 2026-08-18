@@ -531,52 +531,80 @@
             updateAnswerOptionsUI('create');
         });
 
-        function updateAnswerOptionsUI(mode = 'create') {
+        function updateAnswerOptionsUI(mode = 'create', existingChoices = null) {
             const prefix = (mode === 'edit') ? 'eq_' : 'q_';
             const containerId = (mode === 'edit') ? 'eq_dynamic_answer_container' : 'dynamic_answer_container';
             const type = document.getElementById(prefix + 'question_type').value;
             const container = document.getElementById(containerId);
 
-            if (['single_choice', 'listening', 'reading'].includes(type)) {
+            if (['single_choice', 'listening', 'reading', 'multiple_choice'].includes(type)) {
+                const isMultiple = (type === 'multiple_choice');
+                const titleText = isMultiple
+                    ? 'Multiple Choice Answer Options (Check all correct choices)'
+                    : 'Single Choice Answer Options (Select 1 Correct Answer)';
+                const inputType = isMultiple ? 'checkbox' : 'radio';
+                const inputName = isMultiple ? 'correct_choices[]' : 'correct_choice';
+
+                // Standard initial set: exactly 4 choices (A, B, C, D)
+                let choicesData = [
+                    { label: 'A', content: '', is_correct: true },
+                    { label: 'B', content: '', is_correct: false },
+                    { label: 'C', content: '', is_correct: false },
+                    { label: 'D', content: '', is_correct: false }
+                ];
+
+                if (existingChoices && existingChoices.length > 0) {
+                    choicesData = existingChoices.map((c, idx) => ({
+                        label: c.label || String.fromCharCode(65 + idx),
+                        content: c.content || '',
+                        is_correct: !!c.is_correct
+                    }));
+                }
+
                 container.innerHTML = `
-                    <label class="block text-xs font-bold text-white mb-2">Single Choice Answer Options (Select 1 Correct Answer)</label>
-                    ${['A', 'B', 'C', 'D'].map((lbl, i) => `
-                        <div class="flex items-center gap-3">
-                            <input type="radio" name="correct_choice" value="${i}" ${i === 0 ? 'checked' : ''} title="Select as correct answer">
-                            <span class="font-bold text-xs text-indigo-400 w-4">${lbl}</span>
-                            <input type="hidden" name="choices[${i}][label]" value="${lbl}">
-                            <input type="text" id="${prefix}choice_${i}" name="choices[${i}][content]" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${lbl} content" required>
-                        </div>
-                    `).join('')}
-                `;
-            } else if (type === 'multiple_choice') {
-                container.innerHTML = `
-                    <label class="block text-xs font-bold text-white mb-2">Multiple Choice Answer Options (Check all correct choices)</label>
-                    ${['A', 'B', 'C', 'D'].map((lbl, i) => `
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" name="correct_choices[]" value="${i}" ${i === 0 ? 'checked' : ''} title="Check if correct">
-                            <span class="font-bold text-xs text-indigo-400 w-4">${lbl}</span>
-                            <input type="hidden" name="choices[${i}][label]" value="${lbl}">
-                            <input type="text" id="${prefix}choice_${i}" name="choices[${i}][content]" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${lbl} content" required>
-                        </div>
-                    `).join('')}
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-bold text-white">${titleText}</label>
+                        <button type="button" onclick="addDynamicChoice('${prefix}', '${type}')" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-950/60 border border-indigo-500/30 px-2.5 py-1 rounded cursor-pointer transition-colors">
+                            + Add Option
+                        </button>
+                    </div>
+                    <div id="${prefix}choices_list" class="space-y-2.5">
+                        ${choicesData.map((c, i) => `
+                            <div class="choice-item-row flex items-center gap-3 bg-slate-950/40 p-2 rounded-lg border border-slate-900">
+                                <input type="${inputType}" name="${inputName}" value="${i}" ${c.is_correct ? 'checked' : ''} title="${isMultiple ? 'Check if correct' : 'Select as correct answer'}">
+                                <span class="choice-item-label font-bold text-xs text-indigo-400 w-4">${c.label}</span>
+                                <input type="hidden" class="choice-input-label" name="choices[${i}][label]" value="${c.label}">
+                                <input type="text" id="${prefix}choice_${i}" name="choices[${i}][content]" value="${c.content.replace(/"/g, '&quot;')}" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${c.label} content" required>
+                                <button type="button" onclick="removeDynamicChoice(this, '${prefix}')" class="choice-remove-btn text-rose-400 hover:text-rose-300 text-xs px-2 py-1 cursor-pointer" title="Remove choice" style="${choicesData.length <= 2 ? 'display:none;' : ''}">✕</button>
+                            </div>
+                        `).join('')}
+                    </div>
                 `;
             } else if (type === 'true_false') {
+                let tfCorrect = 'true';
+                if (existingChoices && existingChoices.length > 0) {
+                    const falseChoice = existingChoices.find(c => c.content === 'False' && c.is_correct);
+                    if (falseChoice) tfCorrect = 'false';
+                }
                 container.innerHTML = `
                     <label class="block text-xs font-bold text-white mb-2">True / False Correct Answer</label>
                     <div class="flex items-center gap-6">
                         <label class="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
-                            <input type="radio" name="tf_correct_choice" value="true" checked class="text-indigo-600 focus:ring-0"> True
+                            <input type="radio" name="tf_correct_choice" value="true" ${tfCorrect === 'true' ? 'checked' : ''} class="text-indigo-600 focus:ring-0"> True
                         </label>
                         <label class="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
-                            <input type="radio" name="tf_correct_choice" value="false" class="text-indigo-600 focus:ring-0"> False
+                            <input type="radio" name="tf_correct_choice" value="false" ${tfCorrect === 'false' ? 'checked' : ''} class="text-indigo-600 focus:ring-0"> False
                         </label>
                     </div>
                 `;
             } else if (type === 'short_answer') {
+                let initialText = '';
+                if (existingChoices && existingChoices.length > 0) {
+                    initialText = existingChoices[0].content || '';
+                }
                 container.innerHTML = `
                     <label class="block text-xs font-bold text-white mb-1">Exact Correct Answer String *</label>
-                    <input type="text" id="${prefix}short_answer_text" name="short_answer_text" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter expected exact string answer...">
+                    <input type="text" id="${prefix}short_answer_text" name="short_answer_text" value="${initialText.replace(/"/g, '&quot;')}" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter expected exact string answer...">
                 `;
             } else if (type === 'essay') {
                 container.innerHTML = `
@@ -584,6 +612,67 @@
                     <textarea id="${prefix}reference_answer_text" name="reference_answer_text" rows="3" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter model reference answer or grading rubric..."></textarea>
                 `;
             }
+        }
+
+        function addDynamicChoice(prefix, type) {
+            const list = document.getElementById(prefix + 'choices_list');
+            if (!list) return;
+            const rows = list.querySelectorAll('.choice-item-row');
+            const idx = rows.length;
+            const label = String.fromCharCode(65 + idx);
+            const isMultiple = (type === 'multiple_choice');
+            const inputType = isMultiple ? 'checkbox' : 'radio';
+            const inputName = isMultiple ? 'correct_choices[]' : 'correct_choice';
+
+            const div = document.createElement('div');
+            div.className = 'choice-item-row flex items-center gap-3 bg-slate-950/40 p-2 rounded-lg border border-slate-900';
+            div.innerHTML = `
+                <input type="${inputType}" name="${inputName}" value="${idx}" title="${isMultiple ? 'Check if correct' : 'Select as correct answer'}">
+                <span class="choice-item-label font-bold text-xs text-indigo-400 w-4">${label}</span>
+                <input type="hidden" class="choice-input-label" name="choices[${idx}][label]" value="${label}">
+                <input type="text" id="${prefix}choice_${idx}" name="choices[${idx}][content]" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${label} content" required>
+                <button type="button" onclick="removeDynamicChoice(this, '${prefix}')" class="choice-remove-btn text-rose-400 hover:text-rose-300 text-xs px-2 py-1 cursor-pointer" title="Remove choice">✕</button>
+            `;
+            list.appendChild(div);
+            reindexDynamicChoices(prefix);
+        }
+
+        function removeDynamicChoice(btn, prefix) {
+            const list = document.getElementById(prefix + 'choices_list');
+            if (!list) return;
+            const rows = list.querySelectorAll('.choice-item-row');
+            if (rows.length <= 2) return;
+            btn.closest('.choice-item-row').remove();
+            reindexDynamicChoices(prefix);
+        }
+
+        function reindexDynamicChoices(prefix) {
+            const list = document.getElementById(prefix + 'choices_list');
+            if (!list) return;
+            const rows = list.querySelectorAll('.choice-item-row');
+            rows.forEach((row, idx) => {
+                const label = String.fromCharCode(65 + idx);
+                const input = row.querySelector('input[type="radio"], input[type="checkbox"]');
+                const labelSpan = row.querySelector('.choice-item-label');
+                const hiddenLabel = row.querySelector('.choice-input-label');
+                const textInput = row.querySelector('input[type="text"]');
+                const removeBtn = row.querySelector('.choice-remove-btn');
+
+                if (input) input.value = idx;
+                if (labelSpan) labelSpan.textContent = label;
+                if (hiddenLabel) {
+                    hiddenLabel.name = `choices[${idx}][label]`;
+                    hiddenLabel.value = label;
+                }
+                if (textInput) {
+                    textInput.id = `${prefix}choice_${idx}`;
+                    textInput.name = `choices[${idx}][content]`;
+                    textInput.placeholder = `Option ${label} content`;
+                }
+                if (removeBtn) {
+                    removeBtn.style.display = rows.length > 2 ? 'inline-block' : 'none';
+                }
+            });
         }
 
         // View Question Modal
@@ -665,15 +754,7 @@
                 removeAttachedMedia('edit');
             }
 
-            updateAnswerOptionsUI('edit');
-
-            // Pre-fill choices
-            if (q.choices && q.choices.length > 0) {
-                q.choices.forEach((c, idx) => {
-                    const input = document.getElementById(`eq_choice_${idx}`);
-                    if (input) input.value = c.content;
-                });
-            }
+            updateAnswerOptionsUI('edit', q.choices || null);
 
             document.getElementById('edit-question-modal').classList.remove('hidden');
         }

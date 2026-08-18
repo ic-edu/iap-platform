@@ -63,18 +63,84 @@
 
             {{-- Choices Section --}}
             <div>
-                <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.6rem;">Choices & Correct Answer Selection</label>
-                <div style="display:flex;flex-direction:column;gap:.6rem;">
-                    @php $choicesList = $question->choices && $question->choices->isNotEmpty() ? $question->choices : collect([1,2,3,4]); @endphp
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+                    <label style="font-size:.85rem;font-weight:700;color:#cbd5e1;margin:0;">Choices &amp; Correct Answer Selection</label>
+                    <button type="button" onclick="addChoiceRow()" style="font-size:.75rem;font-weight:700;color:#818cf8;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);padding:.25rem .65rem;border-radius:.4rem;cursor:pointer;">
+                        + Add Choice
+                    </button>
+                </div>
+                <div id="choices-container" style="display:flex;flex-direction:column;gap:.6rem;">
+                    @php 
+                        $choicesList = $question->choices && $question->choices->isNotEmpty() 
+                            ? $question->choices 
+                            : collect([
+                                (object)['content' => '', 'choice_text' => '', 'is_correct' => true],
+                                (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                                (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                                (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                            ]); 
+                    @endphp
                     @foreach($choicesList as $cIdx => $cObj)
-                    <div style="display:flex;align-items:center;gap:.75rem;background:#1e293b;padding:.65rem .85rem;border-radius:.6rem;border:1px solid #334155;">
-                        <input type="radio" name="correct_choice" value="{{ $cIdx }}" {{ is_object($cObj) && $cObj->is_correct ? 'checked' : '' }} style="accent-color:#34d399;width:1.1rem;height:1.1rem;">
-                        <span style="font-weight:800;color:#818cf8;font-size:.85rem;width:1.5rem;">{{ chr(65 + $cIdx) }}.</span>
+                    <div class="choice-row" style="display:flex;align-items:center;gap:.75rem;background:#1e293b;padding:.65rem .85rem;border-radius:.6rem;border:1px solid #334155;">
+                        <input type="radio" name="correct_choice" value="{{ $cIdx }}" {{ is_object($cObj) && $cObj->is_correct ? 'checked' : ($cIdx === 0 ? 'checked' : '') }} style="accent-color:#34d399;width:1.1rem;height:1.1rem;">
+                        <span class="choice-label" style="font-weight:800;color:#818cf8;font-size:.85rem;width:1.5rem;">{{ chr(65 + $cIdx) }}.</span>
                         <input type="text" name="choices[{{ $cIdx }}]" value="{{ is_object($cObj) ? ($cObj->content ?? $cObj->choice_text) : '' }}" placeholder="Option {{ chr(65 + $cIdx) }} text" style="flex:1;padding:.5rem .75rem;background:#0f172a;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.88rem;">
+                        <button type="button" onclick="removeChoiceRow(this)" class="btn-remove-choice" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;line-height:1;" title="Remove choice">✕</button>
                     </div>
                     @endforeach
                 </div>
             </div>
+
+            <script>
+            function reindexChoices() {
+                const rows = document.querySelectorAll('#choices-container .choice-row');
+                rows.forEach((row, idx) => {
+                    const label = String.fromCharCode(65 + idx);
+                    const radio = row.querySelector('input[type="radio"]');
+                    const labelSpan = row.querySelector('.choice-label');
+                    const textInput = row.querySelector('input[type="text"]');
+                    const removeBtn = row.querySelector('.btn-remove-choice');
+
+                    if (radio) radio.value = idx;
+                    if (labelSpan) labelSpan.textContent = label + '.';
+                    if (textInput) {
+                        textInput.name = `choices[${idx}]`;
+                        textInput.placeholder = `Option ${label} text`;
+                    }
+                    if (removeBtn) {
+                        removeBtn.style.display = rows.length > 2 ? 'inline-block' : 'none';
+                    }
+                });
+            }
+
+            function addChoiceRow() {
+                const container = document.getElementById('choices-container');
+                const rows = container.querySelectorAll('.choice-row');
+                const idx = rows.length;
+                const label = String.fromCharCode(65 + idx);
+
+                const div = document.createElement('div');
+                div.className = 'choice-row';
+                div.style.cssText = 'display:flex;align-items:center;gap:.75rem;background:#1e293b;padding:.65rem .85rem;border-radius:.6rem;border:1px solid #334155;';
+                div.innerHTML = `
+                    <input type="radio" name="correct_choice" value="${idx}" style="accent-color:#34d399;width:1.1rem;height:1.1rem;">
+                    <span class="choice-label" style="font-weight:800;color:#818cf8;font-size:.85rem;width:1.5rem;">${label}.</span>
+                    <input type="text" name="choices[${idx}]" placeholder="Option ${label} text" style="flex:1;padding:.5rem .75rem;background:#0f172a;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.88rem;">
+                    <button type="button" onclick="removeChoiceRow(this)" class="btn-remove-choice" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;line-height:1;" title="Remove choice">✕</button>
+                `;
+                container.appendChild(div);
+                reindexChoices();
+            }
+
+            function removeChoiceRow(btn) {
+                const rows = document.querySelectorAll('#choices-container .choice-row');
+                if (rows.length <= 2) return;
+                btn.closest('.choice-row').remove();
+                reindexChoices();
+            }
+
+            document.addEventListener('DOMContentLoaded', reindexChoices);
+            </script>
 
             <div>
                 <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Explanation / Rationale</label>
