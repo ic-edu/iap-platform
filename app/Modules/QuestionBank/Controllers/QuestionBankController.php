@@ -7,6 +7,8 @@ use App\Models\AclAuditTrail;
 use App\Models\AclCategory;
 use App\Models\AclVersion;
 use App\Models\QuestionBankArchiveRequest;
+use App\Models\RepositoryActivityLog;
+use App\Models\RepositoryRevisionRequest;
 use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\QuestionBank\Models\Question;
@@ -17,8 +19,10 @@ use App\Services\AclCoverageService;
 use App\Services\AclHealthScoreService;
 use App\Services\AclVersioningService;
 use App\Services\ActivityLogger;
+use App\Services\RepositoryQualityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -244,6 +248,63 @@ class QuestionBankController extends Controller
 
         $questionBank->update($validated);
 
+        // Auto-close metadata & repository-level findings if active revision exists and validation passes
+        if (Schema::hasTable('repository_revision_requests')) {
+            $activeRevision = RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
+                ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+                ->latest()
+                ->first();
+
+            if ($activeRevision) {
+                $qualityService = app(RepositoryQualityService::class);
+                $rescanAudit = $qualityService->validateRepository($questionBank);
+                $currentWarnings = $rescanAudit['warnings'] ?? [];
+
+                foreach ($activeRevision->items()->where('status', 'OPEN')->get() as $openItem) {
+                    $fbLower = strtolower($openItem->feedback ?? '');
+                    $stillPresent = false;
+
+                    // 1. Exact match
+                    foreach ($currentWarnings as $cw) {
+                        if (trim(strtolower($cw)) === $fbLower) {
+                            $stillPresent = true;
+                            break;
+                        }
+                    }
+
+                    // 2. Keyword-specific domain checks
+                    if (!$stillPresent) {
+                        if (str_contains($fbLower, 'description')) {
+                            $stillPresent = empty(trim($questionBank->description ?? ''))
+                                || collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), 'description'));
+                        } elseif (str_contains($fbLower, 'version')) {
+                            $stillPresent = empty(trim($questionBank->current_version ?? ''))
+                                || collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), 'version'));
+                        } elseif (str_contains($fbLower, 'category')) {
+                            $stillPresent = empty($questionBank->acl_category_id)
+                                || collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), 'category'));
+                        } elseif (str_contains($fbLower, 'insufficient question') || str_contains($fbLower, 'question count')) {
+                            $stillPresent = $questionBank->questions()->count() === 0
+                                || collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), 'insufficient question') || str_contains(strtolower($w), 'question count'));
+                        }
+                    }
+
+                    if (!$stillPresent) {
+                        $openItem->status = 'CLOSED';
+                        $openItem->save();
+
+                        RepositoryActivityLog::create([
+                            'resource_type' => 'QuestionBank',
+                            'resource_id'   => (string) $questionBank->id,
+                            'actor_id'      => $user?->id,
+                            'action'        => 'teacher_resolved_finding',
+                            'approval_note' => "Repository metadata update resolved finding #{$openItem->id}: {$openItem->feedback}",
+                        ]);
+                    }
+                }
+            }
+        }
+
         ActivityLogger::log('QUESTION_BANK_EDITED', "Updated question bank: {$questionBank->title}", $user);
 
         // If content was published, create new version snapshot to preserve history
@@ -286,6 +347,24 @@ class QuestionBankController extends Controller
             }
             if (in_array($questionBank->status, ['pending_approval', 'approved', 'published'], true)) {
                 abort(403, 'Question Bank has already been submitted for governance approval.');
+            }
+
+            // State Integrity Guard: If there is an active revision request, ensure all findings are CLOSED
+            if (Schema::hasTable('repository_revision_requests')) {
+                $activeRevision = RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
+                    ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+                    ->latest()
+                    ->first();
+
+                if ($activeRevision) {
+                    $unresolvedCount = $activeRevision->items()->where('status', '!=', 'CLOSED')->count();
+                    if ($unresolvedCount > 0) {
+                        return redirect()->back()
+                            ->with('error', "Cannot submit repository for approval. There are {$unresolvedCount} unresolved revision finding(s) that must be fixed first.");
+                    }
+                    $activeRevision->status = 'RESUBMITTED';
+                    $activeRevision->save();
+                }
             }
         }
 

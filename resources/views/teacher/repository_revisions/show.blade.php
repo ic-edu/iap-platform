@@ -86,15 +86,32 @@
         </div>
 
         @foreach($revisionRequest->items as $index => $item)
+        @php
+            $bank = $revisionRequest->questionBank;
+            $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
+                || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
+            $isQuestionFinding = !empty($item->question_id);
+            $fbLower = strtolower($item->feedback ?? '');
+        @endphp
         <div class="trr-item-card {{ $item->status === 'CLOSED' ? 'trr-item-card--closed' : '' }}">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:.5rem;">
                 <div style="display:flex;align-items:center;gap:.6rem;">
                     <span style="font-size:.85rem;font-weight:900;color:#818cf8;">#{{ $index + 1 }}</span>
                     <span style="font-size:.88rem;font-weight:800;color:#fff;">{{ $item->feedback }}</span>
                 </div>
-                <span style="padding:.2rem .55rem;border-radius:.4rem;font-size:.68rem;font-weight:800;text-transform:uppercase;{{ $item->status === 'CLOSED' ? 'background:rgba(52,211,153,.2);color:#34d399;' : 'background:rgba(244,63,94,.2);color:#fb7185;' }}">
-                    {{ $item->status }}
+                @if($item->status === 'CLOSED')
+                <span style="padding:.2rem .55rem;border-radius:.4rem;font-size:.68rem;font-weight:800;text-transform:uppercase;background:rgba(52,211,153,.2);color:#34d399;">
+                    CLOSED
                 </span>
+                @elseif($isBankLocked)
+                <span style="padding:.2rem .55rem;border-radius:.4rem;font-size:.68rem;font-weight:800;text-transform:uppercase;background:rgba(251,191,36,.2);color:#fbbf24;border:1px solid rgba(251,191,36,.4);">
+                    SUBMITTED — AWAITING REVIEW
+                </span>
+                @else
+                <span style="padding:.2rem .55rem;border-radius:.4rem;font-size:.68rem;font-weight:800;text-transform:uppercase;background:rgba(244,63,94,.2);color:#fb7185;">
+                    OPEN
+                </span>
+                @endif
             </div>
 
             @if($item->suggested_fix)
@@ -104,13 +121,6 @@
             @endif
 
             @php
-                $bank = $revisionRequest->questionBank;
-                $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
-                    || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
-
-                $isQuestionFinding = !empty($item->question_id);
-                $fbLower = strtolower($item->feedback ?? '');
-
                 if ($isBankLocked) {
                     $actionUrl = route('admin.question-banks.show', [
                         $revisionRequest->question_bank_id,

@@ -225,10 +225,25 @@ class TeacherRepositoryRevisionController extends Controller
         $currentWarnings = $rescanAudit['warnings'] ?? [];
 
         $stillPresent = false;
+        $fbLower = strtolower($item->feedback ?? '');
+
+        // 1. Exact match
         foreach ($currentWarnings as $cw) {
-            if (str_contains(strtolower($item->feedback), strtolower(substr($cw, 0, 15)))) {
+            if (trim(strtolower($cw)) === $fbLower) {
                 $stillPresent = true;
                 break;
+            }
+        }
+
+        // 2. Question-level domain checks
+        if (!$stillPresent && $question) {
+            $qPrompt = strtolower($question->prompt ?? '');
+            if (str_contains($fbLower, 'explanation') && empty(trim($question->explanation ?? ''))) {
+                $stillPresent = true;
+            } elseif (str_contains($fbLower, 'prompt') && empty(trim($question->prompt ?? ''))) {
+                $stillPresent = true;
+            } elseif (str_contains($fbLower, 'choice') || str_contains($fbLower, 'designated correct')) {
+                $stillPresent = collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), $qPrompt) || str_contains(strtolower($w), (string) $question->id));
             }
         }
 

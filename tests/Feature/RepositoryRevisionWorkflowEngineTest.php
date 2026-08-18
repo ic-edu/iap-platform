@@ -725,4 +725,192 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         ]));
         $response->assertSessionHas('error');
     }
+
+    /**
+     * TEST 16: Revision resubmit cannot proceed while any finding is OPEN.
+     */
+    public function test_16_revision_cannot_be_resubmitted_while_any_finding_is_open()
+    {
+        $this->bank->status = 'needs_revision';
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Fix issues.',
+        ]);
+
+        $itemOpen = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Missing metadata: Repository Description',
+            'status'                         => 'OPEN',
+        ]);
+
+        $itemClosed = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question explanation needs detail',
+            'status'                         => 'CLOSED',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->post(route('teacher.repository-revisions.resubmit', $revisionRequest->id));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+
+        // Verify status has NOT changed
+        $this->assertEquals('needs_revision', $this->bank->fresh()->status);
+        $this->assertEquals('OPEN', $revisionRequest->fresh()->status);
+    }
+
+    /**
+     * TEST 17: All findings CLOSED allows resubmission and transitions QuestionBank to pending_approval.
+     */
+    public function test_17_all_findings_closed_allows_resubmission_and_transitions_bank_to_pending_approval()
+    {
+        $this->bank->status = 'needs_revision';
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Fix issues.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question choice missing',
+            'status'                         => 'CLOSED',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->post(route('teacher.repository-revisions.resubmit', $revisionRequest->id));
+
+        $response->assertRedirect(route('teacher.repository-revisions.index'));
+        $this->assertEquals('pending_approval', $this->bank->fresh()->status);
+        $this->assertEquals('RESUBMITTED', $revisionRequest->fresh()->status);
+    }
+
+    /**
+     * TEST 18: Updating repository metadata auto-closes matching metadata finding when resolved.
+     */
+    public function test_18_metadata_update_automatically_closes_matching_metadata_finding()
+    {
+        $this->bank->status = 'needs_revision';
+        $this->bank->description = null;
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Provide repository description.',
+        ]);
+
+        $metaItem = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Missing metadata: Repository Description',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Submit metadata update with description populated
+        $response = $this->actingAs($this->teacher)
+            ->put(route('admin.question-banks.update', $this->bank->id), [
+                'title'       => $this->bank->title,
+                'test_type'   => 'toeic',
+                'description' => 'Comprehensive description for academic testing repository.',
+            ]);
+
+        $response->assertRedirect(route('admin.question-banks.show', [$this->bank->id]));
+
+        // Finding MUST be automatically closed
+        $this->assertEquals('CLOSED', $metaItem->fresh()->status);
+    }
+
+    /**
+     * TEST 19: Locked repository displays SUBMITTED — AWAITING REVIEW badge for remaining findings.
+     */
+    public function test_19_locked_repository_displays_submitted_awaiting_review_badge()
+    {
+        $this->bank->status = 'pending_approval';
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'RESUBMITTED',
+            'notes'            => 'Awaiting governance review.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Missing metadata: Repository Description',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revisionRequest->id));
+
+        $response->assertStatus(200);
+
+        // MUST display SUBMITTED — AWAITING REVIEW and NOT actionable OPEN
+        $response->assertSee('SUBMITTED — AWAITING REVIEW', false);
+        $response->assertDontSee('background:rgba(244,63,94,.2);color:#fb7185;', false);
+    }
+
+    /**
+     * TEST 20: Direct submitForApproval route is blocked if active revision request has open findings.
+     */
+    public function test_20_submit_for_approval_route_is_blocked_if_active_revision_has_open_findings()
+    {
+        $this->bank->status = 'needs_revision';
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Must fix finding first.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question choice missing',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->post(route('admin.question-banks.submit', $this->bank->id));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+
+        // Status MUST remain needs_revision
+        $this->assertEquals('needs_revision', $this->bank->fresh()->status);
+        $this->assertEquals('OPEN', $revisionRequest->fresh()->status);
+    }
 }
