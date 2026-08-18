@@ -104,10 +104,21 @@
             @endif
 
             @php
+                $bank = $revisionRequest->questionBank;
+                $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
+                    || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
+
                 $isQuestionFinding = !empty($item->question_id);
                 $fbLower = strtolower($item->feedback ?? '');
 
-                if ($isQuestionFinding) {
+                if ($isBankLocked) {
+                    $actionUrl = route('admin.question-banks.show', [
+                        $revisionRequest->question_bank_id,
+                        'from'                => 'revision_task',
+                        'revision_request_id' => $revisionRequest->id,
+                    ]);
+                    $actionLabel = '👁 View Repository →';
+                } elseif ($isQuestionFinding) {
                     $actionUrl = route('teacher.repository-revisions.edit-question', array_filter([$revisionRequest->id, $item->id, 'from' => request('from')]));
                     $actionLabel = '🛠 Open Focused Question Editor →';
                 } elseif (str_contains($fbLower, 'insufficient question') || str_contains($fbLower, 'question count') || str_contains($fbLower, 'missing detailed explanation') || str_contains($fbLower, 'balanced question difficulty')) {
@@ -138,7 +149,7 @@
             @endphp
 
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem;">
-                <a href="{{ $actionUrl }}" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-sm">
+                <a href="{{ $actionUrl }}" class="px-3.5 py-2 {{ $isBankLocked ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 text-white' }} rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-sm">
                     {{ $actionLabel }}
                 </a>
             </div>
@@ -147,6 +158,13 @@
     </div>
 
     {{-- Bottom Resubmit Section (PART 3 & PART 6) --}}
+    @php
+        $bank = $revisionRequest->questionBank;
+        $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
+            || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
+    @endphp
+
+    @if(!$isBankLocked)
     <div class="trr-panel" style="border-color:#3730a3;background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
             <div>
@@ -157,11 +175,22 @@
             <form method="POST" action="{{ route('teacher.repository-revisions.resubmit', $revisionRequest->id) }}">
                 @csrf
                 <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all inline-flex items-center gap-2">
-                    🚀 Resubmit Repository & Trigger IRQA Re-Scan
+                    🚀 Resubmit Repository &amp; Trigger IRQA Re-Scan
                 </button>
             </form>
         </div>
     </div>
+    @else
+    <div class="trr-panel" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.05);">
+        <div style="display:flex;align-items:center;gap:.85rem;">
+            <span style="font-size:1.4rem;">🔒</span>
+            <div>
+                <h4 style="font-size:.95rem;font-weight:800;color:#fbbf24;margin:0 0 .2rem;">Repository Locked For Governance Approval</h4>
+                <p style="font-size:.8rem;color:#94a3b8;margin:0;">This repository is currently awaiting governance review. Editing is disabled until a Repository Manager acts on the submission.</p>
+            </div>
+        </div>
+    </div>
+    @endif
 
 </div>
 @endsection

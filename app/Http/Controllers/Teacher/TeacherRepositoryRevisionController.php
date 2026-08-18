@@ -73,6 +73,18 @@ class TeacherRepositoryRevisionController extends Controller
             abort(403, 'Unauthorized access to repository revision request.');
         }
 
+        $bank = $revisionRequest->questionBank;
+        $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
+            || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
+
+        if ($isBankLocked) {
+            return redirect()->route('admin.question-banks.show', [
+                $revisionRequest->question_bank_id,
+                'from'                => 'revision_task',
+                'revision_request_id' => $revisionRequest->id,
+            ])->with('info', 'Repository is locked while awaiting governance approval.');
+        }
+
         $revisionRequest->load(['questionBank', 'requestedBy', 'items']);
         $item->load(['question.choices', 'question.mediaAsset']);
 
@@ -92,8 +104,6 @@ class TeacherRepositoryRevisionController extends Controller
                 'action'              => $action,
             ])->with('info', 'This finding is at the repository level. Please update repository details.');
         }
-
-        $bank = $revisionRequest->questionBank;
 
         // Categories & Media assets for dropdown selection
         $categories  = AclCategory::all();
@@ -131,8 +141,19 @@ class TeacherRepositoryRevisionController extends Controller
             abort(403, 'Unauthorized access to repository revision request.');
         }
 
+        $bank = $revisionRequest->questionBank;
+        $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
+            || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
+
+        if ($isBankLocked) {
+            return redirect()->route('admin.question-banks.show', [
+                $revisionRequest->question_bank_id,
+                'from'                => 'revision_task',
+                'revision_request_id' => $revisionRequest->id,
+            ])->with('error', 'Cannot modify repository questions while locked awaiting governance approval.');
+        }
+
         $question = $item->question ?? Question::findOrFail($request->input('question_id'));
-        $bank     = $revisionRequest->questionBank;
 
         // 1. Update Question core fields
         $question->prompt        = $request->input('prompt', $question->prompt);

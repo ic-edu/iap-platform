@@ -44,7 +44,7 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
             'title'       => 'RRWE Enterprise Test Bank',
             'slug'        => 'rrwe-ent-test-bank',
             'test_type'   => 'toeic',
-            'status'      => 'pending_approval',
+            'status'      => 'needs_revision',
             'created_by'  => $this->teacher->id,
             'description' => 'Test Repository Enterprise',
         ]);
@@ -78,6 +78,9 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
      */
     public function test_1_repository_manager_request_revision_creates_governance_entities()
     {
+        $this->bank->status = 'pending_approval';
+        $this->bank->save();
+
         $response = $this->actingAs($this->repoManager)
             ->post(route('admin.repository-manager.question-bank-revision', $this->bank->id), [
                 'notes' => 'Please add category association and double check questions.',
@@ -569,5 +572,157 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         // Field level warning MUST be shown (fre-highlight class on explanation-section)
         $response->assertSee('id="explanation-section" class="fre-section fre-highlight"', false);
         $response->assertSee('Action Required: Provide Explanation');
+    }
+
+    /**
+     * TEST 12: PENDING_APPROVAL repository findings route to read-only repository view with "View Repository" action.
+     */
+    public function test_12_pending_approval_repository_findings_route_to_read_only_view_and_show_view_repository_label()
+    {
+        $this->bank->status = 'pending_approval';
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'RESUBMITTED',
+            'notes'            => 'Awaiting review.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question wording feedback',
+            'status'                         => 'CLOSED',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revisionRequest->id));
+
+        $response->assertStatus(200);
+
+        // Action button MUST be "👁 View Repository →" and MUST NOT be Focused Question Editor
+        $response->assertSee('👁 View Repository →', false);
+        $response->assertDontSee('🛠 Open Focused Question Editor →', false);
+
+        // Target URL MUST be admin.question-banks.show with revision context
+        $response->assertSee(route('admin.question-banks.show', [$this->bank->id]), false);
+        $response->assertSee('from=revision_task', false);
+        $response->assertSee('revision_request_id=' . $revisionRequest->id, false);
+    }
+
+    /**
+     * TEST 13: NEEDS_REVISION + OPEN revision finding routes to Focused Question Editor.
+     */
+    public function test_13_needs_revision_repository_findings_route_to_focused_editor()
+    {
+        $this->bank->status = 'needs_revision';
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Fix question items.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question choice missing',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revisionRequest->id));
+
+        $response->assertStatus(200);
+
+        // Action button MUST be "🛠 Open Focused Question Editor →"
+        $response->assertSee('🛠 Open Focused Question Editor →', false);
+
+        $expectedUrl = route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]);
+        $response->assertSee($expectedUrl);
+    }
+
+    /**
+     * TEST 14: Direct access to edit-question on a locked PENDING_APPROVAL repository cleanly redirects to read-only view.
+     */
+    public function test_14_direct_access_to_editor_on_locked_pending_approval_repository_is_blocked()
+    {
+        $this->bank->status = 'pending_approval';
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'RESUBMITTED',
+            'notes'            => 'Awaiting review.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question choice missing',
+            'status'                         => 'CLOSED',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]));
+
+        $response->assertRedirect(route('admin.question-banks.show', [
+            $this->bank->id,
+            'from'                => 'revision_task',
+            'revision_request_id' => $revisionRequest->id,
+        ]));
+        $response->assertSessionHas('info');
+    }
+
+    /**
+     * TEST 15: Direct POST to update-question on a locked PENDING_APPROVAL repository is blocked.
+     */
+    public function test_15_direct_update_to_locked_pending_approval_repository_is_blocked()
+    {
+        $this->bank->status = 'pending_approval';
+        $this->bank->save();
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'RESUBMITTED',
+            'notes'            => 'Awaiting review.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question choice missing',
+            'status'                         => 'CLOSED',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->post(route('teacher.repository-revisions.update-question', [$revisionRequest->id, $item->id]), [
+                'question_id' => $this->question->id,
+                'prompt'      => 'Illegal modification attempt while locked',
+            ]);
+
+        $response->assertRedirect(route('admin.question-banks.show', [
+            $this->bank->id,
+            'from'                => 'revision_task',
+            'revision_request_id' => $revisionRequest->id,
+        ]));
+        $response->assertSessionHas('error');
     }
 }
