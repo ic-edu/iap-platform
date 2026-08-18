@@ -68,6 +68,8 @@ class RepositoryGovernanceLifecycleTest extends TestCase
         $completeView->assertStatus(200);
         $completeView->assertSee('Done — Governance Review Completed');
         $completeView->assertSee('Status: PUBLISHED');
+        $completeView->assertSee('← Back to IRQA Repository Explorer');
+        $completeView->assertSee(route('admin.academic-library.explorer'));
         $completeView->assertSee('← Back to Governance Queue');
         $completeView->assertSee(route('admin.repository-manager.questions-approval'));
 
@@ -99,6 +101,8 @@ class RepositoryGovernanceLifecycleTest extends TestCase
         $completeView->assertStatus(200);
         $completeView->assertSee('Done — Governance Review Completed');
         $completeView->assertSee('Status: NEEDS REVISION');
+        $completeView->assertSee('← Back to IRQA Repository Explorer');
+        $completeView->assertSee('← Back to Governance Queue');
 
         // Check IRQA Explorer reviewed_issues (SHOULD contain bank)
         $reviewedExplorer = $this->actingAs($this->repoManager)
@@ -128,6 +132,8 @@ class RepositoryGovernanceLifecycleTest extends TestCase
         $completeView->assertStatus(200);
         $completeView->assertSee('Done — Governance Review Completed');
         $completeView->assertSee('Status: ARCHIVED');
+        $completeView->assertSee('← Back to IRQA Repository Explorer');
+        $completeView->assertSee('← Back to Governance Queue');
 
         // Check IRQA Explorer reviewed_issues (SHOULD contain rejected/archived bank)
         $reviewedExplorer = $this->actingAs($this->repoManager)
@@ -183,13 +189,12 @@ class RepositoryGovernanceLifecycleTest extends TestCase
     }
 
     /**
-     * TEST F: Governance Outcome Navigation Simplification.
+     * TEST F: Governance Outcome Navigation Hierarchy.
      * Verifies:
-     * 1. Outcome page has removed 'Return to Origin' and 'Open Governance Queue'.
-     * 2. Outcome page has replaced them with ONE primary button: '← Back to Governance Queue'.
-     * 3. Default queue context routes to admin.repository-manager.questions-approval.
-     * 4. Contextual explorer queue routes to admin.academic-library.explorer with filter.
-     * 5. Does not route to dashboard.
+     * 1. Top breadcrumb is restored to '← Back to IRQA Repository Explorer'.
+     * 2. Main action button inside card is '← Back to Governance Queue'.
+     * 3. Removed duplicate/redundant 'Return to Origin' and 'Open Governance Queue' buttons.
+     * 4. Top breadcrumb points to IRQA Explorer while main button points to the Governance Queue.
      */
     public function test_f_governance_outcome_navigation_simplification()
     {
@@ -198,10 +203,15 @@ class RepositoryGovernanceLifecycleTest extends TestCase
             ->get(route('admin.repository-manager.review-complete', $this->bank->id));
 
         $completeView->assertStatus(200);
+        // Top breadcrumb
+        $completeView->assertSee('← Back to IRQA Repository Explorer');
+        $completeView->assertSee(route('admin.academic-library.explorer'));
+
+        // Main action button
         $completeView->assertSee('← Back to Governance Queue');
         $completeView->assertSee(route('admin.repository-manager.questions-approval'));
 
-        // Buttons removed
+        // Old redundant buttons removed
         $completeView->assertDontSee('Return to Origin');
         $completeView->assertDontSee('Open Governance Queue');
         $completeView->assertDontSee('🔍 Return to Origin');
@@ -216,6 +226,7 @@ class RepositoryGovernanceLifecycleTest extends TestCase
             ]));
 
         $explorerOutcomeView->assertStatus(200);
+        $explorerOutcomeView->assertSee('← Back to IRQA Repository Explorer');
         $explorerOutcomeView->assertSee('← Back to Governance Queue');
         $explorerOutcomeView->assertSee(route('admin.academic-library.explorer', ['filter' => 'reviewed_issues']));
         $explorerOutcomeView->assertDontSee('Return to Origin');

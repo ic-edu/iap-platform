@@ -36,10 +36,10 @@
 
 <div class="rc-container">
 
-    {{-- Explicit Back Button --}}
+    {{-- Top Breadcrumb: Contextual Navigation back to IRQA Repository Explorer --}}
     <div>
-        <a href="{{ $rcPrimaryUrl }}" style="color:#818cf8;font-size:.84rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
-            ← Back to Governance Queue
+        <a href="{{ route('admin.academic-library.explorer', array_filter(['filter' => request('filter')])) }}" style="color:#818cf8;font-size:.84rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
+            ← Back to IRQA Repository Explorer
         </a>
     </div>
 
