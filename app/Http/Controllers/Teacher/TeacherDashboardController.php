@@ -51,6 +51,18 @@ class TeacherDashboardController extends Controller
         $approvedTotal  = $approvedQuestionBanks + $approvedAssessments;
         $archivedTotal  = $archivedQuestionBanks + $archivedAssessments;
 
+        // Actionable Repository Revision Tasks (RRWE v1.0)
+        // Actionable ONLY when RevisionRequest is OPEN/IN_PROGRESS and QuestionBank is currently editable by Teacher
+        $pendingRepoRevCount = \App\Models\RepositoryRevisionRequest::where(function ($q) use ($user) {
+            $q->where('teacher_id', $user->id)
+              ->orWhereHas('questionBank', fn($bq) => $bq->where('created_by', $user->id));
+        })
+        ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+        ->whereHas('questionBank', function ($bq) {
+            $bq->whereIn('status', ['needs_revision', 'draft', 'rejected']);
+        })
+        ->count();
+
         // ──────────────────────────────────────────────
         // Recent banks for the activity widget (latest 8, with questions)
         // ──────────────────────────────────────────────
@@ -100,6 +112,7 @@ class TeacherDashboardController extends Controller
             'approvedTotal',
             'archivedTotal',
             'workflowInbox',
+            'pendingRepoRevCount',
             'recentQuestionBanks',
             'latestDraftBank',
             'notifications',

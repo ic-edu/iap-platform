@@ -412,11 +412,7 @@ a.tw-hero__pill:hover { opacity: .8; }
          CONTINUE WORKING SPOTLIGHT SECTION (HERO WORKFLOW STATE)
          ══════════════════════════════════════════════ --}}
     @php
-        $pendingRepoRevCount = \App\Models\RepositoryRevisionRequest::where(function ($q) {
-            $q->where('teacher_id', Auth::id())
-              ->orWhereHas('questionBank', fn($bq) => $bq->where('created_by', Auth::id()));
-        })->whereIn('status', ['OPEN', 'IN_PROGRESS'])->count();
-
+        $pendingRepoRevCount = $pendingRepoRevCount ?? 0;
         $actionNeededCount = ($draftQuestionBanks ?? 0) + ($draftAssessments ?? 0) + ($needsRevisionAssessments ?? 0) + ($pendingRepoRevCount ?? 0);
         $inProgressReviewCount = ($pendingApprovalQuestionBanks ?? 0) + ($pendingAssessments ?? 0);
     @endphp
