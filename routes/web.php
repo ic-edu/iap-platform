@@ -97,6 +97,8 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.revision-center');
 
     // Teacher Workspace Authoring Aliases (HOTFIX)
+    Route::get('/teacher/archived-repositories', [\App\Http\Controllers\Teacher\TeacherArchivedRepositoryController::class, 'index'])
+        ->name('teacher.archived-repositories.index');
     Route::get('/teacher/question-banks', [\App\Modules\QuestionBank\Controllers\QuestionBankController::class, 'index'])
         ->name('teacher.question-banks.index');
     Route::get('/teacher/question-banks/{questionBank}', [\App\Modules\QuestionBank\Controllers\QuestionBankController::class, 'show'])
@@ -154,6 +156,17 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
     Route::prefix('admin/settings')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('admin.settings.index');
         Route::post('/', [SettingsController::class, 'update'])->name('admin.settings.update');
+    });
+
+    Route::prefix('admin/archived-repositories')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'archivedIndex'])->name('admin.archived-repositories.index');
+        Route::post('/{questionBank}/move-to-recycle-bin', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'moveToRecycleBin'])->name('admin.archived-repositories.move-to-recycle-bin');
+    });
+
+    Route::prefix('admin/recycle-bin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'recycleBinIndex'])->name('admin.recycle-bin.index');
+        Route::get('/{id}', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'recycleBinShow'])->name('admin.recycle-bin.show');
+        Route::post('/{id}/restore', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'restoreFromRecycleBin'])->name('admin.recycle-bin.restore');
     });
 });
 

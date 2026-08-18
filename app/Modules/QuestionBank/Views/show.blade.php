@@ -29,6 +29,9 @@
         } elseif ($from === 'revision_task' && request('revision_request_id')) {
             $backUrl = route('teacher.repository-revisions.show', request('revision_request_id'));
             $backLabel = '← Back to Revision Task';
+        } elseif ($from === 'archived_repositories' || $from === 'archived') {
+            $backUrl = Auth::user()?->hasRole('super-admin') ? route('admin.archived-repositories.index') : route('teacher.archived-repositories.index');
+            $backLabel = '← Back to Archived Repositories';
         } elseif (Auth::user()?->hasRole('teacher')) {
             $backUrl = route('teacher.question-banks.index');
             $backLabel = '← Back to Question Banks';
