@@ -246,94 +246,24 @@ class QuestionBankController extends Controller
             'current_version' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $isPublished = $questionBank->status === 'published' || (bool) $questionBank->is_published;
+        $isPublished = $questionBank->status === 'published' || (bool) $questionBank->is_published;        $questionBank->update($validated);
 
-        $questionBank->update($validated);
-
-        // Auto-close metadata & repository-level findings if active revision exists and validation passes
-        if (Schema::hasTable('repository_revision_requests')) {
-            $activeRevision = RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
-                ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
-                ->latest()
-                ->first();
-
-            if ($activeRevision) {
-                $qualityService = app(RepositoryQualityService::class);
-                $rescanAudit = $qualityService->validateRepository($questionBank);
-                $currentWarnings = $rescanAudit['warnings'] ?? [];
-
-                foreach ($activeRevision->items()->where('status', 'OPEN')->get() as $openItem) {
-                    $fbLower = strtolower($openItem->feedback ?? '');
-                    $stillPresent = false;
-
-                    // 1. Exact match
-                    foreach ($currentWarnings as $cw) {
-                        if (trim(strtolower($cw)) === $fbLower) {
-                            $stillPresent = true;
-                            break;
-                        }
-                    }
-
-                    // 2. Keyword-specific domain checks
-                    if (!$stillPresent) {
-                        if (str_contains($fbLower, 'description')) {
-                            $stillPresent = empty(trim($questionBank->description ?? ''))
-                                || collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), 'description'));
-                        } elseif (str_contains($fbLower, 'version')) {
-                            $stillPresent = empty(trim($questionBank->current_version ?? ''))
-                                || collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), 'version'));
-                        } elseif (str_contains($fbLower, 'category')) {
-                            $stillPresent = empty($questionBank->acl_category_id)
-                                || collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), 'category'));
-                        } elseif (str_contains($fbLower, 'insufficient question') || str_contains($fbLower, 'question count')) {
-                            $stillPresent = $questionBank->questions()->count() === 0
-                                || collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), 'insufficient question') || str_contains(strtolower($w), 'question count'));
-                        }
-                    }
-
-                    if (!$stillPresent) {
-                        $openItem->status = 'CLOSED';
-                        $openItem->save();
-
-                        RepositoryActivityLog::create([
-                            'resource_type' => 'QuestionBank',
-                            'resource_id'   => (string) $questionBank->id,
-                            'actor_id'      => $user?->id,
-                            'action'        => 'teacher_resolved_finding',
-                            'approval_note' => "Repository metadata update resolved finding #{$openItem->id}: {$openItem->feedback}",
-                        ]);
-                    }
-                }
-            }
-        }
+        // Auto-reconcile repository revision findings against updated metadata & question count
+        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
 
         ActivityLogger::log('QUESTION_BANK_EDITED', "Updated question bank: {$questionBank->title}", $user);
-
-        // If content was published, create new version snapshot to preserve history
-        if ($isPublished) {
-            $this->versioningService->createVersion($questionBank, $user, 'Editing published content created new version');
-        }
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
             'resource_id'   => $questionBank->id,
-            'action'        => 'updated',
+            'action'        => 'edited',
             'actor_id'      => $user?->id,
-            'updated_by'    => $user?->id,
             'version'       => $questionBank->current_version ?? '1.0',
             'reason'        => 'Updated question bank details',
         ]);
 
-        $redirectParams = [$questionBank->id];
-        if ($request->filled('from')) {
-            $redirectParams['from'] = $request->input('from');
-        }
-        if ($request->filled('revision_request_id')) {
-            $redirectParams['revision_request_id'] = $request->input('revision_request_id');
-        }
-
-        return redirect()->route('admin.question-banks.show', $redirectParams)
-            ->with('status', 'Question Bank details updated.');
+        return redirect()->route('admin.question-banks.show', $questionBank->id)
+            ->with('status', "Question bank '{$questionBank->title}' updated successfully.");
     }
 
     /**
@@ -341,7 +271,7 @@ class QuestionBankController extends Controller
      */
     public function submitForApproval(QuestionBank $questionBank): RedirectResponse
     {
-        $user = request()->user();
+        $user = request()->user() ?? \Illuminate\Support\Facades\Auth::user();
 
         if ($user && $user->hasRole('teacher')) {
             if ((int) $questionBank->created_by !== (int) $user->id) {
@@ -351,8 +281,10 @@ class QuestionBankController extends Controller
                 abort(403, 'Question Bank has already been submitted for governance approval.');
             }
 
-            // State Integrity Guard: If there is an active revision request, ensure all findings are CLOSED
+            // State Integrity Guard: Reconcile findings and ensure all findings are CLOSED
             if (Schema::hasTable('repository_revision_requests')) {
+                app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+
                 $activeRevision = RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
                     ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
                     ->latest()
@@ -387,6 +319,7 @@ class QuestionBankController extends Controller
         // Dispatch Repository Manager Notification
         if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
             $repoManagers = \App\Models\User::role(['repository-manager', 'super-admin'])->get();
+            $submitterName = $user?->name ?? 'Teacher';
             foreach ($repoManagers as $rm) {
                 \Illuminate\Support\Facades\DB::table('notifications')->insert([
                     'id'              => (string) \Illuminate\Support\Str::uuid(),
@@ -395,9 +328,9 @@ class QuestionBankController extends Controller
                     'notifiable_id'   => $rm->id,
                     'data'            => json_encode([
                         'title'        => 'New Repository Submitted',
-                        'message'      => "Repository '{$questionBank->title}' submitted by {$user->name}",
+                        'message'      => "Repository '{$questionBank->title}' submitted by {$submitterName}",
                         'repository'   => $questionBank->title,
-                        'submitted_by' => $user->name,
+                        'submitted_by' => $submitterName,
                         'link'         => route('admin.repository-manager.question-bank-validate', $questionBank->id),
                     ]),
                     'created_at'      => now(),
@@ -884,6 +817,9 @@ class QuestionBankController extends Controller
 
         $this->saveChoicesForQuestion($question, $qType, $validated);
 
+        // Auto-reconcile repository revision findings (e.g. insufficient question count, missing prompt)
+        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+
         return redirect()->route('admin.question-banks.show', $questionBank->id)
             ->with('status', "Question successfully authored and saved. Total questions in bank: {$questionBank->questions()->count()}.");
     }
@@ -943,6 +879,11 @@ class QuestionBankController extends Controller
         $question->choices()->delete();
         $this->saveChoicesForQuestion($question, $qType, $validated);
 
+        // Auto-reconcile repository revision findings
+        if ($questionBank) {
+            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+        }
+
         return redirect()->route('admin.question-banks.show', $question->question_bank_id)
             ->with('status', 'Question updated successfully.');
     }
@@ -975,6 +916,10 @@ class QuestionBankController extends Controller
             $newC = $choice->replicate();
             $newC->question_id = (string) $newQ->id;
             $newC->save();
+        }
+
+        if ($questionBank) {
+            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
         }
 
         return redirect()->route('admin.question-banks.show', $question->question_bank_id)
@@ -1216,6 +1161,9 @@ class QuestionBankController extends Controller
                 $count++;
             }
         }
+
+        // Auto-reconcile repository revision findings (e.g. question count)
+        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
 
         return redirect()->route('admin.question-banks.show', $questionBank->id)
             ->with('status', "Imported {$count} questions successfully.");

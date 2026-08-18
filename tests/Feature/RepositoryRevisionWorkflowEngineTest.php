@@ -873,6 +873,8 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
             'notes'            => 'Must fix finding first.',
         ]);
 
+        $this->question->choices()->delete();
+
         $item = RepositoryRevisionItem::create([
             'repository_revision_request_id' => $revisionRequest->id,
             'question_bank_id'               => $this->bank->id,
@@ -1041,6 +1043,8 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         // ── SCENARIO A: Revision in progress with open findings (OPEN / needs_revision)
         $this->bank->status = 'needs_revision';
         $this->bank->save();
+        $this->question->explanation = null;
+        $this->question->save();
 
         $revReq = RepositoryRevisionRequest::create([
             'question_bank_id' => $this->bank->id,
@@ -1078,6 +1082,8 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $showResponse->assertDontSee('Status: RESUBMITTED — AWAITING REVIEW');
 
         // ── SCENARIO B: All findings resolved (READY FOR RESUBMISSION)
+        $this->question->explanation = 'Explanation provided.';
+        $this->question->save();
         $itemOpen->status = 'CLOSED';
         $itemOpen->save();
 
@@ -1139,5 +1145,106 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $showResponse->assertDontSee('Status: OPEN');
         $showResponse->assertDontSee('Actionable Quality Findings');
         $showResponse->assertDontSee('Ready to Resubmit Repository?');
+    }
+
+    /**
+     * TEST 24: Question count revision finding auto-closure and submit guard integrity.
+     */
+    public function test_24_question_count_revision_finding_auto_closure_and_submit_guard()
+    {
+        // 1. Setup repository with 0 questions in needs_revision state
+        $emptyBank = QuestionBank::create([
+            'title'           => 'Zero Question Auto-Closure Bank',
+            'slug'            => 'zero-question-auto-closure-bank-' . uniqid(),
+            'test_type'       => 'general',
+            'status'          => 'needs_revision',
+            'created_by'      => $this->teacher->id,
+            'description'     => 'Valid Description',
+            'current_version' => '1.0',
+        ]);
+
+        $revReq = RepositoryRevisionRequest::create([
+            'question_bank_id' => $emptyBank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Please add questions and address metadata.',
+        ]);
+
+        // Finding #1: Description (Already satisfied by Valid Description)
+        $itemDesc = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revReq->id,
+            'question_bank_id'               => $emptyBank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Missing metadata: Repository Description',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Finding #4: Insufficient question count
+        $itemCount = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revReq->id,
+            'question_bank_id'               => $emptyBank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Insufficient question count (0 questions in repository)',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Initial check: Description finding auto-closes, but question count remains OPEN
+        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($emptyBank);
+        $this->assertEquals('CLOSED', $itemDesc->fresh()->status);
+        $this->assertEquals('OPEN', $itemCount->fresh()->status);
+
+        // Submit remains blocked because Finding #4 is OPEN
+        $blockedSubmit = $this->actingAs($this->teacher)
+            ->post(route('admin.question-banks.submit', $emptyBank->id));
+        $blockedSubmit->assertRedirect();
+        $blockedSubmit->assertSessionHas('error');
+        $this->assertEquals('needs_revision', $emptyBank->fresh()->status);
+        $this->assertEquals('OPEN', $revReq->fresh()->status);
+
+        // Revision Workspace confirms Finding #4 is OPEN and Resubmit is disabled
+        $showResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revReq->id));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('Status: OPEN');
+        $showResponse->assertSee('Resubmit Disabled (1 Remaining)');
+
+        // 2. Teacher adds a question to satisfy the threshold
+        $addResponse = $this->actingAs($this->teacher)
+            ->post(route('admin.question-banks.store-question', $emptyBank->id), [
+                'prompt'        => 'What is the capital of Indonesia?',
+                'question_type' => 'multiple_choice',
+                'difficulty'    => 'medium',
+                'points'        => 1,
+                'explanation'   => 'Jakarta / Nusantara is the capital.',
+                'choices'       => [
+                    ['label' => 'A', 'content' => 'Jakarta'],
+                    ['label' => 'B', 'content' => 'Bandung'],
+                    ['label' => 'C', 'content' => 'Surabaya'],
+                ],
+                'correct_choice' => '0',
+            ]);
+        $addResponse->assertRedirect();
+
+        // 3. Finding #4 is now automatically CLOSED!
+        $this->assertEquals(1, $emptyBank->questions()->count());
+        $this->assertEquals('CLOSED', $itemCount->fresh()->status);
+
+        // Revision Workspace now confirms all findings resolved & Resubmit is available
+        $showResponseAfter = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revReq->id));
+        $showResponseAfter->assertStatus(200);
+        $showResponseAfter->assertSee('Status: READY FOR RESUBMISSION');
+        $showResponseAfter->assertSee('All Findings Resolved (2)');
+        $showResponseAfter->assertSee('Resubmit Repository &amp; Trigger IRQA Re-Scan', false);
+
+        // 4. Submit for Approval now successfully proceeds
+        $successfulSubmit = $this->actingAs($this->teacher)
+            ->post(route('admin.question-banks.submit', $emptyBank->id));
+        $successfulSubmit->assertRedirect();
+        $this->assertEquals('pending_approval', $emptyBank->fresh()->status);
+        $this->assertEquals('RESUBMITTED', $revReq->fresh()->status);
     }
 }

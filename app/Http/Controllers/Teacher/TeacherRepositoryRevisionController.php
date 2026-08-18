@@ -59,6 +59,10 @@ class TeacherRepositoryRevisionController extends Controller
             'approval_note' => 'Teacher opened repository revision task.',
         ]);
 
+        if ($revisionRequest->questionBank) {
+            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($revisionRequest->questionBank);
+        }
+
         $revisionRequest->load(['questionBank.questions.choices', 'requestedBy', 'items.question']);
 
         return view('teacher.repository_revisions.show', compact('revisionRequest'));
@@ -213,38 +217,10 @@ class TeacherRepositoryRevisionController extends Controller
             $question->choices()->delete();
         }
 
-        // 4. Run IRQA Validation Check
+        // 4. Run IRQA Validation Check and Reconcile Repository Revision Items
         $qualityService = app(RepositoryQualityService::class);
-        $rescanAudit = $qualityService->validateRepository($bank);
-        $currentWarnings = $rescanAudit['warnings'] ?? [];
-
-        $stillPresent = false;
-        $fbLower = strtolower($item->feedback ?? '');
-
-        // 1. Exact match
-        foreach ($currentWarnings as $cw) {
-            if (trim(strtolower($cw)) === $fbLower) {
-                $stillPresent = true;
-                break;
-            }
-        }
-
-        // 2. Question-level domain checks
-        if (!$stillPresent && $question) {
-            $qPrompt = strtolower($question->prompt ?? '');
-            if (str_contains($fbLower, 'explanation') && empty(trim($question->explanation ?? ''))) {
-                $stillPresent = true;
-            } elseif (str_contains($fbLower, 'prompt') && empty(trim($question->prompt ?? ''))) {
-                $stillPresent = true;
-            } elseif (str_contains($fbLower, 'choice') || str_contains($fbLower, 'designated correct')) {
-                $stillPresent = collect($currentWarnings)->contains(fn($w) => str_contains(strtolower($w), $qPrompt) || str_contains(strtolower($w), (string) $question->id));
-            }
-        }
-
-        if (!$stillPresent) {
-            $item->status = 'CLOSED';
-            $item->save();
-        }
+        $qualityService->reconcileRevisionItems($bank);
+        $item->refresh();
 
         RepositoryActivityLog::create([
             'resource_type' => 'Question',

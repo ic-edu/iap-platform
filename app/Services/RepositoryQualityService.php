@@ -15,7 +15,7 @@ class RepositoryQualityService
      */
     public function validateRepository(QuestionBank $bank): array
     {
-        $bank->loadMissing(['questions.choices', 'aclCategory', 'creator']);
+        $bank->load(['questions.choices', 'aclCategory', 'creator']);
 
         $warnings = [];
         $metadataScore = 100;
@@ -265,6 +265,107 @@ class RepositoryQualityService
                     if ($item->id !== $keep->id) {
                         $item->status = 'FIXED';
                         $item->save();
+                    }
+                }
+            }
+        }
+
+        return $audit;
+    }
+
+    /**
+     * Reconcile active RepositoryRevisionItems for a QuestionBank against current IRQA validation.
+     * Automatically transitions resolved findings from OPEN to CLOSED when the defect no longer exists.
+     */
+    public function reconcileRevisionItems(QuestionBank $bank): array
+    {
+        $audit = $this->validateRepository($bank);
+        $currentWarnings = $audit['warnings'] ?? [];
+        $currentWarningsLower = array_map(fn($w) => strtolower(trim($w)), $currentWarnings);
+
+        if (!\Illuminate\Support\Facades\Schema::hasTable('repository_revision_requests') ||
+            !\Illuminate\Support\Facades\Schema::hasTable('repository_revision_items')) {
+            return $audit;
+        }
+
+        $activeRevisionRequests = \App\Models\RepositoryRevisionRequest::where('question_bank_id', $bank->id)
+            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
+            ->get();
+
+        foreach ($activeRevisionRequests as $revReq) {
+            $openItems = $revReq->items()->where('status', 'OPEN')->get();
+
+            foreach ($openItems as $item) {
+                $fbLower = strtolower(trim($item->feedback ?? ''));
+                $stillPresent = false;
+
+                // 1. Exact match against current warnings
+                foreach ($currentWarnings as $cw) {
+                    if (trim(strtolower($cw)) === $fbLower) {
+                        $stillPresent = true;
+                        break;
+                    }
+                }
+
+                // 2. Keyword and domain-specific checks
+                if (!$stillPresent) {
+                    if (str_contains($fbLower, 'insufficient question count') || str_contains($fbLower, 'question count')) {
+                        $hasCountWarning = collect($currentWarningsLower)->contains(fn($w) => str_contains($w, 'insufficient question') || str_contains($w, 'question count'));
+                        if ($hasCountWarning || $bank->questions()->count() === 0) {
+                            $stillPresent = true;
+                        }
+                    } elseif (str_contains($fbLower, 'missing metadata: repository description') || (str_contains($fbLower, 'description') && str_contains($fbLower, 'missing metadata'))) {
+                        $stillPresent = empty(trim($bank->description ?? ''))
+                            || collect($currentWarningsLower)->contains(fn($w) => str_contains($w, 'description'));
+                    } elseif (str_contains($fbLower, 'missing metadata: version') || (str_contains($fbLower, 'version') && str_contains($fbLower, 'missing metadata'))) {
+                        $stillPresent = empty(trim($bank->current_version ?? ''))
+                            || collect($currentWarningsLower)->contains(fn($w) => str_contains($w, 'version'));
+                    } elseif (str_contains($fbLower, 'missing category association') || str_contains($fbLower, 'category')) {
+                        $stillPresent = empty($bank->acl_category_id)
+                            || collect($currentWarningsLower)->contains(fn($w) => str_contains($w, 'category'));
+                    } elseif (str_contains($fbLower, 'missing metadata:')) {
+                        $stillPresent = collect($currentWarningsLower)->contains(fn($w) => str_contains($w, $fbLower) || str_contains($fbLower, $w));
+                    } elseif ($item->question_id && $item->question) {
+                        $q = $item->question;
+                        $qPrompt = strtolower(trim($q->prompt ?? ''));
+
+                        if (str_contains($fbLower, 'explanation')) {
+                            $hasExplanationDefect = empty(trim($q->explanation ?? ''));
+                            $stillPresent = $hasExplanationDefect || collect($currentWarningsLower)->contains(fn($w) => str_contains($w, $qPrompt) || str_contains($w, (string) $q->id) || str_contains($w, 'explanation'));
+                        } elseif (str_contains($fbLower, 'prompt')) {
+                            $hasPromptDefect = empty(trim($q->prompt ?? ''));
+                            $stillPresent = $hasPromptDefect || collect($currentWarningsLower)->contains(fn($w) => str_contains($w, $qPrompt) || str_contains($w, (string) $q->id) || str_contains($w, 'prompt'));
+                        } elseif (str_contains($fbLower, 'choice') || str_contains($fbLower, 'designated correct')) {
+                            $qTypeVal = is_object($q->question_type) ? $q->question_type->value : (string) $q->question_type;
+                            $nonChoiceTypes = ['essay', 'speaking', 'writing', 'short_answer'];
+                            $isChoiceType = !in_array($qTypeVal, $nonChoiceTypes, true);
+
+                            if ($isChoiceType) {
+                                $hasChoiceDefect = $q->choices()->count() === 0 || $q->choices()->where('is_correct', true)->count() === 0;
+                                $stillPresent = $hasChoiceDefect || collect($currentWarningsLower)->contains(fn($w) => str_contains($w, $qPrompt) || str_contains($w, (string) $q->id) || str_contains($w, 'choice'));
+                            } else {
+                                $stillPresent = collect($currentWarningsLower)->contains(fn($w) => str_contains($w, $qPrompt) || str_contains($w, (string) $q->id));
+                            }
+                        } else {
+                            $stillPresent = collect($currentWarningsLower)->contains(fn($w) => str_contains($w, $fbLower) || str_contains($fbLower, $w));
+                        }
+                    } else {
+                        $stillPresent = collect($currentWarningsLower)->contains(fn($w) => str_contains($w, $fbLower) || str_contains($fbLower, $w));
+                    }
+                }
+
+                if (!$stillPresent) {
+                    $item->status = 'CLOSED';
+                    $item->save();
+
+                    if (\Illuminate\Support\Facades\Schema::hasTable('repository_activity_logs')) {
+                        \App\Models\RepositoryActivityLog::create([
+                            'resource_type' => 'QuestionBank',
+                            'resource_id'   => (string) $bank->id,
+                            'actor_id'      => \Illuminate\Support\Facades\Auth::id() ?? $bank->created_by,
+                            'action'        => 'finding_auto_closed',
+                            'approval_note' => "Quality validation auto-closed finding #{$item->id}: {$item->feedback}",
+                        ]);
                     }
                 }
             }
