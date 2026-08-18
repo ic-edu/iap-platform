@@ -337,4 +337,146 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $response->assertSee('← Back to Revision Task');
         $response->assertSee(route('teacher.repository-revisions.show', $revisionRequest->id));
     }
+
+    /**
+     * TEST 7: Essay question can be saved without answer choices or correct answer, and closes finding.
+     */
+    public function test_7_essay_question_can_save_without_answer_choices_or_correct_answer()
+    {
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Revise essay prompt and explanation.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question is missing a designated correct answer choice',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Save as ESSAY with no choices submitted
+        $response = $this->actingAs($this->teacher)
+            ->post(route('teacher.repository-revisions.update-question', [$revisionRequest->id, $item->id]), [
+                'question_id'            => $this->question->id,
+                'prompt'                 => 'Discuss the economic impacts of global trade.',
+                'question_type'          => 'essay',
+                'explanation'            => 'Grading is based on clarity, structure, and supporting evidence.',
+                'difficulty'             => 'hard',
+                'points'                 => 10,
+                'reference_answer_text'  => 'Model essay outline...',
+            ]);
+
+        $response->assertRedirect(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]));
+        $this->assertDatabaseHas('questions', [
+            'id'            => $this->question->id,
+            'question_type' => 'essay',
+            'prompt'        => 'Discuss the economic impacts of global trade.',
+        ]);
+
+        // Verify choices were deleted for essay
+        $this->assertEquals(0, $this->question->fresh()->choices()->count());
+
+        // Verify item is marked CLOSED
+        $this->assertEquals('CLOSED', $item->fresh()->status);
+    }
+
+    /**
+     * TEST 8: MCQ question still requires answer choices and correct answer in live validation checklist.
+     */
+    public function test_8_mcq_still_requires_answer_choices_and_correct_answer()
+    {
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Fix choices.',
+        ]);
+
+        // Question with no choices
+        $qNoChoices = Question::create([
+            'question_bank_id' => $this->bank->id,
+            'prompt'           => 'MCQ without choices',
+            'question_type'    => 'multiple_choice',
+            'explanation'      => 'Some explanation',
+            'difficulty'       => 'medium',
+            'points'           => 1,
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $qNoChoices->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question has no answer choices attached',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]));
+
+        $response->assertStatus(200);
+        // Live validation checklist must show Answer Choices and Correct Answer as required for MCQ
+        $response->assertSee('Answer Choices');
+        $response->assertSee('Correct Answer');
+        $response->assertSee('✖ Answer Choices');
+        $response->assertSee('✖ Correct Answer');
+    }
+
+    /**
+     * TEST 9: Essay live validation checklist does NOT include or fail answer-choice / correct-answer checks.
+     */
+    public function test_9_essay_live_validation_checklist_does_not_fail_choice_checks()
+    {
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Check essay checklist.',
+        ]);
+
+        $essayQ = Question::create([
+            'question_bank_id' => $this->bank->id,
+            'prompt'           => 'Write an essay comparing two literary works.',
+            'question_type'    => 'essay',
+            'explanation'      => 'Clear rubric provided.',
+            'difficulty'       => 'hard',
+            'points'           => 5,
+        ]);
+
+        // Category set on bank
+        $category = \App\Models\AclCategory::create([
+            'name'      => 'Literature & Composition',
+            'slug'      => 'literature-composition-' . uniqid(),
+            'test_type' => 'general',
+            'is_active' => true,
+        ]);
+        $this->bank->acl_category_id = $category->id;
+        $this->bank->save();
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $essayQ->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Prompt phrasing improvement',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]));
+
+        $response->assertStatus(200);
+        // Answer Choices & Correct Answer are not in the checklist
+        $response->assertDontSee('✖ Answer Choices');
+        $response->assertDontSee('✖ Correct Answer');
+        $response->assertSee('✔ 100% Quality Standards Satisfied');
+    }
 }

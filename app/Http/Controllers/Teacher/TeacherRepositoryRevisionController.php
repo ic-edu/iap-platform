@@ -157,29 +157,45 @@ class TeacherRepositoryRevisionController extends Controller
         }
 
         // 3. Update / Create Answer Choices & Correct Answer Selector
-        if ($request->has('choices')) {
-            $correctChoiceId = $request->input('correct_choice_id');
-            foreach ($request->input('choices', []) as $cId => $cData) {
-                if (is_numeric($cId) || strlen($cId) > 10) {
-                    $choice = QuestionChoice::find($cId);
-                    if ($choice) {
-                        $choice->content    = $cData['content'] ?? $choice->content;
-                        $choice->label      = $cData['label'] ?? $choice->label;
-                        $choice->is_correct = ($correctChoiceId == $cId) || (isset($cData['is_correct']) && $cData['is_correct'] == '1');
-                        $choice->save();
+        $qTypeVal = is_object($question->question_type) ? $question->question_type->value : (string) $question->question_type;
+        $nonChoiceTypes = ['essay', 'speaking', 'writing', 'short_answer'];
+        $isChoiceType = !in_array($qTypeVal, $nonChoiceTypes, true);
+
+        if ($isChoiceType) {
+            if ($request->has('choices')) {
+                $correctChoiceId = $request->input('correct_choice_id');
+                foreach ($request->input('choices', []) as $cId => $cData) {
+                    if (is_numeric($cId) || strlen($cId) > 10) {
+                        $choice = QuestionChoice::find($cId);
+                        if ($choice) {
+                            $choice->content    = $cData['content'] ?? $choice->content;
+                            $choice->label      = $cData['label'] ?? $choice->label;
+                            $choice->is_correct = ((string) $correctChoiceId === (string) $cId) || (isset($cData['is_correct']) && $cData['is_correct'] == '1');
+                            $choice->save();
+                        } elseif (!empty($cData['content'])) {
+                            QuestionChoice::create([
+                                'question_id' => $question->id,
+                                'label'       => $cData['label'] ?? chr(65 + (int)$cId),
+                                'content'     => $cData['content'],
+                                'is_correct'  => ((string) $correctChoiceId === (string) $cId) || (isset($cData['is_correct']) && $cData['is_correct'] == '1'),
+                            ]);
+                        }
                     }
                 }
             }
-        }
 
-        // Handle Adding New Answer Choice
-        if ($request->filled('new_choice_content')) {
-            QuestionChoice::create([
-                'question_id' => $question->id,
-                'label'       => $request->input('new_choice_label', 'A'),
-                'content'     => $request->input('new_choice_content'),
-                'is_correct'  => $request->has('new_choice_is_correct'),
-            ]);
+            // Handle Adding New Answer Choice
+            if ($request->filled('new_choice_content')) {
+                QuestionChoice::create([
+                    'question_id' => $question->id,
+                    'label'       => $request->input('new_choice_label', 'A'),
+                    'content'     => $request->input('new_choice_content'),
+                    'is_correct'  => $request->has('new_choice_is_correct'),
+                ]);
+            }
+        } else {
+            // Essay / Non-choice question: delete any legacy choice records so they do not produce invalid choice warnings
+            $question->choices()->delete();
         }
 
         // 4. Run IRQA Validation Check
@@ -393,11 +409,13 @@ class TeacherRepositoryRevisionController extends Controller
      */
     protected function computeQuestionValidation(Question $question, $bank): array
     {
+        $qTypeVal = is_object($question->question_type) ? $question->question_type->value : (string) ($question->question_type ?? 'multiple_choice');
+        $nonChoiceTypes = ['essay', 'speaking', 'writing', 'short_answer'];
+        $isChoiceType = !in_array($qTypeVal, $nonChoiceTypes, true);
+
         $hasPrompt      = !empty(trim($question->prompt ?? ''));
         $hasCategory    = !empty($bank->acl_category_id);
         $hasDifficulty  = !empty($question->difficulty);
-        $hasChoices     = $question->choices->count() >= 2;
-        $hasCorrect     = $question->choices->where('is_correct', true)->count() >= 1;
         $hasExplanation = !empty(trim($question->explanation ?? ''));
         $hasMedia       = true;
         $hasMetadata    = !empty($bank->title) && !empty($bank->test_type);
@@ -406,12 +424,19 @@ class TeacherRepositoryRevisionController extends Controller
             'prompt'         => ['label' => 'Question Prompt', 'passed' => $hasPrompt],
             'category'       => ['label' => 'Category', 'passed' => $hasCategory],
             'difficulty'     => ['label' => 'Difficulty', 'passed' => $hasDifficulty],
-            'choices'        => ['label' => 'Answer Choices', 'passed' => $hasChoices],
-            'correct_answer' => ['label' => 'Correct Answer', 'passed' => $hasCorrect],
-            'explanation'    => ['label' => 'Explanation', 'passed' => $hasExplanation],
-            'media'          => ['label' => 'Media Attachment', 'passed' => $hasMedia],
-            'metadata'       => ['label' => 'Metadata', 'passed' => $hasMetadata],
         ];
+
+        if ($isChoiceType) {
+            $hasChoices = $question->choices->count() >= 2;
+            $hasCorrect = $question->choices->where('is_correct', true)->count() >= 1;
+
+            $checks['choices']        = ['label' => 'Answer Choices', 'passed' => $hasChoices];
+            $checks['correct_answer'] = ['label' => 'Correct Answer', 'passed' => $hasCorrect];
+        }
+
+        $checks['explanation'] = ['label' => 'Explanation', 'passed' => $hasExplanation];
+        $checks['media']       = ['label' => 'Media Attachment', 'passed' => $hasMedia];
+        $checks['metadata']    = ['label' => 'Metadata', 'passed' => $hasMetadata];
 
         $passedCount = count(array_filter($checks, fn($c) => $c['passed']));
         $totalCount  = count($checks);

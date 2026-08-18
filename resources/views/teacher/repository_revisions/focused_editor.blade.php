@@ -291,10 +291,13 @@
             </div>
 
             {{-- 5. DYNAMIC QUESTION TYPE CONTROL CONTAINER (REUSED SHARED CONTROL LOGIC) --}}
-            <div id="answer-choices-section" class="fre-section {{ $highlightChoices ? 'fre-highlight' : '' }}">
+            @php
+                $isChoiceBased = in_array($qTypeVal, ['multiple_choice', 'single_choice', 'listening', 'reading']);
+            @endphp
+            <div id="answer-choices-section" class="fre-section {{ ($highlightChoices && $isChoiceBased) ? 'fre-highlight' : '' }}">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;">
                     <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">🎯 Dynamic Answer Controls</label>
-                    @if($highlightChoices)
+                    @if($highlightChoices && $isChoiceBased)
                     <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
                         ⚠️ Action Required: Fix Option Choices / Answer Fields Below
                     </span>
@@ -303,33 +306,63 @@
 
                 {{-- Dynamic Target Container --}}
                 <div id="fre_dynamic_answer_container">
-                    @if($question->choices->count() > 0)
-                        @foreach($question->choices as $cIdx => $choice)
-                        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem;">
-                            <input type="radio" name="correct_choice_id" value="{{ $choice->id }}" {{ $choice->is_correct ? 'checked' : '' }} style="accent-color:#10b981;width:1.2rem;height:1.2rem;" title="Mark as Correct Choice">
-                            <span style="font-weight:800;color:#818cf8;width:1.5rem;">{{ $choice->label ?? chr(65 + $cIdx) }}.</span>
-                            <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm" required>
-                            <input type="hidden" name="choices[{{ $choice->id }}][label]" value="{{ $choice->label ?? chr(65 + $cIdx) }}">
+                    @if($qTypeVal === 'essay')
+                        <div id="essay-notice-box" style="padding:1rem 1.25rem;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:.75rem;">
+                            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;">
+                                <span style="font-size:1.1rem;">📝</span>
+                                <strong style="color:#818cf8;font-size:.88rem;">Essay / Open-Ended Question</strong>
+                            </div>
+                            <p style="font-size:.82rem;color:#cbd5e1;margin:0 0 .75rem;line-height:1.5;">
+                                Essay questions do not require answer choices or a correct answer.
+                            </p>
+                            <label style="font-size:.78rem;font-weight:800;color:#cbd5e1;display:block;margin-bottom:.3rem;">Sample Model Answer &amp; Scoring Guidelines (Optional)</label>
+                            <textarea name="reference_answer_text" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter optional model reference answer or grading rubric guidelines...">{{ old('reference_answer_text', $question->reference_answer ?? '') }}</textarea>
                         </div>
-                        @endforeach
-                    @else
-                        <div style="font-size:.8rem;color:#fb7185;padding:.75rem;background:rgba(244,63,94,.1);border-radius:.5rem;margin-bottom:.75rem;">
-                            ⚠️ No answer choices currently attached to this question. Add choices below.
-                        </div>
-                    @endif
+                    @elseif($isChoiceBased)
+                        @if($question->choices->count() > 0)
+                            @foreach($question->choices as $cIdx => $choice)
+                            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem;">
+                                <input type="radio" name="correct_choice_id" value="{{ $choice->id }}" {{ $choice->is_correct ? 'checked' : '' }} style="accent-color:#10b981;width:1.2rem;height:1.2rem;" title="Mark as Correct Choice">
+                                <span style="font-weight:800;color:#818cf8;width:1.5rem;">{{ $choice->label ?? chr(65 + $cIdx) }}.</span>
+                                <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm" required>
+                                <input type="hidden" name="choices[{{ $choice->id }}][label]" value="{{ $choice->label ?? chr(65 + $cIdx) }}">
+                            </div>
+                            @endforeach
+                        @else
+                            <div style="font-size:.8rem;color:#fb7185;padding:.75rem;background:rgba(244,63,94,.1);border-radius:.5rem;margin-bottom:.75rem;">
+                                ⚠️ No answer choices currently attached to this question. Add choices below.
+                            </div>
+                        @endif
 
-                    {{-- Add New Choice Input --}}
-                    <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #334155;">
-                        <div style="font-size:.78rem;font-weight:700;color:#818cf8;margin-bottom:.4rem;">+ Add Additional Choice:</div>
-                        <div style="display:flex;gap:.75rem;align-items:center;">
-                            <input type="text" name="new_choice_label" placeholder="Choice Label (e.g. C)" style="width:70px;" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                            <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                            <label style="font-size:.75rem;color:#34d399;font-weight:700;display:flex;align-items:center;gap:.3rem;">
-                                <input type="checkbox" name="new_choice_is_correct" value="1" style="accent-color:#10b981;">
-                                Correct
+                        {{-- Add New Choice Input --}}
+                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #334155;">
+                            <div style="font-size:.78rem;font-weight:700;color:#818cf8;margin-bottom:.4rem;">+ Add Additional Choice:</div>
+                            <div style="display:flex;gap:.75rem;align-items:center;">
+                                <input type="text" name="new_choice_label" placeholder="Choice Label (e.g. C)" style="width:70px;" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                                <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+                                <label style="font-size:.75rem;color:#34d399;font-weight:700;display:flex;align-items:center;gap:.3rem;">
+                                    <input type="checkbox" name="new_choice_is_correct" value="1" style="accent-color:#10b981;">
+                                    Correct
+                                </label>
+                            </div>
+                        </div>
+                    @elseif($qTypeVal === 'true_false')
+                        <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.5rem;">True / False Correct Answer Designation</label>
+                        <div style="display:flex;gap:1.5rem;align-items:center;">
+                            <label style="font-size:.85rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                                <input type="radio" name="tf_correct_choice" value="true" checked style="accent-color:#10b981;width:1.2rem;height:1.2rem;"> True
+                            </label>
+                            <label style="font-size:.85rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                                <input type="radio" name="tf_correct_choice" value="false" style="accent-color:#10b981;width:1.2rem;height:1.2rem;"> False
                             </label>
                         </div>
-                    </div>
+                    @elseif($qTypeVal === 'short_answer')
+                        <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Accepted Exact Correct Answer String *</label>
+                        <input type="text" name="short_answer_text" value="{{ old('short_answer_text') }}" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter expected exact string answer...">
+                    @elseif($qTypeVal === 'speaking')
+                        <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Speaking Audio Prompt &amp; Evaluation Rubric</label>
+                        <textarea name="speaking_rubric" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter speaking response instructions, target vocabulary, and scoring rubric...">{{ old('speaking_rubric') }}</textarea>
+                    @endif
                 </div>
             </div>
 
@@ -480,8 +513,17 @@ function updateRevisionAnswerOptionsUI() {
     } else if (type === 'essay') {
         // Render Essay Reference Answer & Rubric
         container.innerHTML = `
-            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Sample Answer &amp; Scoring Rubric Guidelines (Optional)</label>
-            <textarea name="reference_answer_text" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter model reference answer or grading rubric guidelines..."></textarea>
+            <div id="essay-notice-box" style="padding:1rem 1.25rem;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:.75rem;">
+                <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;">
+                    <span style="font-size:1.1rem;">📝</span>
+                    <strong style="color:#818cf8;font-size:.88rem;">Essay / Open-Ended Question</strong>
+                </div>
+                <p style="font-size:.82rem;color:#cbd5e1;margin:0 0 .75rem;line-height:1.5;">
+                    Essay questions do not require answer choices or a correct answer.
+                </p>
+                <label style="font-size:.78rem;font-weight:800;color:#cbd5e1;display:block;margin-bottom:.3rem;">Sample Model Answer &amp; Scoring Guidelines (Optional)</label>
+                <textarea name="reference_answer_text" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter optional model reference answer or grading rubric guidelines..."></textarea>
+            </div>
         `;
     } else if (type === 'speaking') {
         // Render Speaking Prompt & Rubric
