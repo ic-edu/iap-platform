@@ -1247,4 +1247,86 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $this->assertEquals('pending_approval', $emptyBank->fresh()->status);
         $this->assertEquals('RESUBMITTED', $revReq->fresh()->status);
     }
+
+    /**
+     * TEST 25: Context-aware post-submit redirect and macro/micro status semantics preservation.
+     */
+    public function test_25_context_aware_post_submit_redirect_and_status_semantics()
+    {
+        $bank = QuestionBank::create([
+            'title'           => 'Post-Submit Redirect Bank',
+            'slug'            => 'post-submit-redirect-' . uniqid(),
+            'test_type'       => 'general',
+            'status'          => 'needs_revision',
+            'created_by'      => $this->teacher->id,
+            'description'     => 'Valid bank for post-submit redirection verification.',
+            'current_version' => '1.0',
+        ]);
+
+        $revReq = RepositoryRevisionRequest::create([
+            'question_bank_id' => $bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Please add question.',
+        ]);
+
+        $item = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revReq->id,
+            'question_bank_id'               => $bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Question count defect',
+            'status'                         => 'CLOSED',
+        ]);
+
+        $question = Question::create([
+            'question_bank_id' => $bank->id,
+            'prompt'           => 'What is the capital of Italy?',
+            'question_type'    => 'multiple_choice',
+            'explanation'      => 'Rome is the capital of Italy.',
+            'difficulty'       => 'easy',
+            'points'           => 1,
+        ]);
+        QuestionChoice::create([
+            'question_id' => $question->id,
+            'label'       => 'A',
+            'content'     => 'Rome',
+            'is_correct'  => true,
+        ]);
+
+        // 1. Submit for Approval originating from revision task (with from=revision_task and revision_request_id)
+        $response = $this->actingAs($this->teacher)
+            ->post(route('admin.question-banks.submit', $bank->id), [
+                'from'                => 'revision_task',
+                'revision_request_id' => $revReq->id,
+            ]);
+
+        // 2. Status changes to PENDING_APPROVAL and Revision Request changes to RESUBMITTED
+        $this->assertEquals('pending_approval', $bank->fresh()->status);
+        $this->assertEquals('RESUBMITTED', $revReq->fresh()->status);
+
+        // 3. Browser redirects automatically to the Revision Task
+        $response->assertRedirect(route('teacher.repository-revisions.show', $revReq->id));
+        $response->assertSessionHas('status');
+
+        // 4. Revision Task displays RESUBMITTED — AWAITING REVIEW while findings remain CLOSED
+        $taskResponse = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revReq->id));
+        $taskResponse->assertStatus(200);
+        $taskResponse->assertSee('Status: RESUBMITTED — AWAITING REVIEW');
+        $taskResponse->assertSee('Repository Locked For Governance Approval');
+        $this->assertEquals('CLOSED', $item->fresh()->status);
+
+        // 5. Viewing the repository directly displays pending_approval with locked banner and no editing controls
+        $repoResponse = $this->actingAs($this->teacher)
+            ->get(route('admin.question-banks.show', $bank->id));
+        $repoResponse->assertStatus(200);
+        $repoResponse->assertSee('pending_approval');
+        $repoResponse->assertSee('Repository locked while awaiting governance approval.');
+        $repoResponse->assertDontSee('✏ Edit Bank Details');
+        $repoResponse->assertDontSee('+ Add Question');
+        $repoResponse->assertDontSee('📥 Bulk Import');
+        $repoResponse->assertDontSee('🚀 Submit for Approval');
+    }
 }

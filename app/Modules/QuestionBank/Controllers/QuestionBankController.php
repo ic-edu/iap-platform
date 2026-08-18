@@ -350,8 +350,26 @@ class QuestionBankController extends Controller
             'reason'        => 'Submitted for Repository Manager governance approval',
         ]);
 
-        return redirect()->route('admin.question-banks.index')
-            ->with('status', "Question bank '{$questionBank->title}' submitted for Super Admin approval.");
+        // Context-aware post-submit redirection
+        $from = request('from');
+        $revisionRequestId = request('revision_request_id');
+        $testId = request('test_id');
+
+        if ($from === 'revision_task' && $revisionRequestId) {
+            $redirect = redirect()->route('teacher.repository-revisions.show', $revisionRequestId);
+        } elseif ($from === 'revision_center') {
+            $redirect = redirect()->route('teacher.revision-center');
+        } elseif ($from === 'dashboard') {
+            $redirect = redirect()->route('teacher.dashboard');
+        } elseif ($from === 'test_builder' && $testId) {
+            $redirect = redirect()->route('teacher.tests.show', $testId);
+        } elseif ($from === 'teacher_question_banks') {
+            $redirect = redirect()->route('teacher.question-banks.index');
+        } else {
+            $redirect = redirect()->route('admin.question-banks.index');
+        }
+
+        return $redirect->with('status', "Question bank '{$questionBank->title}' submitted for Super Admin approval.");
     }
 
     /**

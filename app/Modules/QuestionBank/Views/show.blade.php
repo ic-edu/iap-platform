@@ -76,6 +76,15 @@
 
                     <form action="{{ route('admin.question-banks.submit', $questionBank->id) }}" method="POST" class="inline">
                         @csrf
+                        @if(request('from'))
+                            <input type="hidden" name="from" value="{{ request('from') }}">
+                        @endif
+                        @if(request('revision_request_id'))
+                            <input type="hidden" name="revision_request_id" value="{{ request('revision_request_id') }}">
+                        @endif
+                        @if(request('test_id'))
+                            <input type="hidden" name="test_id" value="{{ request('test_id') }}">
+                        @endif
                         <button type="button" id="submit-trigger-btn" onclick="document.getElementById('inline-submit-panel').classList.remove('hidden'); this.classList.add('hidden');" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
                             🚀 Submit for Approval
                         </button>
@@ -137,6 +146,23 @@
     @if (session('status'))
         <div class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
             ✅ {{ session('status') }}
+        </div>
+    @endif
+
+    @if ($questionBank->status === 'pending_approval')
+        <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-2.5">
+                <span class="text-base">🔒</span>
+                <div>
+                    <strong class="text-amber-200">Repository Locked Under Governance Review</strong>
+                    <p class="text-slate-400 text-xs mt-0.5 mb-0">This repository has been submitted for approval and is locked while awaiting governance review from a Repository Manager. Authoring actions are disabled.</p>
+                </div>
+            </div>
+            @if(request('from') === 'revision_task' && request('revision_request_id'))
+                <a href="{{ route('teacher.repository-revisions.show', request('revision_request_id')) }}" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg whitespace-nowrap transition-colors">
+                    ← Back to Revision Task
+                </a>
+            @endif
         </div>
     @endif
 
@@ -218,7 +244,13 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="p-8 text-center text-slate-500">No questions added yet. Click "+ Add Question" or "Bulk CSV Import" to start authoring.</td>
+                        <td colspan="6" class="p-8 text-center text-slate-500">
+                            @if(in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null]))
+                                No questions added yet. Click "+ Add Question" or "Bulk CSV Import" to start authoring.
+                            @else
+                                No questions in this repository.
+                            @endif
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
