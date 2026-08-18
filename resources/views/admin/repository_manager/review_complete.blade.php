@@ -15,12 +15,31 @@
 @endpush
 
 @section('content')
+@php
+    $from = request('from');
+    $filter = request('filter');
+
+    if ($from === 'explorer' || $from === 'academic_explorer') {
+        $rcPrimaryUrl = route('admin.academic-library.explorer', array_filter(['filter' => $filter]));
+    } elseif ($from === 'reviewed_issues') {
+        $rcPrimaryUrl = route('admin.academic-library.explorer', ['filter' => 'reviewed_issues']);
+    } elseif ($from === 'all_repositories') {
+        $rcPrimaryUrl = route('admin.academic-library.explorer', ['filter' => 'all_repositories']);
+    } elseif ($from === 'assessments_approval') {
+        $rcPrimaryUrl = route('admin.repository-manager.assessments-approval');
+    } elseif (request('from_url') && str_starts_with(request('from_url'), '/') && !str_starts_with(request('from_url'), '//') && !str_contains(request('from_url'), '://')) {
+        $rcPrimaryUrl = request('from_url');
+    } else {
+        $rcPrimaryUrl = route('admin.repository-manager.questions-approval');
+    }
+@endphp
+
 <div class="rc-container">
 
-    {{-- Explicit Back Button (Part 2 & Part 14: Back -> IRQA Repository Explorer) --}}
+    {{-- Explicit Back Button --}}
     <div>
-        <a href="{{ route('admin.academic-library.explorer') }}" style="color:#818cf8;font-size:.84rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
-            ← Back to IRQA Repository Explorer
+        <a href="{{ $rcPrimaryUrl }}" style="color:#818cf8;font-size:.84rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
+            ← Back to Governance Queue
         </a>
     </div>
 
@@ -77,18 +96,9 @@
         </div>
 
         {{-- CTAs --}}
-        @php
-            $rcPrimaryUrl = match(request('from')) {
-                'approval_queue' => route('admin.repository-manager.questions-approval'),
-                default          => route('admin.academic-library.explorer', ['filter' => request('filter', 'reviewed_issues')]),
-            };
-        @endphp
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-            <a href="{{ $rcPrimaryUrl }}" style="padding:.75rem 1.5rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);">
-                🔍 Return to Origin
-            </a>
-            <a href="{{ route('admin.repository-manager.questions-approval') }}" style="padding:.75rem 1.5rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.65rem;font-size:.85rem;font-weight:800;text-decoration:none;">
-                ⚡ Open Governance Queue
+            <a href="{{ $rcPrimaryUrl }}" style="padding:.75rem 1.75rem;background:#6366f1;color:#fff;border-radius:.65rem;font-size:.88rem;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(99,102,241,0.4);display:inline-flex;align-items:center;gap:.4rem;">
+                ← Back to Governance Queue
             </a>
         </div>
 

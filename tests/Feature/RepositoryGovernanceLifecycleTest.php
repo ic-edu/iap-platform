@@ -68,7 +68,8 @@ class RepositoryGovernanceLifecycleTest extends TestCase
         $completeView->assertStatus(200);
         $completeView->assertSee('Done — Governance Review Completed');
         $completeView->assertSee('Status: PUBLISHED');
-        $completeView->assertSee(route('admin.academic-library.explorer'));
+        $completeView->assertSee('← Back to Governance Queue');
+        $completeView->assertSee(route('admin.repository-manager.questions-approval'));
 
         // Check IRQA Explorer reviewed_issues (SHOULD contain approved bank)
         $reviewedExplorer = $this->actingAs($this->repoManager)
@@ -179,5 +180,45 @@ class RepositoryGovernanceLifecycleTest extends TestCase
         $reviewedExplorer->assertStatus(200);
         $reviewedExplorer->assertSee('Detected Issues (Preserved History)');
         $reviewedExplorer->assertSee('Missing Category association');
+    }
+
+    /**
+     * TEST F: Governance Outcome Navigation Simplification.
+     * Verifies:
+     * 1. Outcome page has removed 'Return to Origin' and 'Open Governance Queue'.
+     * 2. Outcome page has replaced them with ONE primary button: '← Back to Governance Queue'.
+     * 3. Default queue context routes to admin.repository-manager.questions-approval.
+     * 4. Contextual explorer queue routes to admin.academic-library.explorer with filter.
+     * 5. Does not route to dashboard.
+     */
+    public function test_f_governance_outcome_navigation_simplification()
+    {
+        // 1. Default outcome page
+        $completeView = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.review-complete', $this->bank->id));
+
+        $completeView->assertStatus(200);
+        $completeView->assertSee('← Back to Governance Queue');
+        $completeView->assertSee(route('admin.repository-manager.questions-approval'));
+
+        // Buttons removed
+        $completeView->assertDontSee('Return to Origin');
+        $completeView->assertDontSee('Open Governance Queue');
+        $completeView->assertDontSee('🔍 Return to Origin');
+        $completeView->assertDontSee('⚡ Open Governance Queue');
+
+        // 2. Contextual Explorer outcome page (from=explorer&filter=reviewed_issues)
+        $explorerOutcomeView = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.review-complete', [
+                $this->bank->id,
+                'from'   => 'explorer',
+                'filter' => 'reviewed_issues',
+            ]));
+
+        $explorerOutcomeView->assertStatus(200);
+        $explorerOutcomeView->assertSee('← Back to Governance Queue');
+        $explorerOutcomeView->assertSee(route('admin.academic-library.explorer', ['filter' => 'reviewed_issues']));
+        $explorerOutcomeView->assertDontSee('Return to Origin');
+        $explorerOutcomeView->assertDontSee('Open Governance Queue');
     }
 }
