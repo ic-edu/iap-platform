@@ -3,6 +3,7 @@
 namespace App\Modules\Assessment\Models;
 
 use App\Models\User;
+use App\Modules\Assessment\Enums\ScoringMethod;
 use App\Modules\QuestionBank\Enums\TestType;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property TestType $test_type
  * @property int $duration_minutes
  * @property int $pass_score
+ * @property ScoringMethod $scoring_method
  * @property bool $shuffle_questions
  * @property bool $shuffle_choices
  * @property bool $is_published
@@ -33,12 +35,17 @@ class Test extends Model
 
     protected $table = 'tests';
 
+    protected $attributes = [
+        'scoring_method' => 'automatic',
+    ];
+
     protected $fillable = [
         'title',
         'slug',
         'test_type',
         'duration_minutes',
         'pass_score',
+        'scoring_method',
         'shuffle_questions',
         'shuffle_choices',
         'is_published',
@@ -50,12 +57,45 @@ class Test extends Model
     {
         return [
             'test_type' => TestType::class,
+            'scoring_method' => ScoringMethod::class,
             'duration_minutes' => 'integer',
             'pass_score' => 'integer',
             'shuffle_questions' => 'boolean',
             'shuffle_choices' => 'boolean',
             'is_published' => 'boolean',
         ];
+    }
+
+    /**
+     * Check if test scoring is automatic.
+     */
+    public function isAutomatic(): bool
+    {
+        return ($this->scoring_method ?? ScoringMethod::Automatic) === ScoringMethod::Automatic;
+    }
+
+    /**
+     * Check if test scoring requires human evaluation.
+     */
+    public function isHuman(): bool
+    {
+        return $this->scoring_method === ScoringMethod::Human;
+    }
+
+    /**
+     * Check if test scoring is hybrid.
+     */
+    public function isHybrid(): bool
+    {
+        return $this->scoring_method === ScoringMethod::Hybrid;
+    }
+
+    /**
+     * Check if test requires examiner evaluation.
+     */
+    public function requiresEvaluation(): bool
+    {
+        return in_array($this->scoring_method, [ScoringMethod::Human, ScoringMethod::Hybrid], true);
     }
 
     /**

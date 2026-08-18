@@ -4,6 +4,7 @@ namespace App\Modules\Assessment\Engines;
 
 use App\Models\User;
 use App\Modules\Assessment\Enums\AttemptStatus;
+use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Assessment\Events\AttemptExpired;
 use App\Modules\Assessment\Events\AttemptResumed;
 use App\Modules\Assessment\Events\AttemptStarted;
@@ -33,11 +34,16 @@ class AttemptEngine
      */
     public function startAttempt(Test $test, User $user): Attempt
     {
+        $evaluationStatus = $test->requiresEvaluation()
+            ? EvaluationStatus::PendingEvaluation
+            : EvaluationStatus::NotRequired;
+
         $attempt = Attempt::create([
             'test_id' => $test->id,
             'user_id' => $user->id,
             'started_at' => now(),
             'status' => AttemptStatus::InProgress,
+            'evaluation_status' => $evaluationStatus,
             'seed' => Str::random(10),
         ]);
 
@@ -61,17 +67,27 @@ class AttemptEngine
      */
     public function submitAttempt(Attempt $attempt): Attempt
     {
+        $attempt->loadMissing(['test']);
+        $test = $attempt->test;
+        $requiresEvaluation = $test?->requiresEvaluation() ?? false;
+
         $this->scoringEngine->evaluateAttempt($attempt);
+
+        $evaluationStatus = $requiresEvaluation
+            ? EvaluationStatus::PendingEvaluation
+            : EvaluationStatus::NotRequired;
 
         $attempt->update([
             'status' => AttemptStatus::Submitted,
+            'evaluation_status' => $evaluationStatus,
             'submitted_at' => now(),
         ]);
 
         $attempt->refresh();
         $result = $this->resultEngine->generateResult($attempt);
 
-        if ($result['is_passed']) {
+        // Certificate is ONLY issued if evaluation is not pending and score passed
+        if (!$requiresEvaluation && $result['is_passed']) {
             $this->certificateEngine->issueCertificate($attempt);
         }
 
@@ -85,17 +101,27 @@ class AttemptEngine
      */
     public function expireAttempt(Attempt $attempt): Attempt
     {
+        $attempt->loadMissing(['test']);
+        $test = $attempt->test;
+        $requiresEvaluation = $test?->requiresEvaluation() ?? false;
+
         $this->scoringEngine->evaluateAttempt($attempt);
+
+        $evaluationStatus = $requiresEvaluation
+            ? EvaluationStatus::PendingEvaluation
+            : EvaluationStatus::NotRequired;
 
         $attempt->update([
             'status' => AttemptStatus::Expired,
+            'evaluation_status' => $evaluationStatus,
             'submitted_at' => now(),
         ]);
 
         $attempt->refresh();
         $result = $this->resultEngine->generateResult($attempt);
 
-        if ($result['is_passed']) {
+        // Certificate is ONLY issued if evaluation is not pending and score passed
+        if (!$requiresEvaluation && $result['is_passed']) {
             $this->certificateEngine->issueCertificate($attempt);
         }
 

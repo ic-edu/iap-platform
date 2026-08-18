@@ -11,7 +11,11 @@ class ScoringEngine
      */
     public function evaluateAttempt(Attempt $attempt): float
     {
-        $attempt->loadMissing(['answers.question.choices']);
+        $attempt->loadMissing(['test', 'answers.question.choices']);
+        $test = $attempt->test;
+        $isHuman = $test?->isHuman() ?? false;
+        $isHybrid = $test?->isHybrid() ?? false;
+
         $totalScore = 0.0;
 
         foreach ($attempt->answers as $answer) {
@@ -20,6 +24,28 @@ class ScoringEngine
                 continue;
             }
 
+            $questionType = $question->question_type?->value ?? (is_string($question->question_type) ? $question->question_type : 'multiple_choice');
+            $isSubjective = in_array($questionType, ['essay', 'writing', 'speaking'], true);
+
+            // For pure HUMAN tests on initial submission, do not auto-score subjective items
+            if ($isHuman) {
+                $answer->update([
+                    'is_correct' => null,
+                    'score_earned' => 0.0,
+                ]);
+                continue;
+            }
+
+            // For HYBRID tests on initial submission, only auto-score objective items; leave subjective items pending
+            if ($isHybrid && $isSubjective) {
+                $answer->update([
+                    'is_correct' => null,
+                    'score_earned' => 0.0,
+                ]);
+                continue;
+            }
+
+            // Objective scoring (Automatic items & Hybrid objective items)
             $isCorrect = false;
             $earnedScore = 0.0;
 

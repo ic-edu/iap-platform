@@ -583,6 +583,14 @@
                     <option value="general">General</option>
                 </select>
             </div>
+            <div class="tb-form-group">
+                <label class="tb-form-label" for="modal-scoring-method">Scoring Method</label>
+                <select id="modal-scoring-method" name="scoring_method" class="tb-form-select">
+                    <option value="automatic">Automatic — Automatically scored; no examiner required</option>
+                    <option value="human">Human — Requires examiner evaluation before final result</option>
+                    <option value="hybrid">Hybrid — Automatic scoring plus examiner evaluation</option>
+                </select>
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;">
                 <div class="tb-form-group">
                     <label class="tb-form-label" for="modal-duration">Duration (Minutes)</label>

@@ -5,6 +5,7 @@ namespace App\Modules\Assessment\Models;
 use App\Models\User;
 use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
+use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Certificate\Models\Certificate;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property float|null $total_score
  * @property array<string, mixed>|null $section_scores
  * @property AttemptStatus $status
+ * @property EvaluationStatus $evaluation_status
  * @property string|null $current_question_id
  * @property array<int, string>|null $flagged_questions
  * @property array<int, string>|null $review_later_questions
@@ -40,6 +42,10 @@ class Attempt extends Model
 
     protected $table = 'attempts';
 
+    protected $attributes = [
+        'evaluation_status' => 'not_required',
+    ];
+
     protected $fillable = [
         'test_id',
         'user_id',
@@ -48,6 +54,7 @@ class Attempt extends Model
         'total_score',
         'section_scores',
         'status',
+        'evaluation_status',
         'current_question_id',
         'flagged_questions',
         'review_later_questions',
@@ -66,7 +73,32 @@ class Attempt extends Model
             'review_later_questions' => 'array',
             'violations_count' => 'integer',
             'status' => AttemptStatus::class,
+            'evaluation_status' => EvaluationStatus::class,
         ];
+    }
+
+    /**
+     * Check if attempt is pending human evaluation.
+     */
+    public function isPendingEvaluation(): bool
+    {
+        return ($this->evaluation_status ?? EvaluationStatus::NotRequired) === EvaluationStatus::PendingEvaluation;
+    }
+
+    /**
+     * Check if attempt evaluation is not required (e.g. automatic).
+     */
+    public function isEvaluationNotRequired(): bool
+    {
+        return ($this->evaluation_status ?? EvaluationStatus::NotRequired) === EvaluationStatus::NotRequired;
+    }
+
+    /**
+     * Check if attempt has been fully evaluated.
+     */
+    public function isEvaluated(): bool
+    {
+        return in_array($this->evaluation_status, [EvaluationStatus::Evaluated, EvaluationStatus::Moderated, EvaluationStatus::NotRequired], true);
     }
 
     /**

@@ -12,9 +12,14 @@
                 <p class="text-xs text-slate-400 mt-1">Submitted at {{ $summary['submitted_at'] ?? now()->toIso8601String() }}</p>
             </div>
 
-            <!-- Pass / Fail Badge -->
+            <!-- Pass / Fail / Pending Evaluation Badge -->
             <div>
-                @if($summary['is_passed'] ?? false)
+                @if($summary['is_pending_evaluation'] ?? false)
+                    <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        AWAITING EXAMINER EVALUATION
+                    </span>
+                @elseif($summary['is_passed'] ?? false)
                     <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         RESULT: PASSED

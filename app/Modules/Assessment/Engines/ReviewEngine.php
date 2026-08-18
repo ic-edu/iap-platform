@@ -37,8 +37,8 @@ class ReviewEngine
 
         $certificate = Certificate::where('attempt_id', $attempt->id)->first();
 
-        // Auto-issue if passed but certificate missing
-        if ($isPassed && !$certificate) {
+        // Auto-issue if passed, evaluation complete, but certificate missing
+        if ($isPassed && !$attempt->isPendingEvaluation() && !$certificate) {
             $certificate = app(CertificateEngine::class)->issueCertificate($attempt);
         }
 

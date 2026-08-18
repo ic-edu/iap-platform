@@ -106,6 +106,7 @@ class TestBuilderController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'test_type' => ['required', 'string'],
+            'scoring_method' => ['nullable', 'string', 'in:automatic,human,hybrid'],
             'duration_minutes' => ['required', 'integer', 'min:1'],
             'pass_score' => ['required', 'integer', 'min:0'],
             'shuffle_questions' => ['nullable', 'boolean'],
@@ -116,6 +117,7 @@ class TestBuilderController extends Controller
             'title' => $validated['title'],
             'slug' => Str::slug($validated['title']).'-'.Str::random(5),
             'test_type' => $validated['test_type'],
+            'scoring_method' => $validated['scoring_method'] ?? 'automatic',
             'duration_minutes' => $validated['duration_minutes'],
             'pass_score' => $validated['pass_score'],
             'shuffle_questions' => $request->has('shuffle_questions'),
@@ -297,6 +299,7 @@ class TestBuilderController extends Controller
         $validated = $request->validate([
             'title'            => ['required', 'string', 'max:255'],
             'test_type'        => ['required', 'string'],
+            'scoring_method'   => ['nullable', 'string', 'in:automatic,human,hybrid'],
             'duration_minutes' => ['required', 'integer', 'min:1'],
             'pass_score'       => ['required', 'integer', 'min:0'],
         ]);
@@ -304,6 +307,7 @@ class TestBuilderController extends Controller
         $test->update([
             'title'            => $validated['title'],
             'test_type'        => $validated['test_type'],
+            'scoring_method'   => $validated['scoring_method'] ?? $test->scoring_method ?? 'automatic',
             'duration_minutes' => $validated['duration_minutes'],
             'pass_score'       => $validated['pass_score'],
         ]);
