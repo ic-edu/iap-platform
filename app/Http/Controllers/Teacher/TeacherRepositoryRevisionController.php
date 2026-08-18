@@ -92,17 +92,11 @@ class TeacherRepositoryRevisionController extends Controller
 
         // Backend Safety Guard: Missing question_id must NEVER reach computeQuestionValidation()
         if (!$question) {
-            $fbLower = strtolower($item->feedback ?? '');
-            $action = (str_contains($fbLower, 'insufficient question') || str_contains($fbLower, 'question count'))
-                ? 'add_question'
-                : 'edit_metadata';
-
             return redirect()->route('admin.question-banks.show', [
                 $revisionRequest->question_bank_id,
                 'from'                => 'revision_task',
                 'revision_request_id' => $revisionRequest->id,
-                'action'              => $action,
-            ])->with('info', 'This finding is at the repository level. Please update repository details.');
+            ])->with('info', 'This finding is at the repository level. Please update repository details in the Question Bank workspace.');
         }
 
         // Categories & Media assets for dropdown selection

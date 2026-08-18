@@ -131,28 +131,11 @@
                 } elseif ($isQuestionFinding) {
                     $actionUrl = route('teacher.repository-revisions.edit-question', array_filter([$revisionRequest->id, $item->id, 'from' => request('from')]));
                     $actionLabel = '🛠 Open Focused Question Editor →';
-                } elseif (str_contains($fbLower, 'insufficient question') || str_contains($fbLower, 'question count') || str_contains($fbLower, 'missing detailed explanation') || str_contains($fbLower, 'balanced question difficulty')) {
-                    $actionUrl = route('admin.question-banks.show', [
-                        $revisionRequest->question_bank_id,
-                        'from'                => 'revision_task',
-                        'revision_request_id' => $revisionRequest->id,
-                        'action'              => 'add_question',
-                    ]);
-                    $actionLabel = '➕ Add / Manage Questions →';
-                } elseif (str_contains($fbLower, 'category')) {
-                    $actionUrl = route('admin.question-banks.show', [
-                        $revisionRequest->question_bank_id,
-                        'from'                => 'revision_task',
-                        'revision_request_id' => $revisionRequest->id,
-                        'action'              => 'edit_category',
-                    ]);
-                    $actionLabel = '🛠 Edit Repository Details →';
                 } else {
                     $actionUrl = route('admin.question-banks.show', [
                         $revisionRequest->question_bank_id,
                         'from'                => 'revision_task',
                         'revision_request_id' => $revisionRequest->id,
-                        'action'              => 'edit_metadata',
                     ]);
                     $actionLabel = '🛠 Edit Repository Details →';
                 }
