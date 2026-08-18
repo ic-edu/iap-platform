@@ -250,25 +250,6 @@ a.tw-hero__pill:hover { opacity: .8; }
 .tw-prog-bar { height: 100%; border-radius: 99px; transition: width .5s ease; }
 .tw-prog-count { font-size: .72rem; font-weight: 700; color: #e2e8f0; width: 32px; text-align: right; }
 
-/* ── Notification Widget ── */
-.tw-notif-item {
-    padding: .85rem 1.25rem;
-    cursor: pointer;
-    transition: background .15s;
-    display: flex;
-    gap: .75rem;
-    align-items: flex-start;
-    text-decoration: none;
-}
-.tw-notif-item:not(:last-child) { border-bottom: 1px solid #1e293b; }
-.tw-notif-item:hover { background: rgba(99,102,241,.05); }
-.tw-notif-item--unread { background: rgba(99,102,241,.06); }
-.tw-notif-dot { width: 7px; height: 7px; border-radius: 50%; background: #6366f1; margin-top: 5px; flex-shrink: 0; }
-.tw-notif-dot--read { background: transparent; border: 1px solid #334155; }
-.tw-notif-title { font-size: .78rem; font-weight: 700; color: #e2e8f0; }
-.tw-notif-msg   { font-size: .72rem; color: #64748b; margin-top: 2px; line-height: 1.4; }
-.tw-notif-time  { font-size: .67rem; color: #475569; margin-top: 3px; font-weight: 500; }
-
 /* ── Empty States ── */
 .tw-empty {
     padding: 2.5rem 1.5rem;
@@ -530,39 +511,6 @@ a.tw-hero__pill:hover { opacity: .8; }
         </a>
         @endif
 
-        @if(($needsRevisionAssessments ?? 0) > 0)
-        <a href="{{ route('teacher.revision-center') }}" class="tw-kpi tw-kpi--amber" style="border-color:#f59e0b;">
-            <div class="tw-kpi__icon">⚠️</div>
-            <div class="tw-kpi__count" style="color:#fbbf24;">{{ $needsRevisionAssessments }}</div>
-            <div class="tw-kpi__label">Question Revisions</div>
-            <div class="tw-kpi__desc">Question-level items needing update</div>
-        </a>
-        @else
-        <a href="javascript:void(0)" class="tw-kpi tw-kpi--amber">
-            <div class="tw-kpi__icon">⚠️</div>
-            <div class="tw-kpi__count">0</div>
-            <div class="tw-kpi__label">Question Revisions</div>
-            <div class="tw-kpi__desc">No question-level revisions</div>
-        </a>
-        @endif
-
-        {{-- RRWE v1.0 PART 2: Repository Revisions Widget --}}
-        @if(($pendingRepoRevCount ?? 0) > 0)
-        <a href="{{ route('teacher.repository-revisions.index') }}" class="tw-kpi tw-kpi--amber" style="border-color:#6366f1;">
-            <div class="tw-kpi__icon">🛠</div>
-            <div class="tw-kpi__count" style="color:#818cf8;">{{ $pendingRepoRevCount }}</div>
-            <div class="tw-kpi__label">Repository Revisions</div>
-            <div class="tw-kpi__desc">Repository-level revision tasks</div>
-        </a>
-        @else
-        <a href="{{ route('teacher.repository-revisions.index') }}" class="tw-kpi tw-kpi--slate">
-            <div class="tw-kpi__icon">🛠</div>
-            <div class="tw-kpi__count">0</div>
-            <div class="tw-kpi__label">Repository Revisions</div>
-            <div class="tw-kpi__desc">No repository revisions</div>
-        </a>
-        @endif
-
         @if($draftQuestionBanks > 0)
         <a href="{{ route('admin.question-banks.index', ['status' => 'draft']) }}" class="tw-kpi tw-kpi--slate">
             <div class="tw-kpi__icon">✏️</div>
@@ -608,14 +556,6 @@ a.tw-hero__pill:hover { opacity: .8; }
             </a>
             <a href="{{ route('admin.media.index') }}" class="tw-qa-btn tw-qa-btn--secondary">
                 🖼 Media Library
-            </a>
-            <a href="{{ route('notifications.index') }}" class="tw-qa-btn tw-qa-btn--secondary">
-                🔔 Notifications
-                @if($unreadNotificationCount > 0)
-                <span style="background:#6366f1;color:#fff;border-radius:99px;padding:1px 7px;font-size:.65rem;">
-                    {{ $unreadNotificationCount }}
-                </span>
-                @endif
             </a>
         </div>
     </div>
@@ -841,46 +781,6 @@ a.tw-hero__pill:hover { opacity: .8; }
                     <div class="tw-prog-count" style="color:{{ $pi['color'] }};">{{ $pi['count'] }}</div>
                 </div>
                 @endforeach
-            </div>
-
-            {{-- SECTION 8: Notifications Widget --}}
-            <div class="tw-widget" style="margin-top:1rem;">
-                <div class="tw-panel__head">
-                    <span class="tw-panel__title">
-                        🔔 Notifications
-                        @if($unreadNotificationCount > 0)
-                        <span style="background:#6366f1;color:#fff;border-radius:99px;padding:1px 8px;font-size:.65rem;margin-left:.4rem;">
-                            {{ $unreadNotificationCount }}
-                        </span>
-                        @endif
-                    </span>
-                    <a href="{{ route('notifications.index') }}" class="tw-panel__link">View All →</a>
-                </div>
-                @forelse($notifications as $n)
-                @php
-                    $nData    = $n->data ?? [];
-                    $isUnread = is_null($n->read_at);
-                @endphp
-                <form method="POST" action="{{ route('notifications.read', $n->id) }}" style="margin:0;padding:0;display:block;">
-                    @csrf
-                    <button type="submit"
-                            class="tw-notif-item {{ $isUnread ? 'tw-notif-item--unread' : '' }}"
-                            style="width:100%;text-align:left;background:none;border:none;cursor:pointer;">
-                        <div class="tw-notif-dot {{ $isUnread ? '' : 'tw-notif-dot--read' }}"></div>
-                        <div>
-                            <div class="tw-notif-title">{{ $nData['title'] ?? 'Notification' }}</div>
-                            <div class="tw-notif-msg">{{ Str::limit($nData['message'] ?? '', 70) }}</div>
-                            <div class="tw-notif-time">{{ $n->created_at?->diffForHumans() }}</div>
-                        </div>
-                    </button>
-                </form>
-                @empty
-                <div class="tw-empty" style="padding:1.5rem;">
-                    <div class="tw-empty__icon">🔕</div>
-                    <div class="tw-empty__title">All clear</div>
-                    <div class="tw-empty__sub">No notifications yet. Governance alerts will appear here.</div>
-                </div>
-                @endforelse
             </div>
 
             {{-- SECTION 7: Recent Activity Timeline --}}

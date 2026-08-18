@@ -101,12 +101,12 @@ class RepositoryRevisionTaskDeliveryTest extends TestCase
         $centerResponse->assertSee('High School Chemistry Bank');
         $centerResponse->assertSee('Open Revision Workspace');
 
-        // 6. Verify Teacher Dashboard shows Repository Revisions counter = 1
+        // 6. Verify Teacher Dashboard shows Action Required CTA = 1
         $dashboardResponse = $this->actingAs($this->teacher)
             ->get(route('teacher.dashboard'));
 
         $dashboardResponse->assertStatus(200);
-        $dashboardResponse->assertSee('Repository Revisions');
-        $dashboardResponse->assertSee('1');
+        $dashboardResponse->assertSee('Action Required • Repository Revision Task');
+        $dashboardResponse->assertSee('1 repository revision task');
     }
 }
