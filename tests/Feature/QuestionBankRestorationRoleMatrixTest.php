@@ -298,6 +298,9 @@ class QuestionBankRestorationRoleMatrixTest extends TestCase
         $this->actingAs($this->repoManager)->post(route('admin.repository-manager.question-bank-revision', $bank->id), ['notes' => 'Add 2 more questions']);
         $this->assertEquals('needs_revision', $bank->fresh()->status);
 
+        // Teacher resolves revision items before resubmitting
+        \App\Models\RepositoryRevisionItem::where('question_bank_id', $bank->id)->update(['status' => 'CLOSED']);
+
         // 4. Teacher resubmits
         $this->actingAs($this->ownerTeacher)->post(route('admin.question-banks.submit', $bank->id));
         $this->assertEquals('pending_approval', $bank->fresh()->status);
