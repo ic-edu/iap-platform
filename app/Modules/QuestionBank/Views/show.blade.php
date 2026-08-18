@@ -26,6 +26,9 @@
         } elseif ($from === 'revision_center') {
             $backUrl = route('teacher.revision-center');
             $backLabel = '← Back to Revision Center';
+        } elseif ($from === 'revision_task' && request('revision_request_id')) {
+            $backUrl = route('teacher.repository-revisions.show', request('revision_request_id'));
+            $backLabel = '← Back to Revision Task';
         } elseif (Auth::user()?->hasRole('teacher')) {
             $backUrl = route('teacher.question-banks.index');
             $backLabel = '← Back to Question Banks';
@@ -799,6 +802,13 @@
             <form action="{{ route('admin.question-banks.update', $questionBank->id) }}" method="POST" class="space-y-4">
                 @csrf
                 @method('PUT')
+                @if(request('from'))
+                    <input type="hidden" name="from" value="{{ request('from') }}">
+                @endif
+                @if(request('revision_request_id'))
+                    <input type="hidden" name="revision_request_id" value="{{ request('revision_request_id') }}">
+                @endif
+
                 <div>
                     <label class="block text-xs font-medium text-slate-300 mb-1">Bank Title *</label>
                     <input type="text" name="title" value="{{ old('title', $questionBank->title) }}" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
@@ -812,6 +822,21 @@
                         <option value="ielts" {{ $typeVal === 'ielts' ? 'selected' : '' }}>IELTS</option>
                         <option value="general" {{ $typeVal === 'general' ? 'selected' : '' }}>General</option>
                     </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Academic Category (ACL)</label>
+                    <select name="acl_category_id" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <option value="">-- Select Category --</option>
+                        @foreach($aclCategories ?? [] as $cat)
+                            <option value="{{ $cat->id }}" {{ (string)$questionBank->acl_category_id === (string)$cat->id ? 'selected' : '' }}>
+                                {{ $cat->name }} ({{ strtoupper($cat->test_type ?? 'general') }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Version</label>
+                    <input type="text" name="current_version" value="{{ old('current_version', $questionBank->current_version ?? '1.0') }}" placeholder="1.0" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
@@ -848,4 +873,19 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            if (action === 'edit_metadata' || action === 'edit_category' || action === 'edit') {
+                const modal = document.getElementById('edit-bank-modal');
+                if (modal) modal.classList.remove('hidden');
+            } else if (action === 'add_question') {
+                if (typeof openCreateQuestionModal === 'function') {
+                    openCreateQuestionModal();
+                }
+            }
+        });
+    </script>
 @endsection

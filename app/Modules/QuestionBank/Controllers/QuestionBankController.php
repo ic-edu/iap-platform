@@ -157,11 +157,12 @@ class QuestionBankController extends Controller
         }
 
         $questionBank->load(['questions.choices', 'category', 'aclCategory', 'archiveRequests', 'versions.creator', 'auditTrails.actor']);
+        $aclCategories = AclCategory::where('is_active', true)->get();
 
         /** @var view-string $viewName */
         $viewName = 'question_bank::show';
 
-        return view($viewName, compact('questionBank'));
+        return view($viewName, compact('questionBank', 'aclCategories'));
     }
 
     /**
@@ -236,6 +237,7 @@ class QuestionBankController extends Controller
             'test_type'       => ['required', 'string'],
             'description'     => ['nullable', 'string', 'max:1000'],
             'acl_category_id' => ['nullable', 'exists:acl_categories,id'],
+            'current_version' => ['nullable', 'string', 'max:50'],
         ]);
 
         $isPublished = $questionBank->status === 'published' || (bool) $questionBank->is_published;
@@ -259,7 +261,15 @@ class QuestionBankController extends Controller
             'reason'        => 'Updated question bank details',
         ]);
 
-        return redirect()->route('admin.question-banks.show', $questionBank->id)
+        $redirectParams = [$questionBank->id];
+        if ($request->filled('from')) {
+            $redirectParams['from'] = $request->input('from');
+        }
+        if ($request->filled('revision_request_id')) {
+            $redirectParams['revision_request_id'] = $request->input('revision_request_id');
+        }
+
+        return redirect()->route('admin.question-banks.show', $redirectParams)
             ->with('status', 'Question Bank details updated.');
     }
 

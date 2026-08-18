@@ -67,7 +67,7 @@ class TeacherRepositoryRevisionController extends Controller
     /**
      * SPRINT RRUXO-REVISION-EDITOR-ENHANCEMENT: Full Question Editor in Repository Revision Mode.
      */
-    public function editQuestion(Request $request, RepositoryRevisionRequest $revisionRequest, RepositoryRevisionItem $item): View
+    public function editQuestion(Request $request, RepositoryRevisionRequest $revisionRequest, RepositoryRevisionItem $item): View|RedirectResponse
     {
         if ($revisionRequest->teacher_id !== Auth::id()) {
             abort(403, 'Unauthorized access to repository revision request.');
@@ -76,8 +76,24 @@ class TeacherRepositoryRevisionController extends Controller
         $revisionRequest->load(['questionBank', 'requestedBy', 'items']);
         $item->load(['question.choices', 'question.mediaAsset']);
 
-        $question = $item->question ?? $revisionRequest->questionBank->questions()->first();
-        $bank     = $revisionRequest->questionBank;
+        $question = $item->question;
+
+        // Backend Safety Guard: Missing question_id must NEVER reach computeQuestionValidation()
+        if (!$question) {
+            $fbLower = strtolower($item->feedback ?? '');
+            $action = (str_contains($fbLower, 'insufficient question') || str_contains($fbLower, 'question count'))
+                ? 'add_question'
+                : 'edit_metadata';
+
+            return redirect()->route('admin.question-banks.show', [
+                $revisionRequest->question_bank_id,
+                'from'                => 'revision_task',
+                'revision_request_id' => $revisionRequest->id,
+                'action'              => $action,
+            ])->with('info', 'This finding is at the repository level. Please update repository details.');
+        }
+
+        $bank = $revisionRequest->questionBank;
 
         // Categories & Media assets for dropdown selection
         $categories  = AclCategory::all();

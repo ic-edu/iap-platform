@@ -173,4 +173,168 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
         $successResponse->assertRedirect(route('teacher.repository-revisions.index'));
         $successResponse->assertSessionHas('success', 'Repository successfully resubmitted. Waiting Repository Manager review.');
     }
+
+    /**
+     * TEST 4: Finding Routing Matrix in Revision Task View.
+     * - Question-linked finding (question_id != null) -> Focused Question Editor
+     * - Repository Description finding (question_id == null) -> Repository Details (action=edit_metadata)
+     * - Version finding (question_id == null) -> Repository Details (action=edit_metadata)
+     * - Category finding (question_id == null) -> Repository Details (action=edit_category)
+     * - Insufficient question count finding (question_id == null) -> Add Questions (action=add_question)
+     */
+    public function test_4_finding_routing_matrix_in_revision_task_view()
+    {
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Multiple governance findings need attention.',
+        ]);
+
+        // Item 1: Question-linked finding
+        $itemQuestion = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => $this->question->id,
+            'finding_type'                   => 'question_warning',
+            'feedback'                       => 'Question 1 is missing explanation.',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Item 2: Repository Description finding
+        $itemDesc = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Missing metadata: Repository Description',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Item 3: Version finding
+        $itemVer = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Missing metadata: Version',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Item 4: Category finding
+        $itemCat = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Missing Category association',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Item 5: Question count finding
+        $itemCount = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Insufficient question count (0 questions in repository)',
+            'status'                         => 'OPEN',
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.show', $revisionRequest->id));
+
+        $response->assertStatus(200);
+
+        // 1. Question finding renders Focused Question Editor link & label
+        $response->assertSee(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $itemQuestion->id]));
+        $response->assertSee('🛠 Open Focused Question Editor →');
+
+        // 2. Repository Description finding renders Edit Repository Details link & label (action=edit_metadata)
+        $response->assertSee(route('admin.question-banks.show', [
+            $this->bank->id,
+            'from'                => 'revision_task',
+            'revision_request_id' => $revisionRequest->id,
+            'action'              => 'edit_metadata',
+        ]));
+        $response->assertSee('🛠 Edit Repository Details →');
+
+        // 3. Category finding renders Edit Repository Details link (action=edit_category)
+        $response->assertSee(route('admin.question-banks.show', [
+            $this->bank->id,
+            'from'                => 'revision_task',
+            'revision_request_id' => $revisionRequest->id,
+            'action'              => 'edit_category',
+        ]));
+
+        // 4. Question count finding renders Add / Manage Questions link & label (action=add_question)
+        $response->assertSee(route('admin.question-banks.show', [
+            $this->bank->id,
+            'from'                => 'revision_task',
+            'revision_request_id' => $revisionRequest->id,
+            'action'              => 'add_question',
+        ]));
+        $response->assertSee('➕ Add / Manage Questions →');
+    }
+
+    /**
+     * TEST 5: Backend Safety Guard — Direct hit to editQuestion with null question_id cleanly redirects without 500 TypeError.
+     */
+    public function test_5_edit_question_safely_redirects_when_question_id_is_null()
+    {
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Missing repository description.',
+        ]);
+
+        $itemNoQuestion = RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $this->bank->id,
+            'question_id'                    => null,
+            'finding_type'                   => 'quality_warning',
+            'feedback'                       => 'Missing metadata: Repository Description',
+            'status'                         => 'OPEN',
+        ]);
+
+        // Attempt direct access to edit-question route with null question item
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $itemNoQuestion->id]));
+
+        // MUST NOT 500 error; MUST cleanly redirect to repository authoring workspace
+        $response->assertRedirect(route('admin.question-banks.show', [
+            $this->bank->id,
+            'from'                => 'revision_task',
+            'revision_request_id' => $revisionRequest->id,
+            'action'              => 'edit_metadata',
+        ]));
+        $response->assertSessionHas('info');
+    }
+
+    /**
+     * TEST 6: Contextual Back navigation from Question Bank workspace returns to Revision Task.
+     */
+    public function test_6_back_navigation_from_question_bank_workspace_returns_to_revision_task()
+    {
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Fix repository details.',
+        ]);
+
+        $response = $this->actingAs($this->teacher)->get(route('admin.question-banks.show', [
+            $this->bank->id,
+            'from'                => 'revision_task',
+            'revision_request_id' => $revisionRequest->id,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee('← Back to Revision Task');
+        $response->assertSee(route('teacher.repository-revisions.show', $revisionRequest->id));
+    }
 }
