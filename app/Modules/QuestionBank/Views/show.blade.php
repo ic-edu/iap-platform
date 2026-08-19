@@ -112,9 +112,11 @@
                         + Add Question
                     </button>
                 @else
+                    @if($questionBank->getLockMessage())
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg">
-                        🔒 Repository locked while awaiting governance approval.
+                        {{ $questionBank->getLockMessage() }}
                     </span>
+                    @endif
                 @endif
             @endif
 

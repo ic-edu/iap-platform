@@ -112,6 +112,23 @@ class QuestionBank extends Model
     }
 
     /**
+     * Get the state-aware repository lock message for UI display.
+     */
+    public function getLockMessage(): ?string
+    {
+        return match ($this->status) {
+            'pending_approval', 'submitted' => '🔒 Repository locked while awaiting governance approval.',
+            'pending_restore_approval', 'restore_requested' => '🔒 Repository locked while awaiting restoration approval.',
+            'approved' => '🔒 Repository approved and locked from editing.',
+            'published' => '🔒 Repository published and locked from editing.',
+            'archived' => '🔒 Repository archived and locked from editing.',
+            'pending_archive_approval', 'archive_requested' => '🔒 Repository locked while awaiting archive approval.',
+            'draft', 'needs_revision', 'revision_requested', 'rejected', null => null,
+            default => '🔒 Repository locked from editing.',
+        };
+    }
+
+    /**
      * Get the course category of this bank.
      *
      * @return BelongsTo<CourseCategory, $this>
