@@ -7,6 +7,7 @@ use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Assessment\Services\TestBuilderService;
 use App\Modules\QuestionBank\Models\Question;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -327,7 +328,27 @@ class TestBuilderController extends Controller
             abort(403, 'Unauthorized access to question.');
         }
 
-        $question->load(['choices']);
+        // Assessment State Guard: Non-draft / approved / published / pending tests are immutable
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $question->load(['choices', 'questionBank']);
+
+        // Master Question Governance Guard: Master Questions are governed content and cannot be directly edited in Test Builder
+        if ($question->question_bank_id !== null) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success'   => false,
+                    'is_master' => true,
+                    'message'   => 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.',
+                    'question'  => $question,
+                ], 403);
+            }
+
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->with('info', 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.');
+        }
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -342,12 +363,30 @@ class TestBuilderController extends Controller
     /**
      * Update an individual question linked to the assessment (TASK 3, TASK 9).
      */
-    public function updateQuestion(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse
+    public function updateQuestion(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse|JsonResponse
     {
         $user = $request->user();
 
         if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
             abort(403, 'Unauthorized access to update question.');
+        }
+
+        // Assessment State Guard: Non-draft / approved / published / pending tests are immutable
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from question editing.");
+        }
+
+        // Master Question Governance Guard: Master Questions MUST NOT be mutated from Test Builder
+        if ($question->question_bank_id !== null) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.',
+                ], 403);
+            }
+
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->with('error', 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.');
         }
 
         $validated = $request->validate([

@@ -58,7 +58,7 @@ class ProgressiveAuthoringLazyLoadingTest extends TestCase
     }
 
     /**
-     * TEST 1: Assessment Detail renders lightweight Revision Summary with Open Question buttons.
+     * TEST 1: Assessment Detail renders lightweight Revision Summary with Governed Master buttons.
      */
     public function test_1_assessment_detail_renders_lightweight_summary()
     {
@@ -103,11 +103,11 @@ class ProgressiveAuthoringLazyLoadingTest extends TestCase
         $res = $this->actingAs($this->teacherA)->get(route('teacher.tests.show', $test->id));
         $res->assertStatus(200);
         $res->assertSee('Progressive Revision Summary');
-        $res->assertSee('Open Question');
+        $res->assertSee('Governed Master');
     }
 
     /**
-     * TEST 2: Clicking Open Question lazy-loads ONLY the requested single question.
+     * TEST 2: Accessing edit on Governed Master question redirects with governance notice (or JSON 403).
      */
     public function test_2_open_question_lazy_loads_single_question_payload()
     {
@@ -128,14 +128,22 @@ class ProgressiveAuthoringLazyLoadingTest extends TestCase
             'difficulty'       => 'medium',
         ]);
 
+        // HTML request redirects to show with info notice
         $res = $this->actingAs($this->teacherA)->get(route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $question->id]));
-        $res->assertStatus(200);
-        $res->assertSee('Isolated Question Stem for Lazy Load');
-        $res->assertSee('Focused Question Authoring Workspace');
+        $res->assertRedirect(route('teacher.tests.show', $test->id));
+        $res->assertSessionHas('info', 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.');
+
+        // AJAX request returns 403 with is_master payload
+        $resJson = $this->actingAs($this->teacherA)->json('GET', route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $question->id]));
+        $resJson->assertStatus(403);
+        $resJson->assertJson([
+            'success' => false,
+            'is_master' => true,
+        ]);
     }
 
     /**
-     * TEST 3: Single Question save updates question and returns to Revision Summary.
+     * TEST 3: Single Master Question save is rejected and returns to Revision Summary with error.
      */
     public function test_3_single_question_save_updates_and_returns_to_summary()
     {
@@ -149,25 +157,22 @@ class ProgressiveAuthoringLazyLoadingTest extends TestCase
             'created_by'       => $this->teacherA->id,
         ]);
 
-        $question = Question::create([
+        $masterQuestion = Question::create([
             'question_bank_id' => $this->bankA->id,
-            'prompt'           => 'Original Prompt Before Save',
+            'prompt'           => 'Original Master Prompt Before Save',
             'question_type'    => 'multiple_choice',
             'difficulty'       => 'easy',
         ]);
 
-        $res = $this->actingAs($this->teacherA)->put(route('teacher.tests.update-question', ['test' => $test->id, 'question' => $question->id]), [
-            'prompt'         => 'Updated Prompt After Focused Save',
-            'question_type'  => 'multiple_choice',
-            'difficulty'     => 'hard',
-            'choices'        => ['New Choice 1'],
-            'correct_choice' => '0',
+        $resMaster = $this->actingAs($this->teacherA)->put(route('teacher.tests.update-question', ['test' => $test->id, 'question' => $masterQuestion->id]), [
+            'prompt' => 'Attempted Direct Edit on Master',
         ]);
 
-        $res->assertRedirect(route('teacher.tests.show', $test->id));
+        $resMaster->assertRedirect(route('teacher.tests.show', $test->id));
+        $resMaster->assertSessionHas('error', 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.');
 
-        $question->refresh();
-        $this->assertEquals('Updated Prompt After Focused Save', $question->prompt);
+        $masterQuestion->refresh();
+        $this->assertEquals('Original Master Prompt Before Save', $masterQuestion->prompt);
     }
 
     /**

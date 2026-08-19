@@ -59,6 +59,12 @@
     </div>
     @endif
 
+    @if(session('info'))
+    <div style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);color:#818cf8;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+        ℹ️ {{ session('info') }}
+    </div>
+    @endif
+
     {{-- TASK 3: Validation Assistant Summary Box --}}
     @if(isset($validationResult))
     <div style="background:{{ $validationResult['is_valid'] ? 'rgba(52,211,153,.08)' : 'rgba(239,68,68,.08)' }};border:1px solid {{ $validationResult['is_valid'] ? 'rgba(52,211,153,.25)' : 'rgba(239,68,68,.25)' }};border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;">
@@ -207,12 +213,18 @@
                     @php
                         $q = $qItem['question'];
                         $hasWarning = !empty($qItem['warnings']);
+                        $isMaster = !empty($q->question_bank_id);
                     @endphp
                     <div style="background:#1e293b;border:1px solid {{ $hasWarning ? 'rgba(245,158,11,.45)' : '#334155' }};border-radius:.85rem;padding:1.1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
                         <div>
-                            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">
+                            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap;">
                                 <span style="font-size:.78rem;font-weight:800;color:#818cf8;">Question #{{ $qItem['number'] }}</span>
                                 <span style="font-size:.72rem;color:#cbd5e1;background:#0f172a;padding:.15rem .45rem;border-radius:.3rem;">Section: {{ $qItem['section']->title }}</span>
+                                @if($isMaster)
+                                <span style="font-size:.72rem;font-weight:700;color:#a5b4fc;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);padding:.15rem .45rem;border-radius:.3rem;">
+                                    🏛️ Governed Master Question
+                                </span>
+                                @endif
                                 @if($hasWarning)
                                 <span style="font-size:.72rem;font-weight:800;color:#fbbf24;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);padding:.15rem .45rem;border-radius:.3rem;">
                                     🟡 {{ implode(' | ', $qItem['warnings']) }}
@@ -228,10 +240,15 @@
                             </div>
                         </div>
                         <div>
-                            {{-- TASK 6: Direct Jump to Question Editor --}}
-                            <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" style="padding:.5rem 1rem;background:{{ $hasWarning ? '#f59e0b' : '#6366f1' }};color:#fff;border-radius:.55rem;font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 2px 8px rgba(0,0,0,.25);">
-                                {{ $hasWarning ? '✏️ Edit Question' : '🔍 Open Question' }}
-                            </a>
+                            @if($isMaster)
+                                <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" style="padding:.5rem 1rem;background:#334155;color:#e2e8f0;border:1px solid #475569;border-radius:.55rem;font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+                                    🔒 Governed Master
+                                </a>
+                            @else
+                                <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" style="padding:.5rem 1rem;background:{{ $hasWarning ? '#f59e0b' : '#6366f1' }};color:#fff;border-radius:.55rem;font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 2px 8px rgba(0,0,0,.25);">
+                                    {{ $hasWarning ? '✏️ Edit Question' : '🔍 Open Question' }}
+                                </a>
+                            @endif
                         </div>
                     </div>
                     @endforeach

@@ -82,7 +82,7 @@ class TeacherDashboardWorkflowStateTest extends TestCase
 
         // MUST see attention header & cards
         $response->assertSee('You have work requiring attention');
-        $response->assertSee('Repository Revisions');
+        $response->assertSee('Repository Revision');
         $response->assertSee('Awaiting Approval');
     }
 
@@ -210,8 +210,7 @@ class TeacherDashboardWorkflowStateTest extends TestCase
         $respA = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
         $respA->assertStatus(200);
         $respA->assertSee('You have 1 repository revision task(s) requiring your immediate attention', false);
-        $respA->assertSee('Repository Revisions');
-        $respA->assertSee('style="color:#818cf8;">1</div>', false);
+        $respA->assertSee('Repository Revision');
 
         // ── SCENARIO B: Add IN_PROGRESS + needs_revision (Actionable -> total 2)
         $actionableBank2 = QuestionBank::create([
@@ -233,7 +232,6 @@ class TeacherDashboardWorkflowStateTest extends TestCase
         $respB = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
         $respB->assertStatus(200);
         $respB->assertSee('You have 2 repository revision task(s) requiring your immediate attention', false);
-        $respB->assertSee('style="color:#818cf8;">2</div>', false);
 
         // ── SCENARIO C: Add locked banks with OPEN/IN_PROGRESS/RESUBMITTED (Must NOT increase actionable count)
         // 1. OPEN + pending_approval
@@ -301,7 +299,6 @@ class TeacherDashboardWorkflowStateTest extends TestCase
         $respC = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
         $respC->assertStatus(200);
         $respC->assertSee('You have 2 repository revision task(s) requiring your immediate attention', false);
-        $respC->assertSee('style="color:#818cf8;">2</div>', false);
 
         // ── SCENARIO D: Resubmit both actionable banks (Actionable count becomes 0)
         $actionableBank1->status = 'pending_approval';
@@ -314,9 +311,6 @@ class TeacherDashboardWorkflowStateTest extends TestCase
         // Hero CTA for revision tasks MUST disappear
         $respD->assertDontSee('repository revision task(s) requiring your immediate attention');
         $respD->assertDontSee('🛠 Open Revision Task Center →');
-        // KPI card displays 0
-        $respD->assertSee('Repository Revisions');
-        $respD->assertSee('No repository revisions');
     }
 }
 

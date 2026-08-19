@@ -106,7 +106,7 @@ class AssessmentQuestionAuthoringEngineTest extends TestCase
         $res->assertStatus(200);
         $res->assertSee('Listening Part 1');
         $res->assertSee('What is the person in the photograph doing?');
-        $res->assertSee('Open Question');
+        $res->assertSee('Governed Master');
     }
 
     /**
@@ -124,31 +124,23 @@ class AssessmentQuestionAuthoringEngineTest extends TestCase
             'created_by'       => $this->teacherA->id,
         ]);
 
-        $question = Question::create([
+        $masterQuestion = Question::create([
             'question_bank_id' => $this->bankA->id,
-            'prompt'           => 'Original Prompt Stem Text',
+            'prompt'           => 'Original Master Question Stem',
             'question_type'    => 'multiple_choice',
             'difficulty'       => 'easy',
         ]);
 
-        $originalQuestionId = $question->id;
-
-        $res = $this->actingAs($this->teacherA)->put(route('teacher.tests.update-question', ['test' => $test->id, 'question' => $question->id]), [
-            'prompt'         => 'Updated Stem Text by Teacher',
-            'question_type'  => 'multiple_choice',
-            'difficulty'     => 'medium',
-            'explanation'    => 'Explanation for answer A',
-            'choices'        => ['Option A text', 'Option B text'],
-            'correct_choice' => '0',
+        // Attempting to update a master question through Test Builder must be rejected
+        $resMaster = $this->actingAs($this->teacherA)->put(route('teacher.tests.update-question', ['test' => $test->id, 'question' => $masterQuestion->id]), [
+            'prompt' => 'Attempted Direct Edit on Master Question',
         ]);
 
-        $res->assertRedirect(route('teacher.tests.show', $test->id));
+        $resMaster->assertRedirect(route('teacher.tests.show', $test->id));
+        $resMaster->assertSessionHas('error', 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.');
 
-        $question->refresh();
-        $this->assertEquals($originalQuestionId, $question->id);
-        $this->assertEquals('Updated Stem Text by Teacher', $question->prompt);
-        $this->assertEquals('medium', is_object($question->difficulty) ? $question->difficulty->value : $question->difficulty);
-        $this->assertEquals('Explanation for answer A', $question->explanation);
+        $masterQuestion->refresh();
+        $this->assertEquals('Original Master Question Stem', $masterQuestion->prompt);
     }
 
     /**
