@@ -91,7 +91,8 @@ class WorkflowTerminologyStandardizationTest extends TestCase
         ]);
 
         $section = TestSection::create(['test_id' => $test->id, 'title' => 'Reading', 'order' => 1]);
-        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question Stem 02']);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question Stem 02', 'question_type' => 'multiple_choice']);
+        \App\Modules\QuestionBank\Models\QuestionChoice::create(['question_id' => $q1->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true]);
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
 
         $res = $this->actingAs($this->teacherA)->get(route('teacher.tests.show', $test->id));
@@ -118,7 +119,8 @@ class WorkflowTerminologyStandardizationTest extends TestCase
         ]);
 
         $section = TestSection::create(['test_id' => $test->id, 'title' => 'Structure', 'order' => 1]);
-        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question Stem 03']);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question Stem 03', 'question_type' => 'multiple_choice']);
+        \App\Modules\QuestionBank\Models\QuestionChoice::create(['question_id' => $q1->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true]);
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
 
         $res = $this->actingAs($this->teacherA)->post(route('teacher.tests.resubmit', $test->id));

@@ -141,6 +141,38 @@ class AssessmentAuthoringWorkflowTest extends TestCase
             'created_by'       => $this->teacherA->id,
         ]);
 
+        $section = \App\Modules\Assessment\Models\TestSection::create([
+            'test_id' => $test->id,
+            'title'   => 'Core Section',
+            'order'   => 1,
+        ]);
+        $bank = \App\Modules\QuestionBank\Models\QuestionBank::create([
+            'title'       => 'Test Bank A',
+            'slug'        => 'test-bank-a-' . \Illuminate\Support\Str::random(5),
+            'test_type'   => 'toeic',
+            'status'      => 'published',
+            'created_by'  => $this->teacherA->id,
+        ]);
+        $q = \App\Modules\QuestionBank\Models\Question::create([
+            'question_bank_id' => $bank->id,
+            'prompt'           => 'Valid question stem?',
+            'question_type'    => 'multiple_choice',
+            'points'           => 1,
+            'difficulty'       => 'medium',
+        ]);
+        \App\Modules\QuestionBank\Models\QuestionChoice::create([
+            'question_id' => $q->id,
+            'label'       => 'A',
+            'content'     => 'Choice A',
+            'is_correct'  => true,
+        ]);
+        \App\Modules\Assessment\Models\TestQuestion::create([
+            'test_section_id' => $section->id,
+            'question_id'     => $q->id,
+            'order'           => 1,
+            'points'          => 1,
+        ]);
+
         $res = $this->actingAs($this->teacherA)->post(route('teacher.tests.resubmit', $test->id));
         $res->assertRedirect(route('teacher.tests.show', $test->id));
 

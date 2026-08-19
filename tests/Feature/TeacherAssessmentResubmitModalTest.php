@@ -28,6 +28,47 @@ class TeacherAssessmentResubmitModalTest extends TestCase
         $this->teacher->assignRole('teacher');
     }
 
+    protected function attachValidQuestion(Test $test): void
+    {
+        $sec = \App\Modules\Assessment\Models\TestSection::create([
+            'test_id' => $test->id,
+            'title'   => 'General Core',
+            'order'   => 1,
+        ]);
+
+        $bank = \App\Modules\QuestionBank\Models\QuestionBank::create([
+            'title'       => 'Bank ' . $test->id,
+            'slug'        => 'bank-' . $test->id . '-' . \Illuminate\Support\Str::random(5),
+            'test_type'   => 'toeic',
+            'status'      => 'published',
+            'created_by'  => $this->teacher->id,
+        ]);
+
+        $q = \App\Modules\QuestionBank\Models\Question::create([
+            'question_bank_id' => $bank->id,
+            'prompt'           => 'Sample prompt?',
+            'question_type'    => 'multiple_choice',
+            'points'           => 1,
+            'difficulty'       => 'medium',
+        ]);
+
+        \App\Modules\QuestionBank\Models\QuestionChoice::create([
+            'question_id' => $q->id,
+            'label'       => 'A',
+            'content'     => 'Option A',
+            'is_correct'  => true,
+        ]);
+
+        \App\Modules\Assessment\Models\TestQuestion::create([
+            'test_section_id' => $sec->id,
+            'question_id'     => $q->id,
+            'order'           => 1,
+            'points'          => 1,
+        ]);
+
+        $test->refresh();
+    }
+
     /**
      * TEST 1: Assessment detail view renders custom IAP modal and no native confirm().
      */
@@ -39,6 +80,8 @@ class TeacherAssessmentResubmitModalTest extends TestCase
             'status'     => 'needs_revision',
             'created_by' => $this->teacher->id,
         ]);
+
+        $this->attachValidQuestion($test);
 
         $response = $this->actingAs($this->teacher)
             ->get(route('teacher.tests.show', $test->id));
@@ -70,6 +113,8 @@ class TeacherAssessmentResubmitModalTest extends TestCase
             'status'     => 'needs_revision',
             'created_by' => $this->teacher->id,
         ]);
+
+        $this->attachValidQuestion($test);
 
         $response = $this->actingAs($this->teacher)
             ->post(route('teacher.tests.resubmit', $test->id));

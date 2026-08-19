@@ -102,6 +102,7 @@ class RoleDashboardRoutingAndWorkspaceIsolationTest extends TestCase
         // Attach question to test section so validator passes upon publication
         $bank = QuestionBank::create(['title' => 'Pool A', 'slug' => 'pool-a', 'test_type' => 'toefl', 'created_by' => $teacher->id]);
         $question = Question::create(['question_bank_id' => $bank->id, 'prompt' => 'Item 1', 'question_type' => 'multiple_choice', 'difficulty' => 'easy', 'points' => 10]);
+        \App\Modules\QuestionBank\Models\QuestionChoice::create(['question_id' => $question->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true]);
         $section = $test->sections()->firstOrFail();
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $question->id, 'order' => 1, 'points' => 10]);
 

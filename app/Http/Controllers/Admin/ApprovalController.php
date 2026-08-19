@@ -386,6 +386,12 @@ class ApprovalController extends Controller
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
+        $validationResult = app(\App\Modules\Assessment\Services\TestBuilderService::class)->validateAssessment($test);
+        if (!$validationResult['is_valid']) {
+            return redirect()->route('admin.approvals.index')
+                ->with('error', "Cannot approve empty or invalid assessment: " . implode(' | ', $validationResult['errors']));
+        }
+
         $test->update([
             'status' => 'approved',
             'is_published' => false,

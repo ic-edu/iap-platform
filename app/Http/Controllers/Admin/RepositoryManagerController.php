@@ -970,6 +970,12 @@ class RepositoryManagerController extends Controller
     {
         $user = $request->user();
 
+        $test->load(['sections.testQuestions']);
+        $totalQuestionsCount = $test->sections->sum(fn($sec) => $sec->testQuestions->count());
+        if ($totalQuestionsCount === 0) {
+            return redirect()->back()->with('error', 'Cannot approve empty assessment with 0 questions.');
+        }
+
         // BUSINESS RULE 5: Approve Guard (Flagged Questions === 0)
         $flaggedCount = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
             ->whereIn('status', ['needs_revision', 'critical_issue'])
@@ -1163,6 +1169,12 @@ class RepositoryManagerController extends Controller
     public function submitAssessmentForReview(Request $request, Test $test): RedirectResponse
     {
         $user = $request->user();
+
+        $validationResult = app(\App\Modules\Assessment\Services\TestBuilderService::class)->validateAssessment($test);
+        if (!$validationResult['is_valid']) {
+            return back()->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
+        }
+
         $previousStatus = $test->status;
 
         $test->status = 'pending';

@@ -46,6 +46,48 @@ class AssessmentWorkflowIntegrationTest extends TestCase
         $this->superAdmin->assignRole('super-admin');
     }
 
+    protected function attachValidQuestion(AssessmentTest $test): void
+    {
+        $sec = \App\Modules\Assessment\Models\TestSection::create([
+            'test_id' => $test->id,
+            'title'   => 'Core Section',
+            'order'   => 1,
+        ]);
+
+        $bank = \App\Modules\QuestionBank\Models\QuestionBank::create([
+            'title'       => 'Test Bank ' . $test->id,
+            'slug'        => 'test-bank-' . $test->id . '-' . \Illuminate\Support\Str::random(5),
+            'test_type'   => 'toefl',
+            'status'      => 'published',
+            'created_by'  => $this->teacher->id,
+            'description' => 'Test bank',
+        ]);
+
+        $question = \App\Modules\QuestionBank\Models\Question::create([
+            'question_bank_id' => $bank->id,
+            'prompt'           => 'Sample valid prompt?',
+            'question_type'    => 'multiple_choice',
+            'points'           => 1,
+            'difficulty'       => 'medium',
+        ]);
+
+        \App\Modules\QuestionBank\Models\QuestionChoice::create([
+            'question_id' => $question->id,
+            'label'       => 'A',
+            'content'     => 'Choice A',
+            'is_correct'  => true,
+        ]);
+
+        \App\Modules\Assessment\Models\TestQuestion::create([
+            'test_section_id' => $sec->id,
+            'question_id'     => $question->id,
+            'order'           => 1,
+            'points'          => 1,
+        ]);
+
+        $test->refresh();
+    }
+
     public function test_teacher_can_submit_draft_assessment_to_repository_manager_queue()
     {
         $test = AssessmentTest::create([
@@ -57,6 +99,8 @@ class AssessmentWorkflowIntegrationTest extends TestCase
             'status'           => 'draft',
             'created_by'       => $this->teacher->id,
         ]);
+
+        $this->attachValidQuestion($test);
 
         $res = $this->actingAs($this->teacher)
             ->from(route('teacher.dashboard'))
@@ -85,6 +129,8 @@ class AssessmentWorkflowIntegrationTest extends TestCase
             'status'           => 'pending',
             'created_by'       => $this->teacher->id,
         ]);
+
+        $this->attachValidQuestion($test);
 
         $resApprove = $this->actingAs($this->repoManager)->post(route('admin.repository-manager.assessment-approve', $test->id), [
             'notes' => 'Meets academic quality guidelines.',
@@ -183,6 +229,8 @@ class AssessmentWorkflowIntegrationTest extends TestCase
             'is_published'     => false,
             'created_by'       => $this->teacher->id,
         ]);
+
+        $this->attachValidQuestion($test);
 
         $this->assertEquals(1, $workflowService->getTeacherMetrics($this->teacher)['draft']);
         $this->assertEquals(0, $workflowService->getTeacherMetrics($this->teacher)['pending']);

@@ -90,6 +90,12 @@
     </div>
     @endif
 
+    @if(isset($reviewProgress) && $reviewProgress['total'] === 0)
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+        ⚠️ Incomplete Assessment: Contains 0 questions. This assessment cannot be approved and must be returned/rejected for authoring.
+    </div>
+    @endif
+
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start;">
         {{-- Left: Assessment Details & Question Cards with Smart Review Panel --}}
         <div style="display:flex;flex-direction:column;gap:1.25rem;">

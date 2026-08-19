@@ -167,6 +167,12 @@ class TestBuilderController extends Controller
      */
     public function submitForApproval(Test $test): RedirectResponse
     {
+        $validationResult = $this->validateAssessment($test);
+        if (!$validationResult['is_valid']) {
+            return redirect()->route('admin.tests.index')
+                ->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
+        }
+
         $test->update(['status' => 'pending_approval']);
 
         return redirect()->route('admin.tests.index')
@@ -446,109 +452,43 @@ class TestBuilderController extends Controller
     /**
      * Resubmit assessment to Repository Manager Approval Queue with Validation Panel check (TASK 5, TASK 7).
      */
-    public function resubmit(Request $request, Test $test): RedirectResponse
-    {
-        $user = $request->user();
-
-        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
-            abort(403, 'Unauthorized access to resubmit assessment test.');
-        }
-
-        // TASK 5: Validation Panel Check before submission
-        $validationResult = $this->validateAssessment($test);
-        if (!$validationResult['is_valid']) {
-            return redirect()->route('teacher.tests.show', $test->id)
-                ->with('error', "Cannot submit invalid assessment test. Please fix the following errors: " . implode(' | ', $validationResult['errors']));
-        }
-
-        $test->update([
-            'status'       => 'pending_approval',
-            'is_published' => false,
-        ]);
-
-        \App\Models\RepositoryActivityLog::create([
-            'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $user->id,
-            'action'        => 'assessment_resubmitted',
-            'approval_note' => 'Assessment resubmitted for review.',
-        ]);
-
-        return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Assessment resubmitted successfully.");
-    }
-
+     public function resubmit(Request $request, Test $test): RedirectResponse
+     {
+         $user = $request->user();
+ 
+         if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+             abort(403, 'Unauthorized access to resubmit assessment test.');
+         }
+ 
+         // TASK 5: Validation Panel Check before submission
+         $validationResult = $this->validateAssessment($test);
+         if (!$validationResult['is_valid']) {
+             return redirect()->route('teacher.tests.show', $test->id)
+                 ->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
+         }
+ 
+         $test->update([
+             'status'       => 'pending_approval',
+             'is_published' => false,
+         ]);
+ 
+         \App\Models\RepositoryActivityLog::create([
+             'resource_type' => 'Test',
+             'resource_id'   => (string) $test->id,
+             'actor_id'      => $user->id,
+             'action'        => 'assessment_resubmitted',
+             'approval_note' => 'Assessment resubmitted for review.',
+         ]);
+ 
+         return redirect()->route('teacher.tests.show', $test->id)
+             ->with('status', "Assessment resubmitted successfully.");
+     }
+ 
     /**
-     * Automated Question & Structure Validation (TASK 5).
+     * Automated Question & Structure Validation (Delegates to TestBuilderService).
      */
     public function validateAssessment(Test $test): array
     {
-        $test->load(['sections.testQuestions.question.choices']);
-        $repoReviews = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
-            ->get()
-            ->keyBy('question_id');
-
-        $errors = [];
-        $allQuestions = [];
-        $questionIndex = 1;
-
-        foreach ($test->sections as $section) {
-            foreach ($section->testQuestions as $tq) {
-                $q = $tq->question;
-                if (!$q) {
-                    $errors[] = "Question #{$questionIndex} in Section '{$section->title}' is missing or unlinked.";
-                    $questionIndex++;
-                    continue;
-                }
-
-                $qErrors = [];
-                if (empty(trim($q->prompt ?? ''))) {
-                    $qErrors[] = "Stem / Prompt text is empty.";
-                }
-
-                if (in_array($q->question_type, ['multiple_choice', 'single_choice', 'true_false', 'select_one'])) {
-                    $choices = $q->choices ?? collect();
-                    if ($choices->isEmpty()) {
-                        $qErrors[] = "No options/choices provided.";
-                    } else {
-                        $hasCorrect = $choices->contains('is_correct', true);
-                        if (!$hasCorrect) {
-                            $qErrors[] = "No correct answer option selected.";
-                        }
-                    }
-                }
-
-                // TASK 5: Structured Repository Question Review Mapping
-                $qRev = $repoReviews[$q->id] ?? null;
-                if ($qRev && $qRev->status === 'needs_revision') {
-                    $qErrors[] = "Repository Feedback (" . ucfirst($qRev->field ?? 'general') . "): " . ($qRev->comment ?? 'Revision requested');
-                }
-
-                if (!empty($qErrors)) {
-                    $snippet = \Illuminate\Support\Str::limit($q->prompt ?? 'Question #'.$q->id, 25);
-                    foreach ($qErrors as $err) {
-                        $errors[] = "Q#{$questionIndex} ({$snippet}): {$err}";
-                    }
-                    $q->validation_warning = implode(' ', $qErrors);
-                } else {
-                    $q->validation_warning = null;
-                }
-
-                $allQuestions[] = [
-                    'number'   => $questionIndex,
-                    'question' => $q,
-                    'section'  => $section,
-                    'warnings' => $qErrors,
-                ];
-
-                $questionIndex++;
-            }
-        }
-
-        return [
-            'is_valid'  => empty($errors),
-            'errors'    => $errors,
-            'questions' => $allQuestions,
-        ];
+        return $this->builderService->validateAssessment($test);
     }
 }
