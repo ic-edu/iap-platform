@@ -310,7 +310,11 @@
                                     📎 + Attach Media
                                 </button>
                                 <button type="button" 
-                                        onclick="openEditSectionModal('{{ $sec->id }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}', '{{ addslashes($sec->instructions ?? '') }}')"
+                                        data-section-id="{{ $sec->id }}"
+                                        data-section-title="{{ $sec->title }}"
+                                        data-section-type="{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}"
+                                        data-section-instructions="{{ $sec->instructions ?? '' }}"
+                                        onclick="openEditSectionModal(this)"
                                         style="padding:.4rem .8rem;background:#334155;color:#e2e8f0;border:1px solid #475569;border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                     ✏️ Edit Section
                                 </button>
@@ -964,17 +968,23 @@
         }
     }
 
-    function openEditSectionModal(sectionId, title, sectionType, instructions) {
+    function openEditSectionModal(btn) {
+        if (!btn) return;
+        const sectionId = btn.getAttribute('data-section-id') || '';
+        const title = btn.getAttribute('data-section-title') || '';
+        const sectionType = btn.getAttribute('data-section-type') || '';
+        const instructions = btn.getAttribute('data-section-instructions') || '';
+
         const form = document.getElementById('edit-section-form');
-        if (form) {
+        if (form && sectionId) {
             form.action = `/teacher/assessments/{{ $test->id }}/sections/${sectionId}`;
         }
         const titleInput = document.getElementById('edit-section-title');
-        if (titleInput) titleInput.value = title || '';
+        if (titleInput) titleInput.value = title;
         const typeSelect = document.getElementById('edit-section-type');
-        if (typeSelect) typeSelect.value = sectionType || '';
+        if (typeSelect) typeSelect.value = sectionType;
         const instructionsInput = document.getElementById('edit-section-instructions');
-        if (instructionsInput) instructionsInput.value = instructions || '';
+        if (instructionsInput) instructionsInput.value = instructions;
 
         const modal = document.getElementById('edit-section-modal');
         if (modal) modal.style.display = 'flex';

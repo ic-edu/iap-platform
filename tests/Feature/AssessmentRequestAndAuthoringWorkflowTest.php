@@ -958,6 +958,126 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
         $examResponse->assertSee('Part 1 audio instructions.');
         $examResponse->assertSee('What is happening in the photo?');
     }
+
+    /** 42. Edit section button renders safely with multiline instructions, quotes, and HTML-like text without JS syntax errors. */
+    public function test_edit_section_button_renders_safely_with_multiline_instructions_and_quotes(): void
+    {
+        $test = Test::create([
+            'title'            => 'TOEIC Listening & Reading for SMK Perhotelan',
+            'slug'             => 'toeic-smk-multiline-render-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 120,
+            'pass_score'       => 500,
+            'status'           => 'draft',
+            'created_by'       => $this->teacher1->id,
+        ]);
+
+        $multilineDirections = "In the Listening test, you'll be asked to understand \"spoken English\".\n\nDirections:\n1. Listen carefully.\n2. Mark <A>, <B>, or <C> on the sheet.";
+
+        $section = TestSection::create([
+            'test_id'      => $test->id,
+            'title'        => "Part 1: Photographs & 'Directions'",
+            'section_type' => 'listening',
+            'instructions' => $multilineDirections,
+            'order'        => 1,
+        ]);
+
+        $response = $this->actingAs($this->teacher1)->get(route('teacher.tests.show', $test->id));
+        $response->assertOk();
+
+        // Verify HTML data attributes are present and escaped safely
+        $response->assertSee('data-section-id="' . $section->id . '"', false);
+        $response->assertSee('data-section-title="Part 1: Photographs &amp; &#039;Directions&#039;"', false);
+        $response->assertSee('data-section-type="listening"', false);
+        $response->assertSee('onclick="openEditSectionModal(this)"', false);
+        // Verify modal and form exist
+        $response->assertSee('id="edit-section-modal"', false);
+        $response->assertSee('id="edit-section-form"', false);
+    }
+
+    /** 43. Section multiline instructions with quotes persist and attached section media remains intact. */
+    public function test_section_multiline_instructions_persist_and_media_remains_intact(): void
+    {
+        $test = Test::create([
+            'title'            => 'TOEIC Listening & Reading for SMK Perhotelan',
+            'slug'             => 'toeic-smk-multiline-update-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 120,
+            'pass_score'       => 500,
+            'status'           => 'draft',
+            'created_by'       => $this->teacher1->id,
+        ]);
+
+        $section = TestSection::create([
+            'test_id'      => $test->id,
+            'title'        => 'Part 1: Initial',
+            'section_type' => 'listening',
+            'order'        => 1,
+        ]);
+
+        $media = \App\Models\MediaAsset::create([
+            'filename'      => 'part1_audio.mp3',
+            'original_name' => 'Part 1 Audio.mp3',
+            'mime_type'     => 'audio/mpeg',
+            'type'          => 'audio',
+            'path'          => 'question-media/part1_audio.mp3',
+            'size'          => 2048,
+            'status'        => 'active',
+            'uploaded_by'   => $this->teacher1->id,
+        ]);
+
+        $builderService = app(\App\Modules\Assessment\Services\TestBuilderService::class);
+        $builderService->attachMediaToSection($section, $media->id, 'Part 1 Audio Instructions', 1);
+
+        $newDirections = "Paragraph 1: Listen to the speaker's voice.\n\nParagraph 2: Select the \"best\" answer (A, B, C, or D).\n\nGood luck!";
+
+        $response = $this->actingAs($this->teacher1)->put(route('teacher.tests.update-section', ['test' => $test->id, 'section' => $section->id]), [
+            'title'        => 'Part 1: Photographs Final',
+            'section_type' => 'listening',
+            'instructions' => $newDirections,
+        ]);
+
+        $response->assertRedirect(route('teacher.tests.show', $test->id));
+
+        $fresh = $section->fresh();
+        $this->assertEquals('Part 1: Photographs Final', $fresh->title);
+        $this->assertEquals($newDirections, $fresh->instructions);
+
+        // Verify media remains attached
+        $this->assertCount(1, $fresh->mediaAssets);
+        $this->assertEquals($media->id, $fresh->mediaAssets->first()->id);
+        $this->assertEquals('Part 1 Audio Instructions', $fresh->mediaAssets->first()->pivot->caption);
+    }
+
+    /** 44. Section edit is blocked for locked assessment states. */
+    public function test_locked_assessment_states_block_section_edit(): void
+    {
+        $test = Test::create([
+            'title'            => 'Locked Test',
+            'slug'             => 'locked-test-sec-edit',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'status'           => 'published',
+            'is_published'     => true,
+            'created_by'       => $this->teacher1->id,
+        ]);
+
+        $section = TestSection::create([
+            'test_id'      => $test->id,
+            'title'        => 'Part 1',
+            'section_type' => 'listening',
+            'order'        => 1,
+        ]);
+
+        $response = $this->actingAs($this->teacher1)->put(route('teacher.tests.update-section', ['test' => $test->id, 'section' => $section->id]), [
+            'title'        => 'Should Fail',
+            'section_type' => 'listening',
+            'instructions' => 'New instructions',
+        ]);
+
+        $response->assertStatus(403);
+    }
 }
 
 
