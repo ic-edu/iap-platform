@@ -51,6 +51,8 @@ class Test extends Model
         'is_published',
         'status',
         'created_by',
+        'assigned_to',
+        'assessment_request_id',
     ];
 
     protected function casts(): array
@@ -130,6 +132,24 @@ class Test extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get assigned teacher of test.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function assignedTeacher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * Get original assessment request.
+     */
+    public function assessmentRequest(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\AssessmentRequest::class, 'assessment_request_id');
     }
 
     /**

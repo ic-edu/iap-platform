@@ -117,6 +117,11 @@
                         {{ $questionBank->getLockMessage() }}
                     </span>
                     @endif
+                    @if(in_array($questionBank->status, ['approved', 'published']))
+                        <button type="button" onclick="openTeacherRequestRevisionModal('{{ $questionBank->id }}', '', '{{ addslashes($questionBank->title) }}')" class="px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 text-xs font-semibold rounded-lg border border-amber-500/30 transition-colors">
+                            🛠 Request Repository Revision
+                        </button>
+                    @endif
                 @endif
             @endif
 
@@ -237,6 +242,10 @@
                                     @csrf
                                     <button type="submit" class="text-xs text-amber-400 hover:underline font-semibold">📄 Duplicate</button>
                                 </form>
+                            @elseif (Auth::user()?->hasRole('teacher') && in_array($questionBank->status, ['approved', 'published']))
+                                <button type="button" onclick="openTeacherRequestRevisionModal('{{ $questionBank->id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="text-xs text-amber-400 hover:underline font-semibold">
+                                    🛠 Request Revision
+                                </button>
                             @endif
                             @if (!Auth::user()?->hasRole('teacher'))
                                 <form action="{{ route('admin.question-banks.destroy-question', $q->id) }}" method="POST" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Delete Question?', message: 'Are you sure you want to delete this question? This action cannot be undone.', confirmText: 'Delete Question', variant: 'danger', form: this });">
@@ -992,7 +1001,52 @@
         </div>
     </div>
 
+    {{-- Teacher Request Repository Revision Modal --}}
+    <div id="teacher-request-revision-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" onclick="closeTeacherRequestRevisionModal(event)">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <span>🛠</span> Request Repository Revision
+                </h3>
+                <button type="button" onclick="closeTeacherRequestRevisionModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+            <form method="POST" action="{{ route('teacher.repository-revisions.request') }}">
+                @csrf
+                <input type="hidden" id="tr-modal-bank-id" name="question_bank_id" value="">
+                <input type="hidden" id="tr-modal-question-id" name="question_id" value="">
+
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Target Repository / Question Item</label>
+                    <div id="tr-modal-target-title" class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-indigo-300 font-semibold truncate"></div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Revision Rationale / Specific Feedback <span class="text-rose-400">*</span></label>
+                    <textarea name="notes" required rows="4" placeholder="Explain the specific corrections required (e.g., prompt clarification, key correction, answer explanation update)..." class="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeTeacherRequestRevisionModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg shadow transition-colors">Submit Revision Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        function openTeacherRequestRevisionModal(bankId, questionId, targetTitle) {
+            document.getElementById('tr-modal-bank-id').value = bankId;
+            document.getElementById('tr-modal-question-id').value = questionId || '';
+            document.getElementById('tr-modal-target-title').innerText = targetTitle || 'Institutional Repository';
+            document.getElementById('teacher-request-revision-modal').classList.remove('hidden');
+        }
+
+        function closeTeacherRequestRevisionModal(e) {
+            if (!e || e.target === document.getElementById('teacher-request-revision-modal')) {
+                document.getElementById('teacher-request-revision-modal').classList.add('hidden');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');

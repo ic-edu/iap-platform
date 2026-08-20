@@ -104,25 +104,49 @@
 
             {{-- RRWE v1.0 PART 7: Repository Findings & Active Revisions Panel --}}
             @php
-                $activeRevisionRequest = \App\Models\RepositoryRevisionRequest::with(['items', 'requestedBy'])
-                    ->where('question_bank_id', $questionBank->id)
-                    ->latest()
-                    ->first();
+                if (!isset($activeRevisionRequest)) {
+                    $activeRevisionRequest = \App\Models\RepositoryRevisionRequest::with(['items', 'requestedBy', 'teacher'])
+                        ->where('question_bank_id', $questionBank->id)
+                        ->latest()
+                        ->first();
+                }
             @endphp
             @if($activeRevisionRequest)
-            <div class="qbw-card" style="border-color:#6366f1;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                    <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">
-                        🔍 Active Governance Revision Request ({{ $activeRevisionRequest->status }})
-                    </h3>
-                    <span style="font-size:.75rem;color:#818cf8;font-weight:700;">Task ID: {{ substr($activeRevisionRequest->id, 0, 8) }}</span>
+            <div class="qbw-card" style="border-color:#6366f1;background:linear-gradient(180deg, rgba(99,102,241,.08) 0%, #0f172a 100%);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
+                    <div style="display:flex;align-items:center;gap:.5rem;">
+                        <span style="font-size:1.25rem;">🛠️</span>
+                        <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">
+                            Teacher Repository Revision Request
+                        </h3>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.5rem;">
+                        <span style="padding:.2rem .6rem;border-radius:.4rem;font-size:.7rem;font-weight:800;text-transform:uppercase;{{ $activeRevisionRequest->status === 'RESUBMITTED' ? 'background:rgba(52,211,153,.2);color:#34d399;border:1px solid rgba(52,211,153,.4);' : 'background:rgba(251,191,36,.2);color:#fbbf24;border:1px solid rgba(251,191,36,.4);' }}">
+                            {{ $activeRevisionRequest->status === 'RESUBMITTED' ? 'Resubmitted — Awaiting RM Review' : 'New Revision Request (' . $activeRevisionRequest->status . ')' }}
+                        </span>
+                        <span style="font-size:.75rem;color:#818cf8;font-weight:700;">Task ID: {{ substr($activeRevisionRequest->id, 0, 8) }}</span>
+                    </div>
                 </div>
-                <div style="font-size:.82rem;color:#cbd5e1;background:#080f1d;padding:.85rem;border-radius:.6rem;border:1px solid #1e293b;margin-bottom:1rem;">
-                    <strong>Reviewer Feedback:</strong> "{{ $activeRevisionRequest->notes }}"
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:.75rem;background:#080f1d;padding:.85rem;border-radius:.6rem;border:1px solid #1e293b;margin-bottom:1rem;font-size:.82rem;">
+                    <div>
+                        <span style="color:#64748b;font-size:.7rem;font-weight:700;display:block;text-transform:uppercase;">Requesting Teacher</span>
+                        <strong style="color:#f1f5f9;">{{ $activeRevisionRequest->teacher?->name ?? 'Teacher' }}</strong>
+                        <span style="color:#94a3b8;font-size:.72rem;display:block;">{{ $activeRevisionRequest->teacher?->email }}</span>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:.7rem;font-weight:700;display:block;text-transform:uppercase;">Teacher's Revision Note</span>
+                        <span style="color:#fbbf24;font-weight:600;">"{{ $activeRevisionRequest->notes }}"</span>
+                    </div>
+                    <div>
+                        <span style="color:#64748b;font-size:.7rem;font-weight:700;display:block;text-transform:uppercase;">Timeline</span>
+                        <span style="color:#cbd5e1;">{{ $activeRevisionRequest->created_at?->diffForHumans() }}</span>
+                    </div>
                 </div>
+
                 @if($activeRevisionRequest->items->count() > 0)
                 <div style="display:flex;flex-direction:column;gap:.5rem;">
-                    <div style="font-size:.72rem;font-weight:800;color:#94a3b8;text-transform:uppercase;">Tracked Quality Findings:</div>
+                    <div style="font-size:.72rem;font-weight:800;color:#94a3b8;text-transform:uppercase;">Tracked Quality Findings &amp; Items:</div>
                     @foreach($activeRevisionRequest->items as $item)
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .85rem;background:#1e293b;border-radius:.5rem;font-size:.78rem;color:#e2e8f0;">
                         <span>⚠️ {{ $item->feedback }}</span>

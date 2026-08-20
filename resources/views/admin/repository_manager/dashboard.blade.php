@@ -278,15 +278,15 @@
             <div>
                 <div class="rm-panel__header">
                     <h3 class="rm-panel__title">📥 Teacher Revision Queue</h3>
-                    <a href="{{ route('admin.repository-manager.media-approval') }}" style="font-size:.78rem;color:#818cf8;font-weight:700;text-decoration:none;">View All Queue →</a>
+                    <a href="{{ route('admin.repository-manager.questions-approval') }}" style="font-size:.78rem;color:#818cf8;font-weight:700;text-decoration:none;">View All Queue →</a>
                 </div>
 
                 @if($teacherSubmissionsQueue->count() > 0)
                     <table class="rm-table">
                         <thead>
                             <tr>
-                                <th>Submitter Teacher</th>
-                                <th>Resource</th>
+                                <th>Teacher</th>
+                                <th>Question Bank</th>
                                 <th>Submitted At</th>
                                 <th>Status</th>
                                 <th>Action</th>
@@ -296,19 +296,32 @@
                             @foreach($teacherSubmissionsQueue as $item)
                             <tr>
                                 <td>
-                                    <div style="font-weight:700;color:#f1f5f9;">{{ $item->submitter?->name ?? 'Teacher' }}</div>
-                                    <div style="font-size:.7rem;color:#64748b;">{{ $item->submitter?->email }}</div>
+                                    <div style="font-weight:700;color:#f1f5f9;">{{ $item->teacher?->name ?? 'Teacher' }}</div>
+                                    <div style="font-size:.7rem;color:#64748b;">{{ $item->teacher?->email }}</div>
                                 </td>
-                                <td><span style="text-transform:uppercase;font-weight:700;color:#818cf8;">{{ $item->resource_type }}</span></td>
-                                <td style="font-size:.75rem;color:#94a3b8;">{{ $item->created_at?->diffForHumans() }}</td>
                                 <td>
-                                    <span style="padding:.2rem .5rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:.4rem;font-size:.7rem;font-weight:700;">
-                                        Pending QA
+                                    <div style="font-weight:700;color:#818cf8;">{{ $item->questionBank?->title ?? 'Question Bank' }}</div>
+                                    @if(!empty($item->notes))
+                                    <div style="font-size:.72rem;color:#cbd5e1;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $item->notes }}">
+                                        "{{ $item->notes }}"
+                                    </div>
+                                    @endif
+                                </td>
+                                <td style="font-size:.75rem;color:#94a3b8;">{{ ($item->updated_at ?? $item->created_at)?->diffForHumans() }}</td>
+                                <td>
+                                    @if($item->status === 'RESUBMITTED')
+                                    <span style="padding:.2rem .5rem;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;border-radius:.4rem;font-size:.7rem;font-weight:700;">
+                                        Resubmitted — Awaiting RM Review
                                     </span>
+                                    @else
+                                    <span style="padding:.2rem .5rem;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;border-radius:.4rem;font-size:.7rem;font-weight:700;">
+                                        New Revision Request
+                                    </span>
+                                    @endif
                                 </td>
                                 <td>
-                                    <a href="{{ route('admin.repository-manager.media-review', $item->id) }}" style="padding:.35rem .75rem;background:#6366f1;color:#fff;border-radius:.45rem;font-size:.72rem;font-weight:800;text-decoration:none;">
-                                        Review Diff →
+                                    <a href="{{ route('admin.repository-manager.question-bank-validate', $item->question_bank_id) }}" style="padding:.35rem .75rem;background:#6366f1;color:#fff;border-radius:.45rem;font-size:.72rem;font-weight:800;text-decoration:none;display:inline-block;">
+                                        Review Workspace →
                                     </a>
                                 </td>
                             </tr>

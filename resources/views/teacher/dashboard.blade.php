@@ -416,7 +416,7 @@ a.tw-hero__pill:hover { opacity: .8; }
     {{-- STATE B: CONTINUE WORKING DRAFT SPOTLIGHT --}}
     <div style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);border:1px solid rgba(99,102,241,.3);border-radius:1.25rem;padding:1.5rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
         <div>
-            <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;">⚡ Continue Working</div>
+            <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;">⚡ Continue Working • Question Bank Draft</div>
             <h3 style="font-size:1.25rem;font-weight:800;color:#f1f5f9;margin:.25rem 0 .4rem;">{{ $latestDraftBank->title }}</h3>
             <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:#94a3b8;">
                 <span>📝 <strong>{{ $latestDraftBank->questions->count() }}</strong> Questions</span>
@@ -432,6 +432,29 @@ a.tw-hero__pill:hover { opacity: .8; }
             </a>
             <a href="{{ route('admin.question-banks.index', ['status' => 'draft']) }}" class="tw-qa-btn tw-qa-btn--secondary">
                 📂 Continue Draft
+            </a>
+        </div>
+    </div>
+    @elseif(isset($latestDraftTest) && $latestDraftTest)
+    {{-- STATE B2: CONTINUE WORKING ASSESSMENT DRAFT SPOTLIGHT --}}
+    <div style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);border:1px solid rgba(99,102,241,.3);border-radius:1.25rem;padding:1.5rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
+        <div>
+            <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;">⚡ Continue Working • Assessment Draft</div>
+            <h3 style="font-size:1.25rem;font-weight:800;color:#f1f5f9;margin:.25rem 0 .4rem;">{{ $latestDraftTest->title }}</h3>
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;color:#94a3b8;">
+                <span>📝 <strong>{{ $latestDraftTest->sections->sum(fn($s) => $s->testQuestions->count()) }}</strong> Questions</span>
+                <span>🏷 <strong>{{ is_object($latestDraftTest->test_type) ? $latestDraftTest->test_type->label() : strtoupper($latestDraftTest->test_type?->value ?? 'General') }}</strong></span>
+                <span>📌 Status <strong style="text-transform:uppercase;">{{ is_object($latestDraftTest->status) ? $latestDraftTest->status->value : $latestDraftTest->status }}</strong></span>
+                <span>🕒 Last edited {{ $latestDraftTest->updated_at?->diffForHumans() }}</span>
+                <span style="color:#34d399;">● Assigned Workspace</span>
+            </div>
+        </div>
+        <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
+            <a href="{{ route('teacher.tests.show', $latestDraftTest->id) }}" class="tw-qa-btn tw-qa-btn--primary">
+                ✏️ Author Assessment →
+            </a>
+            <a href="{{ route('admin.tests.index', ['status' => 'draft']) }}" class="tw-qa-btn tw-qa-btn--secondary">
+                📂 All Assessment Drafts
             </a>
         </div>
     </div>
@@ -479,12 +502,28 @@ a.tw-hero__pill:hover { opacity: .8; }
         @endif
 
         {{-- Teacher Awaiting Approval KPI Card --}}
-        @if(($pendingApprovalQuestionBanks ?? 0) > 0)
-        <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="tw-kpi tw-kpi--amber">
+        @php
+            $totalPendingReview = ($pendingApprovalQuestionBanks ?? 0) + ($pendingAssessments ?? 0);
+        @endphp
+        @if($totalPendingReview > 0)
+        @php
+            $pendingRoute = ($pendingAssessments > 0 && ($pendingApprovalQuestionBanks ?? 0) === 0)
+                ? route('admin.tests.index', ['status' => 'pending_approval'])
+                : route('admin.question-banks.index', ['status' => 'pending_approval']);
+        @endphp
+        <a href="{{ $pendingRoute }}" class="tw-kpi tw-kpi--amber">
             <div class="tw-kpi__icon">⏳</div>
-            <div class="tw-kpi__count">{{ $pendingApprovalQuestionBanks }}</div>
+            <div class="tw-kpi__count">{{ $totalPendingReview }}</div>
             <div class="tw-kpi__label">Awaiting Approval</div>
-            <div class="tw-kpi__desc">Repositories Submitted for Review</div>
+            <div class="tw-kpi__desc">
+                @if(($pendingAssessments ?? 0) > 0 && ($pendingApprovalQuestionBanks ?? 0) > 0)
+                    {{ $pendingApprovalQuestionBanks }} bank(s), {{ $pendingAssessments }} assessment(s)
+                @elseif(($pendingAssessments ?? 0) > 0)
+                    {{ $pendingAssessments }} assessment(s) awaiting review
+                @else
+                    Repositories Submitted for Review
+                @endif
+            </div>
         </a>
         @else
         <a href="javascript:void(0)" onclick="openNoPendingApprovalModal()" class="tw-kpi tw-kpi--amber">
@@ -511,12 +550,25 @@ a.tw-hero__pill:hover { opacity: .8; }
         </a>
         @endif
 
-        @if($draftQuestionBanks > 0)
-        <a href="{{ route('admin.question-banks.index', ['status' => 'draft']) }}" class="tw-kpi tw-kpi--slate">
+        @if(($draftTotal ?? 0) > 0)
+        @php
+            $draftRoute = ($draftAssessments > 0 && ($draftQuestionBanks ?? 0) === 0)
+                ? route('admin.tests.index', ['status' => 'draft'])
+                : route('admin.question-banks.index', ['status' => 'draft']);
+        @endphp
+        <a href="{{ $draftRoute }}" class="tw-kpi tw-kpi--slate">
             <div class="tw-kpi__icon">✏️</div>
-            <div class="tw-kpi__count">{{ $draftQuestionBanks }}</div>
+            <div class="tw-kpi__count">{{ $draftTotal }}</div>
             <div class="tw-kpi__label">Drafts</div>
-            <div class="tw-kpi__desc">In progress, not yet submitted</div>
+            <div class="tw-kpi__desc">
+                @if(($draftAssessments ?? 0) > 0 && ($draftQuestionBanks ?? 0) > 0)
+                    {{ $draftQuestionBanks }} bank(s), {{ $draftAssessments }} assessment(s)
+                @elseif(($draftAssessments ?? 0) > 0)
+                    {{ $draftAssessments }} assessment draft(s) in progress
+                @else
+                    In progress, not yet submitted
+                @endif
+            </div>
         </a>
         @else
         <a href="javascript:void(0)" onclick="openNoDraftModal()" class="tw-kpi tw-kpi--slate">

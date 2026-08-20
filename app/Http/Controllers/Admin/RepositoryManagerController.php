@@ -113,11 +113,13 @@ class RepositoryManagerController extends Controller
             ];
         }
 
-        $teacherSubmissionsQueue = RepositoryReviewRequest::with(['submitter'])
-            ->where('status', 'pending_review')
-            ->latest()
-            ->take(6)
-            ->get();
+        $teacherSubmissionsQueue = Schema::hasTable('repository_revision_requests')
+            ? \App\Models\RepositoryRevisionRequest::with(['teacher', 'questionBank', 'items.question'])
+                ->whereIn('status', ['OPEN', 'RESUBMITTED'])
+                ->latest()
+                ->take(6)
+                ->get()
+            : collect([]);
 
         $teacherPerformanceSummary = [
             ['name' => 'Prof. Alexander Wright', 'submitted' => 18, 'approved' => 16, 'revisions' => 2],
@@ -427,7 +429,15 @@ class RepositoryManagerController extends Controller
             ->latest()
             ->get();
 
-        return view('admin.repository_manager.question_bank_validate', compact('questionBank', 'logs'));
+        $activeRevisionRequest = Schema::hasTable('repository_revision_requests')
+            ? \App\Models\RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
+                ->whereIn('status', ['OPEN', 'RESUBMITTED'])
+                ->with(['teacher', 'requestedBy', 'items.question'])
+                ->latest()
+                ->first()
+            : null;
+
+        return view('admin.repository_manager.question_bank_validate', compact('questionBank', 'logs', 'activeRevisionRequest'));
     }
 
     public function reviewComplete(QuestionBank $questionBank): View
@@ -1103,15 +1113,15 @@ class RepositoryManagerController extends Controller
     }
 
     /**
-     * Reject assessment (TASK 5).
+     * Send Assessment to Archived (RM Decision: Rejected & Archived).
      */
-    public function rejectAssessment(Request $request, Test $test): RedirectResponse
+    public function archiveAssessment(Request $request, Test $test): RedirectResponse
     {
         $user = $request->user();
-        $note = $request->input('notes', 'Assessment rejected by Repository Manager.');
+        $note = $request->input('notes', 'Assessment submission rejected and moved to Archived.');
 
         $previousStatus = $test->status;
-        $test->status = 'needs_revision';
+        $test->status = 'archived';
         $test->is_published = false;
         $test->save();
 
@@ -1120,7 +1130,7 @@ class RepositoryManagerController extends Controller
             'resource_id'   => (string) $test->id,
             'actor_id'      => $test->created_by ?? $user->id,
             'reviewer_id'   => $user->id,
-            'action'        => 'rejected',
+            'action'        => 'assessment_archived',
             'approval_note' => $note,
         ]);
 
@@ -1128,7 +1138,7 @@ class RepositoryManagerController extends Controller
             \App\Models\AclAuditTrail::create([
                 'resource_type' => 'Test',
                 'resource_id'   => (string) $test->id,
-                'action'        => 'assessment_rejected',
+                'action'        => 'assessment_archived',
                 'actor_id'      => $user->id,
                 'reviewer_id'   => $user->id,
                 'created_by'    => $test->created_by ?? $user->id,
@@ -1137,18 +1147,19 @@ class RepositoryManagerController extends Controller
                 'ip_address'    => $request->ip(),
                 'metadata'      => [
                     'previous_status' => $previousStatus,
-                    'new_status'      => 'needs_revision',
+                    'new_status'      => 'archived',
                     'reviewer'        => $user->name,
                 ],
             ]);
         }
 
-        if ($test->creator) {
+        $author = $test->assignedTeacher ?? $test->creator;
+        if ($author) {
             try {
-                $test->creator->notify(new \App\Notifications\EnterpriseSystemNotification(
-                    title: 'Assessment Rejected',
-                    message: "Your Assessment Test '{$test->title}' was rejected by Repository Manager {$user->name}. Reason: {$note}",
-                    type: 'ASSESSMENT_REJECTED',
+                $author->notify(new \App\Notifications\EnterpriseSystemNotification(
+                    title: 'Assessment Submission Rejected and Archived',
+                    message: "Assessment submission '{$test->title}' was rejected and moved to Archived. Reason: {$note}",
+                    type: 'ASSESSMENT_REJECTED_AND_ARCHIVED',
                     priority: 'HIGH',
                     entityType: 'test',
                     entityId: (string) $test->id,
@@ -1160,7 +1171,15 @@ class RepositoryManagerController extends Controller
         }
 
         return redirect()->route('admin.repository-manager.assessment-approval')
-            ->with('danger', "Assessment '{$test->title}' rejected.");
+            ->with('status', "Assessment '{$test->title}' has been rejected and moved to Archived.");
+    }
+
+    /**
+     * Backward compatibility alias for Reject Assessment.
+     */
+    public function rejectAssessment(Request $request, Test $test): RedirectResponse
+    {
+        return $this->archiveAssessment($request, $test);
     }
 
     /**

@@ -356,11 +356,15 @@
 
                 <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
 
-                {{-- Reject Form --}}
-                <form action="{{ route('admin.repository-manager.assessment-reject', $test->id) }}" method="POST" onsubmit="event.preventDefault(); iapConfirm({ title: 'Reject Assessment Test?', message: 'Are you sure you want to reject this assessment test? Rejecting will return it for author revision.', confirmText: 'Reject Assessment', variant: 'danger', form: this });">
+                {{-- Send to Archived Decision (Governance Rejection & Historical Archival) --}}
+                <form action="{{ route('admin.repository-manager.assessment-archive', $test->id) }}" method="POST" id="form-send-to-archived">
                     @csrf
-                    <button type="submit" style="width:100%;padding:.6rem;background:#ef4444;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.8rem;">
-                        ✖ Reject Assessment
+                    <div style="margin-bottom:.75rem;">
+                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Archive / Rejection Reason</label>
+                        <input type="text" name="notes" placeholder="Reason for archiving this submission..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                    </div>
+                    <button type="submit" onclick="event.preventDefault(); iapConfirm({ title: 'Send Assessment to Archived?', message: 'This submission will be marked as ARCHIVED and retained for historical reference. The author will be notified that the submission was rejected and archived.', confirmText: 'Send to Archived', variant: 'warning', form: this.form });" style="width:100%;padding:.65rem;background:#475569;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;gap:.35rem;">
+                        📦 Send to Archived
                     </button>
                 </form>
             </div>

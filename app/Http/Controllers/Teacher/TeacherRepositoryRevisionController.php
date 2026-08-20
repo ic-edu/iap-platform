@@ -8,6 +8,7 @@ use App\Models\MediaAsset;
 use App\Models\RepositoryActivityLog;
 use App\Models\RepositoryRevisionItem;
 use App\Models\RepositoryRevisionRequest;
+use App\Models\User;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use App\Services\RepositoryQualityService;
@@ -452,5 +453,54 @@ class TeacherRepositoryRevisionController extends Controller
             'passed_count' => $passedCount,
             'total_count'  => $totalCount,
         ];
+    }
+
+    /**
+     * Teacher initiates revision request on a Master Question / Question Bank.
+     */
+    public function requestRevision(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'question_bank_id' => ['required', 'exists:question_banks,id'],
+            'question_id'      => ['nullable', 'exists:questions,id'],
+            'notes'            => ['required', 'string', 'max:1000'],
+        ]);
+
+        $bank = \App\Modules\QuestionBank\Models\QuestionBank::findOrFail($validated['question_bank_id']);
+
+        $revisionRequest = RepositoryRevisionRequest::create([
+            'question_bank_id' => $bank->id,
+            'teacher_id'       => $user->id,
+            'requested_by_id'  => $user->id,
+            'status'           => 'OPEN',
+            'notes'            => $validated['notes'],
+        ]);
+
+        $question = !empty($validated['question_id']) ? Question::find($validated['question_id']) : null;
+
+        RepositoryRevisionItem::create([
+            'repository_revision_request_id' => $revisionRequest->id,
+            'question_bank_id'               => $bank->id,
+            'question_id'                    => $question?->id,
+            'feedback'                       => $validated['notes'],
+            'finding_type'                   => 'teacher_revision_request',
+            'severity'                       => 'medium',
+            'suggested_fix'                  => 'Review question prompt/options as requested by teacher.',
+            'status'                         => 'OPEN',
+        ]);
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'QuestionBank',
+            'resource_id'   => $bank->id,
+            'actor_id'      => $user->id,
+            'reviewer_id'   => $user->id,
+            'action'        => 'teacher_requested_revision',
+            'approval_note' => $validated['notes'],
+        ]);
+
+        return redirect()->route('teacher.repository-revisions.show', $revisionRequest->id)
+            ->with('success', 'Repository revision request created. You can now edit question draft.');
     }
 }

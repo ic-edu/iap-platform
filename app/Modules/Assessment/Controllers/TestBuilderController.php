@@ -51,12 +51,22 @@ class TestBuilderController extends Controller
             $query->where('test_type', $type);
         }
 
+        if ($user && $user->hasRole('teacher')) {
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhere('assigned_to', $user->id);
+            });
+        }
+
         $tests = $query->latest('updated_at')->paginate(10)->withQueryString();
 
         // Calculate workspace KPI statistics for Teacher (Section 2 & 7)
         $allMyTestsQuery = Test::query();
         if ($user && $user->hasRole('teacher')) {
-            $allMyTestsQuery->where('created_by', $user->id);
+            $allMyTestsQuery->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhere('assigned_to', $user->id);
+            });
         }
 
         $totalTests           = (clone $allMyTestsQuery)->count();
@@ -246,11 +256,15 @@ class TestBuilderController extends Controller
     {
         $user = $request->user();
 
-        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
             abort(403, 'Unauthorized access to assessment test.');
         }
 
-        $test->load(['sections.testQuestions.question', 'creator']);
+        $test->load(['sections.testQuestions.question.choices', 'sections.testQuestions.question.questionBank', 'creator', 'assignedTeacher']);
+
+        $publishedQuestionBanks = \App\Modules\QuestionBank\Models\QuestionBank::with(['questions.choices'])
+            ->whereIn('status', ['published', 'approved'])
+            ->get();
 
         $latestFeedbackLog = \App\Models\RepositoryActivityLog::where('resource_type', 'Test')
             ->where('resource_id', (string) $test->id)
@@ -289,7 +303,7 @@ class TestBuilderController extends Controller
 
         $validationResult = $this->validateAssessment($test);
 
-        return view('teacher.assessment_detail', compact('test', 'latestFeedbackLog', 'workflowTimeline', 'validationResult'));
+        return view('teacher.assessment_detail', compact('test', 'latestFeedbackLog', 'workflowTimeline', 'validationResult', 'publishedQuestionBanks'));
     }
 
     /**
@@ -299,7 +313,7 @@ class TestBuilderController extends Controller
     {
         $user = $request->user();
 
-        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
             abort(403, 'Unauthorized access to update assessment test.');
         }
 
@@ -324,13 +338,156 @@ class TestBuilderController extends Controller
     }
 
     /**
+     * Attach an existing Master Question from an Institutional Question Bank to an Assessment section.
+     */
+    public function attachMasterQuestion(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $validated = $request->validate([
+            'test_section_id' => ['required', 'exists:test_sections,id'],
+            'question_id'     => ['required', 'exists:questions,id'],
+        ]);
+
+        $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
+        $question = Question::findOrFail($validated['question_id']);
+
+        if ($question->question_bank_id === null) {
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->with('error', 'Selected question is not a Master Question.');
+        }
+
+        try {
+            $this->builderService->assignQuestionToSection($section, $question->id);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Master Question attached to section '{$section->title}'.");
+    }
+
+    /**
+     * Create an Assessment-authored question and attach it to a section.
+     */
+    public function createAssessmentQuestion(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $validated = $request->validate([
+            'test_section_id' => ['required', 'exists:test_sections,id'],
+            'prompt'          => ['required', 'string'],
+            'question_type'   => ['required', 'string'],
+            'difficulty'      => ['nullable', 'string'],
+            'points'          => ['required', 'integer', 'min:1'],
+            'explanation'     => ['nullable', 'string'],
+            'choices'         => ['nullable', 'array'],
+            'correct_choice'  => ['nullable'],
+        ]);
+
+        $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
+
+        $choices = [];
+        if (!empty($validated['choices'])) {
+            foreach ($validated['choices'] as $idx => $choiceText) {
+                if (empty(trim($choiceText))) continue;
+                $choices[] = [
+                    'label'      => chr(65 + $idx),
+                    'content'    => $choiceText,
+                    'is_correct' => ((string) $idx === (string) ($request->input('correct_choice'))),
+                ];
+            }
+        }
+
+        $this->builderService->createAssessmentQuestion($section, [
+            'prompt'        => $validated['prompt'],
+            'question_type' => $validated['question_type'],
+            'difficulty'    => $validated['difficulty'] ?? 'medium',
+            'points'        => $validated['points'],
+            'explanation'   => $validated['explanation'] ?? null,
+            'choices'       => $choices,
+        ]);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Assessment-authored question created and added to section '{$section->title}'.");
+    }
+
+    /**
+     * Remove question reference from Assessment.
+     */
+    public function destroyQuestion(Request $request, Test $test, Question $question): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $removed = $this->builderService->removeQuestionFromSection($test, $question->id);
+
+        if (!$removed) {
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->with('error', 'Question not found in assessment.');
+        }
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', 'Question reference removed from assessment.');
+    }
+
+    /**
+     * Add section to assessment.
+     */
+    public function addSection(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+        ]);
+
+        $section = $this->builderService->addSection($test, $validated['title']);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Section '{$section->title}' added successfully.");
+    }
+
+    /**
      * Lazy Load Single Question for Editing (TASK 4 - Progressive Disclosure).
      */
     public function editQuestion(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question)
     {
         $user = $request->user();
 
-        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
             abort(403, 'Unauthorized access to question.');
         }
 
@@ -373,7 +530,7 @@ class TestBuilderController extends Controller
     {
         $user = $request->user();
 
-        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
             abort(403, 'Unauthorized access to update question.');
         }
 
@@ -452,38 +609,38 @@ class TestBuilderController extends Controller
     /**
      * Resubmit assessment to Repository Manager Approval Queue with Validation Panel check (TASK 5, TASK 7).
      */
-     public function resubmit(Request $request, Test $test): RedirectResponse
-     {
-         $user = $request->user();
- 
-         if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id) {
-             abort(403, 'Unauthorized access to resubmit assessment test.');
-         }
- 
-         // TASK 5: Validation Panel Check before submission
-         $validationResult = $this->validateAssessment($test);
-         if (!$validationResult['is_valid']) {
-             return redirect()->route('teacher.tests.show', $test->id)
-                 ->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
-         }
- 
-         $test->update([
-             'status'       => 'pending_approval',
-             'is_published' => false,
-         ]);
- 
-         \App\Models\RepositoryActivityLog::create([
-             'resource_type' => 'Test',
-             'resource_id'   => (string) $test->id,
-             'actor_id'      => $user->id,
-             'action'        => 'assessment_resubmitted',
-             'approval_note' => 'Assessment resubmitted for review.',
-         ]);
- 
-         return redirect()->route('teacher.tests.show', $test->id)
-             ->with('status', "Assessment resubmitted successfully.");
-     }
- 
+    public function resubmit(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to resubmit assessment test.');
+        }
+
+        // TASK 5: Validation Panel Check before submission
+        $validationResult = $this->validateAssessment($test);
+        if (!$validationResult['is_valid']) {
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
+        }
+
+        $test->update([
+            'status'       => 'pending_approval',
+            'is_published' => false,
+        ]);
+
+        \App\Models\RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $user->id,
+            'action'        => 'assessment_resubmitted',
+            'approval_note' => 'Assessment resubmitted for review.',
+        ]);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Assessment resubmitted successfully.");
+    }
+
     /**
      * Automated Question & Structure Validation (Delegates to TestBuilderService).
      */

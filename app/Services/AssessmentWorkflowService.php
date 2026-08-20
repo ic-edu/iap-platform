@@ -14,7 +14,10 @@ class AssessmentWorkflowService
      */
     public function getTeacherMetrics(User $user): array
     {
-        $baseQuery = Test::where('created_by', $user->id);
+        $baseQuery = Test::where(function ($q) use ($user) {
+            $q->where('created_by', $user->id)
+              ->orWhere('assigned_to', $user->id);
+        });
 
         $draft         = (clone $baseQuery)->where('status', 'draft')->count();
         $pending       = (clone $baseQuery)->whereIn('status', ['pending', 'pending_approval'])->count();
@@ -41,7 +44,10 @@ class AssessmentWorkflowService
             ->whereIn('status', ['pending', 'pending_approval'])
             ->count();
 
-        $pendingAssessments = Test::where('created_by', $user->id)
+        $pendingAssessments = Test::where(function ($q) use ($user) {
+            $q->where('created_by', $user->id)
+              ->orWhere('assigned_to', $user->id);
+        })
             ->whereIn('status', ['pending', 'pending_approval'])
             ->count();
 

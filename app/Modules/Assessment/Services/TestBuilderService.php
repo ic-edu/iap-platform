@@ -75,6 +75,83 @@ class TestBuilderService
     }
 
     /**
+     * Create an Assessment-authored question (ad-hoc, question_bank_id = null) and attach it to a section.
+     */
+    public function createAssessmentQuestion(TestSection $section, array $data): TestQuestion
+    {
+        $question = \App\Modules\QuestionBank\Models\Question::create([
+            'question_bank_id' => null,
+            'prompt'           => $data['prompt'],
+            'question_type'    => $data['question_type'] ?? 'multiple_choice',
+            'difficulty'       => $data['difficulty'] ?? 'medium',
+            'points'           => $data['points'] ?? 1,
+            'explanation'      => $data['explanation'] ?? null,
+            'passage_text'     => $data['passage_text'] ?? null,
+        ]);
+
+        if (!empty($data['choices']) && is_array($data['choices'])) {
+            foreach ($data['choices'] as $choice) {
+                \App\Modules\QuestionBank\Models\QuestionChoice::create([
+                    'question_id' => $question->id,
+                    'label'       => $choice['label'] ?? 'A',
+                    'content'     => $choice['content'] ?? '',
+                    'is_correct'  => !empty($choice['is_correct']),
+                ]);
+            }
+        }
+
+        $nextOrder = (TestQuestion::where('test_section_id', $section->id)->max('order') ?? 0) + 1;
+
+        return TestQuestion::create([
+            'test_section_id' => $section->id,
+            'question_id'     => $question->id,
+            'order'           => $nextOrder,
+            'points'          => $data['points'] ?? 1,
+        ]);
+    }
+
+    /**
+     * Remove question from test section. If ad-hoc (question_bank_id is null), clean up question/choices.
+     */
+    public function removeQuestionFromSection(Test $test, string $questionId): bool
+    {
+        $sectionIds = $test->sections()->pluck('id');
+        $testQuestion = TestQuestion::whereIn('test_section_id', $sectionIds)
+            ->where('question_id', $questionId)
+            ->first();
+
+        if (!$testQuestion) {
+            return false;
+        }
+
+        $question = \App\Modules\QuestionBank\Models\Question::find($questionId);
+        $testQuestion->delete();
+
+        // If it was an Assessment-authored question (not from a Question Bank), delete it
+        if ($question && is_null($question->question_bank_id)) {
+            $question->choices()->delete();
+            $question->delete();
+        }
+
+        return true;
+    }
+
+    /**
+     * Add a section to an assessment.
+     */
+    public function addSection(Test $test, string $title, ?string $sectionType = null): TestSection
+    {
+        $nextOrder = ($test->sections()->max('order') ?? 0) + 1;
+
+        return TestSection::create([
+            'test_id'      => $test->id,
+            'title'        => $title,
+            'section_type' => $sectionType,
+            'order'        => $nextOrder,
+        ]);
+    }
+
+    /**
      * Automated Question & Structure Validation for Assessment Submissions.
      * Canonical rule:
      * - Minimum 1 section.

@@ -94,6 +94,15 @@ class TeacherDashboardController extends Controller
             ->latest('updated_at')
             ->first();
 
+        $latestDraftTest = Test::with(['sections.testQuestions'])
+            ->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhere('assigned_to', $user->id);
+            })
+            ->whereIn('status', ['draft', 'rejected', 'revision_requested', 'needs_revision'])
+            ->latest('updated_at')
+            ->first();
+
         return view('teacher.dashboard', compact(
             'totalQuestionBanks',
             'draftQuestionBanks',
@@ -115,6 +124,7 @@ class TeacherDashboardController extends Controller
             'pendingRepoRevCount',
             'recentQuestionBanks',
             'latestDraftBank',
+            'latestDraftTest',
             'notifications',
             'unreadNotificationCount'
         ));

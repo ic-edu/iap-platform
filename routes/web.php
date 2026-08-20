@@ -113,6 +113,14 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.tests.edit-question');
     Route::put('/teacher/assessments/{test}/questions/{question}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'updateQuestion'])
         ->name('teacher.tests.update-question');
+    Route::post('/teacher/assessments/{test}/attach-master-question', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'attachMasterQuestion'])
+        ->name('teacher.tests.attach-master-question');
+    Route::post('/teacher/assessments/{test}/create-question', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'createAssessmentQuestion'])
+        ->name('teacher.tests.create-question');
+    Route::delete('/teacher/assessments/{test}/questions/{question}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'destroyQuestion'])
+        ->name('teacher.tests.destroy-question');
+    Route::post('/teacher/assessments/{test}/sections', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'addSection'])
+        ->name('teacher.tests.add-section');
     Route::post('/teacher/assessments/{test}/resubmit', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'resubmit'])
         ->name('teacher.tests.resubmit');
 });
@@ -294,7 +302,12 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
         Route::post('/assessments/{test}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveAssessment'])
             ->name('admin.repository-manager.assessment-approve');
         Route::post('/assessments/{test}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionAssessment'])->name('admin.repository-manager.assessment-revision');
+        Route::post('/assessments/{test}/archive', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'archiveAssessment'])->name('admin.repository-manager.assessment-archive');
         Route::post('/assessments/{test}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectAssessment'])->name('admin.repository-manager.assessment-reject');
+
+        // Assessment Requests Intake Queue
+        Route::get('/assessment-requests', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'index'])->name('admin.repository-manager.assessment-requests.index');
+        Route::post('/assessment-requests/{assessmentRequest}/create-draft', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'createDraft'])->name('admin.repository-manager.assessment-requests.create-draft');
 
         // Backward compatibility redirect for legacy double-prefixed URI
         Route::get('/repository-manager/assessments/{test}', function ($test) {
@@ -303,9 +316,16 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
     });
 });
 
+// Admin Assessment Requests
+Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])->group(function () {
+    Route::get('/admin/assessment-requests', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'index'])->name('admin.assessment-requests.index');
+    Route::post('/admin/assessment-requests', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'store'])->name('admin.assessment-requests.store');
+});
+
 // RRWE v1.0 & RRUXO-ENTERPRISE: Teacher Repository Revision Center Routes
 Route::middleware(['web', 'auth', 'role:teacher|super-admin'])->prefix('teacher/repository-revisions')->group(function () {
     Route::get('/', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'index'])->name('teacher.repository-revisions.index');
+    Route::post('/request', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'requestRevision'])->name('teacher.repository-revisions.request');
     Route::get('/{revisionRequest}', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'show'])->name('teacher.repository-revisions.show');
     Route::get('/{revisionRequest}/item/{item}/edit', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'editQuestion'])->name('teacher.repository-revisions.edit-question');
     Route::post('/{revisionRequest}/item/{item}/update', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'updateQuestion'])->name('teacher.repository-revisions.update-question');
