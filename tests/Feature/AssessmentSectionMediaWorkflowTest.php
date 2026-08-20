@@ -399,17 +399,198 @@ class AssessmentSectionMediaWorkflowTest extends TestCase
     }
 
     /**
-     * TEST 13: Existing Media Library remains functional.
+     * TEST 13: Teacher can upload supported image.
      */
-    public function test_13_existing_media_library_remains_functional()
+    public function test_13_teacher_can_upload_supported_image()
     {
-        $response = $this->actingAs($this->teacher)->getJson('/admin/media/list');
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = \Illuminate\Http\UploadedFile::fake()->image('hotel_lobby.png', 800, 600);
+
+        $response = $this->actingAs($this->teacher)
+            ->postJson(route('admin.media.store'), [
+                'file'  => $file,
+                'title' => 'Hotel Lobby Photo',
+            ]);
+
         $response->assertStatus(200);
-        $response->assertJsonStructure([
-            'success',
-            'data' => [
-                '*' => ['id', 'title', 'name', 'url', 'type', 'size'],
-            ],
+        $response->assertJson([
+            'success' => true,
+            'title'   => 'Hotel Lobby Photo',
+            'type'    => 'image',
         ]);
+
+        $this->assertDatabaseHas('media_assets', [
+            'original_name' => 'hotel_lobby.png',
+            'title'         => 'Hotel Lobby Photo',
+            'type'          => 'image',
+            'uploaded_by'   => $this->teacher->id,
+            'status'        => 'active',
+        ]);
+    }
+
+    /**
+     * TEST 14: Teacher can upload supported audio.
+     */
+    public function test_14_teacher_can_upload_supported_audio()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = \Illuminate\Http\UploadedFile::fake()->create('lecture.mp3', 2048, 'audio/mpeg');
+
+        $response = $this->actingAs($this->teacher)
+            ->postJson(route('admin.media.store'), [
+                'file'  => $file,
+                'title' => 'Part 1 Audio Instructions',
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'title'   => 'Part 1 Audio Instructions',
+            'type'    => 'audio',
+        ]);
+
+        $this->assertDatabaseHas('media_assets', [
+            'original_name' => 'lecture.mp3',
+            'title'         => 'Part 1 Audio Instructions',
+            'type'          => 'audio',
+            'uploaded_by'   => $this->teacher->id,
+        ]);
+    }
+
+    /**
+     * TEST 15: Teacher can upload supported PDF.
+     */
+    public function test_15_teacher_can_upload_supported_pdf()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = \Illuminate\Http\UploadedFile::fake()->create('schedule.pdf', 1024, 'application/pdf');
+
+        $response = $this->actingAs($this->teacher)
+            ->postJson(route('admin.media.store'), [
+                'file'  => $file,
+                'title' => 'Staff Schedule Reference Document',
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'title'   => 'Staff Schedule Reference Document',
+            'type'    => 'pdf',
+        ]);
+
+        $this->assertDatabaseHas('media_assets', [
+            'original_name' => 'schedule.pdf',
+            'type'          => 'pdf',
+            'uploaded_by'   => $this->teacher->id,
+        ]);
+    }
+
+    /**
+     * TEST 16: Oversized file is rejected (> 10MB).
+     */
+    public function test_16_oversized_file_is_rejected()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        // 11 MB file exceeds 10240 KB limit
+        $file = \Illuminate\Http\UploadedFile::fake()->create('huge_audio.mp3', 11500, 'audio/mpeg');
+
+        $response = $this->actingAs($this->teacher)
+            ->post(route('admin.media.store'), [
+                'file' => $file,
+            ], ['Accept' => 'application/json']);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('file', $response->json('errors') ?? []);
+    }
+
+    /**
+     * TEST 17: Unsupported file type is rejected.
+     */
+    public function test_17_unsupported_file_type_is_rejected()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = \Illuminate\Http\UploadedFile::fake()->create('script.exe', 500, 'application/x-msdownload');
+
+        $response = $this->actingAs($this->teacher)
+            ->post(route('admin.media.store'), [
+                'file' => $file,
+            ], ['Accept' => 'application/json']);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('file', $response->json('errors') ?? []);
+    }
+
+    /**
+     * TEST 18: Uploaded media becomes available in Media Library list.
+     */
+    public function test_18_uploaded_media_becomes_available_in_media_library()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = \Illuminate\Http\UploadedFile::fake()->image('restaurant_menu.jpg', 600, 400);
+
+        $uploadResponse = $this->actingAs($this->teacher)
+            ->postJson(route('admin.media.store'), [
+                'file'  => $file,
+                'title' => 'Restaurant Menu Visual',
+            ]);
+
+        $uploadResponse->assertStatus(200);
+        $assetId = $uploadResponse->json('id');
+
+        $listResponse = $this->actingAs($this->teacher)->getJson(route('admin.media.list'));
+        $listResponse->assertStatus(200);
+        $listResponse->assertJsonFragment(['id' => $assetId, 'title' => 'Restaurant Menu Visual']);
+    }
+
+    /**
+     * TEST 19: Uploaded media can be attached directly to Assessment Section.
+     */
+    public function test_19_uploaded_media_can_be_attached_to_assessment_section()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = \Illuminate\Http\UploadedFile::fake()->create('conversation_part1.mp3', 1024, 'audio/mpeg');
+
+        $uploadResponse = $this->actingAs($this->teacher)
+            ->postJson(route('admin.media.store'), [
+                'file'  => $file,
+                'title' => 'Conversation Part 1 Audio Track',
+            ]);
+
+        $assetId = $uploadResponse->json('id');
+
+        $attachResponse = $this->actingAs($this->teacher)
+            ->post(route('teacher.tests.sections.media.attach', [
+                'test'    => $this->test->id,
+                'section' => $this->section->id,
+            ]), [
+                'media_asset_id' => $assetId,
+                'caption'        => 'Conversation Audio Directions',
+                'order'          => 1,
+            ]);
+
+        $attachResponse->assertRedirect(route('teacher.tests.show', $this->test->id));
+        $this->assertDatabaseHas('test_section_media', [
+            'test_section_id' => $this->section->id,
+            'media_asset_id'  => $assetId,
+            'caption'         => 'Conversation Audio Directions',
+            'order'           => 1,
+        ]);
+    }
+
+    /**
+     * TEST 20: Unauthorized role cannot upload media.
+     */
+    public function test_20_unauthorized_role_cannot_upload()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $file = \Illuminate\Http\UploadedFile::fake()->image('candidate_photo.png');
+
+        // Candidate / student cannot upload
+        $responseCandidate = $this->actingAs($this->candidate)
+            ->postJson(route('admin.media.store'), [
+                'file' => $file,
+            ]);
+
+        $responseCandidate->assertStatus(403);
     }
 }

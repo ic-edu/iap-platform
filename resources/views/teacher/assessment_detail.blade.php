@@ -801,10 +801,10 @@
     </div>
 </div>
 
-{{-- Modal 5: Attach Section Media from Library --}}
+{{-- Modal 5: Attach Section Media from Library or Direct Upload --}}
 <div id="attach-section-media-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:1rem;" onclick="closeAttachSectionMediaModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:700px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 20px 50px rgba(0,0,0,.5);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #1e293b;padding-bottom:.75rem;">
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:720px;width:100%;max-height:92vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 20px 50px rgba(0,0,0,.5);" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;border-bottom:1px solid #1e293b;padding-bottom:.75rem;">
             <div>
                 <div style="font-size:1.1rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
                     <span>📎</span> Attach Media Asset to Section
@@ -814,35 +814,52 @@
             <button type="button" onclick="closeAttachSectionMediaModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
         </div>
 
+        {{-- Top Navigation: Choose from Library vs Upload New Media --}}
+        <div style="display:flex;gap:.5rem;margin-bottom:1rem;background:#090d16;padding:.35rem;border-radius:.6rem;border:1px solid #1e293b;">
+            <button type="button" id="asm-tab-library" onclick="switchAsmMode('library')" style="flex:1;padding:.45rem .85rem;background:#6366f1;color:#fff;border:none;border-radius:.45rem;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.35rem;transition:all .15s ease;">
+                <span>📚</span> Choose from Media Library
+            </button>
+            <button type="button" id="asm-tab-upload" onclick="switchAsmMode('upload')" style="flex:1;padding:.45rem .85rem;background:transparent;color:#94a3b8;border:none;border-radius:.45rem;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.35rem;transition:all .15s ease;">
+                <span>⬆️</span> + Upload New Media
+            </button>
+        </div>
+
+        {{-- Mode A: Direct Media Upload Panel --}}
+        <div id="asm-upload-panel" style="display:none;background:#090d16;border:1px solid #1e293b;border-radius:.75rem;padding:1.15rem;margin-bottom:1rem;">
+            <div style="font-size:.82rem;font-weight:800;color:#f8fafc;margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem;">
+                <span>🚀</span> Upload Media to Institutional Library
+            </div>
+
+            <div id="asm-upload-feedback" style="display:none;padding:.6rem .8rem;border-radius:.5rem;font-size:.75rem;font-weight:700;margin-bottom:.75rem;"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.85rem;">
+                <div>
+                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">
+                        Select Local File <span style="color:#f43f5e;">*</span>
+                    </label>
+                    <input type="file" id="asm-upload-file" accept=".jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.pdf,image/*,audio/*,application/pdf" style="width:100%;padding:.45rem .6rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#cbd5e1;font-size:.75rem;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">
+                        Media Title (Optional)
+                    </label>
+                    <input type="text" id="asm-upload-title" placeholder="e.g. Part 1 Listening Directions Audio" style="width:100%;padding:.5rem .75rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.78rem;">
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
+                <div style="font-size:.68rem;color:#64748b;">
+                    Supported: JPG, PNG, WebP, MP3, WAV, M4A, PDF (Max: 10 MB)
+                </div>
+                <button type="button" id="asm-upload-btn" onclick="uploadSectionMediaFile()" style="padding:.5rem 1.1rem;background:#10b981;color:#fff;border:none;border-radius:.45rem;font-size:.78rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(16,185,129,.3);">
+                    <span>⬆️</span> Upload &amp; Select Asset
+                </button>
+            </div>
+        </div>
+
         <form id="attach-section-media-form" method="POST" action="" style="display:flex;flex-direction:column;flex:1;min-height:0;gap:1rem;">
             @csrf
             <input type="hidden" id="asm-media-asset-id" name="media_asset_id" value="" required>
-
-            {{-- Optional Section-Specific Caption and Order --}}
-            <div style="display:grid;grid-template-columns:2fr 1fr;gap:.75rem;">
-                <div>
-                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">
-                        Section Media Caption / Directions Label (Optional)
-                    </label>
-                    <input type="text" id="asm-caption" name="caption" placeholder="e.g. Listening Directions Audio, Reference Photograph" style="width:100%;padding:.5rem .75rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.8rem;">
-                </div>
-                <div>
-                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">Display Order</label>
-                    <input type="number" id="asm-order" name="order" min="1" placeholder="Auto (Next)" style="width:100%;padding:.5rem .75rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.8rem;">
-                </div>
-            </div>
-
-            {{-- Media Filter Tabs & Search --}}
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;">
-                <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
-                    <button type="button" onclick="filterSectionMediaModal('all')" class="asm-filter-btn active" style="padding:.35rem .7rem;background:#6366f1;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
-                    <button type="button" onclick="filterSectionMediaModal('audio')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🎵 Audio Tracks</button>
-                    <button type="button" onclick="filterSectionMediaModal('image')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🖼️ Images</button>
-                    <button type="button" onclick="filterSectionMediaModal('passage')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📖 Passages</button>
-                    <button type="button" onclick="filterSectionMediaModal('pdf')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📄 PDFs</button>
-                </div>
-                <input type="text" id="asm-search-input" onkeyup="searchSectionMediaModal(this.value)" placeholder="Search media by title..." style="padding:.35rem .7rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.75rem;min-width:180px;">
-            </div>
 
             {{-- Selected Media Badge --}}
             <div id="asm-selected-preview" style="display:none;padding:.6rem .8rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);border-radius:.55rem;align-items:center;justify-content:space-between;">
@@ -856,9 +873,38 @@
                 <button type="button" onclick="clearSelectedSectionMedia()" style="padding:.25rem .6rem;background:#ef4444;color:#fff;border:none;border-radius:.35rem;font-size:.7rem;font-weight:700;cursor:pointer;">Clear</button>
             </div>
 
-            {{-- Media Grid Container --}}
-            <div id="asm-media-list-container" style="flex:1;min-height:220px;max-height:300px;overflow-y:auto;background:#090d16;border:1px solid #1e293b;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:.6rem;">
-                <div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>
+            {{-- Section-Specific Caption and Order Inputs --}}
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:.75rem;">
+                <div>
+                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">
+                        Section Media Caption / Directions Label (Optional)
+                    </label>
+                    <input type="text" id="asm-caption" name="caption" placeholder="e.g. Listening Directions Audio, Reference Photograph" style="width:100%;padding:.5rem .75rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.8rem;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">Display Order</label>
+                    <input type="number" id="asm-order" name="order" min="1" placeholder="Auto (Next)" style="width:100%;padding:.5rem .75rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.8rem;">
+                </div>
+            </div>
+
+            {{-- Mode B: Library Browser Panel --}}
+            <div id="asm-library-panel" style="display:flex;flex-direction:column;flex:1;min-height:0;gap:.75rem;">
+                {{-- Media Filter Tabs & Search --}}
+                <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+                        <button type="button" onclick="filterSectionMediaModal('all')" class="asm-filter-btn active" style="padding:.35rem .7rem;background:#6366f1;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
+                        <button type="button" onclick="filterSectionMediaModal('audio')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🎵 Audio Tracks</button>
+                        <button type="button" onclick="filterSectionMediaModal('image')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🖼️ Images</button>
+                        <button type="button" onclick="filterSectionMediaModal('passage')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📖 Passages</button>
+                        <button type="button" onclick="filterSectionMediaModal('pdf')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📄 PDFs</button>
+                    </div>
+                    <input type="text" id="asm-search-input" onkeyup="searchSectionMediaModal(this.value)" placeholder="Search media by title..." style="padding:.35rem .7rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.75rem;min-width:180px;">
+                </div>
+
+                {{-- Media Grid Container --}}
+                <div id="asm-media-list-container" style="flex:1;min-height:200px;max-height:260px;overflow-y:auto;background:#090d16;border:1px solid #1e293b;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:.6rem;">
+                    <div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>
+                </div>
             </div>
 
             <div style="display:flex;justify-content:flex-end;gap:.75rem;border-top:1px solid #1e293b;padding-top:.75rem;">
@@ -953,6 +999,10 @@
         clearSelectedSectionMedia();
         document.getElementById('asm-caption').value = '';
         document.getElementById('asm-order').value = '';
+        document.getElementById('asm-upload-file').value = '';
+        document.getElementById('asm-upload-title').value = '';
+        hideAsmUploadFeedback();
+        switchAsmMode('library');
 
         const modal = document.getElementById('attach-section-media-modal');
         if (modal) modal.style.display = 'flex';
@@ -965,6 +1015,125 @@
             const modal = document.getElementById('attach-section-media-modal');
             if (modal) modal.style.display = 'none';
         }
+    }
+
+    function switchAsmMode(mode) {
+        const tabLib = document.getElementById('asm-tab-library');
+        const tabUpload = document.getElementById('asm-tab-upload');
+        const uploadPanel = document.getElementById('asm-upload-panel');
+
+        if (mode === 'upload') {
+            tabUpload.style.background = '#10b981';
+            tabUpload.style.color = '#fff';
+            tabLib.style.background = 'transparent';
+            tabLib.style.color = '#94a3b8';
+            uploadPanel.style.display = 'block';
+        } else {
+            tabLib.style.background = '#6366f1';
+            tabLib.style.color = '#fff';
+            tabUpload.style.background = 'transparent';
+            tabUpload.style.color = '#94a3b8';
+            uploadPanel.style.display = 'none';
+        }
+    }
+
+    function showAsmUploadFeedback(message, isSuccess = false) {
+        const el = document.getElementById('asm-upload-feedback');
+        if (el) {
+            el.style.display = 'block';
+            el.style.background = isSuccess ? 'rgba(16,185,129,.15)' : 'rgba(244,63,94,.15)';
+            el.style.border = isSuccess ? '1px solid rgba(16,185,129,.4)' : '1px solid rgba(244,63,94,.4)';
+            el.style.color = isSuccess ? '#34d399' : '#fb7185';
+            el.textContent = message;
+        }
+    }
+
+    function hideAsmUploadFeedback() {
+        const el = document.getElementById('asm-upload-feedback');
+        if (el) {
+            el.style.display = 'none';
+            el.textContent = '';
+        }
+    }
+
+    function uploadSectionMediaFile() {
+        const fileInput = document.getElementById('asm-upload-file');
+        const titleInput = document.getElementById('asm-upload-title');
+        const uploadBtn = document.getElementById('asm-upload-btn');
+
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            showAsmUploadFeedback('Please choose a file to upload.', false);
+            return;
+        }
+
+        const file = fileInput.files[0];
+        if (file.size > 10 * 1024 * 1024) {
+            showAsmUploadFeedback('File size exceeds the 10 MB limit.', false);
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        if (titleInput && titleInput.value.trim()) {
+            formData.append('title', titleInput.value.trim());
+        }
+        formData.append('_token', '{{ csrf_token() }}');
+
+        uploadBtn.disabled = true;
+        uploadBtn.style.opacity = '.6';
+        uploadBtn.innerHTML = '⏳ Uploading...';
+        hideAsmUploadFeedback();
+
+        fetch('{{ route('admin.media.store') }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Upload failed.');
+                throw new Error(msg);
+            }
+            return data;
+        })
+        .then(data => {
+            const icon = data.type === 'audio' ? '🎵' : (data.type === 'image' ? '🖼️' : (data.type === 'pdf' ? '📄' : (data.type === 'passage' ? '📖' : '📎')));
+            
+            // Add new asset to the beginning of library array
+            const newAsset = {
+                id: data.id,
+                title: data.title || data.filename,
+                name: data.filename,
+                type: data.type,
+                size: data.size,
+                url: data.url
+            };
+            sectionMediaLibrary.unshift(newAsset);
+
+            // Re-render library grid
+            renderSectionMediaGrid(sectionMediaLibrary);
+
+            // Select this newly uploaded asset
+            selectSectionMediaItem(data.id, data.title || data.filename, data.type, icon);
+
+            // Reset inputs & switch to library view with success confirmation
+            fileInput.value = '';
+            titleInput.value = '';
+            switchAsmMode('library');
+            showAsmUploadFeedback(`✅ "${data.title || data.filename}" uploaded & selected!`, true);
+        })
+        .catch(err => {
+            showAsmUploadFeedback(`⚠️ ${err.message}`, false);
+        })
+        .finally(() => {
+            uploadBtn.disabled = false;
+            uploadBtn.style.opacity = '1';
+            uploadBtn.innerHTML = '<span>⬆️</span> Upload &amp; Select Asset';
+        });
     }
 
     function fetchSectionMediaLibrary(preferredType) {

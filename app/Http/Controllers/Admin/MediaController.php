@@ -187,7 +187,8 @@ class MediaController extends Controller
         }
 
         $request->validate([
-            'file' => 'required|file|mimes:jpeg,png,webp,jpg,mp3,wav,m4a,pdf|max:10240',
+            'file'  => 'required|file|mimes:jpeg,png,webp,jpg,mp3,wav,m4a,pdf|max:10240',
+            'title' => 'nullable|string|max:255',
         ]);
 
         $file = $request->file('file');
@@ -197,6 +198,7 @@ class MediaController extends Controller
         $asset = MediaAsset::create([
             'filename'      => basename($path),
             'original_name' => $file->getClientOriginalName(),
+            'title'         => $request->input('title') ?: $file->getClientOriginalName(),
             'mime_type'     => $file->getMimeType(),
             'type'          => $type,
             'path'          => $path,
@@ -212,6 +214,7 @@ class MediaController extends Controller
             'id'       => $asset->id,
             'url'      => $asset->publicUrl(),
             'filename' => $asset->original_name,
+            'title'    => $asset->title,
             'type'     => $asset->type,
             'size'     => $asset->humanSize(),
         ]);
