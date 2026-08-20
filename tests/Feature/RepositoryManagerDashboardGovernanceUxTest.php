@@ -121,13 +121,12 @@ class RepositoryManagerDashboardGovernanceUxTest extends TestCase
      */
     public function test_5_teacher_revision_queue_displays_revision_items()
     {
-        RepositoryReviewRequest::create([
-            'resource_type' => 'media',
-            'resource_id'   => '99',
-            'submitter_id'  => $this->teacher->id,
-            'submitted_by'  => $this->teacher->id,
-            'status'        => 'pending_review',
-            'changes'       => ['title' => 'Updated Audio'],
+        RepositoryRevisionRequest::create([
+            'question_bank_id' => $this->bank->id,
+            'teacher_id'       => $this->teacher->id,
+            'requested_by_id'  => $this->repoManager->id,
+            'status'           => 'OPEN',
+            'notes'            => 'Fix audio file alignment.',
         ]);
 
         $response = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));

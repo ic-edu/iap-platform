@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\AssessmentRequest;
 use App\Models\RepositoryRevisionRequest;
 use App\Models\User;
+use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
@@ -33,6 +35,7 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
         Role::firstOrCreate(['name' => 'repository-manager']);
         Role::firstOrCreate(['name' => 'teacher']);
         Role::firstOrCreate(['name' => 'super-admin']);
+        Role::firstOrCreate(['name' => 'student']);
 
         $this->admin = User::factory()->create(['status' => 'active']);
         $this->admin->assignRole('admin');
@@ -658,5 +661,304 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
         $response->assertSee('TOEIC Listening & Reading for SMK Perhotelan');
         $response->assertSee('1 assessment draft(s) in progress');
     }
+
+    /** 31. Teacher can add section with auto-detected Listening section_type (e.g. Part 1: Photographs). */
+    public function test_teacher_can_add_section_with_auto_detected_listening_section_type(): void
+    {
+        $test = Test::create([
+            'title'       => 'TOEIC Listening & Reading for SMK Perhotelan',
+            'slug'        => 'toeic-listening-reading-smk-sec-test',
+            'test_type'   => 'toeic',
+            'status'      => 'draft',
+            'created_by'  => $this->rm->id,
+            'assigned_to' => $this->teacher1->id,
+        ]);
+
+        $response = $this->actingAs($this->teacher1)->post(route('teacher.tests.add-section', $test->id), [
+            'title' => 'Part 1: Photographs',
+        ]);
+
+        $response->assertRedirect(route('teacher.tests.show', $test->id));
+        $response->assertSessionHas('status', "Section 'Part 1: Photographs' added successfully.");
+
+        $section = TestSection::where('test_id', $test->id)->where('title', 'Part 1: Photographs')->first();
+        $this->assertNotNull($section);
+        $this->assertNotNull($section->section_type);
+        $this->assertEquals('listening', is_object($section->section_type) ? $section->section_type->value : $section->section_type);
+    }
+
+    /** 32. Teacher can add section with auto-detected Reading section_type (e.g. Part 5: Incomplete Sentences). */
+    public function test_teacher_can_add_section_with_auto_detected_reading_section_type(): void
+    {
+        $test = Test::create([
+            'title'       => 'TOEIC Listening & Reading for SMK Perhotelan',
+            'slug'        => 'toeic-listening-reading-smk-sec-test-2',
+            'test_type'   => 'toeic',
+            'status'      => 'draft',
+            'created_by'  => $this->rm->id,
+            'assigned_to' => $this->teacher1->id,
+        ]);
+
+        $response = $this->actingAs($this->teacher1)->post(route('teacher.tests.add-section', $test->id), [
+            'title' => 'Part 5: Incomplete Sentences',
+        ]);
+
+        $response->assertRedirect(route('teacher.tests.show', $test->id));
+
+        $section = TestSection::where('test_id', $test->id)->where('title', 'Part 5: Incomplete Sentences')->first();
+        $this->assertNotNull($section);
+        $this->assertEquals('reading', is_object($section->section_type) ? $section->section_type->value : $section->section_type);
+    }
+
+    /** 33. Teacher can add section with explicit section_type. */
+    public function test_teacher_can_add_section_with_explicit_section_type(): void
+    {
+        $test = Test::create([
+            'title'       => 'IELTS General Test',
+            'slug'        => 'ielts-general-test',
+            'test_type'   => 'ielts',
+            'status'      => 'draft',
+            'created_by'  => $this->rm->id,
+            'assigned_to' => $this->teacher1->id,
+        ]);
+
+        $response = $this->actingAs($this->teacher1)->post(route('teacher.tests.add-section', $test->id), [
+            'title'        => 'Interview & Cue Cards',
+            'section_type' => 'speaking',
+        ]);
+
+        $response->assertRedirect(route('teacher.tests.show', $test->id));
+
+        $section = TestSection::where('test_id', $test->id)->where('title', 'Interview & Cue Cards')->first();
+        $this->assertNotNull($section);
+        $this->assertEquals('speaking', is_object($section->section_type) ? $section->section_type->value : $section->section_type);
+    }
+
+    /** 34. section_type is never persisted as NULL. */
+    public function test_no_malformed_null_section_type_rows_are_persisted(): void
+    {
+        $test = Test::create([
+            'title'       => 'Custom Core Assessment',
+            'slug'        => 'custom-core-assessment',
+            'test_type'   => 'general',
+            'status'      => 'draft',
+            'created_by'  => $this->teacher1->id,
+        ]);
+
+        $response = $this->actingAs($this->teacher1)->post(route('teacher.tests.add-section', $test->id), [
+            'title' => 'General Core Evaluation',
+        ]);
+
+        $response->assertRedirect(route('teacher.tests.show', $test->id));
+        $this->assertEquals(0, \Illuminate\Support\Facades\DB::table('test_sections')->whereNull('section_type')->count());
+    }
+
+    /** 35. Assessment instructions can be saved and survive reload. */
+    public function test_assessment_instructions_can_be_saved_and_survive_reload(): void
+    {
+        $test = Test::create([
+            'title'            => 'TOEIC Listening & Reading for SMK Perhotelan',
+            'slug'             => 'toeic-smk-instructions-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 120,
+            'pass_score'       => 500,
+            'status'           => 'draft',
+            'created_by'       => $this->teacher1->id,
+        ]);
+
+        $instructionsText = "Welcome to the TOEIC Listening & Reading Test for SMK Perhotelan.\nEnsure your headphones are connected.";
+
+        $response = $this->actingAs($this->teacher1)->put(route('teacher.tests.update', $test->id), [
+            'title'            => $test->title,
+            'test_type'        => 'toeic',
+            'duration_minutes' => 120,
+            'pass_score'       => 500,
+            'instructions'     => $instructionsText,
+        ]);
+
+        $response->assertRedirect(route('teacher.tests.show', $test->id));
+        $response->assertSessionHas('status');
+
+        $fresh = $test->fresh();
+        $this->assertEquals($instructionsText, $fresh->instructions);
+
+        $viewResponse = $this->actingAs($this->teacher1)->get(route('teacher.tests.show', $test->id));
+        $viewResponse->assertOk();
+        $viewResponse->assertSee('Welcome to the TOEIC Listening & Reading Test');
+    }
+
+    /** 36. Section instructions can be saved and survive reload. */
+    public function test_section_instructions_can_be_saved_and_survive_reload(): void
+    {
+        $test = Test::create([
+            'title'            => 'TOEIC Listening & Reading for SMK Perhotelan',
+            'slug'             => 'toeic-smk-sec-instructions-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 120,
+            'pass_score'       => 500,
+            'status'           => 'draft',
+            'created_by'       => $this->teacher1->id,
+        ]);
+
+        $directions = "Directions: For each question in this part, you will hear four statements about a picture. Select the statement that best describes what you see.";
+
+        $response = $this->actingAs($this->teacher1)->post(route('teacher.tests.add-section', $test->id), [
+            'title'        => 'Part 1: Photographs',
+            'section_type' => 'listening',
+            'instructions' => $directions,
+        ]);
+
+        $response->assertRedirect(route('teacher.tests.show', $test->id));
+
+        $section = TestSection::where('test_id', $test->id)->where('title', 'Part 1: Photographs')->first();
+        $this->assertNotNull($section);
+        $this->assertEquals($directions, $section->instructions);
+        $this->assertEquals('listening', is_object($section->section_type) ? $section->section_type->value : $section->section_type);
+
+        $viewResponse = $this->actingAs($this->teacher1)->get(route('teacher.tests.show', $test->id));
+        $viewResponse->assertOk();
+        $viewResponse->assertSee($directions);
+    }
+
+    /** 37. Section instructions can be updated via updateSection. */
+    public function test_section_instructions_can_be_updated(): void
+    {
+        $test = Test::create([
+            'title'            => 'TOEIC Listening & Reading for SMK Perhotelan',
+            'slug'             => 'toeic-smk-sec-update-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 120,
+            'pass_score'       => 500,
+            'status'           => 'draft',
+            'created_by'       => $this->teacher1->id,
+        ]);
+
+        $section = TestSection::create([
+            'test_id'      => $test->id,
+            'title'        => 'Part 1',
+            'section_type' => 'listening',
+            'order'        => 1,
+        ]);
+
+        $updatedDirections = "Updated Directions: Listen carefully to audio statements.";
+
+        $response = $this->actingAs($this->teacher1)->put(route('teacher.tests.update-section', ['test' => $test->id, 'section' => $section->id]), [
+            'title'        => 'Part 1: Photographs Revised',
+            'section_type' => 'listening',
+            'instructions' => $updatedDirections,
+        ]);
+
+        $response->assertRedirect(route('teacher.tests.show', $test->id));
+
+        $fresh = $section->fresh();
+        $this->assertEquals('Part 1: Photographs Revised', $fresh->title);
+        $this->assertEquals($updatedDirections, $fresh->instructions);
+    }
+
+    /** 38. Existing assessments with NULL instructions continue working. */
+    public function test_existing_assessments_with_null_instructions_continue_working(): void
+    {
+        $test = Test::create([
+            'title'            => 'Legacy Assessment Without Instructions',
+            'slug'             => 'legacy-null-instructions-test',
+            'test_type'        => 'general',
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'instructions'     => null,
+            'status'           => 'draft',
+            'created_by'       => $this->teacher1->id,
+        ]);
+
+        $this->assertNull($test->instructions);
+
+        $viewResponse = $this->actingAs($this->teacher1)->get(route('teacher.tests.show', $test->id));
+        $viewResponse->assertOk();
+    }
+
+    /** 39. Candidate sees pre-test instructions when configured and timer does not start prematurely. */
+    public function test_candidate_sees_pre_test_instructions_and_timer_starts_only_on_confirmation(): void
+    {
+        $student = User::factory()->create();
+        $student->assignRole('student');
+
+        $test = Test::create([
+            'title'            => 'Published TOEIC Test',
+            'slug'             => 'published-toeic-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 120,
+            'pass_score'       => 500,
+            'instructions'     => 'Mandatory candidate examination guidelines before starting.',
+            'status'           => 'approved',
+            'is_published'     => true,
+            'created_by'       => $this->rm->id,
+        ]);
+
+        $section = TestSection::create([
+            'test_id'      => $test->id,
+            'title'        => 'Part 1: Photographs',
+            'section_type' => 'listening',
+            'instructions' => 'Part 1 audio instructions.',
+            'order'        => 1,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title'        => 'Test Question Bank',
+            'slug'         => 'test-qb-' . Str::random(5),
+            'target_test'  => 'toeic',
+            'created_by'   => $this->rm->id,
+            'is_published' => true,
+        ]);
+
+        $question = Question::create([
+            'question_bank_id' => $bank->id,
+            'prompt'           => 'What is happening in the photo?',
+            'question_type'    => 'multiple_choice',
+            'points'           => 5,
+        ]);
+
+        QuestionChoice::create([
+            'question_id' => $question->id,
+            'label'       => 'A',
+            'content'     => 'She is writing on the board.',
+            'is_correct'  => true,
+            'order'       => 1,
+        ]);
+
+        TestQuestion::create([
+            'test_section_id' => $section->id,
+            'question_id'     => $question->id,
+            'order'           => 1,
+        ]);
+
+        // 1. Available Tests list points to instruction screen
+        $listResponse = $this->actingAs($student)->get(route('candidate.available-tests'));
+        $listResponse->assertOk();
+        $listResponse->assertSee(route('candidate.tests.instructions', $test));
+
+        // 2. Candidate visits instruction screen
+        $instructionsResponse = $this->actingAs($student)->get(route('candidate.tests.instructions', $test));
+        $instructionsResponse->assertOk();
+        $instructionsResponse->assertSee('Mandatory candidate examination guidelines before starting.');
+        $instructionsResponse->assertSee('I Understand &amp; Begin Assessment', false);
+
+        // Verify NO attempt was created yet (Timer has NOT started)
+        $this->assertEquals(0, Attempt::where('user_id', $student->id)->where('test_id', $test->id)->count());
+
+        // 3. Candidate confirms and starts test
+        $startResponse = $this->actingAs($student)->post(route('candidate.tests.start', $test));
+        $attempt = Attempt::where('user_id', $student->id)->where('test_id', $test->id)->first();
+        $this->assertNotNull($attempt);
+        $this->assertEquals('in_progress', $attempt->status->value);
+        $startResponse->assertRedirect(route('candidate.exam', $attempt));
+
+        // 4. Candidate exam view renders Section Directions
+        $examResponse = $this->actingAs($student)->get(route('candidate.exam', $attempt));
+        $examResponse->assertOk();
+        $examResponse->assertSee('Part 1: Photographs');
+        $examResponse->assertSee('Part 1 audio instructions.');
+        $examResponse->assertSee('What is happening in the photo?');
+    }
 }
+
+
 

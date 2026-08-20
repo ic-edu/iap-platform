@@ -53,6 +53,7 @@ class Test extends Model
         'created_by',
         'assigned_to',
         'assessment_request_id',
+        'instructions',
     ];
 
     protected function casts(): array

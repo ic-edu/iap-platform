@@ -12,6 +12,8 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-man
     Route::post('/{test}/duplicate', [TestBuilderController::class, 'duplicate'])->name('admin.tests.duplicate');
     Route::post('/{test}/submit-approval', [TestBuilderController::class, 'submitForApproval'])->name('admin.tests.submit-approval');
     Route::post('/{test}/publish', [TestBuilderController::class, 'publish'])->name('admin.tests.publish');
+    Route::post('/{test}/sections/{section}/media', [TestBuilderController::class, 'attachSectionMedia'])->name('admin.tests.sections.media.attach');
+    Route::delete('/{test}/sections/{section}/media/{media}', [TestBuilderController::class, 'detachSectionMedia'])->name('admin.tests.sections.media.detach');
     Route::delete('/{test}', [TestBuilderController::class, 'destroy'])->name('admin.tests.destroy');
 });
 
@@ -22,6 +24,7 @@ Route::middleware(['web', 'auth'])->prefix('candidate')->group(function () {
     Route::get('/my-attempts', [CandidatePortalController::class, 'myAttempts'])->name('candidate.my-attempts');
     Route::get('/my-certificates', [CandidatePortalController::class, 'myCertificates'])->name('candidate.my-certificates');
 
+    Route::get('/tests/{test}/instructions', [CandidatePortalController::class, 'instructions'])->name('candidate.tests.instructions');
     Route::post('/tests/{test}/start', [CandidatePortalController::class, 'startAttempt'])->name('candidate.tests.start');
     Route::get('/exam/{attempt}', [CandidatePortalController::class, 'exam'])->name('candidate.exam');
     Route::post('/exam/{attempt}/autosave', [CandidatePortalController::class, 'autoSave'])->name('candidate.exam.autosave');

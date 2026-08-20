@@ -3,6 +3,7 @@
 namespace App\Modules\Assessment\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\MediaAsset;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Assessment\Services\TestBuilderService;
@@ -260,7 +261,7 @@ class TestBuilderController extends Controller
             abort(403, 'Unauthorized access to assessment test.');
         }
 
-        $test->load(['sections.testQuestions.question.choices', 'sections.testQuestions.question.questionBank', 'creator', 'assignedTeacher']);
+        $test->load(['sections.testQuestions.question.choices', 'sections.testQuestions.question.questionBank', 'sections.mediaAssets', 'creator', 'assignedTeacher']);
 
         $publishedQuestionBanks = \App\Modules\QuestionBank\Models\QuestionBank::with(['questions.choices'])
             ->whereIn('status', ['published', 'approved'])
@@ -318,20 +319,23 @@ class TestBuilderController extends Controller
         }
 
         $validated = $request->validate([
-            'title'            => ['required', 'string', 'max:255'],
-            'test_type'        => ['required', 'string'],
+            'title'            => ['sometimes', 'required', 'string', 'max:255'],
+            'test_type'        => ['sometimes', 'required', 'string'],
             'scoring_method'   => ['nullable', 'string', 'in:automatic,human,hybrid'],
-            'duration_minutes' => ['required', 'integer', 'min:1'],
-            'pass_score'       => ['required', 'integer', 'min:0'],
+            'duration_minutes' => ['sometimes', 'required', 'integer', 'min:1'],
+            'pass_score'       => ['sometimes', 'required', 'integer', 'min:0'],
+            'instructions'     => ['nullable', 'string'],
         ]);
 
-        $test->update([
-            'title'            => $validated['title'],
-            'test_type'        => $validated['test_type'],
-            'scoring_method'   => $validated['scoring_method'] ?? $test->scoring_method ?? 'automatic',
-            'duration_minutes' => $validated['duration_minutes'],
-            'pass_score'       => $validated['pass_score'],
-        ]);
+        $updateData = [];
+        if (isset($validated['title'])) $updateData['title'] = $validated['title'];
+        if (isset($validated['test_type'])) $updateData['test_type'] = $validated['test_type'];
+        if (isset($validated['scoring_method'])) $updateData['scoring_method'] = $validated['scoring_method'];
+        if (isset($validated['duration_minutes'])) $updateData['duration_minutes'] = $validated['duration_minutes'];
+        if (isset($validated['pass_score'])) $updateData['pass_score'] = $validated['pass_score'];
+        if (array_key_exists('instructions', $validated)) $updateData['instructions'] = $validated['instructions'];
+
+        $test->update($updateData);
 
         return redirect()->route('teacher.tests.show', $test->id)
             ->with('status', "Assessment '{$test->title}' updated and saved to Draft successfully.");
@@ -471,13 +475,108 @@ class TestBuilderController extends Controller
         }
 
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'title'        => ['required', 'string', 'max:255'],
+            'section_type' => ['nullable', 'string', 'in:listening,reading,speaking,writing'],
+            'instructions' => ['nullable', 'string'],
         ]);
 
-        $section = $this->builderService->addSection($test, $validated['title']);
+        $section = $this->builderService->addSection(
+            $test,
+            $validated['title'],
+            $validated['section_type'] ?? null,
+            $validated['instructions'] ?? null
+        );
 
         return redirect()->route('teacher.tests.show', $test->id)
             ->with('status', "Section '{$section->title}' added successfully.");
+    }
+
+    /**
+     * Update section title, type, or directions.
+     */
+    public function updateSection(Request $request, Test $test, TestSection $section): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment section.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $validated = $request->validate([
+            'title'        => ['required', 'string', 'max:255'],
+            'section_type' => ['nullable', 'string', 'in:listening,reading,speaking,writing'],
+            'instructions' => ['nullable', 'string'],
+        ]);
+
+        $this->builderService->updateSection($section, $validated);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Section '{$section->title}' updated successfully.");
+    }
+
+    /**
+     * Attach existing MediaAsset to TestSection.
+     */
+    public function attachSectionMedia(Request $request, Test $test, TestSection $section): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        if ((string) $section->test_id !== (string) $test->id) {
+            abort(404, 'Section does not belong to this assessment.');
+        }
+
+        $validated = $request->validate([
+            'media_asset_id' => ['required', 'string', 'exists:media_assets,id'],
+            'caption'        => ['nullable', 'string', 'max:255'],
+            'order'          => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $this->builderService->attachMediaToSection(
+            $section,
+            $validated['media_asset_id'],
+            $validated['caption'] ?? null,
+            $validated['order'] ?? null
+        );
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', 'Media asset attached to section successfully.');
+    }
+
+    /**
+     * Detach MediaAsset from TestSection.
+     */
+    public function detachSectionMedia(Request $request, Test $test, TestSection $section, MediaAsset $media): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        if ((string) $section->test_id !== (string) $test->id) {
+            abort(404, 'Section does not belong to this assessment.');
+        }
+
+        $this->builderService->detachMediaFromSection($section, $media->id);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', 'Media asset detached from section.');
     }
 
     /**

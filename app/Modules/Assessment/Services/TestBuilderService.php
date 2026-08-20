@@ -2,9 +2,12 @@
 
 namespace App\Modules\Assessment\Services;
 
+use App\Models\MediaAsset;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class TestBuilderService
@@ -139,16 +142,183 @@ class TestBuilderService
     /**
      * Add a section to an assessment.
      */
-    public function addSection(Test $test, string $title, ?string $sectionType = null): TestSection
+    public function addSection(Test $test, string $title, ?string $sectionType = null, ?string $instructions = null): TestSection
     {
         $nextOrder = ($test->sections()->max('order') ?? 0) + 1;
+
+        if (empty($sectionType)) {
+            $sectionType = $this->deriveSectionType($title, $test);
+        }
 
         return TestSection::create([
             'test_id'      => $test->id,
             'title'        => $title,
             'section_type' => $sectionType,
+            'instructions' => $instructions,
             'order'        => $nextOrder,
         ]);
+    }
+
+    /**
+     * Update section details.
+     */
+    public function updateSection(TestSection $section, array $data): TestSection
+    {
+        if (empty($data['section_type']) && !empty($data['title'])) {
+            $data['section_type'] = $this->deriveSectionType($data['title'], $section->test);
+        }
+
+        $section->update(array_filter([
+            'title'        => $data['title'] ?? $section->title,
+            'section_type' => $data['section_type'] ?? $section->section_type,
+            'instructions' => array_key_exists('instructions', $data) ? $data['instructions'] : $section->instructions,
+        ], fn($v) => !is_null($v)));
+
+        if (array_key_exists('instructions', $data)) {
+            $section->instructions = $data['instructions'];
+            $section->save();
+        }
+
+        return $section;
+    }
+
+    /**
+     * Update assessment-level instructions.
+     */
+    public function updateInstructions(Test $test, ?string $instructions): Test
+    {
+        $test->update([
+            'instructions' => $instructions,
+        ]);
+
+        return $test;
+    }
+
+    /**
+     * Attach a MediaAsset to a TestSection.
+     *
+     * @throws ValidationException
+     */
+    public function attachMediaToSection(TestSection $section, string $mediaAssetId, ?string $caption = null, ?int $order = null): void
+    {
+        $test = $section->test;
+        if (!$test || in_array($test->status, ['pending_approval', 'approved', 'published'], true) || $test->is_published) {
+            throw ValidationException::withMessages([
+                'assessment' => "Cannot attach media: Assessment is in {$test?->status} state and locked from editing.",
+            ]);
+        }
+
+        $media = MediaAsset::find($mediaAssetId);
+        if (!$media) {
+            throw ValidationException::withMessages([
+                'media_asset_id' => 'Media asset not found.',
+            ]);
+        }
+
+        $alreadyAttached = $section->mediaAssets()->where('media_asset_id', $mediaAssetId)->exists();
+        if ($alreadyAttached) {
+            throw ValidationException::withMessages([
+                'media_asset_id' => 'This media asset is already attached to this section.',
+            ]);
+        }
+
+        if ($order === null) {
+            $maxOrder = DB::table('test_section_media')->where('test_section_id', $section->id)->max('order') ?? 0;
+            $order = $maxOrder + 1;
+        }
+
+        $section->mediaAssets()->attach($mediaAssetId, [
+            'id'      => (string) Str::ulid(),
+            'caption' => $caption,
+            'order'   => $order,
+        ]);
+    }
+
+    /**
+     * Detach a MediaAsset from a TestSection.
+     *
+     * @throws ValidationException
+     */
+    public function detachMediaFromSection(TestSection $section, string $mediaAssetId): bool
+    {
+        $test = $section->test;
+        if (!$test || in_array($test->status, ['pending_approval', 'approved', 'published'], true) || $test->is_published) {
+            throw ValidationException::withMessages([
+                'assessment' => "Cannot detach media: Assessment is in {$test?->status} state and locked from editing.",
+            ]);
+        }
+
+        return $section->mediaAssets()->detach($mediaAssetId) > 0;
+    }
+
+    /**
+     * Reorder media assets attached to a TestSection.
+     *
+     * @throws ValidationException
+     */
+    public function reorderSectionMedia(TestSection $section, array $mediaOrder): void
+    {
+        $test = $section->test;
+        if (!$test || in_array($test->status, ['pending_approval', 'approved', 'published'], true) || $test->is_published) {
+            throw ValidationException::withMessages([
+                'assessment' => "Cannot reorder media: Assessment is in {$test?->status} state and locked from editing.",
+            ]);
+        }
+
+        foreach ($mediaOrder as $order => $mediaAssetId) {
+            DB::table('test_section_media')
+                ->where('test_section_id', $section->id)
+                ->where('media_asset_id', $mediaAssetId)
+                ->update(['order' => (int) $order + 1]);
+        }
+    }
+
+    /**
+     * Deterministically derive canonical SectionType from title or test context.
+     */
+    public function deriveSectionType(string $title, ?Test $test = null): string
+    {
+        $lower = strtolower(trim($title));
+
+        if (str_contains($lower, 'listen') || 
+            str_contains($lower, 'part 1') || 
+            str_contains($lower, 'part 2') || 
+            str_contains($lower, 'part 3') || 
+            str_contains($lower, 'part 4') || 
+            str_contains($lower, 'photo') || 
+            str_contains($lower, 'audio') || 
+            str_contains($lower, 'conversation') || 
+            str_contains($lower, 'talk')) {
+            return 'listening';
+        }
+
+        if (str_contains($lower, 'speak') || 
+            str_contains($lower, 'oral') || 
+            str_contains($lower, 'interview') ||
+            str_contains($lower, 'cue card')) {
+            return 'speaking';
+        }
+
+        if (str_contains($lower, 'writ') || 
+            str_contains($lower, 'essay') ||
+            str_contains($lower, 'task 1') ||
+            str_contains($lower, 'task 2')) {
+            return 'writing';
+        }
+
+        if (str_contains($lower, 'read') || 
+            str_contains($lower, 'part 5') || 
+            str_contains($lower, 'part 6') || 
+            str_contains($lower, 'part 7') || 
+            str_contains($lower, 'incomplete') || 
+            str_contains($lower, 'passage') || 
+            str_contains($lower, 'structure') || 
+            str_contains($lower, 'grammar') || 
+            str_contains($lower, 'vocab')) {
+            return 'reading';
+        }
+
+        return 'reading';
     }
 
     /**

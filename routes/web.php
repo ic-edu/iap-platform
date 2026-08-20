@@ -121,6 +121,12 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.tests.destroy-question');
     Route::post('/teacher/assessments/{test}/sections', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'addSection'])
         ->name('teacher.tests.add-section');
+    Route::put('/teacher/assessments/{test}/sections/{section}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'updateSection'])
+        ->name('teacher.tests.update-section');
+    Route::post('/teacher/assessments/{test}/sections/{section}/media', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'attachSectionMedia'])
+        ->name('teacher.tests.sections.media.attach');
+    Route::delete('/teacher/assessments/{test}/sections/{section}/media/{media}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'detachSectionMedia'])
+        ->name('teacher.tests.sections.media.detach');
     Route::post('/teacher/assessments/{test}/resubmit', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'resubmit'])
         ->name('teacher.tests.resubmit');
 });

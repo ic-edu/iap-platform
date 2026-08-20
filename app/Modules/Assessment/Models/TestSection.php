@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -27,6 +28,7 @@ class TestSection extends Model
         'test_id',
         'title',
         'section_type',
+        'instructions',
         'duration_minutes',
         'order',
     ];
@@ -58,5 +60,18 @@ class TestSection extends Model
     public function testQuestions(): HasMany
     {
         return $this->hasMany(TestQuestion::class, 'test_section_id')->orderBy('order');
+    }
+
+    /**
+     * Get media assets attached to this test section.
+     *
+     * @return BelongsToMany<\App\Models\MediaAsset, $this>
+     */
+    public function mediaAssets(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\MediaAsset::class, 'test_section_media', 'test_section_id', 'media_asset_id')
+            ->withPivot(['id', 'caption', 'order'])
+            ->withTimestamps()
+            ->orderBy('test_section_media.order');
     }
 }

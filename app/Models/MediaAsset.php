@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
@@ -94,6 +95,13 @@ class MediaAsset extends Model
     public function deleteRequests(): HasMany
     {
         return $this->hasMany(MediaDeleteRequest::class, 'media_asset_id');
+    }
+
+    public function testSections(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Modules\Assessment\Models\TestSection::class, 'test_section_media', 'media_asset_id', 'test_section_id')
+            ->withPivot(['id', 'caption', 'order'])
+            ->withTimestamps();
     }
 
     // ──────────────────────────────────────

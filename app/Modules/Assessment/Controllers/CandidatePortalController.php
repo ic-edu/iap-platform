@@ -89,6 +89,20 @@ class CandidatePortalController extends Controller
     }
 
     /**
+     * Pre-test Assessment Instructions Screen.
+     */
+    public function instructions(Test $test): View
+    {
+        $test->loadMissing('sections.testQuestions');
+        $totalQuestions = $test->sections->sum(fn($s) => $s->testQuestions->count());
+
+        /** @var view-string $viewName */
+        $viewName = 'assessment::candidate.instructions';
+
+        return view($viewName, compact('test', 'totalQuestions'));
+    }
+
+    /**
      * Start test attempt.
      */
     public function startAttempt(Request $request, Test $test): RedirectResponse
@@ -114,14 +128,16 @@ class CandidatePortalController extends Controller
             return redirect()->route('candidate.review', $attempt);
         }
 
-        $attempt->loadMissing(['test.sections.testQuestions.question.choices', 'answers']);
+        $attempt->loadMissing(['test.sections.testQuestions.question.choices', 'test.sections.mediaAssets', 'answers']);
 
         $allQuestions = collect();
         $sections = $attempt->test ? $attempt->test->sections : collect();
         foreach ($sections as $section) {
             foreach ($section->testQuestions as $tq) {
                 if ($tq->question) {
-                    $allQuestions->push($tq->question);
+                    $q = $tq->question;
+                    $q->section_model = $section;
+                    $allQuestions->push($q);
                 }
             }
         }
@@ -132,7 +148,7 @@ class CandidatePortalController extends Controller
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.exam';
 
-        return view($viewName, compact('attempt', 'shuffledQuestions', 'remainingSeconds'));
+        return view($viewName, compact('attempt', 'shuffledQuestions', 'remainingSeconds', 'sections'));
     }
 
     /**

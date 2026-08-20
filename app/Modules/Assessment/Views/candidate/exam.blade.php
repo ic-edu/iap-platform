@@ -49,6 +49,51 @@
                         </button>
                     </div>
 
+                    <!-- Section Title & Directions Banner -->
+                    @php
+                        $section = $question->section_model ?? null;
+                        if (!$section && isset($sections)) {
+                            $section = $sections->first(fn($s) => $s->testQuestions->contains('question_id', $question->id));
+                        }
+                    @endphp
+                    @if($section)
+                        <div class="mb-4 flex items-center gap-2">
+                            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-wide">
+                                {{ $section->title }}
+                            </span>
+                            <span class="text-[11px] text-slate-400 font-medium">
+                                • {{ is_object($section->section_type) ? $section->section_type->label() : ucfirst($section->section_type) }}
+                            </span>
+                        </div>
+
+                        @if(!empty($section->instructions))
+                            <div class="mb-5 p-4 rounded-xl bg-slate-950/80 border border-indigo-500/20 text-slate-300">
+                                <div class="flex items-center gap-2 mb-1 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                    <span>📌</span> Section Directions
+                                </div>
+                                <div class="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+                                    {{ $section->instructions }}
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($section->mediaAssets && $section->mediaAssets->isNotEmpty())
+                            <div class="mb-6 space-y-4">
+                                @foreach($section->mediaAssets as $sectionMedia)
+                                    <div class="p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
+                                        @if($sectionMedia->pivot?->caption)
+                                            <div class="flex items-center gap-1.5 mb-2 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                                                <span>{{ $sectionMedia->typeIcon() }}</span>
+                                                <span>{{ $sectionMedia->pivot->caption }}</span>
+                                            </div>
+                                        @endif
+                                        <x-media-preview :media="$sectionMedia" />
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    @endif
+
                     <!-- Passage Text if Available -->
                     @if ($question->passage)
                         <div class="mb-5 p-4 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-sm max-h-48 overflow-y-auto leading-relaxed">

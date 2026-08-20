@@ -25,12 +25,18 @@
                 </div>
 
                 <div class="mt-6 pt-4 border-t border-slate-800/80">
-                    <form method="POST" action="{{ route('candidate.tests.start', $test) }}">
-                        @csrf
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
-                            Start Assessment Test
-                        </button>
-                    </form>
+                    @if(!empty($test->instructions))
+                        <a href="{{ route('candidate.tests.instructions', $test) }}" class="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
+                            View Instructions &amp; Start &rarr;
+                        </a>
+                    @else
+                        <form method="POST" action="{{ route('candidate.tests.start', $test) }}">
+                            @csrf
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
+                                Start Assessment Test
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
         @empty
