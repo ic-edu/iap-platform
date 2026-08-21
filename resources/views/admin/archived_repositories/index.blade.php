@@ -2,71 +2,23 @@
 
 @section('title', 'Archived Repositories — Governance Platform')
 
-@push('styles')
-<style>
-.sar-container { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
-.sar-hero {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-    border: 1px solid #334155;
-    border-radius: 1.25rem;
-    padding: 1.75rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1.25rem;
-    box-shadow: 0 15px 30px -10px rgba(15,23,42,0.5);
-}
-.sar-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.25rem;
-}
-.sar-card {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 1.25rem;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 1.25rem;
-    transition: all .2s ease;
-}
-.sar-card:hover {
-    border-color: #6366f1;
-    transform: translateY(-2px);
-    box-shadow: 0 12px 25px -8px rgba(99,102,241,0.2);
-}
-.sar-badge {
-    padding: .25rem .7rem;
-    border-radius: 99px;
-    font-size: .7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-}
-.sar-badge--archived { background: rgba(148,163,184,.12); color: #94a3b8; border: 1px solid rgba(148,163,184,.3); }
-</style>
-@endpush
-
 @section('content')
-<div class="sar-container">
+<div class="space-y-6">
 
     {{-- Hero Header --}}
-    <div class="sar-hero">
+    <div class="gov-hero-indigo rounded-2xl p-6 sm:p-7 flex justify-between items-center flex-wrap gap-5">
         <div>
-            <div style="font-size:.72rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem;">Super Admin Governance • Repository Lifecycle</div>
-            <h1 style="font-size:1.65rem;font-weight:900;color:#fff;margin:0 0 .3rem;">📦 Archived Repositories</h1>
-            <p style="font-size:.85rem;color:#94a3b8;margin:0;">Institutional question bank repositories in archived status. Move to Recycle Bin for safe lifecycle management.</p>
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">Super Admin Governance • Repository Lifecycle</div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-1">📦 Archived Repositories</h1>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">Institutional question bank repositories in archived status. Move to Recycle Bin for safe lifecycle management.</p>
         </div>
-        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
-            <a href="{{ route('admin.recycle-bin.index') }}" style="padding:.5rem 1rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.6rem;font-size:.8rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+        <div class="flex gap-3 items-center flex-wrap">
+            <a href="{{ route('admin.recycle-bin.index') }}" class="gov-btn-white px-4 py-2.5 text-xs font-bold flex items-center gap-1.5">
                 🗑 Open Recycle Bin →
             </a>
-            <form action="{{ route('admin.archived-repositories.index') }}" method="GET" style="display:flex;gap:.5rem;">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search archived repositories..." style="background:#0f172a;border:1px solid #334155;border-radius:.6rem;padding:.5rem .85rem;color:#fff;font-size:.8rem;min-width:220px;">
-                <button type="submit" style="padding:.5rem 1rem;background:#334155;color:#fff;border:none;border-radius:.6rem;font-size:.8rem;font-weight:700;cursor:pointer;">
+            <form action="{{ route('admin.archived-repositories.index') }}" method="GET" class="flex gap-2">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search archived repositories..." class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3.5 py-2 text-xs min-w-[220px] focus:outline-none focus:border-indigo-500 transition-colors">
+                <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow transition-colors">
                     Search
                 </button>
             </form>
@@ -74,59 +26,59 @@
     </div>
 
     @if(session('status'))
-    <div style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;">
+    <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
         ✅ {{ session('status') }}
     </div>
     @endif
 
     @if(session('danger'))
-    <div style="background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);color:#fb7185;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;">
+    <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold">
         ⚠️ {{ session('danger') }}
     </div>
     @endif
 
     {{-- Archived Cards Grid --}}
     @if($archivedBanks->count() > 0)
-    <div class="sar-grid">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         @foreach($archivedBanks as $bank)
-        <div class="sar-card">
-            <div>
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;margin-bottom:.75rem;">
+        <div class="gov-card flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+                <div class="flex justify-between items-start gap-3">
                     <div>
-                        <h3 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;margin:0 0 .25rem;">
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">
                             {{ $bank->title }}
                         </h3>
-                        <div style="font-size:.74rem;color:#64748b;">
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                             Version v{{ $bank->current_version ?? '1.0' }} • Author: {{ $bank->creator?->name ?? 'Teacher Author' }}
                         </div>
                     </div>
-                    <span class="sar-badge sar-badge--archived">
+                    <span class="gov-badge-archived shrink-0">
                         ARCHIVED
                     </span>
                 </div>
 
-                <div style="font-size:.82rem;color:#94a3b8;margin-bottom:1rem;line-height:1.4;">
+                <div class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                     {{ Str::limit($bank->description, 100) ?: 'No description provided.' }}
                 </div>
 
-                <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:.76rem;color:#64748b;background:#080f1d;padding:.75rem 1rem;border-radius:.65rem;border:1px solid #1e293b;">
+                <div class="gov-stats-strip flex gap-4 flex-wrap text-xs text-slate-600 dark:text-slate-400">
                     <span>📝 <strong>{{ $bank->questions->count() }}</strong> Questions</span>
                     <span>🏷 <strong>{{ is_object($bank->test_type) ? $bank->test_type->label() : strtoupper($bank->test_type?->value ?? 'General') }}</strong></span>
                 </div>
             </div>
 
             {{-- Actions: View + Move to Recycle Bin ONLY (Soft Delete, Never Hard Delete) --}}
-            <div style="display:flex;gap:.75rem;align-items:center;border-top:1px solid #1e293b;padding-top:1rem;">
+            <div class="flex gap-3 items-center border-t border-slate-200 dark:border-slate-800 pt-3.5">
                 <a href="{{ route('admin.question-banks.show', ['questionBank' => $bank->id, 'from' => 'archived_repositories']) }}"
-                   style="flex:1;text-align:center;padding:.6rem;background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:.6rem;font-size:.8rem;font-weight:700;text-decoration:none;transition:background .15s;">
+                   class="gov-btn-secondary flex-1 text-center py-2 text-xs font-bold">
                     👁 View
                 </a>
 
-                <form action="{{ route('admin.archived-repositories.move-to-recycle-bin', $bank->id) }}" method="POST" style="flex:1;"
+                <form action="{{ route('admin.archived-repositories.move-to-recycle-bin', $bank->id) }}" method="POST" class="flex-1"
                       onsubmit="event.preventDefault(); iapConfirm({ title: 'Move this repository to the Recycle Bin?', message: 'Move \'{{ addslashes($bank->title) }}\' to the Recycle Bin? The repository record, questions, metadata, and audit history will be preserved and can be restored later.', confirmText: 'Move to Recycle Bin', variant: 'danger', form: this });">
                     @csrf
                     <button type="submit"
-                            style="width:100%;padding:.6rem;background:#e11d48;color:#fff;border:none;border-radius:.6rem;font-size:.8rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(225,29,72,0.3);">
+                            class="w-full py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow transition-colors">
                         🗑 Move to Recycle Bin
                     </button>
                 </form>
@@ -135,16 +87,17 @@
         @endforeach
     </div>
 
-    <div style="margin-top:1rem;">
+    <div class="mt-4">
         {{ $archivedBanks->links() }}
     </div>
     @else
-    <div style="text-align:center;padding:4rem 2rem;background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;color:#64748b;">
-        <div style="font-size:2.5rem;margin-bottom:1rem;">📦</div>
-        <h3 style="font-size:1.2rem;font-weight:800;color:#fff;margin:0 0 .5rem;">No Archived Repositories</h3>
-        <p style="font-size:.85rem;color:#94a3b8;margin:0;">There are currently no question banks in archived status across the platform.</p>
+    <div class="gov-empty-state">
+        <div class="text-4xl mb-3">📦</div>
+        <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1">No Archived Repositories</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400">There are currently no question banks in archived status across the platform.</p>
     </div>
     @endif
 
 </div>
 @endsection
+

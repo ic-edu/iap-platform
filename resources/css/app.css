@@ -554,3 +554,266 @@ html[data-theme="light"] [style*="border: 1px solid #334155"] {
     border-color: var(--border) !important;
 }
 
+/* 13. Centralized Governance Workspace Surfaces (Super Admin / Repository Manager) */
+.gov-hero-indigo {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    border: 1px solid #334155;
+    box-shadow: 0 15px 30px -10px rgba(15,23,42,0.5);
+}
+
+html.light .gov-hero-indigo,
+html[data-theme="light"] .gov-hero-indigo {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+.gov-hero-purple {
+    background: linear-gradient(135deg, #0f172a 0%, #31102b 50%, #0f172a 100%);
+    border: 1px solid #4c1d95;
+    box-shadow: 0 15px 30px -10px rgba(76,29,149,0.3);
+}
+
+html.light .gov-hero-purple,
+html[data-theme="light"] .gov-hero-purple {
+    background: linear-gradient(135deg, #ffffff 0%, #faf5ff 50%, #f3e8ff 100%) !important;
+    border: 1px solid #e9d5ff !important;
+    box-shadow: 0 12px 25px -8px rgba(168,85,247,0.1) !important;
+}
+
+.gov-hero-cyan {
+    background: linear-gradient(135deg, #0f172a 0%, #082f49 50%, #0f172a 100%);
+    border: 1px solid #0369a1;
+    box-shadow: 0 15px 30px -10px rgba(3,105,161,0.3);
+}
+
+html.light .gov-hero-cyan,
+html[data-theme="light"] .gov-hero-cyan {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #e0f2fe 100%) !important;
+    border: 1px solid #bae6fd !important;
+    box-shadow: 0 12px 25px -8px rgba(14,165,233,0.1) !important;
+}
+
+.gov-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    transition: all .2s ease;
+}
+
+html.light .gov-card,
+html[data-theme="light"] .gov-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+.gov-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.18);
+}
+
+.gov-stats-strip {
+    background: var(--bg-surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    padding: 0.75rem 1rem;
+}
+
+html.light .gov-stats-strip,
+html[data-theme="light"] .gov-stats-strip {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+.gov-btn-secondary {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #f1f5f9;
+    border-radius: 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+html.light .gov-btn-secondary,
+html[data-theme="light"] .gov-btn-secondary {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+}
+
+html.light .gov-btn-secondary:hover,
+html[data-theme="light"] .gov-btn-secondary:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+.gov-btn-white {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    border-radius: 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+html.light .gov-btn-white,
+html[data-theme="light"] .gov-btn-white {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.05) !important;
+}
+
+html.light .gov-btn-white:hover,
+html[data-theme="light"] .gov-btn-white:hover {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+}
+
+.gov-badge-archived {
+    padding: 0.25rem 0.7rem;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(148,163,184,.12);
+    color: #94a3b8;
+    border: 1px solid rgba(148,163,184,.3);
+}
+
+html.light .gov-badge-archived,
+html[data-theme="light"] .gov-badge-archived {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+.gov-badge-recycle {
+    padding: 0.25rem 0.7rem;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(244,63,94,.15);
+    color: #fb7185;
+    border: 1px solid rgba(244,63,94,.3);
+}
+
+html.light .gov-badge-recycle,
+html[data-theme="light"] .gov-badge-recycle {
+    background: #fff1f2 !important;
+    color: #e11d48 !important;
+    border: 1px solid #fecdd3 !important;
+}
+
+.gov-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 1.25rem;
+    color: #64748b;
+}
+
+html.light .gov-empty-state,
+html[data-theme="light"] .gov-empty-state {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #64748b !important;
+    box-shadow: 0 4px 12px rgba(15,23,42,0.03) !important;
+}
+
+/* ==========================================================================
+   Repository Manager & IRQA Governance Styles (Light/Dark Theme Aware)
+   ========================================================================== */
+html.light .rm-hero,
+html[data-theme="light"] .rm-hero,
+html.light .exp-hero,
+html[data-theme="light"] .exp-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+html.light .rm-hero__title,
+html[data-theme="light"] .rm-hero__title,
+html.light .exp-hero__title,
+html[data-theme="light"] .exp-hero__title {
+    color: var(--text-primary) !important;
+}
+
+html.light .rm-hero__sub,
+html[data-theme="light"] .rm-hero__sub,
+html.light .exp-hero__sub,
+html[data-theme="light"] .exp-hero__sub {
+    color: var(--text-secondary) !important;
+}
+
+html.light .rm-kpi-card,
+html[data-theme="light"] .rm-kpi-card,
+html.light .rm-panel,
+html[data-theme="light"] .rm-panel,
+html.light .exp-card,
+html[data-theme="light"] .exp-card,
+html.light .exp-controls,
+html[data-theme="light"] .exp-controls {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+html.light .rm-panel__title,
+html[data-theme="light"] .rm-panel__title,
+html.light .exp-card__title,
+html[data-theme="light"] .exp-card__title {
+    color: var(--text-primary) !important;
+}
+
+html.light .exp-filter-btn,
+html[data-theme="light"] .exp-filter-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html.light .exp-filter-btn:hover,
+html[data-theme="light"] .exp-filter-btn:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+html.light .exp-filter-btn--active,
+html[data-theme="light"] .exp-filter-btn--active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
+html.light .rm-table th,
+html[data-theme="light"] .rm-table th {
+    background: #f8fafc !important;
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+html.light .rm-table td,
+html[data-theme="light"] .rm-table td {
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+html.light .rm-table tr:hover td,
+html[data-theme="light"] .rm-table tr:hover td {
+    background: #f8faff !important;
+}
+
+
+

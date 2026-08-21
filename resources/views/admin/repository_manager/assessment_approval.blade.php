@@ -3,117 +3,117 @@
 @section('title', 'Assessment Approval Queue — Repository Manager')
 
 @section('content')
-<div style="padding: 1.5rem 0;">
+<div class="space-y-6">
     {{-- Header --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <div class="flex justify-between items-center flex-wrap gap-4">
         <div>
-            <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin:0 0 .3rem;">📋 Assessment Approval Queue</h1>
-            <p style="font-size:.88rem;color:#94a3b8;margin:0;">Review, validate, and approve submitted Assessment Tests from Teachers for institutional deployment.</p>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">📋 Assessment Approval Queue</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Review, validate, and approve submitted Assessment Tests from Teachers for institutional deployment.</p>
         </div>
         <div>
-            <a href="{{ route('admin.repository-manager.dashboard') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('admin.repository-manager.dashboard') }}" class="gov-btn-secondary px-3.5 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 ← Back
             </a>
         </div>
     </div>
 
     {{-- Filter & Counter Cards --}}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;margin-bottom:1.5rem;">
-        <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'pending']) }}" style="background:#0f172a;border:1px solid {{ $status === 'pending' ? '#6366f1' : '#1e293b' }};border-radius:1rem;padding:1.25rem;text-decoration:none;display:block;">
-            <div style="font-size:.72rem;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.06em;">Pending Approval</div>
-            <div style="font-size:1.8rem;font-weight:900;color:#fff;margin-top:.2rem;">{{ $pendingCount }}</div>
-            <div style="font-size:.72rem;color:#64748b;margin-top:.1rem;">Awaiting Repository Review</div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'pending']) }}" class="gov-card p-5 block {{ $status === 'pending' ? 'ring-2 ring-indigo-500' : '' }}">
+            <div class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Pending Approval</div>
+            <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">{{ $pendingCount }}</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Awaiting Repository Review</div>
         </a>
 
-        <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'approved']) }}" style="background:#0f172a;border:1px solid {{ $status === 'approved' ? '#10b981' : '#1e293b' }};border-radius:1rem;padding:1.25rem;text-decoration:none;display:block;">
-            <div style="font-size:.72rem;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.06em;">Approved Tests</div>
-            <div style="font-size:1.8rem;font-weight:900;color:#fff;margin-top:.2rem;">{{ $approvedCount }}</div>
-            <div style="font-size:.72rem;color:#64748b;margin-top:.1rem;">Live in Academic Repository</div>
+        <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'approved']) }}" class="gov-card p-5 block {{ $status === 'approved' ? 'ring-2 ring-emerald-500' : '' }}">
+            <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Approved Tests</div>
+            <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">{{ $approvedCount }}</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Live in Academic Repository</div>
         </a>
 
-        <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'needs_revision']) }}" style="background:#0f172a;border:1px solid {{ $status === 'needs_revision' ? '#f43f5e' : '#1e293b' }};border-radius:1rem;padding:1.25rem;text-decoration:none;display:block;">
-            <div style="font-size:.72rem;font-weight:700;color:#fb7185;text-transform:uppercase;letter-spacing:.06em;">Needs Revision</div>
-            <div style="font-size:1.8rem;font-weight:900;color:#fff;margin-top:.2rem;">{{ $needsRevisionCount }}</div>
-            <div style="font-size:.72rem;color:#64748b;margin-top:.1rem;">Returned to Author</div>
+        <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'needs_revision']) }}" class="gov-card p-5 block {{ $status === 'needs_revision' ? 'ring-2 ring-rose-500' : '' }}">
+            <div class="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Needs Revision</div>
+            <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">{{ $needsRevisionCount }}</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Returned to Author</div>
         </a>
     </div>
 
     {{-- Assessments Queue Table --}}
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;overflow:hidden;">
-        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid #1e293b;display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="font-size:1rem;font-weight:800;color:#fff;margin:0;">Assessment Submissions</h3>
-            <span style="font-size:.78rem;color:#94a3b8;">Showing {{ $assessments->count() }} of {{ $assessments->total() }} items</span>
+    <div class="gov-card p-0 overflow-hidden shadow-sm">
+        <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white">Assessment Submissions</h3>
+            <span class="text-xs text-slate-500 dark:text-slate-400">Showing {{ $assessments->count() }} of {{ $assessments->total() }} items</span>
         </div>
 
         @if($assessments->isEmpty())
-        <div style="padding:4rem 2rem;text-align:center;color:#64748b;">
-            <div style="font-size:2.5rem;margin-bottom:.5rem;">🎉</div>
-            <div style="font-size:1rem;font-weight:700;color:#cbd5e1;">Queue Empty</div>
-            <div style="font-size:.82rem;margin-top:.25rem;">There are no assessment test submissions matching your current filter.</div>
+        <div class="p-12 text-center text-slate-400">
+            <div class="text-4xl mb-2">🎉</div>
+            <div class="text-sm font-bold text-slate-800 dark:text-slate-200">Queue Empty</div>
+            <div class="text-xs text-slate-500 mt-1">There are no assessment test submissions matching your current filter.</div>
         </div>
         @else
-        <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;text-align:left;font-size:.85rem;">
-                <thead>
-                    <tr style="background:#1e293b;color:#94a3b8;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;">
-                        <th style="padding:.85rem 1.25rem;">Title & Type</th>
-                        <th style="padding:.85rem 1.25rem;">Teacher Author</th>
-                        <th style="padding:.85rem 1.25rem;">Sections & Duration</th>
-                        <th style="padding:.85rem 1.25rem;">Status</th>
-                        <th style="padding:.85rem 1.25rem;">Submitted At</th>
-                        <th style="padding:.85rem 1.25rem;text-align:right;">Actions</th>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-xs">
+                <thead class="bg-slate-50 dark:bg-slate-950 text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                        <th class="px-4 py-3">Title &amp; Type</th>
+                        <th class="px-4 py-3">Teacher Author</th>
+                        <th class="px-4 py-3">Sections &amp; Duration</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Submitted At</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody style="divide-y:1px solid #1e293b;color:#e2e8f0;">
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
                     @foreach($assessments as $item)
-                    <tr style="border-bottom:1px solid #1e293b;">
-                        <td style="padding:1rem 1.25rem;">
-                            <div style="font-weight:800;color:#fff;font-size:.9rem;">{{ $item->title }}</div>
-                            <div style="font-size:.72rem;color:#818cf8;margin-top:.15rem;text-transform:uppercase;font-weight:700;">
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-slate-900 dark:text-white text-xs">{{ $item->title }}</div>
+                            <div class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5 uppercase font-bold">
                                 {{ is_object($item->test_type) ? $item->test_type->value : $item->test_type }}
                             </div>
                         </td>
-                        <td style="padding:1rem 1.25rem;">
-                            <div style="font-weight:700;color:#cbd5e1;">{{ $item->creator?->name ?? 'Institutional System' }}</div>
-                            <div style="font-size:.72rem;color:#64748b;">{{ $item->creator?->email }}</div>
+                        <td class="px-4 py-3.5">
+                            <div class="font-semibold text-slate-800 dark:text-slate-200 text-xs">{{ $item->creator?->name ?? 'Institutional System' }}</div>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400">{{ $item->creator?->email }}</div>
                         </td>
-                        <td style="padding:1rem 1.25rem;">
-                            <div style="font-weight:700;color:#e2e8f0;">{{ $item->sections->count() }} Sections</div>
-                            <div style="font-size:.72rem;color:#64748b;">⏱ {{ $item->duration_minutes }} Mins</div>
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-slate-800 dark:text-slate-200 text-xs">{{ $item->sections->count() }} Sections</div>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400">⏱ {{ $item->duration_minutes }} Mins</div>
                         </td>
-                        <td style="padding:1rem 1.25rem;">
+                        <td class="px-4 py-3.5">
                             @if(in_array($item->status, ['pending', 'pending_approval']))
-                                <span style="background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.3);padding:.25rem .65rem;border-radius:.4rem;font-size:.72rem;font-weight:800;">
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                     ⏳ Pending Approval
                                 </span>
                             @elseif($item->status === 'approved')
-                                <span style="background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.3);padding:.25rem .65rem;border-radius:.4rem;font-size:.72rem;font-weight:800;">
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                     ✓ Approved
                                 </span>
                             @else
-                                <span style="background:rgba(251,113,133,.12);color:#fb7185;border:1px solid rgba(251,113,133,.3);padding:.25rem .65rem;border-radius:.4rem;font-size:.72rem;font-weight:800;">
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                                     ⚠️ Needs Revision
                                 </span>
                             @endif
                         </td>
-                        <td style="padding:1rem 1.25rem;font-size:.78rem;color:#94a3b8;">
+                        <td class="px-4 py-3.5 text-xs text-slate-500 dark:text-slate-400">
                             {{ $item->updated_at?->diffForHumans() ?? 'Recently' }}
                         </td>
-                        <td style="padding:1rem 1.25rem;text-align:right;">
+                        <td class="px-4 py-3.5 text-right">
                             @if(in_array($item->status, ['pending', 'pending_approval']))
-                                <a href="{{ route('admin.repository-manager.assessment-review', $item->id) }}" style="padding:.45rem .85rem;background:#4338ca;color:#fff;border-radius:.5rem;font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
-                                    🔍 Review & Governance
+                                <a href="{{ route('admin.repository-manager.assessment-review', $item->id) }}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1">
+                                    🔍 Review &amp; Governance
                                 </a>
                             @elseif(in_array($item->status, ['needs_revision', 'revision_requested']))
-                                <span style="padding:.45rem .85rem;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);border-radius:.5rem;font-size:.78rem;font-weight:800;display:inline-flex;align-items:center;gap:.3rem;">
+                                <span class="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-lg text-xs font-bold inline-flex items-center gap-1">
                                     📝 Awaiting Teacher Resubmission
                                 </span>
                             @elseif($item->status === 'approved')
-                                <span style="padding:.45rem .85rem;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);border-radius:.5rem;font-size:.78rem;font-weight:800;display:inline-flex;align-items:center;gap:.3rem;">
+                                <span class="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-bold inline-flex items-center gap-1">
                                     ✓ Governance Complete
                                 </span>
                             @else
-                                <span style="padding:.45rem .85rem;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:.5rem;font-size:.78rem;font-weight:700;">
+                                <span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold">
                                     {{ ucfirst($item->status) }}
                                 </span>
                             @endif
@@ -123,7 +123,7 @@
                 </tbody>
             </table>
         </div>
-        <div style="padding:1rem;border-top:1px solid #1e293b;">
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800">
             {{ $assessments->links() }}
         </div>
         @endif
@@ -137,3 +137,4 @@ window.addEventListener('pageshow', function (event) {
 });
 </script>
 @endsection
+

@@ -2,53 +2,23 @@
 
 @section('title', 'View Trashed Repository — Recycle Bin')
 
-@push('styles')
-<style>
-.rbs-container { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 950px; margin: 0 auto; }
-.rbs-hero {
-    background: linear-gradient(135deg, #0f172a 0%, #31102b 50%, #0f172a 100%);
-    border: 1px solid #4c1d95;
-    border-radius: 1.25rem;
-    padding: 1.75rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1.25rem;
-}
-.rbs-card {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 1.25rem;
-    padding: 1.75rem;
-}
-.rbs-question-item {
-    background: #080f1d;
-    border: 1px solid #1e293b;
-    border-radius: .75rem;
-    padding: 1rem 1.25rem;
-    margin-bottom: .75rem;
-}
-</style>
-@endpush
-
 @section('content')
-<div class="rbs-container">
+<div class="space-y-6 max-w-5xl mx-auto">
 
     {{-- Breadcrumbs --}}
     <div>
-        <a href="{{ route('admin.recycle-bin.index') }}" style="color:#c084fc;font-size:.84rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
+        <a href="{{ route('admin.recycle-bin.index') }}" class="text-purple-600 dark:text-purple-400 text-xs font-bold hover:underline inline-flex items-center gap-1.5">
             ← Back to Recycle Bin
         </a>
     </div>
 
     {{-- Hero Header --}}
-    <div class="rbs-hero">
+    <div class="gov-hero-purple rounded-2xl p-6 sm:p-7 flex justify-between items-center flex-wrap gap-5">
         <div>
-            <div style="font-size:.72rem;font-weight:800;color:#c084fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem;">Recycle Bin • Trashed Repository Inspection</div>
-            <h1 style="font-size:1.65rem;font-weight:900;color:#fff;margin:0 0 .3rem;">{{ $questionBank->title }}</h1>
-            <div style="font-size:.82rem;color:#cbd5e1;">
-                Author: <strong>{{ $questionBank->creator?->name ?? 'Teacher Author' }}</strong> •
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400 mb-1">Recycle Bin • Trashed Repository Inspection</div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-1">{{ $questionBank->title }}</h1>
+            <div class="text-xs text-slate-600 dark:text-slate-400">
+                Author: <strong class="text-slate-800 dark:text-slate-200">{{ $questionBank->creator?->name ?? 'Teacher Author' }}</strong> •
                 Version v{{ $questionBank->current_version ?? '1.0' }} •
                 Deleted {{ $questionBank->deleted_at?->format('F d, Y \a\t H:i') }} ({{ $questionBank->deleted_at?->diffForHumans() }})
             </div>
@@ -58,7 +28,7 @@
                   onsubmit="event.preventDefault(); iapConfirm({ title: 'Restore this repository from the Recycle Bin?', message: 'Restore \'{{ addslashes($questionBank->title) }}\' from the Recycle Bin back to Archived status? Expected destination after restore: ARCHIVED.', confirmText: 'Restore to Archived', variant: 'warning', form: this });">
                 @csrf
                 <button type="submit"
-                        style="padding:.75rem 1.5rem;background:#059669;color:#fff;border:none;border-radius:.65rem;font-size:.85rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(5,150,105,0.4);display:inline-flex;align-items:center;gap:.4rem;">
+                        class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow transition-colors inline-flex items-center gap-1.5">
                     ↩ Restore to Archived
                 </button>
             </form>
@@ -66,58 +36,65 @@
     </div>
 
     {{-- Repository Details --}}
-    <div class="rbs-card">
-        <h3 style="font-size:1.1rem;font-weight:800;color:#f8fafc;margin:0 0 1rem;">Repository Overview</h3>
-        <p style="font-size:.88rem;color:#94a3b8;line-height:1.5;margin:0 0 1.25rem;">
-            {{ $questionBank->description ?: 'No description provided.' }}
-        </p>
+    <div class="gov-card space-y-5">
+        <div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white mb-2">Repository Overview</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                {{ $questionBank->description ?: 'No description provided.' }}
+            </p>
+        </div>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;background:#080f1d;padding:1rem 1.25rem;border-radius:.75rem;border:1px solid #1e293b;margin-bottom:1.5rem;font-size:.8rem;">
+        <div class="gov-stats-strip grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-slate-600 dark:text-slate-400">
             <div>
-                <span style="color:#64748b;display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;">Test Type</span>
-                <strong style="color:#f1f5f9;">{{ is_object($questionBank->test_type) ? $questionBank->test_type->label() : strtoupper($questionBank->test_type?->value ?? 'General') }}</strong>
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Test Type</span>
+                <strong class="text-slate-900 dark:text-white mt-0.5 block">{{ is_object($questionBank->test_type) ? $questionBank->test_type->label() : strtoupper($questionBank->test_type?->value ?? 'General') }}</strong>
             </div>
             <div>
-                <span style="color:#64748b;display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;">Category</span>
-                <strong style="color:#f1f5f9;">{{ $questionBank->category?->name ?? 'General' }}</strong>
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Category</span>
+                <strong class="text-slate-900 dark:text-white mt-0.5 block">{{ $questionBank->category?->name ?? 'General' }}</strong>
             </div>
             <div>
-                <span style="color:#64748b;display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;">Questions Preserved</span>
-                <strong style="color:#34d399;">{{ $questionBank->questions->count() }} Questions</strong>
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Questions Preserved</span>
+                <strong class="text-emerald-600 dark:text-emerald-400 mt-0.5 block">{{ $questionBank->questions->count() }} Questions</strong>
             </div>
             <div>
-                <span style="color:#64748b;display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;">Destination on Restore</span>
-                <strong style="color:#fbbf24;">ARCHIVED</strong>
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Destination on Restore</span>
+                <strong class="text-amber-600 dark:text-amber-400 mt-0.5 block">ARCHIVED</strong>
             </div>
         </div>
 
         {{-- Question List --}}
-        <h4 style="font-size:.95rem;font-weight:800;color:#cbd5e1;margin:0 0 .75rem;">Preserved Questions ({{ $questionBank->questions->count() }})</h4>
-        @forelse($questionBank->questions as $idx => $q)
-        <div class="rbs-question-item">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                <strong style="font-size:.82rem;color:#818cf8;">#{{ $idx + 1 }} • {{ strtoupper(str_replace('_', ' ', $q->question_type ?? 'Single Choice')) }}</strong>
-                <span style="font-size:.74rem;color:#64748b;">{{ $q->points ?? 1 }} Pt(s)</span>
-            </div>
-            <div style="font-size:.85rem;color:#f1f5f9;margin-bottom:.5rem;">
-                {!! nl2br(e($q->prompt)) !!}
-            </div>
-            @if($q->choices && $q->choices->count() > 0)
-            <div style="display:flex;flex-direction:column;gap:.25rem;padding-left:.5rem;">
-                @foreach($q->choices as $c)
-                <div style="font-size:.78rem;color:{{ $c->is_correct ? '#34d399' : '#94a3b8' }};">
-                    {{ $c->label }}. {{ $c->content }} {{ $c->is_correct ? '✓ (Correct)' : '' }}
+        <div>
+            <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">Preserved Questions ({{ $questionBank->questions->count() }})</h4>
+            <div class="space-y-3">
+                @forelse($questionBank->questions as $idx => $q)
+                <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <strong class="text-xs text-indigo-600 dark:text-indigo-400">#{{ $idx + 1 }} • {{ strtoupper(str_replace('_', ' ', $q->question_type ?? 'Single Choice')) }}</strong>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ $q->points ?? 1 }} Pt(s)</span>
+                    </div>
+                    <div class="text-xs text-slate-900 dark:text-white leading-relaxed">
+                        {!! nl2br(e($q->prompt)) !!}
+                    </div>
+                    @if($q->choices && $q->choices->count() > 0)
+                    <div class="space-y-1 pl-2 pt-1">
+                        @foreach($q->choices as $c)
+                        <div class="text-xs {{ $c->is_correct ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400' }}">
+                            {{ $c->label }}. {{ $c->content }} {{ $c->is_correct ? '✓ (Correct)' : '' }}
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
                 </div>
-                @endforeach
+                @empty
+                <div class="p-6 text-center text-xs text-slate-400">
+                    No questions in this repository.
+                </div>
+                @endforelse
             </div>
-            @endif
         </div>
-        @empty
-        <div style="padding:1.5rem;text-align:center;color:#64748b;font-size:.82rem;">
-            No questions in this repository.
-        </div>
-        @endforelse
     </div>
 
 </div>
 @endsection
+
