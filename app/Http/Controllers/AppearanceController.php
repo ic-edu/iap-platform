@@ -5,19 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class AppearanceController extends Controller
 {
     /**
-     * Show appearance settings page (available to all authenticated roles).
+     * Redirect direct appearance GET requests to profile settings.
      */
-    public function index(Request $request): View
+    public function index(Request $request): RedirectResponse
     {
-        $user = $request->user();
-        $currentTheme = $user?->getThemePreference() ?? 'dark';
-
-        return view('settings.appearance', compact('user', 'currentTheme'));
+        return redirect()->route('profile.edit');
     }
 
     /**

@@ -533,16 +533,27 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $teacher = User::factory()->create();
         $teacher->assignRole('teacher');
 
-        $roles = [$superAdmin, $this->admin, $rm, $teacher, $this->student];
+        $roleWorkspaces = [
+            [$superAdmin, route('super-admin.dashboard')],
+            [$this->admin, route('admin.dashboard')],
+            [$rm, route('admin.repository-manager.dashboard')],
+            [$teacher, route('teacher.dashboard')],
+            [$this->student, route('candidate.portal')],
+        ];
 
-        foreach ($roles as $user) {
-            $response = $this->actingAs($user)->get(route('settings.appearance'));
+        foreach ($roleWorkspaces as [$user, $url]) {
+            $response = $this->actingAs($user)->get($url);
             $response->assertStatus(200);
-            $response->assertSee('Appearance &amp; Theme Settings', false);
-            $response->assertSee('Dark Mode');
-            $response->assertSee('Light Mode');
-            $response->assertSee('System Default');
+            $response->assertSee('theme-btn-light');
+            $response->assertSee('theme-btn-dark');
+            $response->assertSee('theme-btn-system');
+            $response->assertSee('Profile &amp; Account', false);
+            $response->assertSee('Sign out');
         }
+
+        // Dedicated Profile & Account page loads for authenticated users
+        $profileResponse = $this->actingAs($this->admin)->get(route('profile.edit'));
+        $profileResponse->assertStatus(200);
     }
 
     public function test_appearance_settings_persists_theme_preference_per_user(): void

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-900 text-slate-100">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,45 +15,31 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
 
-    <!-- Theme & Visual Mode Initialization -->
+    <!-- Early Theme Initialization to prevent flash of wrong theme -->
     <script>
         (function() {
-            var userTheme = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
-            function applyTheme(theme) {
-                var root = document.documentElement;
-                if (theme === 'light') {
-                    root.classList.remove('dark');
-                    root.classList.add('light');
-                    root.setAttribute('data-theme', 'light');
-                } else if (theme === 'system') {
-                    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    if (prefersDark) {
-                        root.classList.add('dark');
-                        root.classList.remove('light');
-                        root.setAttribute('data-theme', 'dark');
-                    } else {
-                        root.classList.remove('dark');
-                        root.classList.add('light');
-                        root.setAttribute('data-theme', 'light');
-                    }
-                } else {
-                    root.classList.add('dark');
-                    root.classList.remove('light');
-                    root.setAttribute('data-theme', 'dark');
+            var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
+            function resolveTheme(pref) {
+                if (pref === 'system') {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
+                return pref === 'light' ? 'light' : 'dark';
             }
-            window.applyIapTheme = applyTheme;
-            applyTheme(userTheme);
-
-            if (userTheme === 'system') {
-                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-                    applyTheme('system');
-                });
+            var activeTheme = resolveTheme(preference);
+            var root = document.documentElement;
+            root.setAttribute('data-theme', activeTheme);
+            root.setAttribute('data-preference', preference);
+            if (activeTheme === 'dark') {
+                root.classList.add('dark');
+                root.classList.remove('light');
+            } else {
+                root.classList.add('light');
+                root.classList.remove('dark');
             }
         })();
     </script>
 </head>
-<body class="h-full font-sans antialiased bg-slate-900 text-slate-100">
+<body class="h-full font-sans antialiased">
     <div class="min-h-screen flex flex-col md:flex-row">
         <!-- Sidebar Navigation (Removed for Repository Manager role - Full Width Command Center) -->
         @unless(Auth::user()?->hasRole('repository-manager'))
@@ -196,18 +182,98 @@
                         </div>
                     </div>
 
-                    <!-- User Profile Drawer Trigger -->
+                    <!-- User Profile Dropdown Container -->
                     @auth
-                        <div class="flex items-center gap-3 border-l border-slate-800 pl-4">
-                            <button type="button" onclick="openMyProfileDrawer()" class="flex items-center gap-2.5 text-left hover:opacity-80 transition-opacity">
-                                <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-md">
+                        <div class="relative border-l border-slate-800 pl-4" id="user-profile-container">
+                            <button type="button" 
+                                    id="user-profile-btn"
+                                    onclick="toggleUserProfileDropdown(event)" 
+                                    aria-expanded="false"
+                                    aria-haspopup="true"
+                                    aria-controls="user-profile-dropdown"
+                                    class="flex items-center gap-2.5 text-left hover:opacity-90 transition-all cursor-pointer p-1 rounded-xl hover:bg-slate-800/50">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-md flex-shrink-0">
                                     {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
                                 </div>
                                 <div class="hidden sm:block">
                                     <span class="block text-xs font-semibold text-slate-200 leading-tight">{{ Auth::user()->name }}</span>
                                     <span class="block text-[10px] text-indigo-400 font-medium">{{ Auth::user()->roles->first()?->name ?? 'User' }}</span>
                                 </div>
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
                             </button>
+
+                            <!-- Compact Profile Dropdown Menu -->
+                            <div id="user-profile-dropdown" class="hidden absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 p-4 space-y-3">
+                                <!-- 1. Current user identity -->
+                                <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+                                    <div class="w-10 h-10 rounded-xl bg-indigo-600 font-bold text-white text-sm flex items-center justify-center shadow-md flex-shrink-0">
+                                        {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs font-bold text-white truncate">{{ Auth::user()->name }}</p>
+                                        <p class="text-[11px] text-slate-400 font-mono truncate">{{ Auth::user()->email }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Compact Appearance selector: [ ☼ Light ] [ ☾ Dark ] [ ▣ System ] -->
+                                <div class="space-y-1.5">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Theme &amp; Appearance</span>
+                                    <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 border border-slate-800 rounded-xl" role="group" aria-label="Theme selector">
+                                        <button type="button" 
+                                                onclick="setIapTheme('light')" 
+                                                id="theme-btn-light" 
+                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
+                                                title="Light theme" 
+                                                aria-label="Select Light theme">
+                                            <span class="text-sm">☼</span>
+                                            <span class="text-[11px]">Light</span>
+                                        </button>
+                                        <button type="button" 
+                                                onclick="setIapTheme('dark')" 
+                                                id="theme-btn-dark" 
+                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
+                                                title="Dark theme" 
+                                                aria-label="Select Dark theme">
+                                            <span class="text-sm">☾</span>
+                                            <span class="text-[11px]">Dark</span>
+                                        </button>
+                                        <button type="button" 
+                                                onclick="setIapTheme('system')" 
+                                                id="theme-btn-system" 
+                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
+                                                title="System theme" 
+                                                aria-label="Select System theme">
+                                            <span class="text-sm">▣</span>
+                                            <span class="text-[11px]">System</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Profile & Account Navigation Link -->
+                                <div class="pt-2 border-t border-slate-800">
+                                    <a href="{{ route('profile.edit') }}" class="flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+                                        <span class="flex items-center gap-2">
+                                            <span>👤</span> Profile &amp; Account
+                                        </span>
+                                        <span class="text-slate-500 text-xs">&rarr;</span>
+                                    </a>
+                                </div>
+
+                                <!-- 4. Sign out -->
+                                <div class="pt-1">
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-colors cursor-pointer">
+                                            <span class="flex items-center gap-2">
+                                                <span>🚪</span> Sign out
+                                            </span>
+                                            <span class="text-rose-500 text-xs">&rarr;</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     @endauth
                 </div>
@@ -224,98 +290,6 @@
             <main class="flex-1 p-6 overflow-y-auto">
                 @yield('content')
             </main>
-        </div>
-    </div>
-
-    <!-- Slide-Over "My Profile" Right Drawer -->
-    <div id="my-profile-drawer" class="hidden fixed inset-0 z-50 overflow-hidden">
-        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" onclick="closeMyProfileDrawer()"></div>
-        <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div class="w-screen max-w-md bg-slate-900 border-l border-slate-800 text-white shadow-2xl flex flex-col justify-between p-6 overflow-y-auto">
-                <div>
-                    <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
-                        <h2 class="text-base font-bold text-white flex items-center gap-2">
-                            <span>👤 My Profile &amp; Account Context</span>
-                        </h2>
-                        <button type="button" onclick="closeMyProfileDrawer()" class="text-slate-400 hover:text-white text-lg">&times;</button>
-                    </div>
-
-                    @auth
-                        <!-- Authenticated User Overview Card -->
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-6 space-y-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-xl bg-indigo-600 font-extrabold text-white text-base flex items-center justify-center shadow-lg">
-                                    {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-white text-sm">{{ Auth::user()->name }}</h3>
-                                    <p class="text-slate-400 text-xs font-mono">{{ Auth::user()->email }}</p>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">
-                                <div>
-                                    <span class="text-[10px] text-slate-500 uppercase font-bold block">Active Role</span>
-                                    <span class="font-bold text-indigo-400 uppercase">{{ Auth::user()->roles->first()?->name ?? 'student' }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-[10px] text-slate-500 uppercase font-bold block">Account Status</span>
-                                    <span class="font-bold text-emerald-400">ACTIVE</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Appearance & Theme Preferences Link -->
-                        <div class="mb-4">
-                            <a href="{{ route('settings.appearance') }}" class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/40 text-slate-200 hover:text-white transition-colors group">
-                                <div class="flex items-center gap-2.5">
-                                    <span class="text-base">🎨</span>
-                                    <div>
-                                        <p class="text-xs font-bold text-white">Appearance &amp; Theme</p>
-                                        <p class="text-[10px] text-slate-400">Dark, Light, or System preference</p>
-                                    </div>
-                                </div>
-                                <span class="text-xs text-indigo-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
-                            </a>
-                        </div>
-
-                        <!-- Password Update Form -->
-                        <form method="POST" action="{{ route('password.update') }}" class="space-y-4 bg-slate-950 border border-slate-800 rounded-xl p-4">
-                            @csrf
-                            @method('PUT')
-                            <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2">🔒 Update Security Credentials</h4>
-
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Current Password</label>
-                                <input type="password" name="current_password" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none" required placeholder="••••••••">
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">New Password</label>
-                                <input type="password" name="password" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none" required placeholder="••••••••">
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1">Confirm New Password</label>
-                                <input type="password" name="password_confirmation" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none" required placeholder="••••••••">
-                            </div>
-
-                            <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
-                                Update Password
-                            </button>
-                        </form>
-                    @endauth
-                </div>
-
-                <div class="pt-6 border-t border-slate-800 mt-6">
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold rounded-lg transition-colors">
-                            Logout of Session
-                        </button>
-                    </form>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -409,19 +383,101 @@
     </div>
 
     <script>
-        function openMyProfileDrawer() {
-            document.getElementById('my-profile-drawer').classList.remove('hidden');
+        function toggleUserProfileDropdown(event) {
+            if (event) event.stopPropagation();
+            const dropdown = document.getElementById('user-profile-dropdown');
+            const btn = document.getElementById('user-profile-btn');
+            if (!dropdown) return;
+            const isHidden = dropdown.classList.contains('hidden');
+            
+            const notifDropdown = document.getElementById('notifications-dropdown');
+            if (notifDropdown && !notifDropdown.classList.contains('hidden')) {
+                notifDropdown.classList.add('hidden');
+            }
+
+            if (isHidden) {
+                dropdown.classList.remove('hidden');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+            } else {
+                dropdown.classList.add('hidden');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            }
         }
 
-        function closeMyProfileDrawer() {
-            document.getElementById('my-profile-drawer').classList.add('hidden');
+        function updateSwitcherButtonsUI(mode) {
+            ['light', 'dark', 'system'].forEach(function(m) {
+                var btn = document.getElementById('theme-btn-' + m);
+                if (btn) {
+                    if (m === mode) {
+                        btn.classList.add('active');
+                        btn.setAttribute('aria-pressed', 'true');
+                    } else {
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-pressed', 'false');
+                    }
+                }
+            });
         }
+
+        window.setIapTheme = function(mode) {
+            var root = document.documentElement;
+            var activeTheme = mode;
+            if (mode === 'system') {
+                activeTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            root.setAttribute('data-theme', activeTheme);
+            root.setAttribute('data-preference', mode);
+            if (activeTheme === 'dark') {
+                root.classList.add('dark');
+                root.classList.remove('light');
+            } else {
+                root.classList.add('light');
+                root.classList.remove('dark');
+            }
+
+            updateSwitcherButtonsUI(mode);
+
+            // Persist preference to database & session
+            fetch('{{ route('settings.appearance.update') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ theme: mode })
+            }).catch(function(err) {
+                console.error('Failed to persist theme preference:', err);
+            });
+        };
 
         document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('open_profile') === '1') {
-                openMyProfileDrawer();
-            }
+            var currentPref = document.documentElement.getAttribute('data-preference') || 'dark';
+            updateSwitcherButtonsUI(currentPref);
+
+            document.addEventListener('click', function(e) {
+                var userDropdown = document.getElementById('user-profile-dropdown');
+                var userContainer = document.getElementById('user-profile-container');
+                if (userDropdown && !userDropdown.classList.contains('hidden')) {
+                    if (userContainer && !userContainer.contains(e.target)) {
+                        userDropdown.classList.add('hidden');
+                        var btn = document.getElementById('user-profile-btn');
+                        if (btn) btn.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    var userDropdown = document.getElementById('user-profile-dropdown');
+                    if (userDropdown && !userDropdown.classList.contains('hidden')) {
+                        userDropdown.classList.add('hidden');
+                        var btn = document.getElementById('user-profile-btn');
+                        if (btn) btn.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            });
+
             loadNotificationFeed();
         });
 

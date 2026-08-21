@@ -6,84 +6,166 @@
     display: none !important;
 }
 
-/* Platform Semantic Theme Overrides for Light Mode (Dark mode remains native untouched) */
-html.light, html.light body {
+/* ==========================================================================
+   PLATFORM-WIDE SEMANTIC DESIGN TOKENS FOR LIGHT & DARK THEMES
+   ========================================================================== */
+
+/* LIGHT THEME (Activated via html.light or html[data-theme="light"]) */
+html.light,
+html[data-theme="light"],
+html.light body,
+html[data-theme="light"] body {
     background-color: #f8fafc !important;
     color: #0f172a !important;
 }
 
-html.light aside {
+/* Layout Structural Surfaces */
+html.light aside,
+html[data-theme="light"] aside,
+html.light nav,
+html[data-theme="light"] nav,
+html.light header,
+html[data-theme="light"] header {
     background-color: #ffffff !important;
     border-color: #e2e8f0 !important;
 }
 
-html.light nav {
-    background-color: #ffffff !important;
-    border-color: #e2e8f0 !important;
-}
-
-html.light header {
-    background-color: #ffffff !important;
-    border-color: #e2e8f0 !important;
-}
-
+/* Card, Panel, Section & Elevated Surfaces */
 html.light .bg-slate-900,
+html[data-theme="light"] .bg-slate-900,
 html.light .bg-slate-950,
+html[data-theme="light"] .bg-slate-950,
 html.light .bg-slate-900\/90,
+html[data-theme="light"] .bg-slate-900\/90,
 html.light .bg-slate-950\/80,
+html[data-theme="light"] .bg-slate-950\/80,
 html.light .bg-slate-950\/70,
+html[data-theme="light"] .bg-slate-950\/70,
 html.light .bg-slate-950\/60,
+html[data-theme="light"] .bg-slate-950\/60,
 html.light .bg-slate-900\/60,
-html.light .bg-slate-900\/40 {
+html[data-theme="light"] .bg-slate-900\/60,
+html.light .bg-slate-900\/40,
+html[data-theme="light"] .bg-slate-900\/40,
+html.light .bg-slate-950\/90,
+html[data-theme="light"] .bg-slate-950\/90 {
     background-color: #ffffff !important;
     color: #0f172a !important;
 }
 
+/* Secondary Backgrounds and Inner Boxes */
+html.light .bg-slate-800,
+html[data-theme="light"] .bg-slate-800,
+html.light .bg-slate-800\/80,
+html[data-theme="light"] .bg-slate-800\/80,
+html.light .bg-slate-800\/60,
+html[data-theme="light"] .bg-slate-800\/60 {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+
+/* Borders & Dividers */
 html.light .border-slate-800,
+html[data-theme="light"] .border-slate-800,
 html.light .border-slate-800\/80,
+html[data-theme="light"] .border-slate-800\/80,
 html.light .border-slate-800\/60,
+html[data-theme="light"] .border-slate-800\/60,
 html.light .border-slate-900,
-html.light .border-slate-700 {
+html[data-theme="light"] .border-slate-900,
+html.light .border-slate-700,
+html[data-theme="light"] .border-slate-700,
+html.light .border-slate-700\/80,
+html[data-theme="light"] .border-slate-700\/80,
+html.light .divide-slate-800,
+html[data-theme="light"] .divide-slate-800,
+html.light .divide-slate-800\/80,
+html[data-theme="light"] .divide-slate-800\/80,
+html.light .divide-slate-800\/60,
+html[data-theme="light"] .divide-slate-800\/60,
+html.light .divide-slate-900,
+html[data-theme="light"] .divide-slate-900 {
     border-color: #e2e8f0 !important;
 }
 
-html.light .text-white {
-    color: #0f172a !important;
-}
-
+/* Primary, Secondary, and Muted Typography */
+html.light .text-white,
+html[data-theme="light"] .text-white,
 html.light .text-slate-100,
+html[data-theme="light"] .text-slate-100,
 html.light .text-slate-200,
-html.light .text-slate-300 {
-    color: #1e293b !important;
-}
-
-html.light .text-slate-400 {
-    color: #64748b !important;
-}
-
-html.light .text-slate-500 {
-    color: #64748b !important;
-}
-
-html.light .bg-slate-800 {
-    background-color: #f1f5f9 !important;
+html[data-theme="light"] .text-slate-200 {
     color: #0f172a !important;
 }
 
-html.light .hover\:bg-slate-800:hover,
-html.light .hover\:bg-slate-900\/40:hover {
-    background-color: #f1f5f9 !important;
-}
-
-html.light thead.bg-slate-950 {
-    background-color: #f8fafc !important;
+html.light .text-slate-300,
+html[data-theme="light"] .text-slate-300,
+html.light .text-slate-400,
+html[data-theme="light"] .text-slate-400 {
     color: #475569 !important;
 }
 
-html.light input,
+html.light .text-slate-500,
+html[data-theme="light"] .text-slate-500 {
+    color: #64748b !important;
+}
+
+/* Interactive States and Hover Overrides */
+html.light .hover\:bg-slate-800:hover,
+html[data-theme="light"] .hover\:bg-slate-800:hover,
+html.light .hover\:bg-slate-900\/40:hover,
+html[data-theme="light"] .hover\:bg-slate-900\/40:hover,
+html.light .hover\:bg-slate-900\/90:hover,
+html[data-theme="light"] .hover\:bg-slate-900\/90:hover,
+html.light .hover\:bg-slate-700:hover,
+html[data-theme="light"] .hover\:bg-slate-700:hover {
+    background-color: #f1f5f9 !important;
+}
+
+/* Form Inputs, Selects, and Textareas */
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
 html.light select,
-html.light textarea {
+html[data-theme="light"] select,
+html.light textarea,
+html[data-theme="light"] textarea {
     background-color: #ffffff !important;
     color: #0f172a !important;
     border-color: #cbd5e1 !important;
+}
+
+/* Table Headers */
+html.light thead,
+html[data-theme="light"] thead,
+html.light thead.bg-slate-950,
+html[data-theme="light"] thead.bg-slate-950 {
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    border-color: #e2e8f0 !important;
+}
+
+/* Dropdowns & Popovers */
+html.light #notifications-dropdown,
+html[data-theme="light"] #notifications-dropdown,
+html.light #user-profile-dropdown,
+html[data-theme="light"] #user-profile-dropdown {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Theme Switcher Button Group Active Highlights */
+.theme-switcher-btn.active {
+    background-color: #4f46e5 !important;
+    color: #ffffff !important;
+    border-color: #4338ca !important;
+    box-shadow: 0 1px 3px 0 rgba(79, 70, 229, 0.4) !important;
+}
+.theme-switcher-btn:not(.active) {
+    color: #94a3b8 !important;
+    background-color: transparent !important;
+}
+html.light .theme-switcher-btn:not(.active),
+html[data-theme="light"] .theme-switcher-btn:not(.active) {
+    color: #64748b !important;
 }

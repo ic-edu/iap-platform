@@ -17,7 +17,7 @@ class ProfileTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
-    public function test_profile_page_redirects_to_in_dashboard_profile_drawer(): void
+    public function test_profile_page_is_displayed(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
@@ -26,7 +26,7 @@ class ProfileTest extends TestCase
             ->actingAs($admin)
             ->get('/profile');
 
-        $response->assertRedirect(route('admin.dashboard', ['open_profile' => 1]));
+        $response->assertStatus(200);
     }
 
     public function test_profile_information_can_be_updated(): void
