@@ -114,4 +114,73 @@ class RepositoryReviewDecisionLayerTest extends TestCase
         $teacherView->assertSee('Flawed Question Stem Q2');
         $teacherView->assertSee('Fix Q2 stem');
     }
+
+    /**
+     * TEST 3: RM Review Workspace renders standardized iapConfirm dialogs for all 3 governance decisions.
+     */
+    public function test_3_governance_decision_buttons_render_standardized_confirmations(): void
+    {
+        $test = AssessmentTest::create([
+            'title'            => 'TOEIC Standardization Test',
+            'slug'             => 'toeic-standardization-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'status'           => 'pending_approval',
+            'created_by'       => $this->teacherA->id,
+        ]);
+
+        $section = TestSection::create(['test_id' => $test->id, 'title' => 'Part 1', 'order' => 1]);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question 1']);
+        TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
+
+        $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
+        $res->assertStatus(200);
+
+        // 1. Approve Assessment confirmation
+        $res->assertSee("iapConfirm({ title: 'Approve Assessment?'", false);
+        $res->assertSee("confirmText: 'Approve Assessment'", false);
+        $res->assertSee("variant: 'success'", false);
+
+        // 2. Request Assessment Revision confirmation
+        $res->assertSee("iapConfirm({ title: 'Request Assessment Revision?'", false);
+        $res->assertSee("confirmText: 'Request Revision'", false);
+        $res->assertSee("variant: 'warning'", false);
+
+        // 3. Send to Archived confirmation
+        $res->assertSee("iapConfirm({ title: 'Send Assessment to Archived?'", false);
+        $res->assertSee("confirmText: 'Send to Archived'", false);
+        $res->assertSee("variant: 'warning'", false);
+    }
+
+    /**
+     * TEST 4: Backend execution remains fully functional after confirmation.
+     */
+    public function test_4_governance_actions_execute_backend_routes_correctly(): void
+    {
+        $test = AssessmentTest::create([
+            'title'            => 'TOEIC Execution Test',
+            'slug'             => 'toeic-execution-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'status'           => 'pending_approval',
+            'created_by'       => $this->teacherA->id,
+        ]);
+
+        $section = TestSection::create(['test_id' => $test->id, 'title' => 'Part 1', 'order' => 1]);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question 1']);
+        TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
+
+        // Submit approval
+        $approveRes = $this->actingAs($this->repoManager)
+            ->post(route('admin.repository-manager.assessment-approve', $test->id), [
+                'notes' => 'Institutional quality approved',
+            ]);
+
+        $approveRes->assertRedirect();
+        $test->refresh();
+        $this->assertEquals('approved', $test->status);
+        $this->assertTrue((bool) $test->is_published);
+    }
 }
