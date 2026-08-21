@@ -3,66 +3,66 @@
 @section('title', 'Student Enrolments — Academic Operations')
 
 @section('content')
-<div style="display:flex;flex-direction:column;gap:1.5rem;">
+<div class="space-y-6">
 
     @if(session('status'))
-    <div style="padding:.85rem 1.1rem;border-radius:.75rem;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:#34d399;font-size:.82rem;font-weight:600;">
-        ✅ {{ session('status') }}
+    <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium flex items-center gap-2">
+        <span>✅</span> {{ session('status') }}
     </div>
     @endif
 
     {{-- Header --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:0 0 .25rem;">👥 Student Enrolments</h1>
-            <p style="font-size:.85rem;color:#94a3b8;margin:0;">Operational student assignment, transfer, and class enrolment management.</p>
+            <h1 class="text-2xl font-bold text-white">👥 Student Enrolments</h1>
+            <p class="text-xs text-slate-400">Operational student assignment, transfer, and class enrolment management.</p>
         </div>
-        <button type="button" onclick="document.getElementById('enroll-student-modal').style.display='flex'" style="padding:.6rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-size:.85rem;font-weight:700;cursor:pointer;">
+        <button type="button" onclick="document.getElementById('enroll-student-modal').classList.remove('hidden'); document.getElementById('enroll-student-modal').classList.add('flex');" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow transition-colors">
             ＋ Enroll Student into Course
         </button>
     </div>
 
     {{-- Enrolments Table --}}
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1rem;overflow:hidden;">
-        <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
-                <thead>
-                    <tr style="background:#080f1d;color:#475569;text-transform:uppercase;font-size:.67rem;font-weight:800;letter-spacing:.06em;text-align:left;">
-                        <th style="padding:.75rem 1rem;">Student Name</th>
-                        <th style="padding:.75rem 1rem;">Email</th>
-                        <th style="padding:.75rem 1rem;">Enrolled Master Course</th>
-                        <th style="padding:.75rem 1rem;">Teacher</th>
-                        <th style="padding:.75rem 1rem;">Status</th>
-                        <th style="padding:.75rem 1rem;">Enrollment Date</th>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-slate-950 border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <tr>
+                        <th class="px-4 py-3">Student Name</th>
+                        <th class="px-4 py-3">Email</th>
+                        <th class="px-4 py-3">Enrolled Master Course</th>
+                        <th class="px-4 py-3">Teacher</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Enrollment Date</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-slate-800/80">
                     @forelse($enrollments as $enr)
-                    <tr style="border-bottom:1px solid #1e293b;">
-                        <td style="padding:.85rem 1rem;font-weight:700;color:#f1f5f9;">{{ $enr->student?->name ?? 'Student' }}</td>
-                        <td style="padding:.85rem 1rem;color:#94a3b8;">{{ $enr->student?->email ?? '-' }}</td>
-                        <td style="padding:.85rem 1rem;">
-                            <div style="font-weight:700;color:#818cf8;">{{ $enr->course?->title ?? 'Course' }}</div>
-                            <div style="font-size:.7rem;color:#64748b;font-family:monospace;">{{ $enr->course?->code }}</div>
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                        <td class="px-4 py-3.5 font-bold text-white">{{ $enr->student?->name ?? 'Student' }}</td>
+                        <td class="px-4 py-3.5 text-slate-400">{{ $enr->student?->email ?? '-' }}</td>
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-indigo-400">{{ $enr->course?->title ?? 'Course' }}</div>
+                            <div class="text-[11px] text-slate-400 font-mono">{{ $enr->course?->code }}</div>
                         </td>
-                        <td style="padding:.85rem 1rem;color:#cbd5e1;">{{ $enr->course?->lead_teacher_name ?? 'Unassigned' }}</td>
-                        <td style="padding:.85rem 1rem;">
-                            <span style="padding:.25rem .65rem;border-radius:99px;font-size:.65rem;font-weight:800;text-transform:uppercase;background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.3);">
+                        <td class="px-4 py-3.5 text-slate-300">{{ $enr->course?->lead_teacher_name ?? 'Unassigned' }}</td>
+                        <td class="px-4 py-3.5">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                 {{ strtoupper($enr->status ?? 'ACTIVE') }}
                             </span>
                         </td>
-                        <td style="padding:.85rem 1rem;color:#64748b;">{{ optional($enr->created_at)->format('M d, Y') ?? 'Recently' }}</td>
+                        <td class="px-4 py-3.5 text-slate-400">{{ optional($enr->created_at)->format('M d, Y') ?? 'Recently' }}</td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" style="padding:2.5rem;text-align:center;color:#64748b;">No student enrolments registered yet.</td>
+                        <td colspan="6" class="p-10 text-center text-slate-400">No student enrolments registered yet.</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
         @if($enrollments->hasPages())
-        <div style="padding:1rem;border-top:1px solid #1e293b;">
+        <div class="p-4 border-t border-slate-800">
             {{ $enrollments->links() }}
         </div>
         @endif
@@ -71,33 +71,33 @@
 </div>
 
 {{-- Enroll Modal --}}
-<div id="enroll-student-modal" style="position:fixed;inset:0;background:rgba(2,6,23,.75);backdrop-filter:blur(6px);z-index:900;display:none;align-items:center;justify-content:center;padding:1rem;">
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;max-width:500px;width:100%;padding:2rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-            <div style="font-size:1.05rem;font-weight:800;color:#f1f5f9;">👥 Enroll Student into Master Course</div>
-            <button type="button" onclick="document.getElementById('enroll-student-modal').style.display='none'" style="color:#475569;font-size:1.35rem;cursor:pointer;background:none;border:none;">×</button>
+<div id="enroll-student-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center">
+            <h3 class="text-base font-bold text-white">👥 Enroll Student into Master Course</h3>
+            <button type="button" onclick="document.getElementById('enroll-student-modal').classList.add('hidden'); document.getElementById('enroll-student-modal').classList.remove('flex');" class="text-slate-400 hover:text-white text-lg">✕</button>
         </div>
-        <form action="{{ route('admin.academic-operations.enrollments.store') }}" method="POST">
+        <form action="{{ route('admin.academic-operations.enrollments.store') }}" method="POST" class="space-y-4">
             @csrf
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:.3rem;">Select Student *</label>
-                <select name="student_id" required style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem .85rem;border-radius:.6rem;box-sizing:border-box;">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Select Student *</label>
+                <select name="student_id" required class="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
                     <option value="">— Select Student —</option>
                     @foreach($students as $st)
                     <option value="{{ $st->id }}">{{ $st->name }} ({{ $st->email }})</option>
                     @endforeach
                 </select>
             </div>
-            <div style="margin-bottom:1.25rem;">
-                <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:.3rem;">Select Master Course *</label>
-                <select name="course_id" required style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem .85rem;border-radius:.6rem;box-sizing:border-box;">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Select Master Course *</label>
+                <select name="course_id" required class="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
                     <option value="">— Select Master Course —</option>
                     @foreach($activeCourses as $ac)
                     <option value="{{ $ac->id }}">{{ $ac->code }} — {{ $ac->title }}</option>
                     @endforeach
                 </select>
             </div>
-            <button type="submit" style="width:100%;padding:.75rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-weight:700;cursor:pointer;">Complete Student Enrolment &amp; Activate Dashboard</button>
+            <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow transition-colors">Complete Student Enrolment &amp; Activate Dashboard</button>
         </form>
     </div>
 </div>

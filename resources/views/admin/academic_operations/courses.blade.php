@@ -3,96 +3,98 @@
 @section('title', 'Course Management & Approval — Academic Operations')
 
 @section('content')
-<div style="display:flex;flex-direction:column;gap:1.5rem;">
+<div class="space-y-6">
 
     @if(session('status'))
-    <div style="padding:.85rem 1.1rem;border-radius:.75rem;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:#34d399;font-size:.82rem;font-weight:600;">
-        ✅ {{ session('status') }}
+    <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium flex items-center gap-2">
+        <span>✅</span> {{ session('status') }}
     </div>
     @endif
 
     {{-- Header --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:0 0 .25rem;">🎓 Master Course Management</h1>
-            <p style="font-size:.85rem;color:#94a3b8;margin:0;">Operational Admin creates Master Courses. Super Admin approval is required for activation.</p>
+            <h1 class="text-2xl font-bold text-white">🎓 Master Course Management</h1>
+            <p class="text-xs text-slate-400">Operational Admin creates Master Courses. Super Admin approval is required for activation.</p>
         </div>
         @if(!Auth::user()?->hasRole('teacher'))
-        <button type="button" onclick="document.getElementById('create-course-modal').style.display='flex'" style="padding:.6rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-size:.85rem;font-weight:700;cursor:pointer;">
+        <button type="button" onclick="document.getElementById('create-course-modal').classList.remove('hidden'); document.getElementById('create-course-modal').classList.add('flex');" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow transition-colors">
             ＋ Create Master Course
         </button>
         @endif
     </div>
 
     {{-- Courses Table --}}
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1rem;overflow:hidden;">
-        <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
-                <thead>
-                    <tr style="background:#080f1d;color:#475569;text-transform:uppercase;font-size:.67rem;font-weight:800;letter-spacing:.06em;text-align:left;">
-                        <th style="padding:.75rem 1rem;">Code</th>
-                        <th style="padding:.75rem 1rem;">Course Title</th>
-                        <th style="padding:.75rem 1rem;">Program</th>
-                        <th style="padding:.75rem 1rem;">Capacity</th>
-                        <th style="padding:.75rem 1rem;">Assigned Teacher</th>
-                        <th style="padding:.75rem 1rem;">Approval Status</th>
-                        <th style="padding:.75rem 1rem;text-align:right;">Actions</th>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-slate-950 border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <tr>
+                        <th class="px-4 py-3">Code</th>
+                        <th class="px-4 py-3">Course Title</th>
+                        <th class="px-4 py-3">Program</th>
+                        <th class="px-4 py-3">Capacity</th>
+                        <th class="px-4 py-3">Assigned Teacher</th>
+                        <th class="px-4 py-3">Approval Status</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-slate-800/80">
                     @forelse($courses as $course)
                     @php
                         $st = $course->course_status ?? 'active';
                     @endphp
-                    <tr style="border-bottom:1px solid #1e293b;">
-                        <td style="padding:.85rem 1rem;font-family:monospace;font-weight:800;color:#818cf8;">{{ $course->code }}</td>
-                        <td style="padding:.85rem 1rem;">
-                            <div style="font-weight:700;color:#f1f5f9;">{{ $course->title }}</div>
-                            <div style="font-size:.7rem;color:#64748b;">{{ $course->schedule }}</div>
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                        <td class="px-4 py-3.5 font-mono font-bold text-indigo-400">{{ $course->code }}</td>
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-white">{{ $course->title }}</div>
+                            <div class="text-[11px] text-slate-400">{{ $course->schedule }}</div>
                         </td>
-                        <td style="padding:.85rem 1rem;"><span style="padding:.2rem .6rem;border-radius:.4rem;background:rgba(99,102,241,.12);color:#818cf8;font-size:.7rem;font-weight:700;">{{ $course->program ?? 'TOEFL' }}</span></td>
-                        <td style="padding:.85rem 1rem;font-weight:700;color:#cbd5e1;">{{ $course->capacity ?? 30 }} seats</td>
-                        <td style="padding:.85rem 1rem;color:#94a3b8;">
+                        <td class="px-4 py-3.5">
+                            <span class="px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[11px] font-bold">{{ $course->program ?? 'TOEFL' }}</span>
+                        </td>
+                        <td class="px-4 py-3.5 font-bold text-slate-300">{{ $course->capacity ?? 30 }} seats</td>
+                        <td class="px-4 py-3.5 text-slate-400">
                             @php
                                 $leadTeacher = $course->leadTeacher();
                             @endphp
                             @if($leadTeacher)
-                                <span style="font-weight:600;color:#f1f5f9;">{{ $leadTeacher->name }}</span>
-                                <span style="font-size:.65rem;color:#34d399;font-weight:700;display:block;">Lead Teacher</span>
+                                <span class="font-semibold text-white">{{ $leadTeacher->name }}</span>
+                                <span class="text-[10px] text-emerald-400 font-bold block">Lead Teacher</span>
                             @elseif($course->assignedTeachers->isNotEmpty())
-                                <span style="font-weight:600;color:#cbd5e1;">{{ $course->assignedTeachers->first()->name }}</span>
+                                <span class="font-semibold text-slate-300">{{ $course->assignedTeachers->first()->name }}</span>
                             @elseif(($course->course_status ?? '') === 'waiting_approval')
-                                <span style="font-style:italic;color:#fbbf24;">Assignment Pending</span>
+                                <span class="italic text-amber-400">Assignment Pending</span>
                             @else
-                                <span style="font-style:italic;color:#64748b;">No teacher assigned</span>
+                                <span class="italic text-slate-500">No teacher assigned</span>
                             @endif
                         </td>
-                        <td style="padding:.85rem 1rem;">
-                            <span style="padding:.25rem .65rem;border-radius:99px;font-size:.65rem;font-weight:800;text-transform:uppercase;border:1px solid;
-                                @if($st === 'active' || $st === 'approved') background:rgba(52,211,153,.12);color:#34d399;border-color:rgba(52,211,153,.3);
-                                @elseif($st === 'waiting_approval') background:rgba(251,191,36,.12);color:#fbbf24;border-color:rgba(251,191,36,.3);
-                                @else background:rgba(100,116,139,.12);color:#94a3b8;border-color:rgba(100,116,139,.3); @endif">
+                        <td class="px-4 py-3.5">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border
+                                @if($st === 'active' || $st === 'approved') bg-emerald-500/10 text-emerald-400 border-emerald-500/20
+                                @elseif($st === 'waiting_approval') bg-amber-500/10 text-amber-400 border-amber-500/20
+                                @else bg-slate-800 text-slate-400 border-slate-700 @endif">
                                 {{ str_replace('_', ' ', $st) }}
                             </span>
                         </td>
-                        <td style="padding:.85rem 1rem;text-align:right;">
+                        <td class="px-4 py-3.5 text-right">
                             @if(Auth::user()?->hasRole('super-admin') && $st === 'waiting_approval')
-                            <div style="display:flex;gap:.35rem;justify-content:flex-end;">
+                            <div class="flex gap-1.5 justify-end">
                                 <form action="{{ route('admin.academic-operations.courses.approve', $course->id) }}" method="POST">
                                     @csrf
-                                    <button type="submit" style="background:#34d399;color:#0f172a;border:none;padding:.25rem .6rem;border-radius:.35rem;font-size:.7rem;font-weight:800;cursor:pointer;">
+                                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors">
                                         ✓ Approve
                                     </button>
                                 </form>
                                 <form action="{{ route('admin.academic-operations.courses.reject', $course->id) }}" method="POST">
                                     @csrf
-                                    <button type="submit" style="background:#fb7185;color:#fff;border:none;padding:.25rem .6rem;border-radius:.35rem;font-size:.7rem;font-weight:800;cursor:pointer;">
+                                    <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors">
                                         ✕ Reject
                                     </button>
                                 </form>
                             </div>
                             @else
-                            <span style="font-size:.75rem;font-weight:600;color:#64748b;">
+                            <span class="text-xs font-semibold text-slate-400">
                                 Master Course Active
                             </span>
                             @endif
@@ -100,14 +102,14 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" style="padding:2.5rem;text-align:center;color:#64748b;">No master courses found.</td>
+                        <td colspan="7" class="p-10 text-center text-slate-400">No master courses found.</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
         @if($courses->hasPages())
-        <div style="padding:1rem;border-top:1px solid #1e293b;">
+        <div class="p-4 border-t border-slate-800">
             {{ $courses->links() }}
         </div>
         @endif
@@ -117,40 +119,40 @@
 
 {{-- Create Modal --}}
 @if(!Auth::user()?->hasRole('teacher'))
-<div id="create-course-modal" style="position:fixed;inset:0;background:rgba(2,6,23,.75);backdrop-filter:blur(6px);z-index:900;display:none;align-items:center;justify-content:center;padding:1rem;">
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;max-width:500px;width:100%;padding:2rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-            <div style="font-size:1.05rem;font-weight:800;color:#f1f5f9;">🎓 Create Master Course</div>
-            <button type="button" onclick="document.getElementById('create-course-modal').style.display='none'" style="color:#475569;font-size:1.35rem;cursor:pointer;background:none;border:none;">×</button>
+<div id="create-course-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center">
+            <h3 class="text-base font-bold text-white">🎓 Create Master Course</h3>
+            <button type="button" onclick="document.getElementById('create-course-modal').classList.add('hidden'); document.getElementById('create-course-modal').classList.remove('flex');" class="text-slate-400 hover:text-white text-lg">✕</button>
         </div>
-        <form action="{{ route('admin.academic-operations.courses.store') }}" method="POST">
+        <form action="{{ route('admin.academic-operations.courses.store') }}" method="POST" class="space-y-4">
             @csrf
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:.3rem;">Course Code *</label>
-                <input type="text" name="code" required style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem .85rem;border-radius:.6rem;box-sizing:border-box;" placeholder="e.g. TOEFL-MASTER-101">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Course Code *</label>
+                <input type="text" name="code" required class="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="e.g. TOEFL-MASTER-101">
             </div>
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:.3rem;">Course Title *</label>
-                <input type="text" name="title" required style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem .85rem;border-radius:.6rem;box-sizing:border-box;" placeholder="e.g. TOEFL iBT Intensive Master Program">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Course Title *</label>
+                <input type="text" name="title" required class="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors" placeholder="e.g. TOEFL iBT Intensive Master Program">
             </div>
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:.3rem;">Program *</label>
-                <select name="program" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem .85rem;border-radius:.6rem;box-sizing:border-box;">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Program *</label>
+                <select name="program" class="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
                     <option value="TOEFL">TOEFL</option>
                     <option value="TOEIC">TOEIC</option>
                     <option value="IELTS">IELTS</option>
                     <option value="General">General</option>
                 </select>
             </div>
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:.3rem;">Capacity *</label>
-                <input type="number" name="capacity" value="30" required style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem .85rem;border-radius:.6rem;box-sizing:border-box;">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Capacity *</label>
+                <input type="number" name="capacity" value="30" required class="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
             </div>
-            <div style="margin-bottom:1.25rem;">
-                <label style="display:block;font-size:.78rem;color:#94a3b8;margin-bottom:.3rem;">Schedule</label>
-                <input type="text" name="schedule" value="Mon, Wed 09:00 - 11:00 AM" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem .85rem;border-radius:.6rem;box-sizing:border-box;">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Schedule</label>
+                <input type="text" name="schedule" value="Mon, Wed 09:00 - 11:00 AM" class="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
             </div>
-            <button type="submit" style="width:100%;padding:.75rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-weight:700;cursor:pointer;">Submit for Super Admin Approval</button>
+            <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow transition-colors">Submit for Super Admin Approval</button>
         </form>
     </div>
 </div>

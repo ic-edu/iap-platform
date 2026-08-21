@@ -504,3 +504,53 @@ html.light .text-indigo-300,
 html[data-theme="light"] .text-indigo-300 {
     color: var(--accent) !important;
 }
+
+/* 12. Universal Fallback Overrides for Legacy / Inline-Styled Components */
+html.light [style*="background:#0f172a"],
+html[data-theme="light"] [style*="background:#0f172a"],
+html.light [style*="background: #0f172a"],
+html[data-theme="light"] [style*="background: #0f172a"],
+html.light [style*="background:#080f1d"],
+html[data-theme="light"] [style*="background:#080f1d"],
+html.light [style*="background: #080f1d"],
+html[data-theme="light"] [style*="background: #080f1d"],
+html.light [style*="background:#020617"],
+html[data-theme="light"] [style*="background:#020617"],
+html.light [style*="background: #020617"],
+html[data-theme="light"] [style*="background: #020617"] {
+    background-color: var(--bg-surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+html.light [style*="background:#1e293b"],
+html[data-theme="light"] [style*="background:#1e293b"],
+html.light [style*="background: #1e293b"],
+html[data-theme="light"] [style*="background: #1e293b"] {
+    background-color: var(--bg-surface-muted) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+html.light [style*="color:#fff"],
+html[data-theme="light"] [style*="color:#fff"],
+html.light [style*="color: #fff"],
+html[data-theme="light"] [style*="color: #fff"],
+html.light [style*="color:#f1f5f9"],
+html[data-theme="light"] [style*="color:#f1f5f9"],
+html.light [style*="color: #f1f5f9"],
+html[data-theme="light"] [style*="color: #f1f5f9"] {
+    color: var(--text-primary) !important;
+}
+
+html.light [style*="border:1px solid #1e293b"],
+html[data-theme="light"] [style*="border:1px solid #1e293b"],
+html.light [style*="border: 1px solid #1e293b"],
+html[data-theme="light"] [style*="border: 1px solid #1e293b"],
+html.light [style*="border:1px solid #334155"],
+html[data-theme="light"] [style*="border:1px solid #334155"],
+html.light [style*="border: 1px solid #334155"],
+html[data-theme="light"] [style*="border: 1px solid #334155"] {
+    border-color: var(--border) !important;
+}
+

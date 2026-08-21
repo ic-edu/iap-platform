@@ -3,78 +3,78 @@
 @section('title', 'Course Monitoring Dashboard — Academic Operations')
 
 @section('content')
-<div style="display:flex;flex-direction:column;gap:1.5rem;">
+<div class="space-y-6">
 
     {{-- Header --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:0 0 .25rem;">📊 Course Monitoring Dashboard</h1>
-            <p style="font-size:.85rem;color:#94a3b8;margin:0;">Academic Operations Center overview for active courses, student assignments, teacher assignments, and approval queues.</p>
+            <h1 class="text-2xl font-bold text-white">📊 Course Monitoring Dashboard</h1>
+            <p class="text-xs text-slate-400">Academic Operations Center overview for active courses, student assignments, teacher assignments, and approval queues.</p>
         </div>
     </div>
 
     {{-- KPI Cards --}}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:1rem;">
-        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.15rem 1.25rem;">
-            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;">Active Courses</div>
-            <div style="font-size:1.85rem;font-weight:900;color:#34d399;margin-top:.25rem;">{{ $activeCoursesCount }}</div>
-            <div style="font-size:.7rem;color:#475569;margin-top:.25rem;">Approved institutional courses</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Courses</div>
+            <div class="text-3xl font-black text-emerald-400 mt-1">{{ $activeCoursesCount }}</div>
+            <div class="text-[11px] text-slate-400 mt-1">Approved institutional courses</div>
         </div>
 
-        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.15rem 1.25rem;">
-            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;">Students Assigned</div>
-            <div style="font-size:1.85rem;font-weight:900;color:#818cf8;margin-top:.25rem;">{{ $studentsAssignedCount }}</div>
-            <div style="font-size:.7rem;color:#475569;margin-top:.25rem;">Active student enrolments</div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Students Assigned</div>
+            <div class="text-3xl font-black text-indigo-400 mt-1">{{ $studentsAssignedCount }}</div>
+            <div class="text-[11px] text-slate-400 mt-1">Active student enrolments</div>
         </div>
 
-        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.15rem 1.25rem;">
-            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;">Teachers Assigned</div>
-            <div style="font-size:1.85rem;font-weight:900;color:#38bdf8;margin-top:.25rem;">{{ $teachersAssignedCount }}</div>
-            <div style="font-size:.7rem;color:#475569;margin-top:.25rem;">Active teacher roles</div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Teachers Assigned</div>
+            <div class="text-3xl font-black text-sky-400 mt-1">{{ $teachersAssignedCount }}</div>
+            <div class="text-[11px] text-slate-400 mt-1">Active teacher roles</div>
         </div>
 
-        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.15rem 1.25rem;">
-            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;">Courses Awaiting Approval</div>
-            <div style="font-size:1.85rem;font-weight:900;color:#fbbf24;margin-top:.25rem;">{{ $waitingApprovalCount }}</div>
-            <div style="font-size:.7rem;color:#475569;margin-top:.25rem;">Pending Super Admin review</div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Courses Awaiting Approval</div>
+            <div class="text-3xl font-black text-amber-400 mt-1">{{ $waitingApprovalCount }}</div>
+            <div class="text-[11px] text-slate-400 mt-1">Pending Super Admin review</div>
         </div>
     </div>
 
     {{-- Two Column Layout --}}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {{-- Recently Created Courses --}}
-        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.35rem 1.5rem;">
-            <div style="font-size:.9rem;font-weight:800;color:#f1f5f9;margin-bottom:1rem;">🎓 Recently Created Master Courses</div>
-            <div style="display:flex;flex-direction:column;gap:.75rem;">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="text-sm font-bold text-white mb-4">🎓 Recently Created Master Courses</div>
+            <div class="space-y-3">
                 @forelse($recentlyCreatedCourses as $rc)
-                <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:.65rem;border-bottom:1px solid #1e293b;">
+                <div class="flex justify-between items-center pb-3 border-b border-slate-800 last:border-b-0 last:pb-0">
                     <div>
-                        <div style="font-size:.82rem;font-weight:700;color:#f1f5f9;">{{ $rc->title }}</div>
-                        <div style="font-size:.7rem;color:#64748b;font-family:monospace;">{{ $rc->code }} · {{ $rc->program }}</div>
+                        <div class="text-xs font-bold text-white">{{ $rc->title }}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">{{ $rc->code }} · {{ $rc->program }}</div>
                     </div>
-                    <span style="font-size:.65rem;font-weight:800;padding:.2rem .55rem;border-radius:99px;background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.25);">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                         {{ strtoupper($rc->course_status ?? 'DRAFT') }}
                     </span>
                 </div>
                 @empty
-                <div style="font-size:.78rem;color:#64748b;padding:1rem 0;text-align:center;">No recent courses.</div>
+                <div class="text-xs text-slate-400 py-4 text-center">No recent courses.</div>
                 @endforelse
             </div>
         </div>
 
         {{-- Recent Operational Notifications --}}
-        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.35rem 1.5rem;">
-            <div style="font-size:.9rem;font-weight:800;color:#f1f5f9;margin-bottom:1rem;">🔔 Recent System Notifications</div>
-            <div style="display:flex;flex-direction:column;gap:.75rem;">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="text-sm font-bold text-white mb-4">🔔 Recent System Notifications</div>
+            <div class="space-y-3">
                 @forelse($recentNotifications as $notif)
-                <div style="display:flex;flex-direction:column;gap:2px;padding-bottom:.65rem;border-bottom:1px solid #1e293b;">
-                    <div style="font-size:.8rem;font-weight:700;color:#e2e8f0;">{{ $notif->title }}</div>
-                    <div style="font-size:.72rem;color:#94a3b8;">{{ Str::limit($notif->message, 80) }}</div>
-                    <div style="font-size:.67rem;color:#64748b;">{{ optional($notif->created_at)->diffForHumans() }}</div>
+                <div class="flex flex-col gap-0.5 pb-3 border-b border-slate-800 last:border-b-0 last:pb-0">
+                    <div class="text-xs font-bold text-white">{{ $notif->title }}</div>
+                    <div class="text-[11px] text-slate-400">{{ Str::limit($notif->message, 80) }}</div>
+                    <div class="text-[10px] text-slate-500">{{ optional($notif->created_at)->diffForHumans() }}</div>
                 </div>
                 @empty
-                <div style="font-size:.78rem;color:#64748b;padding:1rem 0;text-align:center;">No recent notifications.</div>
+                <div class="text-xs text-slate-400 py-4 text-center">No recent notifications.</div>
                 @endforelse
             </div>
         </div>

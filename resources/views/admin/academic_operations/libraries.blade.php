@@ -3,56 +3,56 @@
 @section('title', 'Academic Libraries Monitoring — Academic Operations')
 
 @section('content')
-<div style="display:flex;flex-direction:column;gap:1.5rem;">
+<div class="space-y-6">
 
     {{-- Header --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:0 0 .25rem;">📚 Academic Libraries Monitoring</h1>
-            <p style="font-size:.85rem;color:#94a3b8;margin:0;">Institutional read-only repository monitoring for TOEFL, TOEIC, IELTS, and Foundational libraries. (Admin monitors repository volume and health; content editing is performed in Teacher Workspace).</p>
+            <h1 class="text-2xl font-bold text-white">📚 Academic Libraries Monitoring</h1>
+            <p class="text-xs text-slate-400">Institutional read-only repository monitoring for TOEFL, TOEIC, IELTS, and Foundational libraries. (Admin monitors repository volume and health; content editing is performed in Teacher Workspace).</p>
         </div>
     </div>
 
     {{-- Monitoring Cards Grid --}}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:1.25rem;">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         @foreach($monitoringData as $key => $lib)
-        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.5rem;display:flex;flex-direction:column;justify-space:between;gap:1.1rem;">
-            <div>
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">{{ $lib['name'] }}</span>
-                    <span style="padding:.2rem .65rem;border-radius:99px;font-size:.65rem;font-weight:900;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-sm">
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-base font-bold text-white">{{ $lib['name'] }}</span>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         HEALTH {{ $lib['health_score'] }}%
                     </span>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:1.25rem;padding-top:1rem;border-top:1px solid #1e293b;">
+                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800">
                     <div>
-                        <div style="font-size:.68rem;color:#64748b;font-weight:700;text-transform:uppercase;">Question Count</div>
-                        <div style="font-size:1.5rem;font-weight:900;color:#818cf8;margin-top:2px;">{{ $lib['questions_count'] }}</div>
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Question Count</div>
+                        <div class="text-2xl font-black text-indigo-400 mt-0.5">{{ $lib['questions_count'] }}</div>
                     </div>
                     <div>
-                        <div style="font-size:.68rem;color:#64748b;font-weight:700;text-transform:uppercase;">Media Assets</div>
-                        <div style="font-size:1.5rem;font-weight:900;color:#34d399;margin-top:2px;">{{ $lib['media_count'] }}</div>
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Media Assets</div>
+                        <div class="text-2xl font-black text-emerald-400 mt-0.5">{{ $lib['media_count'] }}</div>
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:.5rem;margin-top:1rem;background:#080f1d;padding:.75rem;border-radius:.75rem;border:1px solid #1e293b;">
-                    <div style="text-align:center;">
-                        <div style="font-size:.65rem;color:#64748b;">Draft</div>
-                        <div style="font-size:.9rem;font-weight:800;color:#fbbf24;">{{ $lib['draft_count'] }}</div>
+                <div class="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-center">
+                    <div>
+                        <div class="text-[10px] text-slate-400">Draft</div>
+                        <div class="text-sm font-bold text-amber-400">{{ $lib['draft_count'] }}</div>
                     </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:.65rem;color:#64748b;">Published</div>
-                        <div style="font-size:.9rem;font-weight:800;color:#34d399;">{{ $lib['published_count'] }}</div>
+                    <div>
+                        <div class="text-[10px] text-slate-400">Published</div>
+                        <div class="text-sm font-bold text-emerald-400">{{ $lib['published_count'] }}</div>
                     </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:.65rem;color:#64748b;">Archived</div>
-                        <div style="font-size:.9rem;font-weight:800;color:#64748b;">{{ $lib['archived_count'] }}</div>
+                    <div>
+                        <div class="text-[10px] text-slate-400">Archived</div>
+                        <div class="text-sm font-bold text-slate-400">{{ $lib['archived_count'] }}</div>
                     </div>
                 </div>
             </div>
 
-            <a href="{{ route('admin.publications.question-banks') }}" style="display:block;text-align:center;padding:.6rem;background:#1e293b;color:#cbd5e1;border-radius:.6rem;font-size:.78rem;font-weight:700;text-decoration:none;transition:background .15s;">
+            <a href="{{ route('admin.publications.question-banks') }}" class="block text-center py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-colors">
                 View Publication Queues →
             </a>
         </div>
