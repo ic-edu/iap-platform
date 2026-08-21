@@ -202,6 +202,27 @@ class CandidatePortalController extends Controller
      */
     public function submit(Attempt $attempt): RedirectResponse
     {
+        $attempt->loadMissing(['test.sections.testQuestions.question', 'answers']);
+
+        $totalQuestionsCount = 0;
+        if ($attempt->test) {
+            foreach ($attempt->test->sections as $sec) {
+                $totalQuestionsCount += $sec->testQuestions->count();
+            }
+        }
+
+        $isExpired = $this->engine->timerEngine->isExpired($attempt);
+
+        if (!$isExpired && $totalQuestionsCount > 0) {
+            $answeredCount = $attempt->answers->filter(function ($a) {
+                return !is_null($a->selected_choice_id) || !empty($a->text_response);
+            })->count();
+
+            if ($answeredCount < $totalQuestionsCount) {
+                return redirect()->back()->with('error', 'Please answer all questions before submitting the assessment.');
+            }
+        }
+
         $this->engine->submitAttempt($attempt);
 
         return redirect()->route('candidate.review', $attempt);
