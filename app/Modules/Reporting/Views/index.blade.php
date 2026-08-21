@@ -235,6 +235,21 @@
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof Chart === 'undefined') return;
 
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light' || document.documentElement.classList.contains('light');
+
+    const trendBorder = isLight ? '#5b5ce2' : '#6366f1';
+    const trendBg = isLight ? 'rgba(91, 92, 226, 0.08)' : 'rgba(99, 102, 241, 0.15)';
+    const trendPoint = isLight ? '#5b5ce2' : '#818cf8';
+    const gridColor = isLight ? 'rgba(226, 232, 240, 0.8)' : 'rgba(51, 65, 85, 0.3)';
+    const tickColor = isLight ? '#64748b' : '#94a3b8';
+    const legendColor = isLight ? '#475569' : '#cbd5e1';
+    const passColor = isLight ? '#059669' : '#10b981';
+    const failColor = isLight ? '#e11d48' : '#f43f5e';
+    const simColor = isLight ? '#d97706' : '#f59e0b';
+    const emptyColor = isLight ? '#e2e8f0' : '#334155';
+    const doughnutBorder = isLight ? '#ffffff' : '#0f172a';
+    const doughnutBorderWidth = isLight ? 2 : 0;
+
     // 1. Activity Trend (Line Chart)
     const ctxTrend = document.getElementById('chartActivityTrend');
     if (ctxTrend) {
@@ -245,11 +260,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Attempts',
                     data: @json($activityTrend['data']),
-                    borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    borderColor: trendBorder,
+                    backgroundColor: trendBg,
                     fill: true,
                     tension: 0.3,
-                    pointBackgroundColor: '#818cf8',
+                    pointBackgroundColor: trendPoint,
                     pointRadius: 3
                 }]
             },
@@ -258,8 +273,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-                    y: { beginAtZero: true, grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 10 }, stepSize: 1 } }
+                    x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } },
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 }, stepSize: 1 } }
                 }
             }
         });
@@ -278,15 +293,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: hasData ? ['Passed', 'Failed'] : ['No Data'],
                 datasets: [{
                     data: hasData ? [passedCount, failedCount] : [1],
-                    backgroundColor: hasData ? ['#10b981', '#f43f5e'] : ['#334155'],
-                    borderWidth: 0
+                    backgroundColor: hasData ? [passColor, failColor] : [emptyColor],
+                    borderColor: doughnutBorder,
+                    borderWidth: doughnutBorderWidth
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 11 } } }
+                    legend: { position: 'bottom', labels: { color: legendColor, font: { size: 11 } } }
                 },
                 cutout: '70%'
             }
@@ -306,15 +322,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: hasModeData ? ['Simulator', 'Real Test'] : ['No Data'],
                 datasets: [{
                     data: hasModeData ? [simCount, realCount] : [1],
-                    backgroundColor: hasModeData ? ['#f59e0b', '#f43f5e'] : ['#334155'],
-                    borderWidth: 0
+                    backgroundColor: hasModeData ? [simColor, failColor] : [emptyColor],
+                    borderColor: doughnutBorder,
+                    borderWidth: doughnutBorderWidth
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 11 } } }
+                    legend: { position: 'bottom', labels: { color: legendColor, font: { size: 11 } } }
                 },
                 cutout: '70%'
             }

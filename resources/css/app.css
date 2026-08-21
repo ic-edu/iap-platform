@@ -20,6 +20,7 @@ html[data-theme="dark"] {
     --bg-surface-muted: #020617;
     --border: #1e293b;
     --border-strong: #334155;
+    --border-subtle: #1e293b;
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
@@ -28,6 +29,11 @@ html[data-theme="dark"] {
     --input-border: #1e293b;
     --accent: #6366f1;
     --accent-hover: #4f46e5;
+    --accent-subtle: rgba(99, 102, 241, 0.15);
+    --accent-subtle-border: rgba(99, 102, 241, 0.3);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.5);
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #f43f5e;
@@ -37,20 +43,27 @@ html[data-theme="dark"] {
 
 html.light,
 html[data-theme="light"] {
-    --bg-page: #f8fafc;
+    --bg-page: #f4f7fb;
     --bg-surface: #ffffff;
     --bg-surface-elevated: #ffffff;
-    --bg-surface-muted: #f1f5f9;
+    --bg-surface-muted: #eef2f6;
+    --bg-sidebar: #fcfdfe;
     --border: #e2e8f0;
     --border-strong: #cbd5e1;
-    --text-primary: #0f172a;
+    --border-subtle: #edf2f7;
+    --text-primary: #172033;
     --text-secondary: #475569;
     --text-muted: #64748b;
     --text-inverse: #ffffff;
     --input-bg: #ffffff;
     --input-border: #cbd5e1;
-    --accent: #4f58c8;
-    --accent-hover: #434cae;
+    --accent: #5b5ce2;
+    --accent-hover: #4d4ecf;
+    --accent-subtle: #eef0ff;
+    --accent-subtle-border: #dbe0fc;
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 10px 28px rgba(15, 23, 42, 0.10);
     --success: #059669;
     --warning: #d97706;
     --danger: #e11d48;
@@ -68,18 +81,95 @@ html[data-theme="light"] body {
     color: var(--text-primary) !important;
 }
 
-/* Layout Structural Surfaces (Sidebar, Topbar, Navigation, Header) */
+/* 1. Layout Structural Surfaces (Sidebar, Topbar, Navigation, Header) */
 html.light aside,
-html[data-theme="light"] aside,
-html.light nav,
-html[data-theme="light"] nav,
+html[data-theme="light"] aside {
+    background-color: var(--bg-sidebar) !important;
+    border-color: var(--border) !important;
+}
+
 html.light header,
-html[data-theme="light"] header {
+html[data-theme="light"] header,
+html.light nav,
+html[data-theme="light"] nav {
     background-color: var(--bg-surface) !important;
     border-color: var(--border) !important;
 }
 
-/* Card, Panel, Section & Elevated Surfaces */
+/* Sidebar Section Headers */
+html.light aside span.text-slate-500,
+html[data-theme="light"] aside span.text-slate-500 {
+    color: var(--text-muted) !important;
+}
+
+/* Sidebar Active Nav Item: Soft indigo surface + crisp accent text */
+html.light aside nav a.bg-indigo-600,
+html[data-theme="light"] aside nav a.bg-indigo-600 {
+    background-color: var(--accent-subtle) !important;
+    color: var(--accent) !important;
+    border: 1px solid var(--accent-subtle-border) !important;
+    box-shadow: 0 1px 3px rgba(91, 92, 226, 0.12) !important;
+}
+
+html.light aside nav a.bg-indigo-600 svg,
+html[data-theme="light"] aside nav a.bg-indigo-600 svg {
+    color: var(--accent) !important;
+}
+
+/* Sidebar Inactive Nav Items */
+html.light aside nav a.text-slate-400,
+html[data-theme="light"] aside nav a.text-slate-400 {
+    color: var(--text-secondary) !important;
+}
+
+html.light aside nav a.text-slate-400:hover,
+html[data-theme="light"] aside nav a.text-slate-400:hover {
+    background-color: #f1f5f9 !important;
+    color: var(--text-primary) !important;
+}
+
+/* Topbar Global Search Input */
+html.light header input,
+html[data-theme="light"] header input {
+    background-color: #f8fafc !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+html.light header input::placeholder,
+html[data-theme="light"] header input::placeholder {
+    color: #94a3b8 !important;
+}
+
+html.light header input:focus,
+html[data-theme="light"] header input:focus {
+    background-color: #ffffff !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(91, 92, 226, 0.15) !important;
+}
+
+/* Notification Bell & Action Icon Boxes */
+html.light #notifications-bell-btn,
+html[data-theme="light"] #notifications-bell-btn {
+    background-color: #ffffff !important;
+    border-color: var(--border) !important;
+    color: var(--text-secondary) !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light #notifications-bell-btn:hover,
+html[data-theme="light"] #notifications-bell-btn:hover {
+    background-color: #f8fafc !important;
+    border-color: var(--border-strong) !important;
+    color: var(--text-primary) !important;
+}
+
+html.light #candidate-profile-btn:hover,
+html[data-theme="light"] #candidate-profile-btn:hover {
+    background-color: #f1f5f9 !important;
+}
+
+/* 2. Card, Panel, Section & Elevated Surfaces */
 html.light .bg-slate-900,
 html[data-theme="light"] .bg-slate-900,
 html.light .bg-slate-950,
@@ -106,7 +196,7 @@ html[data-theme="light"] .bg-slate-950\/40 {
     color: var(--text-primary) !important;
 }
 
-/* Secondary Backgrounds, Inner Boxes, and Recessed Areas */
+/* Secondary Backgrounds, Inner Recessed Boxes, Well Cards */
 html.light .bg-slate-800,
 html[data-theme="light"] .bg-slate-800,
 html.light .bg-slate-800\/80,
@@ -114,12 +204,31 @@ html[data-theme="light"] .bg-slate-800\/80,
 html.light .bg-slate-800\/60,
 html[data-theme="light"] .bg-slate-800\/60,
 html.light .bg-slate-800\/50,
-html[data-theme="light"] .bg-slate-800\/50 {
+html[data-theme="light"] .bg-slate-800\/50,
+html.light .bg-slate-800\/40,
+html[data-theme="light"] .bg-slate-800\/40 {
     background-color: var(--bg-surface-muted) !important;
     color: var(--text-primary) !important;
 }
 
-/* Borders, Outlines & Dividers */
+/* Shadow refinement for cards in light mode */
+html.light .shadow-lg,
+html[data-theme="light"] .shadow-lg,
+html.light .shadow-md,
+html[data-theme="light"] .shadow-md,
+html.light .shadow-2xl,
+html[data-theme="light"] .shadow-2xl,
+html.light .shadow-xl,
+html[data-theme="light"] .shadow-xl {
+    box-shadow: var(--shadow-md) !important;
+}
+
+html.light .shadow-sm,
+html[data-theme="light"] .shadow-sm {
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* 3. Borders, Outlines & Dividers */
 html.light .border-slate-800,
 html[data-theme="light"] .border-slate-800,
 html.light .border-slate-800\/80,
@@ -132,6 +241,8 @@ html.light .border-slate-700,
 html[data-theme="light"] .border-slate-700,
 html.light .border-slate-700\/80,
 html[data-theme="light"] .border-slate-700\/80,
+html.light .border-slate-700\/60,
+html[data-theme="light"] .border-slate-700\/60,
 html.light .divide-slate-800,
 html[data-theme="light"] .divide-slate-800,
 html.light .divide-slate-800\/80,
@@ -139,11 +250,13 @@ html[data-theme="light"] .divide-slate-800\/80,
 html.light .divide-slate-800\/60,
 html[data-theme="light"] .divide-slate-800\/60,
 html.light .divide-slate-900,
-html[data-theme="light"] .divide-slate-900 {
+html[data-theme="light"] .divide-slate-900,
+html.light .divide-slate-700,
+html[data-theme="light"] .divide-slate-700 {
     border-color: var(--border) !important;
 }
 
-/* Primary, Secondary, and Muted Typography */
+/* 4. Primary, Secondary, and Muted Typography */
 html.light .text-white,
 html[data-theme="light"] .text-white,
 html.light .text-slate-100,
@@ -165,7 +278,7 @@ html[data-theme="light"] .text-slate-500 {
     color: var(--text-muted) !important;
 }
 
-/* Interactive States and Hover Overrides */
+/* 5. Interactive States and Hover Overrides */
 html.light .hover\:bg-slate-800:hover,
 html[data-theme="light"] .hover\:bg-slate-800:hover,
 html.light .hover\:bg-slate-900\/40:hover,
@@ -177,7 +290,7 @@ html[data-theme="light"] .hover\:bg-slate-700:hover {
     background-color: var(--bg-surface-muted) !important;
 }
 
-/* Form Inputs, Selects, and Textareas */
+/* 6. Form Inputs, Selects, and Textareas */
 html.light input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
 html[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
 html.light select,
@@ -187,19 +300,40 @@ html[data-theme="light"] textarea {
     background-color: var(--input-bg) !important;
     color: var(--text-primary) !important;
     border-color: var(--input-border) !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
 }
 
-/* Table Headers */
+html.light input:focus,
+html[data-theme="light"] input:focus,
+html.light select:focus,
+html[data-theme="light"] select:focus,
+html.light textarea:focus,
+html[data-theme="light"] textarea:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(91, 92, 226, 0.15) !important;
+}
+
+/* 7. Table Headers and Rows */
 html.light thead,
 html[data-theme="light"] thead,
 html.light thead.bg-slate-950,
 html[data-theme="light"] thead.bg-slate-950 {
-    background-color: var(--bg-surface-muted) !important;
+    background-color: #f8fafc !important;
     color: var(--text-secondary) !important;
-    border-color: var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
 }
 
-/* Dropdowns & Popovers */
+html.light tbody tr,
+html[data-theme="light"] tbody tr {
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+html.light tbody tr:hover,
+html[data-theme="light"] tbody tr:hover {
+    background-color: #f8faff !important;
+}
+
+/* 8. Dropdowns & Popovers */
 html.light #notifications-dropdown,
 html[data-theme="light"] #notifications-dropdown,
 html.light #user-profile-dropdown,
@@ -207,14 +341,21 @@ html[data-theme="light"] #user-profile-dropdown,
 html.light #candidate-profile-dropdown,
 html[data-theme="light"] #candidate-profile-dropdown {
     background-color: var(--bg-surface) !important;
-    border-color: var(--border) !important;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-lg) !important;
+    border-radius: 1rem !important;
 }
 
-/* ==========================================================================
-   THEME SWITCHER CONTROLS (High-Contrast in both Dark and Light modes)
-   ========================================================================== */
+html.light #notifications-dropdown .border-slate-800,
+html[data-theme="light"] #notifications-dropdown .border-slate-800,
+html.light #user-profile-dropdown .border-slate-800,
+html[data-theme="light"] #user-profile-dropdown .border-slate-800,
+html.light #candidate-profile-dropdown .border-slate-800,
+html[data-theme="light"] #candidate-profile-dropdown .border-slate-800 {
+    border-color: var(--border) !important;
+}
 
+/* 9. Theme Switcher Controls */
 .theme-switcher-btn {
     color: #94a3b8 !important;
     background-color: transparent !important;
@@ -235,13 +376,14 @@ html[data-theme="light"] #candidate-profile-dropdown {
 
 html.light .theme-switcher-btn,
 html[data-theme="light"] .theme-switcher-btn {
-    color: #475569 !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid transparent;
 }
 
 html.light .theme-switcher-btn:hover:not(.active),
 html[data-theme="light"] .theme-switcher-btn:hover:not(.active) {
-    color: #0f172a !important;
-    background-color: rgba(0, 0, 0, 0.05) !important;
+    color: var(--text-primary) !important;
+    background-color: #f1f5f9 !important;
 }
 
 html.light .theme-switcher-btn.active,
@@ -249,12 +391,21 @@ html[data-theme="light"] .theme-switcher-btn.active {
     background-color: var(--accent) !important;
     color: #ffffff !important;
     border-color: var(--accent-hover) !important;
+    box-shadow: 0 1px 3px rgba(91, 92, 226, 0.3) !important;
 }
 
-/* Light Theme Soft Accent Overrides for Buttons, Active States, and Links */
+/* 10. Buttons & Actions */
 html.light .bg-indigo-600,
 html[data-theme="light"] .bg-indigo-600 {
     background-color: var(--accent) !important;
+    color: #ffffff !important;
+}
+
+html.light a.bg-indigo-600,
+html[data-theme="light"] a.bg-indigo-600,
+html.light button.bg-indigo-600,
+html[data-theme="light"] button.bg-indigo-600 {
+    box-shadow: 0 2px 8px rgba(91, 92, 226, 0.22) !important;
 }
 
 html.light .hover\:bg-indigo-500:hover,
@@ -262,6 +413,7 @@ html[data-theme="light"] .hover\:bg-indigo-500:hover,
 html.light .hover\:bg-indigo-600:hover,
 html[data-theme="light"] .hover\:bg-indigo-600:hover {
     background-color: var(--accent-hover) !important;
+    color: #ffffff !important;
 }
 
 html.light .text-indigo-400,
@@ -276,4 +428,79 @@ html[data-theme="light"] .border-indigo-500,
 html.light .border-indigo-600,
 html[data-theme="light"] .border-indigo-600 {
     border-color: var(--accent) !important;
+}
+
+/* 11. Status Badges & Muted Semantic Feedback */
+/* Success */
+html.light .bg-emerald-500\/10,
+html[data-theme="light"] .bg-emerald-500\/10,
+html.light .bg-emerald-500\/20,
+html[data-theme="light"] .bg-emerald-500\/20,
+html.light .bg-emerald-950\/30,
+html[data-theme="light"] .bg-emerald-950\/30 {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    border-color: #a7f3d0 !important;
+}
+
+html.light .text-emerald-400,
+html[data-theme="light"] .text-emerald-400,
+html.light .text-emerald-500,
+html[data-theme="light"] .text-emerald-500 {
+    color: #047857 !important;
+}
+
+/* Warning */
+html.light .bg-amber-500\/10,
+html[data-theme="light"] .bg-amber-500\/10,
+html.light .bg-amber-500\/20,
+html[data-theme="light"] .bg-amber-500\/20,
+html.light .bg-amber-950\/30,
+html[data-theme="light"] .bg-amber-950\/30 {
+    background-color: #fffbeb !important;
+    color: #b45309 !important;
+    border-color: #fde68a !important;
+}
+
+html.light .text-amber-400,
+html[data-theme="light"] .text-amber-400,
+html.light .text-amber-500,
+html[data-theme="light"] .text-amber-500 {
+    color: #b45309 !important;
+}
+
+/* Danger / Rose */
+html.light .bg-rose-500\/10,
+html[data-theme="light"] .bg-rose-500\/10,
+html.light .bg-rose-500\/20,
+html[data-theme="light"] .bg-rose-500\/20,
+html.light .bg-rose-950\/30,
+html[data-theme="light"] .bg-rose-950\/30 {
+    background-color: #fff1f2 !important;
+    color: #be123c !important;
+    border-color: #fecdd3 !important;
+}
+
+html.light .text-rose-400,
+html[data-theme="light"] .text-rose-400,
+html.light .text-rose-500,
+html[data-theme="light"] .text-rose-500 {
+    color: #be123c !important;
+}
+
+/* Indigo Badges */
+html.light .bg-indigo-500\/10,
+html[data-theme="light"] .bg-indigo-500\/10,
+html.light .bg-indigo-500\/20,
+html[data-theme="light"] .bg-indigo-500\/20,
+html.light .bg-indigo-950\/30,
+html[data-theme="light"] .bg-indigo-950\/30 {
+    background-color: #eef0ff !important;
+    color: var(--accent) !important;
+    border-color: #dbe0fc !important;
+}
+
+html.light .text-indigo-300,
+html[data-theme="light"] .text-indigo-300 {
+    color: var(--accent) !important;
 }
