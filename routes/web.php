@@ -226,14 +226,16 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
         Route::post('/teacher-assignments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'storeTeacherAssignment'])->name('admin.academic-operations.teacher-assignments.store');
         Route::get('/enrollments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'enrollments'])->name('admin.academic-operations.enrollments');
         Route::post('/enrollments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'storeEnrollment'])->name('admin.academic-operations.enrollments.store');
-        Route::get('/libraries', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'libraries'])->name('admin.academic-operations.libraries');
+        Route::get('/libraries', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'libraries'])
+            ->middleware('role:repository-manager|super-admin')
+            ->name('admin.academic-operations.libraries');
         Route::get('/monitoring', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'monitoring'])->name('admin.academic-operations.monitoring');
     });
 
 });
 
-// Shared Media Library & Academic Library (Teacher + Admin + Super Admin + Repository Manager)
-Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher|repository-manager'])->group(function () {
+// Shared Media Library & Academic Library (Teacher + Super Admin + Repository Manager Governance)
+Route::middleware(['web', 'auth', 'role:super-admin|teacher|repository-manager'])->group(function () {
     // Academic Library Architecture (Sprint: Academic Library Architecture)
     Route::prefix('admin/academic-library')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'index'])->name('admin.academic-library.index');
@@ -262,8 +264,8 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|teacher|repository-man
     });
 });
 
-// Admin & Super Admin Media Governance
-Route::middleware(['web', 'auth', 'role:admin|super-admin'])->group(function () {
+// Super Admin & Repository Manager Media Governance
+Route::middleware(['web', 'auth', 'role:super-admin|repository-manager'])->group(function () {
     Route::prefix('admin/media')->group(function () {
         Route::get('/archive', [MediaController::class, 'archiveIndex'])->name('admin.media.archive-index');
         Route::post('/{media}/restore', [MediaController::class, 'restore'])->name('admin.media.restore');

@@ -181,15 +181,6 @@ class NavigationService
                 ],
                 [
                     'section' => 'Academic Operations',
-                    'label' => 'Course Management',
-                    'route' => 'admin.academic-operations.courses',
-                    'icon' => 'academic-cap',
-                    'permission' => null,
-                    'active_pattern' => 'admin/academic-operations/courses*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Academic Operations',
                     'label' => 'Student Enrollments',
                     'route' => 'admin.academic-operations.enrollments',
                     'icon' => 'user-group',
@@ -204,15 +195,6 @@ class NavigationService
                     'icon' => 'user-check',
                     'permission' => null,
                     'active_pattern' => 'admin/academic-operations/teacher-assignments*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Academic Operations',
-                    'label' => 'Academic Libraries',
-                    'route' => 'admin.academic-operations.libraries',
-                    'icon' => 'book-open',
-                    'permission' => null,
-                    'active_pattern' => 'admin/academic-operations/libraries*',
                     'badge' => null,
                 ],
                 [
@@ -231,15 +213,6 @@ class NavigationService
                     'icon' => 'chart-bar',
                     'permission' => null,
                     'active_pattern' => 'admin/reporting*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Media Library',
-                    'label' => 'Media Library',
-                    'route' => 'admin.media.index',
-                    'icon' => 'folder',
-                    'permission' => null,
-                    'active_pattern' => 'admin/media*',
                     'badge' => null,
                 ],
             ];

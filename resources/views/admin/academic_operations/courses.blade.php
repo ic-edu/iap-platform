@@ -92,9 +92,9 @@
                                 </form>
                             </div>
                             @else
-                            <a href="{{ route('admin.academic.workspace', $course->id) }}" style="font-size:.75rem;font-weight:700;color:#818cf8;text-decoration:none;">
-                                View Workspace →
-                            </a>
+                            <span style="font-size:.75rem;font-weight:600;color:#64748b;">
+                                Master Course Active
+                            </span>
                             @endif
                         </td>
                     </tr>

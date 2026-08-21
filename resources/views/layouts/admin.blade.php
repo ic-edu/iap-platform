@@ -269,24 +269,43 @@
             </div>
             <div class="grid grid-cols-2 gap-3 text-xs">
                 @auth
-                    @if (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin'))
-                        <a href="{{ route('admin.question-banks.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📂 Manage Question Banks
-                        </a>
-                        <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📋 Build Assessment Test
-                        </a>
+                    @if (Auth::user()->hasRole('super-admin'))
                         <a href="{{ route('admin.users.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             👤 Add Platform User
                         </a>
                         <a href="{{ route('admin.approvals.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             🛡️ Review Content Approvals
                         </a>
+                        <a href="{{ route('admin.monitoring.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            ⚡ System Observability
+                        </a>
+                        <a href="{{ route('admin.audit-logs.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📜 Audit &amp; Activity Logs
+                        </a>
                         <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             📊 Export Analytics Report
                         </a>
                         <a href="{{ route('admin.settings.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
                             ⚙️ System Settings
+                        </a>
+                    @elseif (Auth::user()->hasRole('admin'))
+                        <a href="{{ route('admin.users.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            👤 Manage Candidates
+                        </a>
+                        <a href="{{ route('admin.certificates.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            🏅 Certificate Registry
+                        </a>
+                        <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📋 Assessments &amp; Assignments
+                        </a>
+                        <a href="{{ route('admin.academic-operations.applications') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📝 Student Applications
+                        </a>
+                        <a href="{{ route('admin.academic-operations.enrollments') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            👥 Student Enrollments
+                        </a>
+                        <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
+                            📊 Reports &amp; Analytics
                         </a>
                     @elseif (Auth::user()->hasRole('teacher'))
                         <a href="{{ route('admin.academic-library.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">

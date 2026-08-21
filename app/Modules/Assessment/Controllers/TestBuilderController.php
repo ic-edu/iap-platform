@@ -61,6 +61,11 @@ class TestBuilderController extends Controller
 
         $tests = $query->latest('updated_at')->paginate(10)->withQueryString();
 
+        // Regular Admin Operational View: Render Assessment Assignment & Operations workspace
+        if ($user && $user->hasRole('admin') && !$user->hasRole(['teacher', 'repository-manager'])) {
+            return view('assessment::admin_operations', compact('tests'));
+        }
+
         // Calculate workspace KPI statistics for Teacher (Section 2 & 7)
         $allMyTestsQuery = Test::query();
         if ($user && $user->hasRole('teacher')) {
@@ -106,13 +111,13 @@ class TestBuilderController extends Controller
 
     /**
      * Store new test in draft mode.
-     * Teacher & Admin MAY create draft tests. Super Admin MUST NOT create tests.
+     * Teacher & RM MAY create draft tests. Admin & Super Admin MUST NOT create tests directly.
      */
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        if ($user && $user->hasRole('super-admin')) {
-            abort(403, 'Super Admin is an auditor/approver and cannot create tests directly.');
+        if ($user && ($user->hasRole('super-admin') || ($user->hasRole('admin') && !$user->hasRole(['teacher', 'repository-manager'])))) {
+            abort(403, 'Regular Admin cannot author assessment tests. Assessment authoring belongs to Teachers.');
         }
 
         $validated = $request->validate([
@@ -265,6 +270,13 @@ class TestBuilderController extends Controller
     {
         $user = $request->user();
 
+        // Regular Admin Operational View: Render Assessment Candidate Assignment & Management workspace
+        if ($user && $user->hasRole('admin') && !$user->hasRole(['teacher', 'repository-manager'])) {
+            $assignedCandidates = $test->assignments()->with(['user', 'assignedBy'])->latest('assigned_at')->get();
+            $availableStudents = \App\Models\User::role('student')->get();
+            return view('assessment::admin_show', compact('test', 'assignedCandidates', 'availableStudents'));
+        }
+
         if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
             abort(403, 'Unauthorized access to assessment test.');
         }
@@ -321,6 +333,10 @@ class TestBuilderController extends Controller
     public function update(Request $request, Test $test): RedirectResponse
     {
         $user = $request->user();
+
+        if ($user && ($user->hasRole('super-admin') || ($user->hasRole('admin') && !$user->hasRole(['teacher', 'repository-manager'])))) {
+            abort(403, 'Regular Admin cannot edit assessment definitions. Assessment authoring belongs to Teachers.');
+        }
 
         if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
             abort(403, 'Unauthorized access to update assessment test.');
