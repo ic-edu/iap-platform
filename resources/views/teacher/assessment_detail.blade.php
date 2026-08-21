@@ -404,15 +404,24 @@
                                         <img src="{{ $q->image_url }}" alt="Thumbnail" style="width:22px;height:22px;object-fit:cover;border-radius:.25rem;border:1px solid #475569;">
                                         <span style="font-size:.72rem;font-weight:700;color:#38bdf8;">🖼 Image ✓</span>
                                         <span style="font-size:.68rem;color:#cbd5e1;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $q->image_url }}">{{ basename($q->image_url) }}</span>
+                                        <button type="button" 
+                                                onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')" 
+                                                style="padding:.15rem .45rem;background:#1e293b;color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:.35rem;font-size:.68rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-left:.25rem;">
+                                            👁️ Preview
+                                        </button>
                                     </div>
                                 @endif
 
                                 @if($qHasAudio)
                                     <div style="display:inline-flex;align-items:center;gap:.35rem;background:#0f172a;border:1px solid rgba(129,140,248,.35);padding:.2rem .5rem;border-radius:.4rem;">
                                         <span style="font-size:.8rem;">🎧</span>
-                                        <audio src="{{ $q->audio_url }}" controls style="height:20px;width:120px;"></audio>
-                                        <span style="font-size:.72rem;font-weight:700;color:#818cf8;">🔊 Audio ✓</span>
+                                        <span style="font-size:.72rem;font-weight:700;color:#818cf8;">🎧 Audio ✓</span>
                                         <span style="font-size:.68rem;color:#cbd5e1;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $q->audio_url }}">{{ basename($q->audio_url) }}</span>
+                                        <button type="button" 
+                                                onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')" 
+                                                style="padding:.15rem .45rem;background:#1e293b;color:#818cf8;border:1px solid rgba(129,140,248,.35);border-radius:.35rem;font-size:.68rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-left:.25rem;">
+                                            👁️ Preview
+                                        </button>
                                     </div>
                                 @endif
 
@@ -719,6 +728,9 @@
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.4rem;">
+                            <button type="button" onclick="previewQuestionModalMedia('create', 'image')" style="background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                                👁️ Preview
+                            </button>
                             <button type="button" onclick="openQuestionMediaPicker('create', 'image')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
                                 Change
                             </button>
@@ -753,6 +765,9 @@
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.4rem;">
+                            <button type="button" onclick="previewQuestionModalMedia('create', 'audio')" style="background:rgba(129,140,248,.15);color:#818cf8;border:1px solid rgba(129,140,248,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                                👁️ Preview
+                            </button>
                             <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
                                 Change
                             </button>
@@ -1819,6 +1834,15 @@
                 modal.style.display = 'none';
                 document.getElementById('apm-content').innerHTML = '';
             }
+        }
+    }
+
+    function previewQuestionModalMedia(mode, type) {
+        const prefix = (mode === 'edit') ? 'eq-' : 'q-';
+        const url = document.getElementById(prefix + type + '-url')?.value;
+        const title = document.getElementById(prefix + 'preview-' + type + '-title')?.innerText || (type === 'image' ? 'Photograph' : 'Audio Prompt');
+        if (url) {
+            previewAssetModal('', title, type, url);
         }
     }
 

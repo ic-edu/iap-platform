@@ -488,4 +488,120 @@ class QuestionMediaAttachmentWorkflowTest extends TestCase
         $this->assertEquals('Master Bank Question Prompt', $masterQuestion->prompt);
         $this->assertEquals($this->photoAsset->publicUrl(), $masterQuestion->image_url);
     }
+
+    /**
+     * Requirement: Question Image & Audio Preview buttons render in Assessment Detail view.
+     */
+    public function test_16_question_image_and_audio_preview_buttons_render_in_detail_view(): void
+    {
+        $q1 = Question::create([
+            'question_bank_id' => null,
+            'prompt'           => 'Question 1 with Image and Audio',
+            'question_type'    => 'multiple_choice',
+            'points'           => 1,
+            'image_url'        => $this->photoAsset->publicUrl(),
+            'audio_url'        => $this->audioAsset->publicUrl(),
+            'media_asset_id'   => $this->photoAsset->id,
+        ]);
+        TestQuestion::create([
+            'test_section_id' => $this->section->id,
+            'question_id'     => $q1->id,
+            'order'           => 1,
+            'points'          => 1,
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.tests.show', $this->test->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('🖼 Image ✓', false);
+        $response->assertSee('🎧 Audio ✓', false);
+        // Image preview button
+        $response->assertSee("previewAssetModal('', '" . addslashes(basename($q1->image_url)) . "', 'image', '" . $q1->image_url . "')", false);
+        // Audio preview button
+        $response->assertSee("previewAssetModal('', '" . addslashes(basename($q1->audio_url)) . "', 'audio', '" . $q1->audio_url . "')", false);
+        $response->assertSee('asset-preview-modal', false);
+    }
+
+    /**
+     * Requirement: Question Editor renders Preview buttons for attached Image & Audio.
+     */
+    public function test_17_question_editor_renders_preview_buttons(): void
+    {
+        $q1 = Question::create([
+            'question_bank_id' => null,
+            'prompt'           => 'Question Editor Test',
+            'question_type'    => 'multiple_choice',
+            'points'           => 1,
+            'image_url'        => $this->photoAsset->publicUrl(),
+            'audio_url'        => $this->audioAsset->publicUrl(),
+            'media_asset_id'   => $this->photoAsset->id,
+        ]);
+        TestQuestion::create([
+            'test_section_id' => $this->section->id,
+            'question_id'     => $q1->id,
+            'order'           => 1,
+            'points'          => 1,
+        ]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.tests.edit-question', ['test' => $this->test->id, 'question' => $q1->id]));
+
+        $response->assertStatus(200);
+        $response->assertSee("previewQuestionModalMedia('image')", false);
+        $response->assertSee("previewQuestionModalMedia('audio')", false);
+        $response->assertSee('asset-preview-modal', false);
+    }
+
+    /**
+     * Requirement: Multi-question media integrity — Q1, Q2, Q3 each keep their distinct media URLs.
+     */
+    public function test_18_multi_question_media_integrity_remains_distinct(): void
+    {
+        $q1 = Question::create([
+            'question_bank_id' => null,
+            'prompt'           => 'Q1 Prompt',
+            'question_type'    => 'multiple_choice',
+            'points'           => 1,
+            'image_url'        => 'http://localhost:8000/media/asset_img_1/preview',
+            'audio_url'        => 'http://localhost:8000/media/asset_aud_1/preview',
+        ]);
+        $q2 = Question::create([
+            'question_bank_id' => null,
+            'prompt'           => 'Q2 Prompt',
+            'question_type'    => 'multiple_choice',
+            'points'           => 1,
+            'image_url'        => 'http://localhost:8000/media/asset_img_2/preview',
+            'audio_url'        => 'http://localhost:8000/media/asset_aud_2/preview',
+        ]);
+        $q3 = Question::create([
+            'question_bank_id' => null,
+            'prompt'           => 'Q3 Prompt',
+            'question_type'    => 'multiple_choice',
+            'points'           => 1,
+            'image_url'        => 'http://localhost:8000/media/asset_img_3/preview',
+            'audio_url'        => 'http://localhost:8000/media/asset_aud_3/preview',
+        ]);
+
+        TestQuestion::create(['test_section_id' => $this->section->id, 'question_id' => $q1->id, 'order' => 1, 'points' => 1]);
+        TestQuestion::create(['test_section_id' => $this->section->id, 'question_id' => $q2->id, 'order' => 2, 'points' => 1]);
+        TestQuestion::create(['test_section_id' => $this->section->id, 'question_id' => $q3->id, 'order' => 3, 'points' => 1]);
+
+        $response = $this->actingAs($this->teacher)
+            ->get(route('teacher.tests.show', $this->test->id));
+
+        $response->assertStatus(200);
+
+        // Verify Q1 preview triggers
+        $response->assertSee("previewAssetModal('', 'preview', 'image', 'http://localhost:8000/media/asset_img_1/preview')", false);
+        $response->assertSee("previewAssetModal('', 'preview', 'audio', 'http://localhost:8000/media/asset_aud_1/preview')", false);
+
+        // Verify Q2 preview triggers
+        $response->assertSee("previewAssetModal('', 'preview', 'image', 'http://localhost:8000/media/asset_img_2/preview')", false);
+        $response->assertSee("previewAssetModal('', 'preview', 'audio', 'http://localhost:8000/media/asset_aud_2/preview')", false);
+
+        // Verify Q3 preview triggers
+        $response->assertSee("previewAssetModal('', 'preview', 'image', 'http://localhost:8000/media/asset_img_3/preview')", false);
+        $response->assertSee("previewAssetModal('', 'preview', 'audio', 'http://localhost:8000/media/asset_aud_3/preview')", false);
+    }
 }

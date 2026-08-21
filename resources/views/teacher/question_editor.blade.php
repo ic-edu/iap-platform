@@ -97,6 +97,9 @@
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.4rem;">
+                            <button type="button" onclick="previewQuestionModalMedia('image')" style="background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                                👁️ Preview
+                            </button>
                             <button type="button" onclick="openQuestionMediaPicker('image')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                 Change
                             </button>
@@ -131,6 +134,9 @@
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.4rem;">
+                            <button type="button" onclick="previewQuestionModalMedia('audio')" style="background:rgba(129,140,248,.15);color:#818cf8;border:1px solid rgba(129,140,248,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                                👁️ Preview
+                            </button>
                             <button type="button" onclick="openQuestionMediaPicker('audio')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                 Change
                             </button>
@@ -319,6 +325,18 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+{{-- General Asset Preview Modal --}}
+<div id="asset-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;padding:1.5rem;" onclick="closeAssetPreviewModal(event)">
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.6);" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #1e293b;padding-bottom:.6rem;">
+            <div id="apm-title" style="font-size:1rem;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Preview Asset</div>
+            <button type="button" onclick="closeAssetPreviewModal()" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;">×</button>
+        </div>
+        <div id="apm-content" style="display:flex;justify-content:center;align-items:center;min-height:180px;">
+        </div>
     </div>
 </div>
 
@@ -631,9 +649,50 @@ function removeQuestionAttachedMedia(type) {
     }
 }
 
+function previewAssetModal(id, title, type, url) {
+    document.getElementById('apm-title').textContent = `${type.toUpperCase()}: ${title}`;
+    const contentEl = document.getElementById('apm-content');
+
+    if (type === 'image') {
+        contentEl.innerHTML = `<img src="${url}" alt="${title}" style="max-width:100%;max-height:450px;border-radius:.6rem;object-fit:contain;">`;
+    } else if (type === 'audio') {
+        contentEl.innerHTML = `
+            <div style="width:100%;text-align:center;padding:1.5rem;background:#090d16;border-radius:.75rem;">
+                <div style="font-size:3rem;margin-bottom:.5rem;">🎵</div>
+                <audio controls controlsList="nodownload noplaybackrate" src="${url}" preload="metadata" style="width:100%;max-width:480px;accent-color:#6366f1;"></audio>
+            </div>`;
+    } else if (type === 'pdf') {
+        contentEl.innerHTML = `<iframe src="${url}#toolbar=0" style="width:100%;height:450px;border:none;border-radius:.6rem;background:#fff;"></iframe>`;
+    } else {
+        contentEl.innerHTML = `<div style="padding:1.5rem;color:#cbd5e1;font-size:.85rem;line-height:1.6;white-space:pre-wrap;background:#090d16;border-radius:.6rem;width:100%;">Reading / text passage preview...</div>`;
+    }
+
+    const modal = document.getElementById('asset-preview-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeAssetPreviewModal(e) {
+    if (!e || e.target === document.getElementById('asset-preview-modal')) {
+        const modal = document.getElementById('asset-preview-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.getElementById('apm-content').innerHTML = '';
+        }
+    }
+}
+
+function previewQuestionModalMedia(type) {
+    const url = document.getElementById('eq-' + type + '-url')?.value;
+    const title = document.getElementById('eq-preview-' + type + '-title')?.innerText || (type === 'image' ? 'Photograph' : 'Audio Prompt');
+    if (url) {
+        previewAssetModal('', title, type, url);
+    }
+}
+
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         closeQuestionMediaPicker();
+        closeAssetPreviewModal();
     }
 });
 </script>
