@@ -85,13 +85,6 @@ class ReportingController extends Controller
             ->take(5)
             ->get();
 
-        // 6. Recent Assessment Submissions
-        $recentAttempts = Attempt::with(['test', 'user', 'certificate'])
-            ->whereIn('status', ['submitted', 'completed'])
-            ->latest('updated_at')
-            ->limit(10)
-            ->get();
-
         /** @var view-string $viewName */
         $viewName = 'reporting::index';
 
@@ -118,8 +111,7 @@ class ReportingController extends Controller
             'simulatorAttemptsCount',
             'realTestAttemptsCount',
             'statusDistribution',
-            'popularAssessments',
-            'recentAttempts'
+            'popularAssessments'
         ));
     }
 

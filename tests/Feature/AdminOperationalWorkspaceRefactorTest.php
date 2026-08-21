@@ -494,10 +494,9 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $response->assertViewHas('totalCertificates', 1);
 
         $response->assertSee('OPERATIONAL ANALYTICS');
-        $response->assertSee('Reports &amp; Analytics', false);
-        $response->assertSee('Student Ken');
+        $response->assertSee('Assessment Reports &amp; Analytics', false);
         $response->assertSee('TOEIC Simulator 01');
-        $response->assertSee('PASSED');
+        $response->assertDontSee('Recent Assessment Submissions');
 
         // Test CSV Export
         $csvResponse = $this->actingAs($this->admin)->get(route('admin.reporting.export-csv'));
