@@ -3,69 +3,70 @@
 @section('title', 'Teacher Revision Center — Returned Items')
 
 @section('content')
-<div style="padding: 1.5rem 0;">
+<div class="space-y-6">
     {{-- Header --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <div class="gov-hero-indigo rounded-2xl p-6 sm:p-7 flex justify-between items-center flex-wrap gap-5">
         <div>
-            <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin:0 0 .3rem;">⚠️ Teacher Revision Center</h1>
-            <p style="font-size:.88rem;color:#94a3b8;margin:0;">Review Repository Manager feedback notes and revise returned Question Banks and Assessments.</p>
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-amber-500 mb-1">Author Workspace • Quality Review</div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-1">⚠️ Teacher Revision Center</h1>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">Review Repository Manager feedback notes and revise returned Question Banks and Assessments.</p>
         </div>
-        <div style="display:flex;gap:.75rem;align-items:center;">
-            <a href="{{ route('teacher.dashboard') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+        <div class="flex gap-3 items-center">
+            <a href="{{ route('teacher.dashboard') }}" class="gov-btn-secondary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 ← Back
             </a>
-            <a href="{{ route('teacher.dashboard') }}" style="padding:.6rem 1.1rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('teacher.dashboard') }}" class="gov-btn-primary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 Dashboard
             </a>
         </div>
     </div>
 
     {{-- Question Banks Needing Revision Section --}}
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;overflow:hidden;margin-bottom:2rem;">
-        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid #1e293b;display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="font-size:1rem;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:.5rem;">
+    <div class="gov-card overflow-hidden !p-0">
+        <div class="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 📂 Question Banks Needing Revision ({{ $revisionQuestionBanks->count() }})
             </h3>
         </div>
 
         @if($revisionQuestionBanks->isEmpty())
-            <div style="padding:3rem 2rem;text-align:center;color:#64748b;">
-                <div style="font-size:2rem;margin-bottom:.5rem;">🎉</div>
-                <div style="font-size:.92rem;font-weight:700;color:#cbd5e1;">No Question Banks Awaiting Revision</div>
-                <div style="font-size:.8rem;margin-top:.2rem;">All your question banks are either in draft, pending approval, or approved.</div>
+            <div class="p-10 text-center text-slate-500 dark:text-slate-400">
+                <div class="text-3xl mb-2">🎉</div>
+                <div class="text-sm font-bold text-slate-800 dark:text-slate-200">No Question Banks Awaiting Revision</div>
+                <div class="text-xs mt-1 text-slate-500 dark:text-slate-400">All your question banks are either in draft, pending approval, or approved.</div>
             </div>
         @else
-            <div style="divide-y:1px solid #1e293b;">
+            <div class="divide-y divide-slate-200 dark:divide-slate-800">
                 @foreach($revisionQuestionBanks as $bank)
-                <div style="padding:1.5rem;border-bottom:1px solid #1e293b;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
+                <div class="p-5">
+                    <div class="flex justify-between items-start flex-wrap gap-4 mb-3">
                         <div>
-                            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;">
-                                <span style="background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);padding:.2rem .65rem;border-radius:.4rem;font-size:.72rem;font-weight:800;">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                     ⚠️ Needs Revision
                                 </span>
-                                <span style="font-size:.75rem;color:#818cf8;font-weight:700;text-transform:uppercase;">
+                                <span class="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase">
                                     {{ is_object($bank->test_type) ? $bank->test_type->value : $bank->test_type }}
                                 </span>
                             </div>
-                            <h4 style="font-size:1.15rem;font-weight:800;color:#fff;margin:0 0 .25rem;">{{ $bank->title }}</h4>
-                            <div style="font-size:.78rem;color:#64748b;">
-                                📝 {{ $bank->questions->count() }} Questions • Returned by <strong style="color:#cbd5e1;">{{ $bank->reviewer_name }}</strong> {{ $bank->returned_at?->diffForHumans() }}
+                            <h4 class="text-base font-bold text-slate-900 dark:text-white mb-0.5">{{ $bank->title }}</h4>
+                            <div class="text-xs text-slate-500 dark:text-slate-400">
+                                📝 {{ $bank->questions->count() }} Questions • Returned by <strong class="text-slate-700 dark:text-slate-300">{{ $bank->reviewer_name }}</strong> {{ $bank->returned_at?->diffForHumans() }}
                             </div>
                         </div>
                         <div>
-                            <a href="{{ route('teacher.question-banks.show', $bank->id) }}" style="padding:.65rem 1.25rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 12px rgba(99,102,241,.3);">
+                            <a href="{{ route('teacher.question-banks.show', $bank->id) }}" class="gov-btn-primary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5 shadow">
                                 ✏️ Continue Revision
                             </a>
                         </div>
                     </div>
 
                     {{-- Prominent Repository Manager Feedback Box (TASK 4) --}}
-                    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:.75rem;padding:1rem;margin-top:.75rem;">
-                        <div style="font-size:.72rem;font-weight:800;color:#fbbf24;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem;">
+                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mt-3">
+                        <div class="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">
                             💬 Repository Manager Feedback
                         </div>
-                        <div style="font-size:.85rem;color:#e2e8f0;line-height:1.5;">
+                        <div class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
                             "{{ $bank->latest_feedback }}"
                         </div>
                     </div>
@@ -77,43 +78,43 @@
 
     {{-- Assessments Needing Revision Section --}}
     @if($revisionAssessments->isNotEmpty())
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;overflow:hidden;">
-        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid #1e293b;">
-            <h3 style="font-size:1rem;font-weight:800;color:#fff;margin:0;">
+    <div class="gov-card overflow-hidden !p-0">
+        <div class="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800">
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">
                 📋 Assessment Tests Needing Revision ({{ $revisionAssessments->count() }})
             </h3>
         </div>
-        <div style="divide-y:1px solid #1e293b;">
+        <div class="divide-y divide-slate-200 dark:divide-slate-800">
             @foreach($revisionAssessments as $test)
-            <div style="padding:1.5rem;border-bottom:1px solid #1e293b;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
+            <div class="p-5">
+                <div class="flex justify-between items-start flex-wrap gap-4 mb-3">
                     <div>
-                        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;">
-                            <span style="background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);padding:.2rem .65rem;border-radius:.4rem;font-size:.72rem;font-weight:800;">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                 ⚠️ Needs Revision
                             </span>
-                            <span style="font-size:.75rem;color:#818cf8;font-weight:700;text-transform:uppercase;">
+                            <span class="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase">
                                 {{ is_object($test->test_type) ? $test->test_type->value : $test->test_type }}
                             </span>
                         </div>
-                        <h4 style="font-size:1.15rem;font-weight:800;color:#fff;margin:0 0 .25rem;">{{ $test->title }}</h4>
-                        <div style="font-size:.78rem;color:#64748b;">
-                            ⏱ {{ $test->duration_minutes }} Mins • Returned by <strong style="color:#cbd5e1;">{{ $test->reviewer_name }}</strong> {{ $test->returned_at?->diffForHumans() }}
+                        <h4 class="text-base font-bold text-slate-900 dark:text-white mb-0.5">{{ $test->title }}</h4>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                            ⏱ {{ $test->duration_minutes }} Mins • Returned by <strong class="text-slate-700 dark:text-slate-300">{{ $test->reviewer_name }}</strong> {{ $test->returned_at?->diffForHumans() }}
                         </div>
                     </div>
                     <div>
-                        <a href="{{ route('teacher.tests.show', $test->id) }}" style="padding:.65rem 1.25rem;background:#4338ca;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+                        <a href="{{ route('teacher.tests.show', $test->id) }}" class="gov-btn-primary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5 shadow">
                             ✏️ Revise Assessment
                         </a>
                     </div>
                 </div>
 
                 {{-- Feedback Box --}}
-                <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:.75rem;padding:1rem;margin-top:.75rem;">
-                    <div style="font-size:.72rem;font-weight:800;color:#fbbf24;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem;">
+                <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mt-3">
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">
                         💬 Repository Manager Feedback
                     </div>
-                    <div style="font-size:.85rem;color:#e2e8f0;line-height:1.5;">
+                    <div class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
                         "{{ $test->latest_feedback }}"
                     </div>
                 </div>

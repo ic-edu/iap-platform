@@ -5,20 +5,20 @@
 @section('content')
 <div style="padding: 1.5rem 0; max-width: 900px; margin: 0 auto;">
     {{-- Header & Navigation --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <div class="gov-hero-indigo rounded-2xl p-6 sm:p-7 flex justify-between items-center flex-wrap gap-5 mb-6">
         <div>
-            <div style="font-size:.78rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem;">
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">
                 ⚡ Focused Question Authoring Workspace
             </div>
-            <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin:0;">
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-1">
                 Edit Question (ID: {{ $question->id }})
             </h1>
         </div>
-        <div style="display:flex;gap:.75rem;align-items:center;">
-            <a href="{{ route('teacher.tests.show', $test->id) }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+        <div class="flex gap-3 items-center">
+            <a href="{{ route('teacher.tests.show', $test->id) }}" class="gov-btn-secondary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 ← Back to Assessment
             </a>
-            <a href="{{ route('teacher.dashboard') }}" style="padding:.6rem 1.1rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('teacher.dashboard') }}" class="gov-btn-primary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 Dashboard
             </a>
         </div>
@@ -31,7 +31,7 @@
     @endif
 
     {{-- Question Editor Card --}}
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;box-shadow:0 20px 40px -15px rgba(0,0,0,.5);">
+    <div class="gov-card p-6 sm:p-7">
         <form id="edit-question-form" method="POST" action="{{ route('teacher.tests.update-question', ['test' => $test->id, 'question' => $question->id]) }}" onsubmit="return validateEditQuestionForm(this)" style="display:flex;flex-direction:column;gap:1.25rem;">
             @csrf
             @method('PUT')

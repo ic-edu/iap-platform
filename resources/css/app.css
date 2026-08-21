@@ -1098,6 +1098,489 @@ html[data-theme="light"] .mac-pill.active {
     border-color: var(--accent) !important;
 }
 
+/* ==========================================================================
+   Teacher Workspace, Library & Authoring Surfaces Theme Overrides
+   ========================================================================== */
+
+/* 1. Teacher Dashboard (.tw-*) */
+html.light .tw-hero,
+html[data-theme="light"] .tw-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+html.light .tw-hero__greeting,
+html[data-theme="light"] .tw-hero__greeting {
+    color: var(--text-primary) !important;
+}
+
+html.light .tw-hero__sub,
+html[data-theme="light"] .tw-hero__sub {
+    color: var(--text-secondary) !important;
+}
+
+html.light .tw-hero__date,
+html[data-theme="light"] .tw-hero__date {
+    color: var(--accent) !important;
+}
+
+html.light .tw-kpi,
+html[data-theme="light"] .tw-kpi,
+html.light .tw-panel,
+html[data-theme="light"] .tw-panel,
+html.light .tw-widget,
+html[data-theme="light"] .tw-widget,
+html.light .tw-modal,
+html[data-theme="light"] .tw-modal {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+html.light .tw-panel__title,
+html[data-theme="light"] .tw-panel__title,
+html.light .tw-modal__title,
+html[data-theme="light"] .tw-modal__title,
+html.light .tw-title-link,
+html[data-theme="light"] .tw-title-link,
+html.light .tw-prog-count,
+html[data-theme="light"] .tw-prog-count {
+    color: var(--text-primary) !important;
+}
+
+html.light .tw-panel__head,
+html[data-theme="light"] .tw-panel__head,
+html.light .tw-filter-bar,
+html[data-theme="light"] .tw-filter-bar,
+html.light .tw-prog-item,
+html[data-theme="light"] .tw-prog-item,
+html.light .tw-modal__head,
+html[data-theme="light"] .tw-modal__head {
+    border-color: #e2e8f0 !important;
+}
+
+html.light .tw-search,
+html[data-theme="light"] .tw-search,
+html.light .tw-form-input,
+html[data-theme="light"] .tw-form-input,
+html.light .tw-form-select,
+html[data-theme="light"] .tw-form-select,
+html.light .tw-form-textarea,
+html[data-theme="light"] .tw-form-textarea {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: var(--text-primary) !important;
+}
+
+html.light .tw-form-label,
+html[data-theme="light"] .tw-form-label,
+html.light .tw-prog-label,
+html[data-theme="light"] .tw-prog-label {
+    color: var(--text-secondary) !important;
+}
+
+html.light .tw-fpill,
+html[data-theme="light"] .tw-fpill {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html.light .tw-fpill:hover,
+html[data-theme="light"] .tw-fpill:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+html.light .tw-fpill--active,
+html[data-theme="light"] .tw-fpill--active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
+html.light .tw-table th,
+html[data-theme="light"] .tw-table th {
+    background: #f8fafc !important;
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+html.light .tw-table td,
+html[data-theme="light"] .tw-table td {
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+html.light .tw-table tr:hover td,
+html[data-theme="light"] .tw-table tr:hover td {
+    background: #f8faff !important;
+}
+
+html.light .tw-prog-bar-wrap,
+html[data-theme="light"] .tw-prog-bar-wrap {
+    background: #e2e8f0 !important;
+}
+
+html.light .tw-qa-btn--secondary,
+html[data-theme="light"] .tw-qa-btn--secondary {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+}
+
+html.light .tw-qa-btn--secondary:hover,
+html[data-theme="light"] .tw-qa-btn--secondary:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+html.light .tw-empty__title,
+html[data-theme="light"] .tw-empty__title {
+    color: var(--text-primary) !important;
+}
+
+html.light .tw-empty__sub,
+html[data-theme="light"] .tw-empty__sub {
+    color: var(--text-secondary) !important;
+}
+
+/* 2. Institutional Academic Library (.al-*) */
+html.light .al-hero,
+html[data-theme="light"] .al-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+html.light .al-hero__title,
+html[data-theme="light"] .al-hero__title,
+html.light .al-section-title,
+html[data-theme="light"] .al-section-title,
+html.light .al-card__title,
+html[data-theme="light"] .al-card__title {
+    color: var(--text-primary) !important;
+}
+
+html.light .al-hero__sub,
+html[data-theme="light"] .al-hero__sub,
+html.light .al-card__desc,
+html[data-theme="light"] .al-card__desc {
+    color: var(--text-secondary) !important;
+}
+
+html.light .al-health-panel,
+html[data-theme="light"] .al-health-panel,
+html.light .al-card,
+html[data-theme="light"] .al-card,
+html.light .al-modal,
+html[data-theme="light"] .al-modal {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+html.light .al-card__bar-bg,
+html[data-theme="light"] .al-card__bar-bg {
+    background: #e2e8f0 !important;
+}
+
+/* 3. Academic Content Library / Question Bank Authoring (.acl-*) */
+html.light .acl-hero,
+html[data-theme="light"] .acl-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+html.light .acl-hero__title,
+html[data-theme="light"] .acl-hero__title,
+html.light .acl-health-num,
+html[data-theme="light"] .acl-health-num,
+html.light .acl-cov-head,
+html[data-theme="light"] .acl-cov-head,
+html.light .acl-cov-card__title,
+html[data-theme="light"] .acl-cov-card__title,
+html.light .acl-spotlight__title,
+html[data-theme="light"] .acl-spotlight__title,
+html.light .acl-panel__title,
+html[data-theme="light"] .acl-panel__title,
+html.light .acl-title-link,
+html[data-theme="light"] .acl-title-link {
+    color: var(--text-primary) !important;
+}
+
+html.light .acl-hero__sub,
+html[data-theme="light"] .acl-hero__sub,
+html.light .acl-hm-val,
+html[data-theme="light"] .acl-hm-val,
+html.light .acl-spotlight__meta,
+html[data-theme="light"] .acl-spotlight__meta {
+    color: var(--text-secondary) !important;
+}
+
+html.light .acl-health-card,
+html[data-theme="light"] .acl-health-card,
+html.light .acl-kpi,
+html[data-theme="light"] .acl-kpi,
+html.light .acl-coverage-panel,
+html[data-theme="light"] .acl-coverage-panel,
+html.light .acl-spotlight,
+html[data-theme="light"] .acl-spotlight,
+html.light .acl-panel,
+html[data-theme="light"] .acl-panel,
+html.light .acl-modal,
+html[data-theme="light"] .acl-modal {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+html.light .acl-cov-card,
+html[data-theme="light"] .acl-cov-card {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+html.light .acl-cov-card__bar-bg,
+html[data-theme="light"] .acl-cov-card__bar-bg {
+    background: #e2e8f0 !important;
+}
+
+html.light .acl-panel__head,
+html[data-theme="light"] .acl-panel__head,
+html.light .acl-filter-bar,
+html[data-theme="light"] .acl-filter-bar {
+    border-color: #e2e8f0 !important;
+}
+
+html.light .acl-search,
+html[data-theme="light"] .acl-search,
+html.light .acl-select,
+html[data-theme="light"] .acl-select {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: var(--text-primary) !important;
+}
+
+html.light .acl-fpill,
+html[data-theme="light"] .acl-fpill {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html.light .acl-fpill:hover,
+html[data-theme="light"] .acl-fpill:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+html.light .acl-fpill--active,
+html[data-theme="light"] .acl-fpill--active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
+html.light .acl-table th,
+html[data-theme="light"] .acl-table th {
+    background: #f8fafc !important;
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+html.light .acl-table td,
+html[data-theme="light"] .acl-table td {
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+html.light .acl-table tr:hover td,
+html[data-theme="light"] .acl-table tr:hover td {
+    background: #f8faff !important;
+}
+
+html.light .acl-btn--secondary,
+html[data-theme="light"] .acl-btn--secondary {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+}
+
+html.light .acl-btn--secondary:hover,
+html[data-theme="light"] .acl-btn--secondary:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+/* 4. Assessment Test Builder (.tb-*) */
+html.light .tb-hero,
+html[data-theme="light"] .tb-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+html.light .tb-hero__title,
+html[data-theme="light"] .tb-hero__title,
+html.light .tb-panel__title,
+html[data-theme="light"] .tb-panel__title,
+html.light .tb-title-link,
+html[data-theme="light"] .tb-title-link {
+    color: var(--text-primary) !important;
+}
+
+html.light .tb-hero__sub,
+html[data-theme="light"] .tb-hero__sub {
+    color: var(--text-secondary) !important;
+}
+
+html.light .tb-kpi,
+html[data-theme="light"] .tb-kpi,
+html.light .tb-qa-strip,
+html[data-theme="light"] .tb-qa-strip,
+html.light .tb-panel,
+html[data-theme="light"] .tb-panel,
+html.light .tb-modal,
+html[data-theme="light"] .tb-modal {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+html.light .tb-panel__head,
+html[data-theme="light"] .tb-panel__head,
+html.light .tb-filter-bar,
+html[data-theme="light"] .tb-filter-bar {
+    border-color: #e2e8f0 !important;
+}
+
+html.light .tb-search,
+html[data-theme="light"] .tb-search {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: var(--text-primary) !important;
+}
+
+html.light .tb-fpill,
+html[data-theme="light"] .tb-fpill {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html.light .tb-fpill:hover,
+html[data-theme="light"] .tb-fpill:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+html.light .tb-fpill--active,
+html[data-theme="light"] .tb-fpill--active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
+html.light .tb-table th,
+html[data-theme="light"] .tb-table th {
+    background: #f8fafc !important;
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+html.light .tb-table td,
+html[data-theme="light"] .tb-table td {
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+html.light .tb-table tr:hover td,
+html[data-theme="light"] .tb-table tr:hover td {
+    background: #f8faff !important;
+}
+
+html.light .tb-qa-btn--secondary,
+html[data-theme="light"] .tb-qa-btn--secondary {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+}
+
+html.light .tb-qa-btn--secondary:hover,
+html[data-theme="light"] .tb-qa-btn--secondary:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+/* 5. Institutional Media Repository (.imr-*) */
+html.light .imr-hero,
+html[data-theme="light"] .imr-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+html.light .imr-hero__title,
+html[data-theme="light"] .imr-hero__title,
+html.light .imr-card__title,
+html[data-theme="light"] .imr-card__title {
+    color: var(--text-primary) !important;
+}
+
+html.light .imr-hero__sub,
+html[data-theme="light"] .imr-hero__sub,
+html.light .imr-card__sub,
+html[data-theme="light"] .imr-card__sub {
+    color: var(--text-secondary) !important;
+}
+
+html.light .imr-kpi,
+html[data-theme="light"] .imr-kpi,
+html.light .imr-filter-bar,
+html[data-theme="light"] .imr-filter-bar,
+html.light .imr-card,
+html[data-theme="light"] .imr-card,
+html.light .imr-modal,
+html[data-theme="light"] .imr-modal {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+html.light .imr-card__preview,
+html[data-theme="light"] .imr-card__preview {
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html.light .imr-foot,
+html[data-theme="light"] .imr-foot {
+    border-top: 1px solid #e2e8f0 !important;
+}
+
+html.light .imr-exam-btn,
+html[data-theme="light"] .imr-exam-btn {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html.light .imr-exam-btn:hover,
+html[data-theme="light"] .imr-exam-btn:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+html.light .imr-exam-btn--active,
+html[data-theme="light"] .imr-exam-btn--active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
 
 
 

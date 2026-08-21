@@ -3,45 +3,45 @@
 @section('title', 'Assessment Revision Summary — ' . $test->title)
 
 @section('content')
-<div style="padding: 1.5rem 0;">
+<div class="space-y-6">
     {{-- Header & Navigation --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <div class="gov-hero-indigo rounded-2xl p-6 sm:p-7 flex justify-between items-center flex-wrap gap-5">
         <div>
-            <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.35rem;">
-                <span style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);padding:.2rem .65rem;border-radius:.4rem;font-size:.75rem;font-weight:800;text-transform:uppercase;">
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider">
                     {{ is_object($test->test_type) ? $test->test_type->value : strtoupper($test->test_type ?? 'TOEIC') }}
                 </span>
                 @if(in_array($test->status, ['needs_revision', 'revision_requested']))
-                    <span style="background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);padding:.2rem .65rem;border-radius:.4rem;font-size:.75rem;font-weight:800;">
+                    <span class="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         ⚠️ Needs Revision
                     </span>
                 @elseif(in_array($test->status, ['pending', 'pending_approval']))
-                    <span style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);padding:.2rem .65rem;border-radius:.4rem;font-size:.75rem;font-weight:800;">
+                    <span class="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         ⏳ Pending Approval
                     </span>
                 @elseif($test->status === 'approved' || $test->is_published)
-                    <span style="background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);padding:.2rem .65rem;border-radius:.4rem;font-size:.75rem;font-weight:800;">
+                    <span class="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         🟢 Published & Live
                     </span>
                 @else
-                    <span style="background:rgba(148,163,184,.15);color:#cbd5e1;border:1px solid rgba(148,163,184,.3);padding:.2rem .65rem;border-radius:.4rem;font-size:.75rem;font-weight:800;">
+                    <span class="bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         📝 Draft
                     </span>
                 @endif
             </div>
-            <h1 style="font-size:1.75rem;font-weight:800;color:#fff;margin:0;">{{ $test->title }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{{ $test->title }}</h1>
         </div>
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+        <div class="flex gap-3 flex-wrap items-center">
             @if(request('from') === 'revision_center')
-            <a href="{{ route('teacher.revision-center') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('teacher.revision-center') }}" class="gov-btn-secondary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 ← Back to Revision Center
             </a>
             @else
-            <a href="{{ route('teacher.tests.index') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('teacher.tests.index') }}" class="gov-btn-secondary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 ← Back to Assessments
             </a>
             @endif
-            <a href="{{ route('teacher.dashboard') }}" style="padding:.6rem 1.1rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('teacher.dashboard') }}" class="gov-btn-primary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 Dashboard
             </a>
         </div>
