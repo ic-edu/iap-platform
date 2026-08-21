@@ -518,8 +518,10 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $response->assertSee('No paid candidates are currently waiting for Real Test assignment.');
 
         // Topbar has Dashboard button for Regular Admin instead of + Quick Action
-        $response->assertSee('🏠 Dashboard');
+        $response->assertSee('title="Operational Dashboard"', false);
+        $response->assertSee('<span>Dashboard</span>', false);
         $response->assertDontSee('+ Quick Action');
+        $response->assertDontSee('🏠 Dashboard');
     }
 
     public function test_platform_wide_appearance_settings_accessible_for_all_five_roles(): void

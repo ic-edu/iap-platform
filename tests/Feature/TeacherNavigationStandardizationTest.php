@@ -66,8 +66,9 @@ class TeacherNavigationStandardizationTest extends TestCase
         $response = $this->actingAs($this->teacher)->get(route('teacher.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('🏠 Dashboard');
+        $response->assertSee('<span>Dashboard</span>', false);
         $response->assertDontSee('+ Quick Action');
+        $response->assertDontSee('🏠 Dashboard');
     }
 
     /**

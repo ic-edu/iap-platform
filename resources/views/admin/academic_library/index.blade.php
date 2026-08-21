@@ -102,7 +102,7 @@
         </a>
         @if(Auth::user()?->hasRole('teacher'))
         <a href="{{ route('teacher.dashboard') }}" style="color:#94a3b8;font-size:.8rem;font-weight:700;text-decoration:none;display:inline-block;">
-            🏠 Dashboard
+            Dashboard
         </a>
         @endif
     </div>

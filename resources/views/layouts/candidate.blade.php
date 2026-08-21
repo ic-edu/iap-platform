@@ -44,10 +44,10 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('candidate.portal') }}" class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 select-none">
                         <span class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md shadow-indigo-500/30">iC</span>
                         <span class="font-bold text-white tracking-wide text-lg">iC.edu <span class="text-indigo-400 font-medium">Student</span></span>
-                    </a>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-6 text-sm font-medium">

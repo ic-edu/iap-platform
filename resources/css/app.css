@@ -49,8 +49,8 @@ html[data-theme="light"] {
     --text-inverse: #ffffff;
     --input-bg: #ffffff;
     --input-border: #cbd5e1;
-    --accent: #4f46e5;
-    --accent-hover: #4338ca;
+    --accent: #4f58c8;
+    --accent-hover: #434cae;
     --success: #059669;
     --warning: #d97706;
     --danger: #e11d48;
@@ -246,7 +246,34 @@ html[data-theme="light"] .theme-switcher-btn:hover:not(.active) {
 
 html.light .theme-switcher-btn.active,
 html[data-theme="light"] .theme-switcher-btn.active {
-    background-color: #4f46e5 !important;
+    background-color: var(--accent) !important;
     color: #ffffff !important;
-    border-color: #4338ca !important;
+    border-color: var(--accent-hover) !important;
+}
+
+/* Light Theme Soft Accent Overrides for Buttons, Active States, and Links */
+html.light .bg-indigo-600,
+html[data-theme="light"] .bg-indigo-600 {
+    background-color: var(--accent) !important;
+}
+
+html.light .hover\:bg-indigo-500:hover,
+html[data-theme="light"] .hover\:bg-indigo-500:hover,
+html.light .hover\:bg-indigo-600:hover,
+html[data-theme="light"] .hover\:bg-indigo-600:hover {
+    background-color: var(--accent-hover) !important;
+}
+
+html.light .text-indigo-400,
+html[data-theme="light"] .text-indigo-400,
+html.light .text-indigo-600,
+html[data-theme="light"] .text-indigo-600 {
+    color: var(--accent) !important;
+}
+
+html.light .border-indigo-500,
+html[data-theme="light"] .border-indigo-500,
+html.light .border-indigo-600,
+html[data-theme="light"] .border-indigo-600 {
+    border-color: var(--accent) !important;
 }

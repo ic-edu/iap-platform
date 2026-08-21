@@ -49,7 +49,7 @@
             <div class="flex items-center gap-3 mb-1">
                 <a href="{{ $backUrl }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">{{ $backLabel }}</a>
                 @if(Auth::user()?->hasRole('teacher'))
-                    <a href="{{ route('teacher.dashboard') }}" class="text-xs text-slate-400 hover:text-white font-semibold transition-colors">🏠 Dashboard</a>
+                    <a href="{{ route('teacher.dashboard') }}" class="text-xs text-slate-400 hover:text-white font-semibold transition-colors">Dashboard</a>
                 @endif
             </div>
             <div class="flex items-center gap-3 mt-1">

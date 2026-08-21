@@ -77,7 +77,8 @@ class RepositoryManagerHeaderNavigationTest extends TestCase
         $response = $this->actingAs($this->teacher)->get(route('admin.question-banks.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('🏠 Dashboard');
+        $response->assertSee('<span>Dashboard</span>', false);
         $response->assertDontSee('+ Quick Action');
+        $response->assertDontSee('🏠 Dashboard');
     }
 }

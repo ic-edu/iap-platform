@@ -1,9 +1,9 @@
 <div class="flex grow flex-col gap-y-5 overflow-y-auto border-r border-slate-200 bg-white px-6 pb-4 dark:border-slate-800 dark:bg-slate-950">
     <div class="flex h-16 shrink-0 items-center gap-x-3">
-        <a href="{{ route('dashboard') }}" class="flex items-center gap-x-3">
+        <div class="flex items-center gap-x-3 select-none">
             <x-application-logo class="h-9 w-auto fill-current text-indigo-600 dark:text-indigo-400" />
             <span class="text-base font-semibold text-slate-950 dark:text-white">{{ config('app.name', 'IAP Platform') }}</span>
-        </a>
+        </div>
     </div>
 
     <nav class="flex flex-1 flex-col">

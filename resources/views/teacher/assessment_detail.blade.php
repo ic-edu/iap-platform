@@ -42,7 +42,7 @@
             </a>
             @endif
             <a href="{{ route('teacher.dashboard') }}" style="padding:.6rem 1.1rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
-                🏠 Dashboard
+                Dashboard
             </a>
         </div>
     </div>

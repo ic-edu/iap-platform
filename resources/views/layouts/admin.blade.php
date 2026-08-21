@@ -45,13 +45,13 @@
         @unless(Auth::user()?->hasRole('repository-manager'))
         <aside class="w-full md:w-64 bg-slate-950 border-b md:border-b-0 md:border-r border-slate-800 flex-shrink-0">
             <div class="p-6 flex items-center justify-between border-b border-slate-900">
-                <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
+                <div class="flex items-center gap-3 select-none">
                     <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white shadow-lg shadow-indigo-500/30">IAP</span>
                     <div>
                         <span class="block font-bold text-white text-base leading-tight">iC.edu</span>
                         <span class="block text-xs font-medium text-slate-400">Assessment Platform</span>
                     </div>
-                </a>
+                </div>
             </div>
 
             <!-- Navigation Links Grouped by Section -->
@@ -115,21 +115,21 @@
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
-                        <span>🏠 Dashboard</span>
+                        <span>Dashboard</span>
                     </a>
                     @elseif(Auth::user()?->hasRole('teacher'))
                     <a href="{{ route('teacher.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Teacher Authoring Dashboard">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
-                        <span>🏠 Dashboard</span>
+                        <span>Dashboard</span>
                     </a>
                     @elseif(Auth::user()?->hasRole('admin'))
                     <a href="{{ route('admin.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Operational Dashboard">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
-                        <span>🏠 Dashboard</span>
+                        <span>Dashboard</span>
                     </a>
                     @else
                     <button onclick="document.getElementById('quick-action-modal').classList.remove('hidden')" class="hidden sm:inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors shadow-sm">

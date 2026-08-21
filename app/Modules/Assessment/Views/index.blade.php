@@ -293,7 +293,7 @@
             ← Back to Teacher Dashboard
         </a>
         <a href="{{ route('teacher.dashboard') }}" style="color:#cbd5e1;font-size:.82rem;font-weight:700;text-decoration:none;">
-            🏠 Dashboard
+            Dashboard
         </a>
     </div>
     @endif
