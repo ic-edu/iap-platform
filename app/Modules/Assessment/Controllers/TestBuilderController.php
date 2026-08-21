@@ -549,6 +549,38 @@ class TestBuilderController extends Controller
     }
 
     /**
+     * Delete section from assessment.
+     */
+    public function destroySection(Request $request, Test $test, TestSection $section): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment section.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true) || $test->is_published) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        if ((string) $section->test_id !== (string) $test->id) {
+            abort(404, 'Section does not belong to this assessment.');
+        }
+
+        $sectionTitle = $section->title;
+
+        try {
+            $this->builderService->deleteSection($test, $section);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->withErrors($e->validator);
+        }
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Section '{$sectionTitle}' removed successfully.");
+    }
+
+    /**
      * Attach existing MediaAsset to TestSection.
      */
     public function attachSectionMedia(Request $request, Test $test, TestSection $section): RedirectResponse

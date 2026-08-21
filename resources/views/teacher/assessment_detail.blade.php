@@ -303,7 +303,22 @@
                                 </div>
                             </div>
                             @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                            <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+                            @php
+                                $secQCount = $sec->testQuestions->count();
+                                $secMCount = $sec->mediaAssets->count();
+                                $secEscTitle = addslashes($sec->title);
+
+                                if ($secQCount === 0 && $secMCount === 0) {
+                                    $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? This section contains no questions.";
+                                } elseif ($secQCount > 0 && $secMCount === 0) {
+                                    $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact.";
+                                } elseif ($secQCount === 0 && $secMCount > 0) {
+                                    $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? Any media attached to this section will be detached but will remain available in the Media Library.";
+                                } else {
+                                    $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact. Any media attached to this section will be detached but will remain available in the Media Library.";
+                                }
+                            @endphp
+                            <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;">
                                 <button type="button" 
                                         onclick="openAttachSectionMediaModal('{{ $sec->id }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
                                         style="padding:.4rem .8rem;background:#4f46e5;color:#fff;border:none;border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
@@ -318,6 +333,13 @@
                                         style="padding:.4rem .8rem;background:#334155;color:#e2e8f0;border:1px solid #475569;border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                     ✏️ Edit Section
                                 </button>
+                                <form method="POST" action="{{ route('teacher.tests.destroy-section', ['test' => $test->id, 'section' => $sec->id]) }}" style="display:inline;" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Section?', message: '{{ $secConfirmMsg }}', confirmText: 'Remove Section', variant: 'danger', form: this });">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" style="padding:.4rem .8rem;background:rgba(244,63,94,.1);color:#fb7185;border:1px solid rgba(244,63,94,.3);border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+                                        🗑 Remove Section
+                                    </button>
+                                </form>
                             </div>
                             @endif
                         </div>

@@ -123,6 +123,8 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.tests.add-section');
     Route::put('/teacher/assessments/{test}/sections/{section}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'updateSection'])
         ->name('teacher.tests.update-section');
+    Route::delete('/teacher/assessments/{test}/sections/{section}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'destroySection'])
+        ->name('teacher.tests.destroy-section');
     Route::post('/teacher/assessments/{test}/sections/{section}/media', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'attachSectionMedia'])
         ->name('teacher.tests.sections.media.attach');
     Route::delete('/teacher/assessments/{test}/sections/{section}/media/{media}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'detachSectionMedia'])

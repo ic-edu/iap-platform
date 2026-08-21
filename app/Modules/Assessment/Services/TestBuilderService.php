@@ -186,6 +186,40 @@ class TestBuilderService
     }
 
     /**
+     * Delete a section from an assessment.
+     */
+    public function deleteSection(Test $test, TestSection $section): bool
+    {
+        if ((string) $section->test_id !== (string) $test->id) {
+            abort(404, 'Section does not belong to this assessment.');
+        }
+
+        // Editable state check
+        $editableStatuses = ['draft', 'needs_revision', 'revision_requested', 'rejected'];
+        if (!in_array($test->status, $editableStatuses, true) || $test->is_published) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => "Assessment is {$test->status} and locked from editing.",
+            ]);
+        }
+
+        // Must retain at least one section
+        if ($test->sections()->count() <= 1) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'section' => 'Cannot delete the only section in an assessment. An assessment must have at least one section.',
+            ]);
+        }
+
+        // Detach section media (test_section_media)
+        $section->mediaAssets()->detach();
+
+        // Delete test_questions pivot rows belonging to that Section (preserves questions & choices records)
+        $section->testQuestions()->delete();
+
+        // Delete the section record
+        return (bool) $section->delete();
+    }
+
+    /**
      * Update assessment-level instructions.
      */
     public function updateInstructions(Test $test, ?string $instructions): Test

@@ -14,6 +14,7 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-man
     Route::post('/{test}/publish', [TestBuilderController::class, 'publish'])->name('admin.tests.publish');
     Route::post('/{test}/sections/{section}/media', [TestBuilderController::class, 'attachSectionMedia'])->name('admin.tests.sections.media.attach');
     Route::delete('/{test}/sections/{section}/media/{media}', [TestBuilderController::class, 'detachSectionMedia'])->name('admin.tests.sections.media.detach');
+    Route::delete('/{test}/sections/{section}', [TestBuilderController::class, 'destroySection'])->name('admin.tests.sections.destroy');
     Route::delete('/{test}', [TestBuilderController::class, 'destroy'])->name('admin.tests.destroy');
 });
 
