@@ -23,17 +23,26 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $email
  * @property string $status
  * @property string|null $phone_number
+ * @property string $theme_preference
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'status', 'phone_number'])]
+#[Fillable(['name', 'email', 'password', 'status', 'phone_number', 'theme_preference'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+
+    /**
+     * Get user theme preference ('dark', 'light', 'system').
+     */
+    public function getThemePreference(): string
+    {
+        return $this->theme_preference ?? 'dark';
+    }
 
     /**
      * Get the attributes that should be cast.

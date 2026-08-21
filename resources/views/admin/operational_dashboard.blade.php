@@ -21,14 +21,6 @@
             <h1 class="text-2xl font-black text-white tracking-tight">Operational Dashboard</h1>
             <p class="text-sm text-slate-400">Candidate Operations, Payment Eligibility &amp; Test Assignments — {{ now()->format('l, d F Y') }}</p>
         </div>
-        <div class="flex items-center gap-3">
-            <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-slate-700 transition-colors shadow-sm">
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Manage Candidates
-            </a>
-        </div>
     </div>
 
     @if(session('status'))
@@ -135,10 +127,10 @@
         </div>
 
         @if(count($actionRequiredCandidates) === 0)
-        <div class="py-8 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40">
-            <span class="text-3xl block mb-2">🎉</span>
-            <p class="text-sm font-bold text-slate-300">All Clear</p>
-            <p class="text-xs text-slate-400 mt-1">There are no paid candidates currently waiting for Real Test assignment.</p>
+        <div class="py-3.5 px-4 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40 flex items-center justify-center gap-2 text-xs text-slate-400">
+            <span class="text-base">🎉</span>
+            <strong class="text-slate-300 font-semibold">All Clear:</strong>
+            <span>No paid candidates are currently waiting for Real Test assignment.</span>
         </div>
         @else
         <div class="divide-y divide-slate-800/80">

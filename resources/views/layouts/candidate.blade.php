@@ -13,6 +13,44 @@
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <!-- Theme & Visual Mode Initialization -->
+    <script>
+        (function() {
+            var userTheme = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
+            function applyTheme(theme) {
+                var root = document.documentElement;
+                if (theme === 'light') {
+                    root.classList.remove('dark');
+                    root.classList.add('light');
+                    root.setAttribute('data-theme', 'light');
+                } else if (theme === 'system') {
+                    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (prefersDark) {
+                        root.classList.add('dark');
+                        root.classList.remove('light');
+                        root.setAttribute('data-theme', 'dark');
+                    } else {
+                        root.classList.remove('dark');
+                        root.classList.add('light');
+                        root.setAttribute('data-theme', 'light');
+                    }
+                } else {
+                    root.classList.add('dark');
+                    root.classList.remove('light');
+                    root.setAttribute('data-theme', 'dark');
+                }
+            }
+            window.applyIapTheme = applyTheme;
+            applyTheme(userTheme);
+
+            if (userTheme === 'system') {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+                    applyTheme('system');
+                });
+            }
+        })();
+    </script>
 </head>
 <body class="font-sans antialiased bg-slate-950 text-slate-100 min-h-screen flex flex-col">
     <!-- Candidate Navigation Bar -->
@@ -31,6 +69,7 @@
                     <a href="{{ route('candidate.available-tests') }}" class="{{ request()->routeIs('candidate.available-tests') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">Available Tests</a>
                     <a href="{{ route('candidate.my-attempts') }}" class="{{ request()->routeIs('candidate.my-attempts') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">My Attempts</a>
                     <a href="{{ route('candidate.my-certificates') }}" class="{{ request()->routeIs('candidate.my-certificates') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">🎓 My Certificates</a>
+                    <a href="{{ route('settings.appearance') }}" class="{{ request()->routeIs('settings.appearance') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">🎨 Theme</a>
                 </div>
 
                 <div class="flex items-center gap-3">
@@ -46,7 +85,8 @@
 
     <!-- Main Candidate Content Area -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {{ $slot }}
+        {{ $slot ?? '' }}
+        @yield('content')
     </main>
 
     <!-- Footer -->

@@ -14,6 +14,44 @@
     <!-- Scripts and Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
+
+    <!-- Theme & Visual Mode Initialization -->
+    <script>
+        (function() {
+            var userTheme = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
+            function applyTheme(theme) {
+                var root = document.documentElement;
+                if (theme === 'light') {
+                    root.classList.remove('dark');
+                    root.classList.add('light');
+                    root.setAttribute('data-theme', 'light');
+                } else if (theme === 'system') {
+                    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (prefersDark) {
+                        root.classList.add('dark');
+                        root.classList.remove('light');
+                        root.setAttribute('data-theme', 'dark');
+                    } else {
+                        root.classList.remove('dark');
+                        root.classList.add('light');
+                        root.setAttribute('data-theme', 'light');
+                    }
+                } else {
+                    root.classList.add('dark');
+                    root.classList.remove('light');
+                    root.setAttribute('data-theme', 'dark');
+                }
+            }
+            window.applyIapTheme = applyTheme;
+            applyTheme(userTheme);
+
+            if (userTheme === 'system') {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+                    applyTheme('system');
+                });
+            }
+        })();
+    </script>
 </head>
 <body class="h-full font-sans antialiased bg-slate-900 text-slate-100">
     <div class="min-h-screen flex flex-col md:flex-row">
@@ -85,7 +123,7 @@
 
                 <!-- Topbar Actions -->
                 <div class="flex items-center gap-3">
-                    <!-- Topbar Action Button (Role-Aware: Dashboard for Repository Manager and Teacher, Quick Action for others) -->
+                    <!-- Topbar Action Button (Role-Aware: Dashboard for Regular Admin, Repository Manager, Teacher) -->
                     @if(Auth::user()?->hasRole('repository-manager'))
                     <a href="{{ route('admin.repository-manager.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Repository Manager Dashboard">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,6 +133,13 @@
                     </a>
                     @elseif(Auth::user()?->hasRole('teacher'))
                     <a href="{{ route('teacher.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Teacher Authoring Dashboard">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                        <span>🏠 Dashboard</span>
+                    </a>
+                    @elseif(Auth::user()?->hasRole('admin'))
+                    <a href="{{ route('admin.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Operational Dashboard">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
@@ -218,6 +263,20 @@
                                     <span class="font-bold text-emerald-400">ACTIVE</span>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Appearance & Theme Preferences Link -->
+                        <div class="mb-4">
+                            <a href="{{ route('settings.appearance') }}" class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/40 text-slate-200 hover:text-white transition-colors group">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-base">🎨</span>
+                                    <div>
+                                        <p class="text-xs font-bold text-white">Appearance &amp; Theme</p>
+                                        <p class="text-[10px] text-slate-400">Dark, Light, or System preference</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-indigo-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                            </a>
                         </div>
 
                         <!-- Password Update Form -->

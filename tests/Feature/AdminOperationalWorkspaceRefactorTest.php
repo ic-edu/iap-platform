@@ -504,4 +504,72 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $this->assertStringContainsString('text/csv', (string) $csvResponse->headers->get('Content-Type'));
         $this->assertStringContainsString('attachment; filename="assessment_report_', $csvResponse->headers->get('Content-Disposition'));
     }
+
+    public function test_operational_dashboard_header_polished_and_compact_empty_state(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
+        $response->assertStatus(200);
+
+        // Manage Candidates button removed from header
+        $response->assertDontSee('>Manage Candidates</a>', false);
+
+        // Compact empty state when 0 action candidates
+        $response->assertSee('All Clear:');
+        $response->assertSee('No paid candidates are currently waiting for Real Test assignment.');
+
+        // Topbar has Dashboard button for Regular Admin instead of + Quick Action
+        $response->assertSee('🏠 Dashboard');
+        $response->assertDontSee('+ Quick Action');
+    }
+
+    public function test_platform_wide_appearance_settings_accessible_for_all_five_roles(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole('super-admin');
+
+        $rm = User::factory()->create();
+        $rm->assignRole('repository-manager');
+
+        $teacher = User::factory()->create();
+        $teacher->assignRole('teacher');
+
+        $roles = [$superAdmin, $this->admin, $rm, $teacher, $this->student];
+
+        foreach ($roles as $user) {
+            $response = $this->actingAs($user)->get(route('settings.appearance'));
+            $response->assertStatus(200);
+            $response->assertSee('Appearance &amp; Theme Settings', false);
+            $response->assertSee('Dark Mode');
+            $response->assertSee('Light Mode');
+            $response->assertSee('System Default');
+        }
+    }
+
+    public function test_appearance_settings_persists_theme_preference_per_user(): void
+    {
+        // Default is dark
+        $this->assertSame('dark', $this->student->getThemePreference());
+
+        // Update to light
+        $response = $this->actingAs($this->student)->post(route('settings.appearance.update'), [
+            'theme' => 'light',
+        ]);
+        $response->assertSessionHas('status', 'theme-updated');
+        $this->student->refresh();
+        $this->assertSame('light', $this->student->getThemePreference());
+        $this->assertSame('light', session('theme_preference'));
+
+        // Update to system via JSON
+        $jsonResponse = $this->actingAs($this->admin)->postJson(route('settings.appearance.update'), [
+            'theme' => 'system',
+        ]);
+        $jsonResponse->assertStatus(200);
+        $jsonResponse->assertJson([
+            'success' => true,
+            'theme' => 'system',
+        ]);
+        $this->admin->refresh();
+        $this->assertSame('system', $this->admin->getThemePreference());
+    }
 }
+

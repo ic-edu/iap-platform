@@ -346,4 +346,8 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
+
+    // Platform-Wide User Appearance & Theme Settings
+    Route::get('/settings/appearance', [\App\Http\Controllers\AppearanceController::class, 'index'])->name('settings.appearance');
+    Route::post('/settings/appearance', [\App\Http\Controllers\AppearanceController::class, 'update'])->name('settings.appearance.update');
 });
