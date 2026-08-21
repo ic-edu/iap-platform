@@ -317,7 +317,7 @@ class GlobalIapModalInfrastructureTest extends TestCase
         $response = $this->actingAs($rmUser)->get(route('admin.repository-manager.question-bank-validate', $qb->id));
         $response->assertStatus(200);
         $response->assertSee('id="validation-back-link"', false);
-        $response->assertSee('window.history.back()', false);
+        $response->assertDontSee('window.history.back()', false);
         $response->assertSee('href="' . route('admin.repository-manager.questions-approval') . '"', false);
 
         // Safe local from_url check

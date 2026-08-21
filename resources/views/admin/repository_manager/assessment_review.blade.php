@@ -27,7 +27,7 @@
             <p style="font-size:.88rem;color:#94a3b8;margin:0;">Review by Exception: All questions are implicitly <strong>Default OK</strong>. Interact only with questions requiring attention.</p>
         </div>
         <div>
-            <a href="{{ route('admin.repository-manager.assessment-approval') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('admin.repository-manager.assessment-approval') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
                 ← Back
             </a>
         </div>
@@ -576,6 +576,13 @@ window.addEventListener('scroll', function() {
     } else {
         btn.style.opacity = '0';
         btn.style.pointerEvents = 'none';
+    }
+});
+
+// BFCACHE pageshow reload guard for mutable governance state
+window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+        window.location.reload();
     }
 });
 </script>

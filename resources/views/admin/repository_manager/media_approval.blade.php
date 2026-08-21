@@ -28,7 +28,7 @@
     {{-- Top Header --}}
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
         <div>
-            <a href="{{ route('admin.repository-manager.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+            <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
                 ← Back
             </a>
             <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:.25rem 0 0;">
@@ -160,4 +160,11 @@
     </div>
 
 </div>
+<script>
+window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+</script>
 @endsection

@@ -178,9 +178,116 @@ class RepositoryReviewDecisionLayerTest extends TestCase
                 'notes' => 'Institutional quality approved',
             ]);
 
-        $approveRes->assertRedirect();
+        $approveRes->assertRedirect(route('admin.repository-manager.assessment-approval'));
+        $approveRes->assertSessionHas('success');
         $test->refresh();
         $this->assertEquals('approved', $test->status);
         $this->assertTrue((bool) $test->is_published);
+    }
+
+    /**
+     * TEST 5: Governance navigation links use canonical routes and do NOT use history.back().
+     */
+    public function test_5_governance_navigation_uses_canonical_links_without_history_back(): void
+    {
+        $test = AssessmentTest::create([
+            'title'            => 'TOEIC Nav Test',
+            'slug'             => 'toeic-nav-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'status'           => 'pending_approval',
+            'created_by'       => $this->teacherA->id,
+        ]);
+
+        $section = TestSection::create(['test_id' => $test->id, 'title' => 'Part 1', 'order' => 1]);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question 1']);
+        TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
+
+        // Assessment Review Workspace
+        $reviewRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
+        $reviewRes->assertStatus(200);
+        $reviewRes->assertSee(route('admin.repository-manager.assessment-approval'));
+        $reviewRes->assertDontSee('history.back()');
+
+        // Assessment Approval Queue
+        $queueRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval'));
+        $queueRes->assertStatus(200);
+        $queueRes->assertSee(route('admin.repository-manager.dashboard'));
+        $queueRes->assertDontSee('history.back()');
+
+        // Question Bank Validation Workspace
+        $qbRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.question-bank-validate', $this->bankA->id));
+        $qbRes->assertStatus(200);
+        $qbRes->assertDontSee('history.back()');
+
+        // Media Approval Queue
+        $mediaQueueRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.media-approval'));
+        $mediaQueueRes->assertStatus(200);
+        $mediaQueueRes->assertDontSee('history.back()');
+    }
+
+    /**
+     * TEST 6: Governance pages include pageshow reload guard to prevent bfcache restoration of stale state.
+     */
+    public function test_6_governance_pages_include_bfcache_pageshow_reload_guard(): void
+    {
+        $test = AssessmentTest::create([
+            'title'            => 'TOEIC bfcache Guard Test',
+            'slug'             => 'toeic-bfcache-guard-test',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'status'           => 'pending_approval',
+            'created_by'       => $this->teacherA->id,
+        ]);
+
+        $section = TestSection::create(['test_id' => $test->id, 'title' => 'Part 1', 'order' => 1]);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question 1']);
+        TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
+
+        // Check pageshow reload listener in Review and Queue
+        $reviewRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
+        $reviewRes->assertSee("window.addEventListener('pageshow'", false);
+        $reviewRes->assertSee("if (event.persisted)", false);
+
+        $queueRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval'));
+        $queueRes->assertSee("window.addEventListener('pageshow'", false);
+        $queueRes->assertSee("if (event.persisted)", false);
+    }
+
+    /**
+     * TEST 7: Approved assessment is properly excluded from pending queue and listed in approved queue.
+     */
+    public function test_7_approved_assessment_excluded_from_pending_and_present_in_approved_queue(): void
+    {
+        $test = AssessmentTest::create([
+            'title'            => 'TOEIC Filter Verification',
+            'slug'             => 'toeic-filter-verification',
+            'test_type'        => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'status'           => 'pending_approval',
+            'created_by'       => $this->teacherA->id,
+        ]);
+
+        $section = TestSection::create(['test_id' => $test->id, 'title' => 'Part 1', 'order' => 1]);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question 1']);
+        TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
+
+        // Pending queue sees it
+        $pendingRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval', ['status' => 'pending']));
+        $pendingRes->assertSee('TOEIC Filter Verification');
+
+        // Approve it
+        $this->actingAs($this->repoManager)->post(route('admin.repository-manager.assessment-approve', $test->id));
+
+        // Pending queue no longer lists it
+        $freshPendingRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval', ['status' => 'pending']));
+        $freshPendingRes->assertDontSee('TOEIC Filter Verification');
+
+        // Approved queue lists it
+        $approvedRes = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval', ['status' => 'approved']));
+        $approvedRes->assertSee('TOEIC Filter Verification');
     }
 }

@@ -75,7 +75,6 @@
 
         <a href="{{ $fallbackUrl }}" 
            id="validation-back-link" 
-           onclick="if (window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1 && document.referrer !== window.location.href) { event.preventDefault(); window.history.back(); }" 
            style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
             {{ $backText }}
         </a>
@@ -414,4 +413,11 @@
     </div>
 
 </div>
+<script>
+window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+</script>
 @endsection
