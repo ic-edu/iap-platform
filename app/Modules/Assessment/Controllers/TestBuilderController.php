@@ -404,29 +404,59 @@ class TestBuilderController extends Controller
             'explanation'     => ['nullable', 'string'],
             'choices'         => ['nullable', 'array'],
             'correct_choice'  => ['nullable'],
+            'media_asset_id'  => ['nullable', 'string'],
+            'image_url'       => ['nullable', 'string'],
+            'audio_url'       => ['nullable', 'string'],
         ]);
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
 
+        $qType = $validated['question_type'] ?? 'multiple_choice';
+        if (is_object($qType)) {
+            $qType = $qType->value;
+        }
+        $isMcq = in_array($qType, ['multiple_choice', 'single_choice', 'true_false', 'select_one', 'toefl_listening_mcq', 'toefl_reading_mcq'], true) || !empty($validated['choices']);
+
+        $correctChoice = $request->input('correct_choice');
+        if ($isMcq && (is_null($correctChoice) || $correctChoice === '')) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'correct_choice' => 'Please select the correct answer.',
+            ]);
+        }
+
         $choices = [];
+        $hasCorrect = false;
         if (!empty($validated['choices'])) {
             foreach ($validated['choices'] as $idx => $choiceText) {
                 if (empty(trim($choiceText))) continue;
+                $isCorrect = (!is_null($correctChoice) && $correctChoice !== '' && (string) $idx === (string) $correctChoice);
+                if ($isCorrect) {
+                    $hasCorrect = true;
+                }
                 $choices[] = [
-                    'label'      => chr(65 + $idx),
+                    'label'      => chr(65 + count($choices)),
                     'content'    => $choiceText,
-                    'is_correct' => ((string) $idx === (string) ($request->input('correct_choice'))),
+                    'is_correct' => $isCorrect,
                 ];
             }
         }
 
+        if ($isMcq && !$hasCorrect) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'correct_choice' => 'Please select the correct answer.',
+            ]);
+        }
+
         $this->builderService->createAssessmentQuestion($section, [
-            'prompt'        => $validated['prompt'],
-            'question_type' => $validated['question_type'],
-            'difficulty'    => $validated['difficulty'] ?? 'medium',
-            'points'        => $validated['points'],
-            'explanation'   => $validated['explanation'] ?? null,
-            'choices'       => $choices,
+            'prompt'         => $validated['prompt'],
+            'question_type'  => $validated['question_type'],
+            'difficulty'     => $validated['difficulty'] ?? 'medium',
+            'points'         => $validated['points'],
+            'explanation'    => $validated['explanation'] ?? null,
+            'media_asset_id' => $validated['media_asset_id'] ?? null,
+            'image_url'      => $validated['image_url'] ?? null,
+            'audio_url'      => $validated['audio_url'] ?? null,
+            'choices'        => $choices,
         ]);
 
         return redirect()->route('teacher.tests.show', $test->id)
@@ -658,6 +688,9 @@ class TestBuilderController extends Controller
             'explanation'    => ['nullable', 'string'],
             'choices'        => ['nullable', 'array'],
             'correct_choice' => ['nullable'],
+            'media_asset_id' => ['nullable', 'string'],
+            'image_url'      => ['nullable', 'string'],
+            'audio_url'      => ['nullable', 'string'],
         ]);
 
         // Reuse existing Question ID (TASK 3 & TASK 9)
@@ -665,34 +698,78 @@ class TestBuilderController extends Controller
         if (isset($validated['question_type'])) $question->question_type = $validated['question_type'];
         if (isset($validated['difficulty'])) $question->difficulty = $validated['difficulty'];
         if (isset($validated['explanation'])) $question->explanation = $validated['explanation'];
+        
+        if ($request->has('image_url')) {
+            $question->image_url = $request->input('image_url') ?: null;
+        }
+        if ($request->has('audio_url')) {
+            $question->audio_url = $request->input('audio_url') ?: null;
+        }
+        if ($request->has('media_asset_id')) {
+            $question->media_asset_id = $request->input('media_asset_id') ?: null;
+        }
+
         $question->save();
+
+        $qType = $validated['question_type'] ?? $question->question_type ?? 'multiple_choice';
+        if (is_object($qType)) {
+            $qType = $qType->value;
+        }
+        $isMcq = in_array($qType, ['multiple_choice', 'single_choice', 'true_false', 'select_one', 'toefl_listening_mcq', 'toefl_reading_mcq'], true) || $request->has('choices');
 
         if ($request->has('choices')) {
             $choicesData = $request->input('choices', []);
             $correctChoiceIndex = $request->input('correct_choice');
 
+            if ($isMcq && (is_null($correctChoiceIndex) || $correctChoiceIndex === '')) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'correct_choice' => 'Please select the correct answer.',
+                ]);
+            }
+
+            $validIdx = 0;
+            $hasCorrect = false;
+            $existingChoices = $question->choices()->get();
+
             foreach ($choicesData as $idx => $choiceText) {
                 if (empty(trim($choiceText))) continue;
 
-                $choice = $question->choices()->skip($idx)->first();
-                $isCorrect = ((string)$idx === (string)$correctChoiceIndex);
+                $isCorrect = (!is_null($correctChoiceIndex) && $correctChoiceIndex !== '' && (string) $idx === (string) $correctChoiceIndex);
+                if ($isCorrect) {
+                    $hasCorrect = true;
+                }
+
+                $choice = $existingChoices->get($validIdx);
 
                 if ($choice) {
                     $choice->update([
-                        'label'       => chr(65 + $idx),
+                        'label'       => chr(65 + $validIdx),
                         'content'     => $choiceText,
                         'choice_text' => $choiceText,
                         'is_correct'  => $isCorrect,
                     ]);
                 } else {
                     $question->choices()->create([
-                        'label'       => chr(65 + $idx),
+                        'label'       => chr(65 + $validIdx),
                         'content'     => $choiceText,
                         'choice_text' => $choiceText,
                         'is_correct'  => $isCorrect,
-                        'order'       => $idx + 1,
+                        'order'       => $validIdx + 1,
                     ]);
                 }
+                $validIdx++;
+            }
+
+            if ($existingChoices->count() > $validIdx) {
+                for ($i = $validIdx; $i < $existingChoices->count(); $i++) {
+                    $existingChoices->get($i)?->delete();
+                }
+            }
+
+            if ($isMcq && !$hasCorrect && $validIdx > 0) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'correct_choice' => 'Please select the correct answer.',
+                ]);
             }
         }
 

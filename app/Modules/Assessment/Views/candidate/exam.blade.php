@@ -102,6 +102,29 @@
                         </div>
                     @endif
 
+                    <!-- Question-Level Media (Image, Audio, MediaAsset) -->
+                    @if (!empty($question->image_url))
+                        <div class="mb-5 text-center">
+                            <img src="{{ $question->image_url }}" alt="Question Attachment" class="max-h-72 max-w-full rounded-xl mx-auto border border-slate-800 shadow-md object-contain">
+                        </div>
+                    @endif
+
+                    @if (!empty($question->audio_url))
+                        <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
+                            <div class="flex items-center gap-1.5 mb-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                <span>🎧</span>
+                                <span>Question Audio Prompt</span>
+                            </div>
+                            <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $question->audio_url }}" preload="metadata"></audio>
+                        </div>
+                    @endif
+
+                    @if (empty($question->image_url) && empty($question->audio_url) && $question->mediaAsset)
+                        <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
+                            <x-media-preview :media="$question->mediaAsset" />
+                        </div>
+                    @endif
+
                     <!-- Prompt -->
                     <div class="text-base font-semibold text-white mb-6 leading-snug">
                         {!! e($question->prompt) !!}

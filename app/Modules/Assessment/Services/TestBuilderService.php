@@ -84,6 +84,9 @@ class TestBuilderService
     {
         $question = \App\Modules\QuestionBank\Models\Question::create([
             'question_bank_id' => null,
+            'media_asset_id'   => $data['media_asset_id'] ?? null,
+            'image_url'        => $data['image_url'] ?? null,
+            'audio_url'        => $data['audio_url'] ?? null,
             'prompt'           => $data['prompt'],
             'question_type'    => $data['question_type'] ?? 'multiple_choice',
             'difficulty'       => $data['difficulty'] ?? 'medium',

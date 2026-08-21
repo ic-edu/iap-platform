@@ -599,7 +599,7 @@
             <button type="button" onclick="closeCreateAuthoredQuestionModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
         </div>
 
-        <form method="POST" action="{{ route('teacher.tests.create-question', $test->id) }}">
+        <form id="create-authored-question-form" method="POST" action="{{ route('teacher.tests.create-question', $test->id) }}" onsubmit="return validateCreateQuestionForm(this)">
             @csrf
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
                 <div>
@@ -641,28 +641,102 @@
                 </div>
             </div>
 
+            {{-- Question Media Section --}}
             <div style="margin-bottom:1rem;background:#1e293b;padding:1rem;border-radius:.75rem;border:1px solid #334155;">
-                <label style="display:block;font-size:.75rem;font-weight:800;color:#e2e8f0;margin-bottom:.5rem;">Multiple Choice Options &amp; Correct Answer</label>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                    <div>
+                        <span style="font-size:.78rem;font-weight:800;color:#e2e8f0;display:block;">🖼️ / 🎧 Question Media (Optional)</span>
+                        <span style="font-size:.7rem;color:#94a3b8;">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
+                    </div>
+                    <button type="button" onclick="openQuestionMediaPicker('create')" style="padding:.35rem .75rem;background:#4f46e5;color:#fff;border:none;border-radius:.45rem;font-size:.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+                        📎 + Attach Media
+                    </button>
+                </div>
+
+                <input type="hidden" id="q-media-asset-id" name="media_asset_id" value="">
+                <input type="hidden" id="q-image-url" name="image_url" value="">
+                <input type="hidden" id="q-audio-url" name="audio_url" value="">
+
+                {{-- Attached Media Previews --}}
+                <div id="q-attached-media-container" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.6rem;">
+                    {{-- Image preview card --}}
+                    <div id="q-preview-image-card" style="display:none;background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:.75rem;">
+                            <img id="q-preview-image-thumb" src="" alt="Thumbnail" style="width:48px;height:48px;object-fit:cover;border-radius:.35rem;border:1px solid #475569;">
+                            <div>
+                                <span style="font-size:.75rem;font-weight:700;color:#38bdf8;display:block;">🖼️ Attached Image</span>
+                                <span id="q-preview-image-title" style="font-size:.7rem;color:#cbd5e1;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;"></span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="removeQuestionAttachedMedia('create', 'image')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                            ✕ Remove
+                        </button>
+                    </div>
+
+                    {{-- Audio preview card --}}
+                    <div id="q-preview-audio-card" style="display:none;background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:.75rem;flex:1;">
+                            <span style="font-size:1.4rem;">🎧</span>
+                            <div style="flex:1;">
+                                <span style="font-size:.75rem;font-weight:700;color:#818cf8;display:block;">🎵 Attached Audio</span>
+                                <span id="q-preview-audio-title" style="font-size:.7rem;color:#cbd5e1;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-bottom:.3rem;"></span>
+                                <audio id="q-preview-audio-player" controls style="height:28px;width:100%;max-width:280px;" src=""></audio>
+                            </div>
+                        </div>
+                        <button type="button" onclick="removeQuestionAttachedMedia('create', 'audio')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                            ✕ Remove
+                        </button>
+                    </div>
+
+                    <div id="q-no-media-msg" style="font-size:.72rem;color:#64748b;font-style:italic;">
+                        No question-level media attached.
+                    </div>
+                </div>
+            </div>
+
+            {{-- Choices Section with Explicit Visual Correct Answer Indicator --}}
+            <div style="margin-bottom:1rem;background:#1e293b;padding:1rem;border-radius:.75rem;border:1px solid #334155;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                    <label style="font-size:.78rem;font-weight:800;color:#e2e8f0;margin:0;">Multiple Choice Options &amp; Correct Answer</label>
+                    <span style="font-size:.7rem;color:#94a3b8;">Select exactly one radio button as the correct answer.</span>
+                </div>
+
+                <div id="create-q-validation-error" style="display:none;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;padding:.5rem .75rem;border-radius:.5rem;font-size:.75rem;font-weight:700;margin-bottom:.65rem;">
+                    ⚠️ Please select the correct answer.
+                </div>
+
                 <div style="display:flex;flex-direction:column;gap:.5rem;">
-                    <div style="display:flex;align-items:center;gap:.5rem;">
-                        <input type="radio" name="correct_choice" value="0" checked style="accent-color:#10b981;">
-                        <span style="font-weight:800;color:#818cf8;font-size:.8rem;width:20px;">A</span>
-                        <input type="text" name="choices[]" placeholder="Option A text" required style="flex:1;padding:.5rem;background:#0f172a;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                    <div class="create-choice-row" id="create-choice-row-0" style="display:flex;align-items:center;gap:.6rem;background:#0f172a;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #334155;transition:all .15s ease;">
+                        <input type="radio" name="correct_choice" value="0" id="create-correct-0" onchange="updateCreateModalCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
+                        <label for="create-correct-0" style="font-weight:800;color:#818cf8;font-size:.82rem;width:1.5rem;cursor:pointer;margin:0;">A.</label>
+                        <input type="text" name="choices[]" placeholder="Option A text" required style="flex:1;padding:.45rem .65rem;background:#1e293b;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                        <span class="create-correct-badge" id="create-correct-badge-0" style="display:none;align-items:center;gap:.25rem;padding:.25rem .55rem;border-radius:.35rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.7rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;">
+                            ✓ CORRECT ANSWER
+                        </span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:.5rem;">
-                        <input type="radio" name="correct_choice" value="1" style="accent-color:#10b981;">
-                        <span style="font-weight:800;color:#818cf8;font-size:.8rem;width:20px;">B</span>
-                        <input type="text" name="choices[]" placeholder="Option B text" required style="flex:1;padding:.5rem;background:#0f172a;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                    <div class="create-choice-row" id="create-choice-row-1" style="display:flex;align-items:center;gap:.6rem;background:#0f172a;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #334155;transition:all .15s ease;">
+                        <input type="radio" name="correct_choice" value="1" id="create-correct-1" onchange="updateCreateModalCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
+                        <label for="create-correct-1" style="font-weight:800;color:#818cf8;font-size:.82rem;width:1.5rem;cursor:pointer;margin:0;">B.</label>
+                        <input type="text" name="choices[]" placeholder="Option B text" required style="flex:1;padding:.45rem .65rem;background:#1e293b;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                        <span class="create-correct-badge" id="create-correct-badge-1" style="display:none;align-items:center;gap:.25rem;padding:.25rem .55rem;border-radius:.35rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.7rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;">
+                            ✓ CORRECT ANSWER
+                        </span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:.5rem;">
-                        <input type="radio" name="correct_choice" value="2" style="accent-color:#10b981;">
-                        <span style="font-weight:800;color:#818cf8;font-size:.8rem;width:20px;">C</span>
-                        <input type="text" name="choices[]" placeholder="Option C text" style="flex:1;padding:.5rem;background:#0f172a;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                    <div class="create-choice-row" id="create-choice-row-2" style="display:flex;align-items:center;gap:.6rem;background:#0f172a;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #334155;transition:all .15s ease;">
+                        <input type="radio" name="correct_choice" value="2" id="create-correct-2" onchange="updateCreateModalCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
+                        <label for="create-correct-2" style="font-weight:800;color:#818cf8;font-size:.82rem;width:1.5rem;cursor:pointer;margin:0;">C.</label>
+                        <input type="text" name="choices[]" placeholder="Option C text" style="flex:1;padding:.45rem .65rem;background:#1e293b;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                        <span class="create-correct-badge" id="create-correct-badge-2" style="display:none;align-items:center;gap:.25rem;padding:.25rem .55rem;border-radius:.35rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.7rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;">
+                            ✓ CORRECT ANSWER
+                        </span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:.5rem;">
-                        <input type="radio" name="correct_choice" value="3" style="accent-color:#10b981;">
-                        <span style="font-weight:800;color:#818cf8;font-size:.8rem;width:20px;">D</span>
-                        <input type="text" name="choices[]" placeholder="Option D text" style="flex:1;padding:.5rem;background:#0f172a;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                    <div class="create-choice-row" id="create-choice-row-3" style="display:flex;align-items:center;gap:.6rem;background:#0f172a;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #334155;transition:all .15s ease;">
+                        <input type="radio" name="correct_choice" value="3" id="create-correct-3" onchange="updateCreateModalCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
+                        <label for="create-correct-3" style="font-weight:800;color:#818cf8;font-size:.82rem;width:1.5rem;cursor:pointer;margin:0;">D.</label>
+                        <input type="text" name="choices[]" placeholder="Option D text" style="flex:1;padding:.45rem .65rem;background:#1e293b;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                        <span class="create-correct-badge" id="create-correct-badge-3" style="display:none;align-items:center;gap:.25rem;padding:.25rem .55rem;border-radius:.35rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.7rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;">
+                            ✓ CORRECT ANSWER
+                        </span>
                     </div>
                 </div>
             </div>
@@ -931,9 +1005,299 @@
     </div>
 </div>
 
+{{-- Modal 7: Question Media Picker Modal --}}
+<div id="question-media-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10001;align-items:center;justify-content:center;padding:1rem;" onclick="closeQuestionMediaPicker(event)">
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:1.25rem;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.7);" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #1e293b;padding-bottom:.75rem;">
+            <div>
+                <div style="font-size:1.1rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
+                    <span>📎</span> Attach Question Media
+                </div>
+                <div style="font-size:.72rem;color:#94a3b8;margin-top:.2rem;">
+                    Select an Image (photograph) or Audio prompt from the Institutional Media Library, or upload directly.
+                </div>
+            </div>
+            <button type="button" onclick="closeQuestionMediaPicker()" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;">×</button>
+        </div>
+
+        {{-- Direct Upload Toggle Bar --}}
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:.75rem 1rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
+            <div style="display:flex;align-items:center;gap:.5rem;">
+                <span style="font-size:1.1rem;">⬆️</span>
+                <input type="file" id="qm-direct-file-input" accept="image/*,audio/*,application/pdf" style="font-size:.75rem;color:#cbd5e1;">
+            </div>
+            <button type="button" id="qm-upload-btn" onclick="uploadQuestionMediaFile()" style="padding:.4rem 1rem;background:#10b981;color:#fff;border:none;border-radius:.45rem;font-size:.75rem;font-weight:800;cursor:pointer;">
+                Upload &amp; Attach
+            </button>
+        </div>
+
+        {{-- Library Filters & Search --}}
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+            <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+                <button type="button" onclick="filterQuestionMediaModal('all')" class="qm-filter-btn active" style="padding:.35rem .7rem;background:#6366f1;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
+                <button type="button" onclick="filterQuestionMediaModal('image')" class="qm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🖼️ Images</button>
+                <button type="button" onclick="filterQuestionMediaModal('audio')" class="qm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🎵 Audio Tracks</button>
+                <button type="button" onclick="filterQuestionMediaModal('passage')" class="qm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📖 Passages</button>
+                <button type="button" onclick="filterQuestionMediaModal('pdf')" class="qm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📄 PDFs</button>
+            </div>
+            <input type="text" id="qm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." style="padding:.35rem .7rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.75rem;min-width:180px;">
+        </div>
+
+        {{-- Media Grid Container --}}
+        <div id="qm-media-list-container" style="flex:1;min-height:220px;max-height:300px;overflow-y:auto;background:#090d16;border:1px solid #1e293b;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:.6rem;">
+            <div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;border-top:1px solid #1e293b;padding-top:.75rem;margin-top:.75rem;">
+            <button type="button" onclick="closeQuestionMediaPicker()" style="padding:.5rem 1rem;background:#334155;color:#fff;border:none;border-radius:.45rem;font-size:.8rem;font-weight:700;cursor:pointer;">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
     let sectionMediaLibrary = [];
+    let questionMediaLibrary = [];
     let currentAsmSectionId = null;
+    let currentQuestionMediaTargetMode = 'create';
+
+    function openQuestionMediaPicker(mode = 'create') {
+        currentQuestionMediaTargetMode = mode;
+        const modal = document.getElementById('question-media-picker-modal');
+        if (modal) modal.style.display = 'flex';
+        fetchQuestionMediaLibrary();
+    }
+
+    function closeQuestionMediaPicker(e) {
+        if (!e || e.target === document.getElementById('question-media-picker-modal')) {
+            const modal = document.getElementById('question-media-picker-modal');
+            if (modal) modal.style.display = 'none';
+        }
+    }
+
+    function fetchQuestionMediaLibrary() {
+        const container = document.getElementById('qm-media-list-container');
+        if (questionMediaLibrary.length > 0) {
+            renderQuestionMediaGrid(questionMediaLibrary);
+            return;
+        }
+
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>';
+        fetch('/admin/media/list')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.data)) {
+                    questionMediaLibrary = data.data;
+                    renderQuestionMediaGrid(questionMediaLibrary);
+                } else {
+                    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#f43f5e;font-size:.75rem;padding:2rem;">Failed to load media library.</div>';
+                }
+            })
+            .catch(() => {
+                container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#f43f5e;font-size:.75rem;padding:2rem;">Error communicating with media server.</div>';
+            });
+    }
+
+    function filterQuestionMediaModal(type) {
+        const buttons = document.querySelectorAll('.qm-filter-btn');
+        buttons.forEach(btn => {
+            btn.style.background = '#1e293b';
+            btn.style.color = '#cbd5e1';
+            btn.style.border = '1px solid #334155';
+        });
+        if (event && event.target) {
+            event.target.style.background = '#6366f1';
+            event.target.style.color = '#fff';
+            event.target.style.border = 'none';
+        }
+
+        const query = (document.getElementById('qm-search-input')?.value || '').toLowerCase();
+        let filtered = questionMediaLibrary;
+        if (type !== 'all') {
+            filtered = filtered.filter(item => item.type === type);
+        }
+        if (query) {
+            filtered = filtered.filter(item => (item.title || item.name || '').toLowerCase().includes(query));
+        }
+        renderQuestionMediaGrid(filtered);
+    }
+
+    function searchQuestionMediaModal(query) {
+        query = query.toLowerCase();
+        const activeBtn = Array.from(document.querySelectorAll('.qm-filter-btn')).find(b => b.style.background === 'rgb(99, 102, 241)' || b.style.background === '#6366f1');
+        let filtered = questionMediaLibrary;
+        if (query) {
+            filtered = filtered.filter(item => (item.title || item.name || '').toLowerCase().includes(query));
+        }
+        renderQuestionMediaGrid(filtered);
+    }
+
+    function renderQuestionMediaGrid(items) {
+        const container = document.getElementById('qm-media-list-container');
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">No media assets found.</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#131d31;border:1px solid #334155;border-radius:.55rem;padding:.65rem;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;';
+
+            let icon = '📎';
+            if (item.type === 'audio') icon = '🎵';
+            else if (item.type === 'image') icon = '🖼️';
+            else if (item.type === 'passage') icon = '📖';
+            else if (item.type === 'pdf') icon = '📄';
+
+            let previewHtml = '';
+            if (item.type === 'image') {
+                previewHtml = `<img src="${item.url}" style="width:100%;height:60px;object-fit:cover;border-radius:.35rem;border:1px solid #334155;margin-bottom:.3rem;">`;
+            }
+
+            card.innerHTML = `
+                <div>
+                    ${previewHtml}
+                    <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.25rem;">
+                        <span style="font-size:.65rem;font-weight:800;color:#818cf8;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);padding:.1rem .35rem;border-radius:.25rem;text-transform:uppercase;">
+                            ${icon} ${item.type}
+                        </span>
+                    </div>
+                    <div style="font-size:.75rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.title || item.name}">
+                        ${item.title || item.name}
+                    </div>
+                </div>
+                <button type="button" onclick='applySelectedQuestionMedia(${JSON.stringify(item)})' style="margin-top:.4rem;padding:.35rem .6rem;background:#4f46e5;color:#fff;border:none;border-radius:.35rem;font-size:.72rem;font-weight:700;cursor:pointer;width:100%;text-align:center;">
+                    Use This Media
+                </button>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function uploadQuestionMediaFile() {
+        const fileInput = document.getElementById('qm-direct-file-input');
+        const file = fileInput?.files?.[0];
+        if (!file) {
+            iapAlert({ title: 'Select File', message: 'Please select a file to upload first.', variant: 'warning' });
+            return;
+        }
+
+        const btn = document.getElementById('qm-upload-btn');
+        btn.disabled = true;
+        btn.innerHTML = 'Uploading...';
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        fetch('/admin/media', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Upload failed.');
+                throw new Error(msg);
+            }
+            return data;
+        })
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = 'Upload &amp; Attach';
+            const assetData = data.asset || data;
+            const assetId = assetData.id || data.id;
+            if (data.success && assetId) {
+                const item = {
+                    id: assetId,
+                    title: assetData.title || assetData.filename || assetData.original_name,
+                    name: assetData.filename || assetData.original_name,
+                    url: assetData.url || (assetId ? `/media/${assetId}/preview` : ''),
+                    type: assetData.type
+                };
+                questionMediaLibrary.unshift(item);
+                applySelectedQuestionMedia(item);
+                fileInput.value = '';
+            } else {
+                iapAlert({ title: 'Upload Failed', message: data.message || 'Error uploading media asset.', variant: 'danger' });
+            }
+        })
+        .catch((err) => {
+            btn.disabled = false;
+            btn.innerHTML = 'Upload &amp; Attach';
+            iapAlert({ title: 'Upload Failed', message: err.message || 'Communication error while uploading media asset.', variant: 'danger' });
+        });
+    }
+
+    function applySelectedQuestionMedia(item) {
+        const prefix = (currentQuestionMediaTargetMode === 'edit') ? 'eq-' : 'q-';
+        const mediaIdInput = document.getElementById(prefix + 'media-asset-id');
+        const imgInput = document.getElementById(prefix + 'image-url');
+        const audioInput = document.getElementById(prefix + 'audio-url');
+        const noMediaMsg = document.getElementById(prefix + 'no-media-msg');
+
+        if (!mediaIdInput.value) {
+            mediaIdInput.value = item.id;
+        }
+
+        if (item.type === 'image') {
+            imgInput.value = item.url;
+            const card = document.getElementById(prefix + 'preview-image-card');
+            const thumb = document.getElementById(prefix + 'preview-image-thumb');
+            const title = document.getElementById(prefix + 'preview-image-title');
+            if (card) card.style.display = 'flex';
+            if (thumb) thumb.src = item.url;
+            if (title) title.innerText = item.title || item.name || 'Photograph';
+        } else if (item.type === 'audio') {
+            audioInput.value = item.url;
+            const card = document.getElementById(prefix + 'preview-audio-card');
+            const player = document.getElementById(prefix + 'preview-audio-player');
+            const title = document.getElementById(prefix + 'preview-audio-title');
+            if (card) card.style.display = 'flex';
+            if (player) player.src = item.url;
+            if (title) title.innerText = item.title || item.name || 'Audio Statement';
+        } else {
+            // PDF or Passage: can be stored as primary media asset or image/audio URL
+            if (item.url) imgInput.value = item.url;
+            mediaIdInput.value = item.id;
+            const card = document.getElementById(prefix + 'preview-image-card');
+            const title = document.getElementById(prefix + 'preview-image-title');
+            if (card) card.style.display = 'flex';
+            if (title) title.innerText = `[${item.type.toUpperCase()}] ` + (item.title || item.name);
+        }
+
+        if (noMediaMsg) noMediaMsg.style.display = 'none';
+        closeQuestionMediaPicker();
+    }
+
+    function removeQuestionAttachedMedia(mode, type) {
+        const prefix = (mode === 'edit') ? 'eq-' : 'q-';
+        const mediaIdInput = document.getElementById(prefix + 'media-asset-id');
+        const imgInput = document.getElementById(prefix + 'image-url');
+        const audioInput = document.getElementById(prefix + 'audio-url');
+        const noMediaMsg = document.getElementById(prefix + 'no-media-msg');
+
+        if (type === 'image') {
+            imgInput.value = '';
+            const card = document.getElementById(prefix + 'preview-image-card');
+            if (card) card.style.display = 'none';
+        } else if (type === 'audio') {
+            audioInput.value = '';
+            const card = document.getElementById(prefix + 'preview-audio-card');
+            const player = document.getElementById(prefix + 'preview-audio-player');
+            if (card) card.style.display = 'none';
+            if (player) player.src = '';
+        }
+
+        if (!imgInput.value && !audioInput.value) {
+            mediaIdInput.value = '';
+            if (noMediaMsg) noMediaMsg.style.display = 'block';
+        }
+    }
 
     function openAttachMasterModal() {
         const modal = document.getElementById('attach-master-modal');
@@ -946,9 +1310,56 @@
         }
     }
 
+    function updateCreateModalCorrectChoice() {
+        const form = document.getElementById('create-authored-question-form');
+        if (!form) return;
+        const selected = form.querySelector('input[name="correct_choice"]:checked');
+        const errBox = document.getElementById('create-q-validation-error');
+        if (errBox && selected) errBox.style.display = 'none';
+
+        for (let i = 0; i < 4; i++) {
+            const badge = document.getElementById(`create-correct-badge-${i}`);
+            const row = document.getElementById(`create-choice-row-${i}`);
+            const isSelected = selected && selected.value === String(i);
+
+            if (badge) {
+                badge.style.display = isSelected ? 'inline-flex' : 'none';
+            }
+            if (row) {
+                row.style.borderColor = isSelected ? 'rgba(16,185,129,0.6)' : '#334155';
+                row.style.background = isSelected ? 'rgba(16,185,129,0.06)' : '#0f172a';
+            }
+        }
+    }
+
+    function validateCreateQuestionForm(form) {
+        const qType = form.querySelector('select[name="question_type"]')?.value || 'multiple_choice';
+        if (['multiple_choice', 'single_choice'].includes(qType) || form.querySelectorAll('input[name="choices[]"]').length > 0) {
+            const selected = form.querySelector('input[name="correct_choice"]:checked');
+            if (!selected) {
+                const errBox = document.getElementById('create-q-validation-error');
+                if (errBox) {
+                    errBox.textContent = 'Please select the correct answer.';
+                    errBox.style.display = 'block';
+                    errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
     function openCreateAuthoredQuestionModal() {
         const modal = document.getElementById('create-authored-question-modal');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.style.display = 'flex';
+            // Explicitly ensure new MCQ starts with no correct answer selected
+            const checkedRadios = modal.querySelectorAll('input[name="correct_choice"]:checked');
+            checkedRadios.forEach(r => r.checked = false);
+            const errBox = document.getElementById('create-q-validation-error');
+            if (errBox) errBox.style.display = 'none';
+            updateCreateModalCorrectChoice();
+        }
     }
     function closeCreateAuthoredQuestionModal(e) {
         if (!e || e.target === document.getElementById('create-authored-question-modal')) {
