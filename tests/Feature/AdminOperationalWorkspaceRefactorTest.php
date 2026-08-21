@@ -551,9 +551,20 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
             $response->assertSee('Sign out');
         }
 
-        // Dedicated Profile & Account page loads for authenticated users
+        // Dedicated IAP Profile & Account page loads for staff users in IAP shell
         $profileResponse = $this->actingAs($this->admin)->get(route('profile.edit'));
         $profileResponse->assertStatus(200);
+        $profileResponse->assertSee('USER PROFILE &amp; ACCOUNT', false);
+        $profileResponse->assertSee('Profile &amp; Account Settings', false);
+        $profileResponse->assertSee('Personal Information');
+        $profileResponse->assertSee('Security &amp; Credentials', false);
+        $profileResponse->assertDontSee('x-app-layout');
+
+        // Dedicated IAP Profile & Account page loads for student in candidate shell
+        $studentProfileResponse = $this->actingAs($this->student)->get(route('profile.edit'));
+        $studentProfileResponse->assertStatus(200);
+        $studentProfileResponse->assertSee('USER PROFILE &amp; ACCOUNT', false);
+        $studentProfileResponse->assertSee('iC.edu');
     }
 
     public function test_appearance_settings_persists_theme_preference_per_user(): void

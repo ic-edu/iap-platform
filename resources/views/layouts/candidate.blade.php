@@ -252,6 +252,21 @@
                     }
                 }
             });
+
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                var root = document.documentElement;
+                if (root.getAttribute('data-preference') === 'system') {
+                    var activeTheme = e.matches ? 'dark' : 'light';
+                    root.setAttribute('data-theme', activeTheme);
+                    if (activeTheme === 'dark') {
+                        root.classList.add('dark');
+                        root.classList.remove('light');
+                    } else {
+                        root.classList.add('light');
+                        root.classList.remove('dark');
+                    }
+                }
+            });
         });
     </script>
 </body>

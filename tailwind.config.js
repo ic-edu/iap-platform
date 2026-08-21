@@ -3,12 +3,14 @@ import forms from '@tailwindcss/forms';
 
 /** @type {import('tailwindcss').Config} */
 export default {
-    darkMode: 'class',
+    darkMode: ['class', '[data-theme="dark"]'],
 
     content: [
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
+        './app/Modules/**/Views/**/*.blade.php',
+        './app/**/*.php',
     ],
 
     theme: {
