@@ -109,33 +109,38 @@
 
                 <!-- Topbar Actions -->
                 <div class="flex items-center gap-3">
-                    <!-- Topbar Action Button (Role-Aware: Dashboard for Regular Admin, Repository Manager, Teacher) -->
-                    @if(Auth::user()?->hasRole('repository-manager'))
-                    <a href="{{ route('admin.repository-manager.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Repository Manager Dashboard">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <!-- Topbar Action Button (Role-Aware Dashboard Navigation) -->
+                    @php
+                        $user = Auth::user();
+                        $dashboardRoute = route('dashboard');
+                        $dashboardTitle = 'Dashboard';
+                        if ($user?->hasRole('super-admin')) {
+                            $dashboardRoute = route('super-admin.dashboard');
+                            $dashboardTitle = 'Super Admin Dashboard';
+                        } elseif ($user?->hasRole('repository-manager')) {
+                            $dashboardRoute = route('admin.repository-manager.dashboard');
+                            $dashboardTitle = 'Repository Manager Dashboard';
+                        } elseif ($user?->hasRole('teacher')) {
+                            $dashboardRoute = route('teacher.dashboard');
+                            $dashboardTitle = 'Teacher Dashboard';
+                        } elseif ($user?->hasRole('admin')) {
+                            $dashboardRoute = route('admin.dashboard');
+                            $dashboardTitle = 'Operational Dashboard';
+                        } elseif ($user?->hasRole('finance')) {
+                            $dashboardRoute = route('finance.dashboard');
+                            $dashboardTitle = 'Finance Dashboard';
+                        } elseif ($user?->hasRole('candidate') || $user?->hasRole('student')) {
+                            $dashboardRoute = route('candidate.portal');
+                            $dashboardTitle = 'Candidate Portal';
+                        }
+                    @endphp
+                    <a href="{{ $dashboardRoute }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="{{ $dashboardTitle }}">
+                        <svg class="w-4 h-4 text-white flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
                         <span>Dashboard</span>
                     </a>
-                    @elseif(Auth::user()?->hasRole('teacher'))
-                    <a href="{{ route('teacher.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Teacher Authoring Dashboard">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                        </svg>
-                        <span>Dashboard</span>
-                    </a>
-                    @elseif(Auth::user()?->hasRole('admin'))
-                    <a href="{{ route('admin.dashboard') }}" class="hidden sm:inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-sm" title="Operational Dashboard">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                        </svg>
-                        <span>Dashboard</span>
-                    </a>
-                    @else
-                    <button onclick="document.getElementById('quick-action-modal').classList.remove('hidden')" class="hidden sm:inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors shadow-sm">
-                        <span>+ Quick Action</span>
-                    </button>
-                    @endif
+
 
                     <!-- Notifications Dropdown (NOTIFICATION-001) -->
                     @php
@@ -290,95 +295,6 @@
             <main class="flex-1 p-6 overflow-y-auto">
                 @yield('content')
             </main>
-        </div>
-    </div>
-
-    <!-- Role-Aware Quick Action Modal -->
-    <div id="quick-action-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-white">⚡ Permitted Quick Actions</h3>
-                <button onclick="document.getElementById('quick-action-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
-            </div>
-            <div class="grid grid-cols-2 gap-3 text-xs">
-                @auth
-                    @if (Auth::user()->hasRole('super-admin'))
-                        <a href="{{ route('admin.users.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            👤 Add Platform User
-                        </a>
-                        <a href="{{ route('admin.approvals.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            🛡️ Review Content Approvals
-                        </a>
-                        <a href="{{ route('admin.monitoring.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            ⚡ System Observability
-                        </a>
-                        <a href="{{ route('admin.audit-logs.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📜 Audit &amp; Activity Logs
-                        </a>
-                        <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📊 Export Analytics Report
-                        </a>
-                        <a href="{{ route('admin.settings.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            ⚙️ System Settings
-                        </a>
-                    @elseif (Auth::user()->hasRole('admin'))
-                        <a href="{{ route('admin.users.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            👤 Manage Candidates
-                        </a>
-                        <a href="{{ route('admin.certificates.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            🏅 Certificate Registry
-                        </a>
-                        <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📋 Assessments &amp; Assignments
-                        </a>
-                        <a href="{{ route('admin.academic-operations.applications') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📝 Student Applications
-                        </a>
-                        <a href="{{ route('admin.academic-operations.enrollments') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            👥 Student Enrollments
-                        </a>
-                        <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📊 Reports &amp; Analytics
-                        </a>
-                    @elseif (Auth::user()->hasRole('teacher'))
-                        <a href="{{ route('admin.academic-library.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📚 Academic Library
-                        </a>
-                        <a href="{{ route('admin.question-banks.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📂 Author Question Bank
-                        </a>
-                        <a href="{{ route('admin.tests.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📋 Create Test Draft
-                        </a>
-                        <a href="{{ route('teacher.dashboard') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            🏡 Teacher Workspace
-                        </a>
-                        <a href="{{ route('admin.reporting.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📊 Student Reports
-                        </a>
-                    @elseif (Auth::user()->hasRole('repository-manager'))
-                        <a href="{{ route('admin.repository-manager.dashboard') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-indigo-500/30 text-indigo-300 font-bold block transition-colors">
-                            ⚡ Repository Manager Command Center
-                        </a>
-                        <a href="{{ route('admin.repository-manager.media-approval') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            🖼 Media Approval Center
-                        </a>
-                        <a href="{{ route('admin.repository-manager.questions-approval') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📂 Question Banks Approval
-                        </a>
-                        <a href="{{ route('admin.academic-library.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📚 Academic Library Explorer
-                        </a>
-                    @elseif (Auth::user()->hasRole('finance'))
-                        <a href="{{ route('admin.commerce.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            🛍️ Billing &amp; Packages
-                        </a>
-                        <a href="{{ route('admin.commerce.index') }}" class="p-3 bg-slate-800 hover:bg-indigo-600/30 rounded-lg border border-slate-700 text-slate-200 font-semibold block transition-colors">
-                            📊 Financial Reports
-                        </a>
-                    @endif
-                @endauth
-            </div>
         </div>
     </div>
 
