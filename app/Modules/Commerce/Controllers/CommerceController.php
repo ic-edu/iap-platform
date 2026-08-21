@@ -21,7 +21,7 @@ class CommerceController extends Controller
     {
         $tests = Test::where('is_published', true)->get();
 
-        $grossRevenue = Payment::whereIn('status', [PaymentStatus::Success, 'success', 'paid'])->sum('amount');
+        $grossRevenue = Payment::whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])->sum('amount');
         $paymentTransactionsCount = Payment::count();
         $invoicesCount = Invoice::count();
         $couponsCount = Coupon::count();

@@ -77,7 +77,7 @@ class UserController extends Controller
             if ($filter === 'paid-eligible' || $filter === 'eligible') {
                 $query->role('student')
                     ->whereHas('orders', function ($oq) {
-                        $oq->whereHas('invoice.payments', fn($pq) => $pq->whereIn('status', [\App\Modules\Commerce\Domain\Enums\PaymentStatus::Success, 'success', 'paid']));
+                        $oq->whereHas('invoice.payments', fn($pq) => $pq->whereIn('status', [\App\Modules\Commerce\Domain\Enums\PaymentStatus::Success, \App\Modules\Commerce\Domain\Enums\PaymentStatus::Paid]));
                     });
             }
         }

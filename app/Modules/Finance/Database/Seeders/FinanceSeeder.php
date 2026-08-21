@@ -30,7 +30,7 @@ class FinanceSeeder extends Seeder
             'amount' => 750000.00,
             'currency' => 'IDR',
             'payment_method' => 'bank_transfer',
-            'status' => PaymentStatus::Paid,
+            'status' => PaymentStatus::Success,
             'paid_at' => now(),
         ]);
     }

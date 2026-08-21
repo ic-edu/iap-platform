@@ -1,47 +1,244 @@
 @extends('layouts.admin')
 
+@section('title', 'Operational Reports & Analytics — Assessment & Candidate Statistics')
+
 @section('content')
-    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+<div class="space-y-6">
+
+    {{-- Page Header --}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
-            <h1 class="text-2xl font-bold text-white">Assessment Reports &amp; Analytics</h1>
-            <p class="text-xs text-slate-400">View real-time candidate completion statistics, pass rate metrics, and export audit reports.</p>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded text-[11px] font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    OPERATIONAL ANALYTICS
+                </span>
+            </div>
+            <h1 class="text-2xl font-black text-white tracking-tight">Assessment Reports &amp; Analytics</h1>
+            <p class="text-sm text-slate-400">Live candidate completions, pass/fail performance, test modes, and institutional analytics.</p>
         </div>
-        <a href="{{ route('admin.reporting.export-csv') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
-            📊 Export CSV Report
+        <a href="{{ route('admin.reporting.export-csv') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-md shadow-emerald-600/20 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export CSV Audit Report
         </a>
     </div>
 
-    <!-- Analytics Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center">
-            <span class="text-xs font-medium text-slate-400 uppercase">Total Submissions</span>
-            <span class="text-3xl font-extrabold text-white mt-1 block">{{ $totalAttempts }}</span>
+    {{-- KPI Section 1: Candidate Results & Performance --}}
+    <section>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+            <span>Assessment Results &amp; Candidate Activity</span>
+        </h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            
+            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Total Submissions</span>
+                <span class="text-2xl font-black text-white mt-1 block">{{ number_format($totalAttempts) }}</span>
+                <span class="text-[10px] text-slate-500 mt-0.5 block">Finished tests</span>
+            </div>
+
+            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Pass Rate</span>
+                <span class="text-2xl font-black text-emerald-400 mt-1 block">{{ $passRate }}%</span>
+                <span class="text-[10px] text-emerald-500/80 mt-0.5 block">{{ number_format($totalPassed) }} passed</span>
+            </div>
+
+            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Failed Tests</span>
+                <span class="text-2xl font-black text-rose-400 mt-1 block">{{ number_format($totalFailed) }}</span>
+                <span class="text-[10px] text-rose-500/80 mt-0.5 block">Below passing score</span>
+            </div>
+
+            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Certificates</span>
+                <span class="text-2xl font-black text-indigo-400 mt-1 block">{{ number_format($totalCertificates) }}</span>
+                <span class="text-[10px] text-indigo-500/80 mt-0.5 block">Issued &amp; verified</span>
+            </div>
+
+            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Active Assignments</span>
+                <span class="text-2xl font-black text-amber-400 mt-1 block">{{ number_format($activeAssignments) }}</span>
+                <span class="text-[10px] text-amber-500/80 mt-0.5 block">Allocated seats</span>
+            </div>
+
+            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">In Progress</span>
+                <span class="text-2xl font-black text-sky-400 mt-1 block">{{ number_format($inProgressAttempts) }}</span>
+                <span class="text-[10px] text-sky-500/80 mt-0.5 block">Active exam sessions</span>
+            </div>
+
+            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Paid / Eligible</span>
+                <span class="text-2xl font-black text-emerald-400 mt-1 block">{{ number_format($paidEligibleCandidates) }}</span>
+                <span class="text-[10px] text-slate-500 mt-0.5 block">Real Test verified</span>
+            </div>
+
+            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Registered Students</span>
+                <span class="text-2xl font-black text-white mt-1 block">{{ number_format($totalStudents) }}</span>
+                <span class="text-[10px] text-slate-500 mt-0.5 block">Total candidates</span>
+            </div>
+
         </div>
-        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center">
-            <span class="text-xs font-medium text-slate-400 uppercase">Pass Rate Percentage</span>
-            <span class="text-3xl font-extrabold text-emerald-400 mt-1 block">{{ $passRate }}%</span>
-            <span class="text-xs text-slate-500 mt-0.5 block">{{ $totalPassed }} candidates passed</span>
+    </section>
+
+    {{-- KPI Section 2: Institutional Inventory & Staff Distribution --}}
+    <section>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+            <span>Assessment Inventory &amp; Institutional Staff</span>
+        </h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
+                <span class="text-[10px] font-semibold text-slate-400 block">Total Assessments</span>
+                <span class="text-lg font-bold text-white mt-0.5 block">{{ number_format($totalTests) }}</span>
+            </div>
+            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
+                <span class="text-[10px] font-semibold text-slate-400 block">Published / Live</span>
+                <span class="text-lg font-bold text-emerald-400 mt-0.5 block">{{ number_format($publishedTests) }}</span>
+            </div>
+            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
+                <span class="text-[10px] font-semibold text-slate-400 block">Simulator Tests</span>
+                <span class="text-lg font-bold text-amber-400 mt-0.5 block">{{ number_format($simulatorTests) }}</span>
+            </div>
+            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
+                <span class="text-[10px] font-semibold text-slate-400 block">Real Tests</span>
+                <span class="text-lg font-bold text-rose-400 mt-0.5 block">{{ number_format($realTests) }}</span>
+            </div>
+            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
+                <span class="text-[10px] font-semibold text-slate-400 block">Teachers</span>
+                <span class="text-lg font-bold text-indigo-400 mt-0.5 block">{{ number_format($totalTeachers) }}</span>
+            </div>
+            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
+                <span class="text-[10px] font-semibold text-slate-400 block">Repository Managers</span>
+                <span class="text-lg font-bold text-purple-400 mt-0.5 block">{{ number_format($totalRMs) }}</span>
+            </div>
+            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
+                <span class="text-[10px] font-semibold text-slate-400 block">Admins &amp; Staff</span>
+                <span class="text-lg font-bold text-slate-200 mt-0.5 block">{{ number_format($totalAdmins + $totalSuperAdmins) }}</span>
+            </div>
         </div>
-        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center">
-            <span class="text-xs font-medium text-slate-400 uppercase">Certificates Issued</span>
-            <span class="text-3xl font-extrabold text-indigo-400 mt-1 block">{{ $totalCertificates }}</span>
+    </section>
+
+    {{-- Visual Analytics & Charts Hub --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {{-- Chart 1: Assessment Activity Trend (7 Days) --}}
+        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1 flex items-center justify-between">
+                <span>📈 Attempt Activity (Last 7 Days)</span>
+            </h3>
+            <p class="text-[11px] text-slate-500 mb-4">Daily volume of candidate assessment attempts</p>
+            <div class="relative h-48 flex items-center justify-center">
+                <canvas id="chartActivityTrend"></canvas>
+            </div>
         </div>
-        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center">
-            <span class="text-xs font-medium text-slate-400 uppercase">Active Test Packages</span>
-            <span class="text-3xl font-extrabold text-amber-400 mt-1 block">{{ $totalTests }}</span>
+
+        {{-- Chart 2: Pass vs Fail Distribution --}}
+        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1 flex items-center justify-between">
+                <span>🎯 Pass vs Fail Performance</span>
+            </h3>
+            <p class="text-[11px] text-slate-500 mb-4">Final candidate score outcomes</p>
+            <div class="relative h-48 flex items-center justify-center">
+                <canvas id="chartPassFail"></canvas>
+            </div>
         </div>
+
+        {{-- Chart 3: Assessment Mode Breakdown --}}
+        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1 flex items-center justify-between">
+                <span>🛡️ Mode: Simulator vs Real Test</span>
+            </h3>
+            <p class="text-[11px] text-slate-500 mb-4">Attempts distributed by assessment mode</p>
+            <div class="relative h-48 flex items-center justify-center">
+                <canvas id="chartModeBreakdown"></canvas>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Recent Submissions Table -->
+    {{-- Popular Assessments & Status Breakdown Section --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {{-- Popular Assessments by Attempts --}}
+        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
+                🏆 Most Active Assessments
+            </h3>
+            @if($popularAssessments->isEmpty())
+            <div class="py-8 text-center border border-dashed border-slate-800 rounded-lg">
+                <p class="text-xs text-slate-500">No assessment attempts recorded yet.</p>
+            </div>
+            @else
+            <div class="space-y-3">
+                @foreach($popularAssessments as $t)
+                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-white truncate">{{ $t->title }}</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $t->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                                {{ $t->assessment_mode?->label() ?? 'Assessment' }}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ $t->test_type->label() }}</span>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <span class="text-sm font-black text-white">{{ number_format($t->attempts_count) }}</span>
+                        <span class="text-[10px] text-slate-500 block">attempt(s)</span>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @endif
+        </div>
+
+        {{-- Candidate Lifecycle Status --}}
+        <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
+                📊 Candidate Assessment Status
+            </h3>
+            <div class="space-y-2.5">
+                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
+                    <span class="text-xs font-semibold text-amber-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span> Active Assignments
+                    </span>
+                    <span class="text-sm font-bold text-white font-mono">{{ number_format($activeAssignments) }}</span>
+                </div>
+                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
+                    <span class="text-xs font-semibold text-sky-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-sky-400"></span> In Progress (Live Exams)
+                    </span>
+                    <span class="text-sm font-bold text-white font-mono">{{ number_format($inProgressAttempts) }}</span>
+                </div>
+                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
+                    <span class="text-xs font-semibold text-emerald-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Completed &amp; Passed
+                    </span>
+                    <span class="text-sm font-bold text-white font-mono">{{ number_format($totalPassed) }}</span>
+                </div>
+                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
+                    <span class="text-xs font-semibold text-rose-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-rose-400"></span> Completed &amp; Failed
+                    </span>
+                    <span class="text-sm font-bold text-white font-mono">{{ number_format($totalFailed) }}</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {{-- Recent Assessment Submissions Table --}}
     <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-        <div class="p-4 border-b border-slate-800">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
             <h2 class="text-sm font-bold text-white">Recent Assessment Submissions</h2>
+            <span class="text-xs text-slate-400 font-mono">Live Assessment Submissions</span>
         </div>
         <table class="w-full text-left text-sm text-slate-300">
             <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
                 <tr>
                     <th class="p-4">Candidate</th>
                     <th class="p-4">Assessment Title</th>
+                    <th class="p-4">Mode</th>
                     <th class="p-4">Final Score</th>
                     <th class="p-4">Result</th>
                     <th class="p-4 text-right">Date</th>
@@ -59,6 +256,11 @@
                             <div class="text-xs font-normal text-slate-400 font-mono">{{ $att->user?->email }}</div>
                         </td>
                         <td class="p-4 text-xs font-medium text-indigo-400">{{ $att->test?->title ?? 'Test Session' }}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $att->test?->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                                {{ $att->test?->assessment_mode?->label() ?? 'Assessment' }}
+                            </span>
+                        </td>
                         <td class="p-4 font-bold text-white">{{ $res['final_score'] ?? 0 }} <span class="text-xs font-normal text-slate-500">/ {{ $res['pass_score'] ?? 0 }}</span></td>
                         <td class="p-4">
                             @if ($passed)
@@ -67,14 +269,110 @@
                                 <span class="px-2.5 py-0.5 text-xs font-bold rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">FAILED</span>
                             @endif
                         </td>
-                        <td class="p-4 text-right text-xs text-slate-400">{{ $att->submitted_at?->format('d M Y, H:i') }}</td>
+                        <td class="p-4 text-right text-xs text-slate-400">{{ $att->submitted_at?->format('d M Y, H:i') ?? $att->updated_at?->format('d M Y, H:i') }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="p-8 text-center text-slate-500">No submission records logged yet.</td>
+                        <td colspan="6" class="p-8 text-center text-slate-500">No submission records logged yet.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
+
+</div>
+
+{{-- Chart.js Scripts --}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart === 'undefined') return;
+
+    // 1. Activity Trend (Line Chart)
+    const ctxTrend = document.getElementById('chartActivityTrend');
+    if (ctxTrend) {
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: @json($activityTrend['labels']),
+                datasets: [{
+                    label: 'Attempts',
+                    data: @json($activityTrend['data']),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#818cf8',
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 10 }, stepSize: 1 } }
+                }
+            }
+        });
+    }
+
+    // 2. Pass vs Fail (Doughnut Chart)
+    const ctxPassFail = document.getElementById('chartPassFail');
+    if (ctxPassFail) {
+        const passedCount = {{ $totalPassed }};
+        const failedCount = {{ $totalFailed }};
+        const hasData = (passedCount + failedCount) > 0;
+
+        new Chart(ctxPassFail, {
+            type: 'doughnut',
+            data: {
+                labels: hasData ? ['Passed', 'Failed'] : ['No Data'],
+                datasets: [{
+                    data: hasData ? [passedCount, failedCount] : [1],
+                    backgroundColor: hasData ? ['#10b981', '#f43f5e'] : ['#334155'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 11 } } }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+
+    // 3. Simulator vs Real Test (Pie/Doughnut Chart)
+    const ctxMode = document.getElementById('chartModeBreakdown');
+    if (ctxMode) {
+        const simCount = {{ $simulatorAttemptsCount }};
+        const realCount = {{ $realTestAttemptsCount }};
+        const hasModeData = (simCount + realCount) > 0;
+
+        new Chart(ctxMode, {
+            type: 'doughnut',
+            data: {
+                labels: hasModeData ? ['Simulator', 'Real Test'] : ['No Data'],
+                datasets: [{
+                    data: hasModeData ? [simCount, realCount] : [1],
+                    backgroundColor: hasModeData ? ['#f59e0b', '#f43f5e'] : ['#334155'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 11 } } }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+});
+</script>
 @endsection

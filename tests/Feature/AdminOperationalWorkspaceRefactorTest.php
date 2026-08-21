@@ -403,4 +403,106 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $this->actingAs($this->superAdmin)->get(route('super-admin.dashboard'))->assertStatus(200);
         $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'))->assertStatus(200);
     }
+
+    /**
+     * 15. PaymentStatus Enum Integrity and Commerce Hydration
+     */
+    public function test_payment_status_enum_integrity_and_commerce_hydration(): void
+    {
+        // Enum cases verification
+        $this->assertSame('pending', PaymentStatus::Pending->value);
+        $this->assertSame('success', PaymentStatus::Success->value);
+        $this->assertSame('paid', PaymentStatus::Paid->value);
+        $this->assertSame('failed', PaymentStatus::Failed->value);
+        $this->assertSame('refunded', PaymentStatus::Refunded->value);
+
+        $this->assertTrue(PaymentStatus::Success->isSuccess());
+        $this->assertTrue(PaymentStatus::Paid->isSuccess());
+        $this->assertFalse(PaymentStatus::Pending->isSuccess());
+        $this->assertFalse(PaymentStatus::Failed->isSuccess());
+
+        // Test Hydration of Payment model with both success and paid statuses
+        $cat = ProductCategory::create(['name' => 'Assessments', 'slug' => 'assessments']);
+        $product = Product::create([
+            'title'        => 'TOEIC Exam Voucher',
+            'slug'         => 'toeic-exam-voucher',
+            'product_type' => 'assessment',
+            'category_id'  => $cat->id,
+            'price'        => 250000,
+            'is_active'    => true,
+            'test_id'      => $this->simulatorTest->id,
+        ]);
+
+        $checkout = new CheckoutEngine(new PricingEngine, new InvoiceEngine);
+        $orderRes = $checkout->checkout($this->student, $product);
+
+        $billing = new BillingEngine;
+        $payment = $billing->createPayment($orderRes['invoice'], 'manual_transfer');
+        $billing->confirmPayment($payment, 'TXN-TEST-12345');
+
+        // Verify /admin/commerce renders 200 without ValueError
+        $response = $this->actingAs($this->admin)->get(route('admin.commerce.index'));
+        $response->assertStatus(200);
+        $response->assertSee('Commerce &amp; Finance Management', false);
+        $response->assertSee($payment->reference_number);
+        $response->assertSee('SUCCESS');
+    }
+
+    /**
+     * 16. Reporting Analytics Dashboard & CSV Export
+     */
+    public function test_reporting_dashboard_comprehensive_metrics_and_csv_export(): void
+    {
+        // Update test type to general for scoring
+        $this->simulatorTest->update(['test_type' => TestType::General, 'pass_score' => 500]);
+
+        // Create an attempt with result summary
+        $attempt = Attempt::create([
+            'test_id' => $this->simulatorTest->id,
+            'user_id' => $this->student->id,
+            'status' => 'submitted',
+            'total_score' => 750,
+            'started_at' => now()->subHour(),
+            'completed_at' => now(),
+            'submitted_at' => now(),
+            'current_section_index' => 0,
+            'answers' => [],
+            'section_scores' => [],
+        ]);
+
+        // Create Certificate
+        Certificate::create([
+            'attempt_id' => $attempt->id,
+            'user_id' => $this->student->id,
+            'certificate_number' => 'CERT-2026-9999',
+            'verification_code' => 'VERIF-9999',
+            'status' => 'valid',
+            'issued_at' => now(),
+        ]);
+
+        // Access Reporting Dashboard
+        $response = $this->actingAs($this->admin)->get(route('admin.reporting.index'));
+        $response->assertStatus(200);
+        $response->assertViewIs('reporting::index');
+        $response->assertViewHas('totalStudents', 1);
+        $response->assertViewHas('totalTests', 2);
+        $response->assertViewHas('simulatorTests', 1);
+        $response->assertViewHas('realTests', 1);
+        $response->assertViewHas('totalAttempts', 1);
+        $response->assertViewHas('totalPassed', 1);
+        $response->assertViewHas('passRate', 100.0);
+        $response->assertViewHas('totalCertificates', 1);
+
+        $response->assertSee('OPERATIONAL ANALYTICS');
+        $response->assertSee('Reports &amp; Analytics', false);
+        $response->assertSee('Student Ken');
+        $response->assertSee('TOEIC Simulator 01');
+        $response->assertSee('PASSED');
+
+        // Test CSV Export
+        $csvResponse = $this->actingAs($this->admin)->get(route('admin.reporting.export-csv'));
+        $csvResponse->assertStatus(200);
+        $this->assertStringContainsString('text/csv', (string) $csvResponse->headers->get('Content-Type'));
+        $this->assertStringContainsString('attachment; filename="assessment_report_', $csvResponse->headers->get('Content-Disposition'));
+    }
 }

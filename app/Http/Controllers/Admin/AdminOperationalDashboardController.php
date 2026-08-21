@@ -29,7 +29,7 @@ class AdminOperationalDashboardController extends Controller
         // 2. Paid / Eligible Candidates (Candidates with confirmed paid transactions)
         $paidEligibleCandidatesCount = User::role('student')
             ->whereHas('orders', function ($q) {
-                $q->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, 'success', 'paid']));
+                $q->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]));
             })
             ->count();
 
@@ -47,7 +47,7 @@ class AdminOperationalDashboardController extends Controller
 
         // ACTION PANEL: Candidates Requiring Action (Paid Real Test awaiting Admin Assignment)
         $paidOrders = Order::with(['user', 'items.product.test', 'invoice.payments'])
-            ->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, 'success', 'paid']))
+            ->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]))
             ->whereHas('items.product.test', fn($t) => $t->where('assessment_mode', 'real_test'))
             ->latest()
             ->get();

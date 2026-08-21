@@ -25,7 +25,7 @@ class AssignmentEngine
             return true;
         }
 
-        if ($payment && ($payment->status === PaymentStatus::Success || $payment->status->value === 'success' || $payment->status->value === 'paid')) {
+        if ($payment && ($payment->status === PaymentStatus::Success || $payment->status === PaymentStatus::Paid)) {
             return true;
         }
 
@@ -36,7 +36,7 @@ class AssignmentEngine
         return Payment::whereHas('invoice.order.items', function ($q) use ($test) {
             $q->whereHas('product', fn($p) => $p->where('test_id', $test->id));
         })
-        ->whereIn('status', [PaymentStatus::Success, 'success', 'paid'])
+        ->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
         ->whereHas('invoice.order', fn($o) => $o->where('user_id', $user->id))
         ->exists();
     }
@@ -54,7 +54,7 @@ class AssignmentEngine
 
         return User::whereHas('orders', function ($q) use ($test) {
             $q->whereHas('items.product', fn($p) => $p->where('test_id', $test->id))
-              ->whereHas('invoice.payments', fn($pm) => $pm->whereIn('status', [PaymentStatus::Success, 'success', 'paid']));
+              ->whereHas('invoice.payments', fn($pm) => $pm->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]));
         })->get();
     }
 
