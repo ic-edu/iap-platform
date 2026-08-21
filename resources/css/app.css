@@ -25,6 +25,7 @@ html[data-theme="dark"] {
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
     --text-inverse: #0f172a;
+    --text-on-accent: #ffffff;
     --input-bg: #020617;
     --input-border: #1e293b;
     --accent: #6366f1;
@@ -55,6 +56,7 @@ html[data-theme="light"] {
     --text-secondary: #475569;
     --text-muted: #64748b;
     --text-inverse: #ffffff;
+    --text-on-accent: #ffffff;
     --input-bg: #ffffff;
     --input-border: #cbd5e1;
     --accent: #5b5ce2;
@@ -394,26 +396,111 @@ html[data-theme="light"] .theme-switcher-btn.active {
     box-shadow: 0 1px 3px rgba(91, 92, 226, 0.3) !important;
 }
 
-/* 10. Buttons & Actions */
+/* 10. Buttons & Actions (High-Contrast Inverse Text on Accent Surfaces) */
+.btn-primary,
+.gov-btn-primary,
+.exp-btn-open {
+    background-color: var(--accent);
+    color: var(--text-on-accent) !important;
+    text-decoration: none;
+}
+
 html.light .bg-indigo-600,
-html[data-theme="light"] .bg-indigo-600 {
+html[data-theme="light"] .bg-indigo-600,
+html.light .bg-indigo-500,
+html[data-theme="light"] .bg-indigo-500,
+html.light .bg-indigo-700,
+html[data-theme="light"] .bg-indigo-700,
+html.light .bg-indigo-800,
+html[data-theme="light"] .bg-indigo-800,
+html.light .btn-primary,
+html[data-theme="light"] .btn-primary,
+html.light .gov-btn-primary,
+html[data-theme="light"] .gov-btn-primary,
+html.light .exp-btn-open,
+html[data-theme="light"] .exp-btn-open,
+html.light .exp-filter-btn--active,
+html[data-theme="light"] .exp-filter-btn--active,
+html.light .mac-pill.active,
+html[data-theme="light"] .mac-pill.active,
+html.light [style*="background:#6366f1"],
+html[data-theme="light"] [style*="background:#6366f1"],
+html.light [style*="background: #6366f1"],
+html[data-theme="light"] [style*="background: #6366f1"],
+html.light [style*="background:#4338ca"],
+html[data-theme="light"] [style*="background:#4338ca"],
+html.light [style*="background: #4338ca"],
+html[data-theme="light"] [style*="background: #4338ca"],
+html.light [style*="background:#4f46e5"],
+html[data-theme="light"] [style*="background:#4f46e5"],
+html.light [style*="background: #4f46e5"],
+html[data-theme="light"] [style*="background: #4f46e5"],
+html.light #iap-modal-confirm-btn,
+html[data-theme="light"] #iap-modal-confirm-btn {
     background-color: var(--accent) !important;
-    color: #ffffff !important;
+    color: var(--text-on-accent) !important;
+}
+
+/* Explicit rule for all child elements inside primary accent buttons */
+html.light .bg-indigo-600 *,
+html[data-theme="light"] .bg-indigo-600 *,
+html.light .bg-indigo-500 *,
+html[data-theme="light"] .bg-indigo-500 *,
+html.light .bg-indigo-700 *,
+html[data-theme="light"] .bg-indigo-700 *,
+html.light .bg-indigo-800 *,
+html[data-theme="light"] .bg-indigo-800 *,
+html.light .btn-primary *,
+html[data-theme="light"] .btn-primary *,
+html.light .gov-btn-primary *,
+html[data-theme="light"] .gov-btn-primary *,
+html.light .exp-btn-open *,
+html[data-theme="light"] .exp-btn-open *,
+html.light .exp-filter-btn--active *,
+html[data-theme="light"] .exp-filter-btn--active *,
+html.light .mac-pill.active *,
+html[data-theme="light"] .mac-pill.active *,
+html.light [style*="background:#6366f1"] *,
+html[data-theme="light"] [style*="background:#6366f1"] *,
+html.light [style*="background: #6366f1"] *,
+html[data-theme="light"] [style*="background: #6366f1"] *,
+html.light [style*="background:#4338ca"] *,
+html[data-theme="light"] [style*="background:#4338ca"] *,
+html.light [style*="background: #4338ca"] *,
+html[data-theme="light"] [style*="background: #4338ca"] *,
+html.light [style*="background:#4f46e5"] *,
+html[data-theme="light"] [style*="background:#4f46e5"] *,
+html.light [style*="background: #4f46e5"] *,
+html[data-theme="light"] [style*="background: #4f46e5"] *,
+html.light #iap-modal-confirm-btn *,
+html[data-theme="light"] #iap-modal-confirm-btn * {
+    color: var(--text-on-accent) !important;
+    fill: currentColor !important;
 }
 
 html.light a.bg-indigo-600,
 html[data-theme="light"] a.bg-indigo-600,
 html.light button.bg-indigo-600,
-html[data-theme="light"] button.bg-indigo-600 {
+html[data-theme="light"] button.bg-indigo-600,
+html.light .exp-btn-open,
+html[data-theme="light"] .exp-btn-open {
     box-shadow: 0 2px 8px rgba(91, 92, 226, 0.22) !important;
 }
 
 html.light .hover\:bg-indigo-500:hover,
 html[data-theme="light"] .hover\:bg-indigo-500:hover,
 html.light .hover\:bg-indigo-600:hover,
-html[data-theme="light"] .hover\:bg-indigo-600:hover {
+html[data-theme="light"] .hover\:bg-indigo-600:hover,
+html.light .bg-indigo-600:hover,
+html[data-theme="light"] .bg-indigo-600:hover,
+html.light .exp-btn-open:hover,
+html[data-theme="light"] .exp-btn-open:hover,
+html.light [style*="background:#6366f1"]:hover,
+html[data-theme="light"] [style*="background:#6366f1"]:hover,
+html.light [style*="background: #6366f1"]:hover,
+html[data-theme="light"] [style*="background: #6366f1"]:hover {
     background-color: var(--accent-hover) !important;
-    color: #ffffff !important;
+    color: var(--text-on-accent) !important;
 }
 
 html.light .text-indigo-400,
@@ -428,6 +515,26 @@ html[data-theme="light"] .border-indigo-500,
 html.light .border-indigo-600,
 html[data-theme="light"] .border-indigo-600 {
     border-color: var(--accent) !important;
+}
+
+/* Saturated Solid Badges & Action Badges (Rose, Emerald, Amber, Sky) */
+html.light .bg-rose-600,
+html[data-theme="light"] .bg-rose-600,
+html.light .bg-emerald-600,
+html[data-theme="light"] .bg-emerald-600,
+html.light .bg-amber-600,
+html[data-theme="light"] .bg-amber-600,
+html.light .bg-sky-600,
+html[data-theme="light"] .bg-sky-600,
+html.light .bg-rose-600 *,
+html[data-theme="light"] .bg-rose-600 *,
+html.light .bg-emerald-600 *,
+html[data-theme="light"] .bg-emerald-600 *,
+html.light .bg-amber-600 *,
+html[data-theme="light"] .bg-amber-600 *,
+html.light .bg-sky-600 *,
+html[data-theme="light"] .bg-sky-600 * {
+    color: #ffffff !important;
 }
 
 /* 11. Status Badges & Muted Semantic Feedback */
@@ -532,14 +639,11 @@ html[data-theme="light"] [style*="background: #1e293b"] {
     color: var(--text-primary) !important;
 }
 
-html.light [style*="color:#fff"],
-html[data-theme="light"] [style*="color:#fff"],
-html.light [style*="color: #fff"],
-html[data-theme="light"] [style*="color: #fff"],
-html.light [style*="color:#f1f5f9"],
-html[data-theme="light"] [style*="color:#f1f5f9"],
-html.light [style*="color: #f1f5f9"],
-html[data-theme="light"] [style*="color: #f1f5f9"] {
+/* Only adjust inline white/light text when inside surface cards/containers that lack saturated/accent backgrounds */
+html.light .gov-card [style*="color:#fff"]:not([style*="background"]):not(.bg-indigo-600):not(.bg-rose-600):not(.bg-emerald-600):not(.bg-amber-600):not(.bg-sky-600):not(button):not(a),
+html[data-theme="light"] .gov-card [style*="color:#fff"]:not([style*="background"]):not(.bg-indigo-600):not(.bg-rose-600):not(.bg-emerald-600):not(.bg-amber-600):not(.bg-sky-600):not(button):not(a),
+html.light .gov-hero [style*="color:#fff"]:not([style*="background"]):not(.bg-indigo-600):not(.bg-rose-600):not(.bg-emerald-600):not(.bg-amber-600):not(.bg-sky-600):not(button):not(a),
+html[data-theme="light"] .gov-hero [style*="color:#fff"]:not([style*="background"]):not(.bg-indigo-600):not(.bg-rose-600):not(.bg-emerald-600):not(.bg-amber-600):not(.bg-sky-600):not(button):not(a) {
     color: var(--text-primary) !important;
 }
 

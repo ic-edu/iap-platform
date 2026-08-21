@@ -193,7 +193,7 @@
                 </div>
             </div>
 
-            <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" style="display:block;text-align:center;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;transition:background .15s;">
+            <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" class="exp-btn-open" style="display:block;text-align:center;padding:.6rem;border-radius:.6rem;font-size:.8rem;font-weight:700;text-decoration:none;">
                 Open Repository →
             </a>
         </div>
