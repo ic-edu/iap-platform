@@ -13,6 +13,10 @@ use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
+use App\Modules\Commerce\Application\BillingEngine;
+use App\Modules\Commerce\Application\CheckoutEngine;
+use App\Modules\Commerce\Application\InvoiceEngine;
+use App\Modules\Commerce\Application\PricingEngine;
 use App\Modules\Commerce\Domain\Enums\OrderStatus;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Modules\Commerce\Domain\Models\Invoice;
@@ -20,6 +24,7 @@ use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Models\OrderItem;
 use App\Modules\Commerce\Domain\Models\Payment;
 use App\Modules\Commerce\Domain\Models\Product;
+use App\Modules\Commerce\Domain\Models\ProductCategory;
 use App\Modules\QuestionBank\Enums\QuestionType;
 use App\Modules\QuestionBank\Enums\TestType;
 use App\Modules\QuestionBank\Models\QuestionChoice;
@@ -252,74 +257,104 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
     }
 
     /**
-     * 7. Real Test Assignment After Paid Transaction Makes Test Visible and Startable
+     * 7. Payment Confirmation Makes Candidate Eligible Without Auto-Assigning Real Test
      */
-    public function test_real_test_assignment_succeeds_with_confirmed_payment(): void
+    public function test_payment_paid_does_not_auto_assign_real_test_but_makes_candidate_eligible(): void
     {
+        $cat = ProductCategory::create(['name' => 'Assessments', 'slug' => 'assessments']);
         $product = Product::create([
             'title'        => 'Official Real TOEIC Exam Voucher',
             'slug'         => 'real-toeic-voucher',
             'product_type' => 'assessment',
+            'category_id'  => $cat->id,
             'price'        => 500000,
             'is_active'    => true,
             'test_id'      => $this->realTest->id,
         ]);
 
-        $order = Order::create([
-            'user_id'         => $this->student->id,
-            'order_number'    => 'ORD-REAL-001',
-            'total_amount'    => 500000,
-            'status'          => OrderStatus::Completed,
-        ]);
+        $checkoutEngine = new CheckoutEngine(new PricingEngine, new InvoiceEngine);
+        $checkoutRes = $checkoutEngine->checkout($this->student, $product);
 
-        OrderItem::create([
-            'order_id'   => $order->id,
-            'product_id' => $product->id,
-            'quantity'   => 1,
-            'price'      => 500000,
-            'total'      => 500000,
-        ]);
+        $billingEngine = new BillingEngine;
+        $payment = $billingEngine->createPayment($checkoutRes['invoice'], 'manual_transfer');
+        $billingEngine->confirmPayment($payment, 'TXN-CONFIRM-001');
 
-        $invoice = Invoice::create([
-            'user_id'        => $this->student->id,
-            'order_id'       => $order->id,
-            'invoice_number' => 'INV-REAL-001',
-            'amount'         => 500000,
-            'status'         => 'paid',
-            'issued_at'      => now(),
-            'due_at'         => now()->addDays(7),
-        ]);
+        // Verify Payment is PAID, Invoice is PAID, Order is COMPLETED
+        $this->assertSame(PaymentStatus::Success, $payment->fresh()->status);
+        $this->assertSame('paid', $checkoutRes['invoice']->fresh()->status->value);
+        $this->assertSame(OrderStatus::Completed, $checkoutRes['order']->fresh()->status);
 
-        $payment = Payment::create([
-            'invoice_id'       => $invoice->id,
-            'user_id'          => $this->student->id,
-            'reference_number' => 'REF-REAL-001',
-            'payment_gateway'  => 'manual_transfer',
-            'amount'           => 500000,
-            'status'           => PaymentStatus::Success,
-            'confirmed_at'     => now(),
-        ]);
+        // IMPORTANT BUSINESS RULE: CandidateTestAssignment is NOT automatically created for Real Test
+        $this->assertFalse(CandidateTestAssignment::where('user_id', $this->student->id)->where('test_id', $this->realTest->id)->exists());
 
+        // BUT Candidate is now ELIGIBLE for assignment
         $assignmentEngine = app(AssignmentEngine::class);
-        $assignment = $assignmentEngine->assignToUser($this->realTest, $this->student, $this->admin, $payment, $order);
+        $this->assertTrue($assignmentEngine->isPaymentEligible($this->realTest, $this->student));
+        $this->assertFalse($assignmentEngine->isEligibleToStart($this->realTest, $this->student)); // Not startable yet (needs Admin assignment)
 
-        $this->assertInstanceOf(CandidateTestAssignment::class, $assignment);
+        // Real Test is NOT yet visible in Candidate Available Tests
+        $availResp = $this->actingAs($this->student)->get(route('candidate.available-tests'));
+        $availResp->assertDontSee('Official TOEIC Real Certification Test');
+    }
+
+    /**
+     * 8. Admin Cannot Assign Unpaid Candidate to Real Test, But Can Assign Paid Eligible Candidate
+     */
+    public function test_admin_can_assign_paid_eligible_candidate_to_real_test(): void
+    {
+        $cat = ProductCategory::create(['name' => 'Assessments', 'slug' => 'assessments']);
+        $product = Product::create([
+            'title'        => 'Official Real TOEIC Exam Voucher',
+            'slug'         => 'real-toeic-voucher',
+            'product_type' => 'assessment',
+            'category_id'  => $cat->id,
+            'price'        => 500000,
+            'is_active'    => true,
+            'test_id'      => $this->realTest->id,
+        ]);
+
+        $otherUnpaidStudent = User::factory()->create(['name' => 'Unpaid Student', 'status' => 'active']);
+        $otherUnpaidStudent->assignRole('student');
+
+        // Admin attempts to assign unpaid student -> Fails with error
+        $adminFailResponse = $this->actingAs($this->admin)->post(route('admin.tests.assign-candidate', $this->realTest), [
+            'candidate_id' => $otherUnpaidStudent->id,
+        ]);
+        $adminFailResponse->assertSessionHas('error');
+        $this->assertFalse(CandidateTestAssignment::where('user_id', $otherUnpaidStudent->id)->where('test_id', $this->realTest->id)->exists());
+
+        // Now student pays for the test
+        $checkoutEngine = new CheckoutEngine(new PricingEngine, new InvoiceEngine);
+        $checkoutRes = $checkoutEngine->checkout($this->student, $product);
+
+        $billingEngine = new BillingEngine;
+        $payment = $billingEngine->createPayment($checkoutRes['invoice'], 'manual_transfer');
+        $billingEngine->confirmPayment($payment, 'TXN-CONFIRM-002');
+
+        // Admin explicitly assigns the eligible paid candidate
+        $adminAssignResponse = $this->actingAs($this->admin)->post(route('admin.tests.assign-candidate', $this->realTest), [
+            'candidate_id' => $this->student->id,
+        ]);
+        $adminAssignResponse->assertSessionHas('status');
+
+        // Verify CandidateTestAssignment is now active
+        $assignment = CandidateTestAssignment::where('user_id', $this->student->id)->where('test_id', $this->realTest->id)->first();
+        $this->assertNotNull($assignment);
         $this->assertTrue($assignment->isActive());
-        $this->assertTrue($assignmentEngine->isEligibleToStart($this->realTest, $this->student));
+        $this->assertSame($this->admin->id, $assignment->assigned_by);
 
-        // Now Available Tests includes the assigned Real Test
-        $availableResponse = $this->actingAs($this->student)->get(route('candidate.available-tests'));
-        $availableResponse->assertStatus(200);
-        $availableResponse->assertSee('Official TOEIC Real Certification Test');
+        // Candidate can now see the Real Test in Available Tests
+        $availResp = $this->actingAs($this->student)->get(route('candidate.available-tests'));
+        $availResp->assertSee('Official TOEIC Real Certification Test');
 
-        // Now candidate can successfully start the exam
-        $response = $this->actingAs($this->student)->post(route('candidate.tests.start', $this->realTest));
-        $response->assertStatus(302);
+        // Candidate can now start the exam
+        $startResp = $this->actingAs($this->student)->post(route('candidate.tests.start', $this->realTest));
+        $startResp->assertStatus(302);
         $this->assertSame(1, Attempt::where('user_id', $this->student->id)->where('test_id', $this->realTest->id)->count());
     }
 
     /**
-     * 8. Real Test Single Play Audio Enforcement
+     * 9. Real Test Single Play Audio Enforcement
      */
     public function test_real_test_audio_enforces_single_play_per_attempt(): void
     {
@@ -357,7 +392,7 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
     }
 
     /**
-     * 9. RM Intake Origin Enforcement for Real Tests
+     * 10. RM Intake Origin Enforcement for Real Tests
      */
     public function test_teacher_cannot_directly_create_real_test_draft_without_rm_intake(): void
     {

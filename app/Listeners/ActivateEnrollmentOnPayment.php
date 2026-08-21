@@ -47,7 +47,12 @@ class ActivateEnrollmentOnPayment
             }
 
             if ($product->test) {
-                $this->assignmentEngine->assignToUser($product->test, $user);
+                // Simulator tests preserve auto-assignment on purchase
+                if ($product->test->isSimulator()) {
+                    $this->assignmentEngine->assignToUser($product->test, $user);
+                }
+                // Real Tests: DO NOT auto-create CandidateTestAssignment.
+                // The candidate becomes eligible (PAID), awaiting explicit Admin assignment.
             }
         }
 

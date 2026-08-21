@@ -16,6 +16,8 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-man
     Route::delete('/{test}/sections/{section}/media/{media}', [TestBuilderController::class, 'detachSectionMedia'])->name('admin.tests.sections.media.detach');
     Route::delete('/{test}/sections/{section}', [TestBuilderController::class, 'destroySection'])->name('admin.tests.sections.destroy');
     Route::delete('/{test}', [TestBuilderController::class, 'destroy'])->name('admin.tests.destroy');
+    Route::post('/{test}/assign-candidate', [TestBuilderController::class, 'assignCandidate'])->name('admin.tests.assign-candidate');
+    Route::delete('/{test}/unassign-candidate/{user}', [TestBuilderController::class, 'unassignCandidate'])->name('admin.tests.unassign-candidate');
 });
 
 // Candidate Portal & CBT Delivery Engine Routes

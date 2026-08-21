@@ -864,4 +864,38 @@ class TestBuilderController extends Controller
     {
         return $this->builderService->validateAssessment($test);
     }
+
+    /**
+     * Assign a candidate to an assessment test (Admin/RM action).
+     */
+    public function assignCandidate(Request $request, Test $test): RedirectResponse
+    {
+        $validated = $request->validate([
+            'candidate_id' => ['required', 'exists:users,id'],
+        ]);
+
+        $candidate = \App\Models\User::findOrFail($validated['candidate_id']);
+        $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
+
+        try {
+            $assignment = $assignmentEngine->assignToUser($test, $candidate, $request->user());
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        \App\Services\ActivityLogger::log('CANDIDATE_ASSIGNED', "Assigned candidate '{$candidate->name}' to test '{$test->title}'", $assignment);
+
+        return back()->with('status', "Candidate '{$candidate->name}' successfully assigned to '{$test->title}'.");
+    }
+
+    /**
+     * Unassign a candidate from an assessment test.
+     */
+    public function unassignCandidate(Request $request, Test $test, \App\Models\User $user): RedirectResponse
+    {
+        $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
+        $assignmentEngine->unassign($test, $user);
+
+        return back()->with('status', "Candidate '{$user->name}' unassigned from '{$test->title}'.");
+    }
 }

@@ -17,6 +17,48 @@ use InvalidArgumentException;
 class AssignmentEngine
 {
     /**
+     * Check if a candidate has a confirmed PAID transaction for a Real Test (Payment Eligibility).
+     */
+    public function isPaymentEligible(Test $test, User $user, ?Payment $payment = null, ?Order $order = null): bool
+    {
+        if ($test->isSimulator()) {
+            return true;
+        }
+
+        if ($payment && ($payment->status === PaymentStatus::Success || $payment->status->value === 'success' || $payment->status->value === 'paid')) {
+            return true;
+        }
+
+        if ($order && $order->status === OrderStatus::Completed) {
+            return true;
+        }
+
+        return Payment::whereHas('invoice.order.items', function ($q) use ($test) {
+            $q->whereHas('product', fn($p) => $p->where('test_id', $test->id));
+        })
+        ->whereIn('status', [PaymentStatus::Success, 'success', 'paid'])
+        ->whereHas('invoice.order', fn($o) => $o->where('user_id', $user->id))
+        ->exists();
+    }
+
+    /**
+     * Get all candidate users who have paid for this Real Test and are eligible for assignment.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, User>
+     */
+    public function getEligibleCandidates(Test $test)
+    {
+        if ($test->isSimulator()) {
+            return User::role('student')->get();
+        }
+
+        return User::whereHas('orders', function ($q) use ($test) {
+            $q->whereHas('items.product', fn($p) => $p->where('test_id', $test->id))
+              ->whereHas('invoice.payments', fn($pm) => $pm->whereIn('status', [PaymentStatus::Success, 'success', 'paid']));
+        })->get();
+    }
+
+    /**
      * Assign a test to a specific student user.
      */
     public function assignToUser(
@@ -27,25 +69,8 @@ class AssignmentEngine
         ?Order $order = null
     ): CandidateTestAssignment {
         // For Real Test: Validate paid payment transaction
-        if ($test->isRealTest()) {
-            $isPaid = false;
-            if ($payment && ($payment->status === PaymentStatus::Success || $payment->status->value === 'success' || $payment->status->value === 'paid')) {
-                $isPaid = true;
-            } elseif ($order && $order->status === OrderStatus::Completed) {
-                $isPaid = true;
-            } else {
-                // Check if user has any confirmed paid order/payment for this test
-                $isPaid = Payment::whereHas('invoice.order.items', function ($q) use ($test) {
-                    $q->whereHas('product', fn($p) => $p->where('test_id', $test->id));
-                })
-                ->whereIn('status', [PaymentStatus::Success, 'success', 'paid'])
-                ->whereHas('invoice.order', fn($o) => $o->where('user_id', $user->id))
-                ->exists();
-            }
-
-            if (!$isPaid) {
-                throw new InvalidArgumentException("Real Test '{$test->title}' requires a confirmed PAID transaction before candidate assignment.");
-            }
+        if ($test->isRealTest() && !$this->isPaymentEligible($test, $user, $payment, $order)) {
+            throw new InvalidArgumentException("Real Test '{$test->title}' requires a confirmed PAID transaction before candidate assignment.");
         }
 
         $assignment = CandidateTestAssignment::updateOrCreate(
