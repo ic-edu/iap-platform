@@ -215,14 +215,35 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
     }
 
     /**
-     * 5. Real Test Payment Gating & Assignment
+     * 5. Available Tests Visibility (Simulator visible, unassigned Real Test excluded)
      */
-    public function test_real_test_requires_paid_assignment_before_start(): void
+    public function test_available_tests_shows_simulator_and_excludes_unassigned_real_test(): void
     {
-        // Student attempts to start unassigned/unpaid Real Test
+        $response = $this->actingAs($this->student)->get(route('candidate.available-tests'));
+        $response->assertStatus(200);
+
+        // Simulator appears
+        $response->assertSee('TOEIC Simulator Practice 01');
+
+        // Unassigned Real Test is completely excluded from the list
+        $response->assertDontSee('Official TOEIC Real Certification Test');
+    }
+
+    /**
+     * 6. Real Test Payment Gating & Direct Start Rejection
+     */
+    public function test_real_test_requires_paid_assignment_and_rejects_unauthorized_start(): void
+    {
+        // Student attempts direct start without assignment -> 403 Forbidden
         $response = $this->actingAs($this->student)->post(route('candidate.tests.start', $this->realTest));
-        $response->assertRedirect(route('candidate.available-tests'));
-        $response->assertSessionHas('error');
+        $response->assertStatus(403);
+
+        // Attempt was NOT created
+        $this->assertSame(0, Attempt::where('user_id', $this->student->id)->where('test_id', $this->realTest->id)->count());
+
+        // Instructions endpoint also rejects unauthorized access -> 403
+        $instResponse = $this->actingAs($this->student)->get(route('candidate.tests.instructions', $this->realTest));
+        $instResponse->assertStatus(403);
 
         // Admin attempts to assign unpaid student to Real Test -> Throws InvalidArgumentException
         $assignmentEngine = app(AssignmentEngine::class);
@@ -231,7 +252,7 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
     }
 
     /**
-     * 6. Real Test Assignment After Paid Transaction
+     * 7. Real Test Assignment After Paid Transaction Makes Test Visible and Startable
      */
     public function test_real_test_assignment_succeeds_with_confirmed_payment(): void
     {
@@ -286,6 +307,11 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
         $this->assertTrue($assignment->isActive());
         $this->assertTrue($assignmentEngine->isEligibleToStart($this->realTest, $this->student));
 
+        // Now Available Tests includes the assigned Real Test
+        $availableResponse = $this->actingAs($this->student)->get(route('candidate.available-tests'));
+        $availableResponse->assertStatus(200);
+        $availableResponse->assertSee('Official TOEIC Real Certification Test');
+
         // Now candidate can successfully start the exam
         $response = $this->actingAs($this->student)->post(route('candidate.tests.start', $this->realTest));
         $response->assertStatus(302);
@@ -293,7 +319,7 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
     }
 
     /**
-     * 7. Real Test Single Play Audio Enforcement
+     * 8. Real Test Single Play Audio Enforcement
      */
     public function test_real_test_audio_enforces_single_play_per_attempt(): void
     {
@@ -331,7 +357,7 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
     }
 
     /**
-     * 8. RM Intake Origin Enforcement for Real Tests
+     * 9. RM Intake Origin Enforcement for Real Tests
      */
     public function test_teacher_cannot_directly_create_real_test_draft_without_rm_intake(): void
     {

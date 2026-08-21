@@ -195,8 +195,18 @@ class Test extends Model
      *
      * @return HasMany<Attempt, $this>
      */
-    public function attempts(): HasMany
+     public function attempts(): HasMany
+     {
+         return $this->hasMany(Attempt::class, 'test_id');
+     }
+
+    /**
+     * Get candidate test assignments.
+     *
+     * @return HasMany<\App\Modules\Assessment\Models\CandidateTestAssignment, $this>
+     */
+    public function assignments(): HasMany
     {
-        return $this->hasMany(Attempt::class, 'test_id');
+        return $this->hasMany(\App\Modules\Assessment\Models\CandidateTestAssignment::class, 'test_id');
     }
 }

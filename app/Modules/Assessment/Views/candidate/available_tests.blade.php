@@ -8,7 +8,6 @@
         @forelse ($tests as $test)
             @php
                 $isRealTest = $test->isRealTest();
-                $isEligible = app(\App\Modules\Assessment\Engines\AssignmentEngine::class)->isEligibleToStart($test, Auth::user());
             @endphp
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between shadow-sm hover:border-slate-700 transition-colors">
                 <div>
@@ -18,7 +17,7 @@
                         </span>
                         @if($isRealTest)
                             <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wide">
-                                Real Test
+                                Real Test (Assigned)
                             </span>
                         @else
                             <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wide">
@@ -45,14 +44,7 @@
                 </div>
 
                 <div class="mt-6 pt-4 border-t border-slate-800/80">
-                    @if($isRealTest && !$isEligible)
-                        <div class="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs text-center font-bold mb-2">
-                            🔒 Paid Assignment Required
-                        </div>
-                        <button type="button" disabled class="w-full bg-slate-800 text-slate-500 font-semibold py-2 rounded-lg text-sm cursor-not-allowed shadow-sm">
-                            Locked (Requires Payment)
-                        </button>
-                    @elseif(!empty($test->instructions))
+                    @if(!empty($test->instructions))
                         <a href="{{ route('candidate.tests.instructions', $test) }}" class="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
                             View Instructions &amp; Start &rarr;
                         </a>
@@ -60,7 +52,7 @@
                         <form method="POST" action="{{ route('candidate.tests.start', $test) }}">
                             @csrf
                             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
-                                Start Assessment Test
+                                Start Assessment Test &rarr;
                             </button>
                         </form>
                     @endif

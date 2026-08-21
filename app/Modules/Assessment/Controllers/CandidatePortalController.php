@@ -26,7 +26,18 @@ class CandidatePortalController extends Controller
     {
         $userId = (int) $request->user()?->id;
 
-        $availableTestsCount = Test::where('is_published', true)->count();
+        $availableTestsCount = Test::where('is_published', true)
+            ->where(function ($query) use ($userId) {
+                $query->where('assessment_mode', 'simulator')
+                    ->orWhere(function ($q) use ($userId) {
+                        $q->where('assessment_mode', 'real_test')
+                          ->whereHas('assignments', function ($a) use ($userId) {
+                              $a->where('user_id', $userId)->where('status', 'active');
+                          });
+                    });
+            })
+            ->count();
+
         $myAttemptsCount = Attempt::where('user_id', $userId)->count();
         $completedAttemptsCount = Attempt::where('user_id', $userId)->whereIn('status', ['submitted', 'expired'])->count();
         $issuedCertificatesCount = Certificate::where('user_id', $userId)->count();
@@ -53,11 +64,25 @@ class CandidatePortalController extends Controller
     }
 
     /**
-     * List available tests to take.
+     * List available tests to take (Simulators + Assigned Real Tests).
      */
-    public function availableTests(): View
+    public function availableTests(Request $request): View
     {
-        $tests = Test::where('is_published', true)->with('sections')->paginate(9);
+        $user = $request->user();
+        $userId = (int) $user?->id;
+
+        $tests = Test::where('is_published', true)
+            ->where(function ($query) use ($userId) {
+                $query->where('assessment_mode', 'simulator')
+                    ->orWhere(function ($q) use ($userId) {
+                        $q->where('assessment_mode', 'real_test')
+                          ->whereHas('assignments', function ($a) use ($userId) {
+                              $a->where('user_id', $userId)->where('status', 'active');
+                          });
+                    });
+            })
+            ->with('sections')
+            ->paginate(9);
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.available_tests';
@@ -99,8 +124,14 @@ class CandidatePortalController extends Controller
     /**
      * Pre-test Assessment Instructions Screen.
      */
-    public function instructions(Test $test): View
+    public function instructions(Request $request, Test $test): View
     {
+        $user = $request->user();
+        $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
+        if (!$assignmentEngine->isEligibleToStart($test, $user)) {
+            abort(403, "Unauthorized access. Real Test '{$test->title}' requires an active paid assignment.");
+        }
+
         $test->loadMissing('sections.testQuestions');
         $totalQuestions = $test->sections->sum(fn($s) => $s->testQuestions->count());
 
@@ -123,8 +154,7 @@ class CandidatePortalController extends Controller
         // Eligibility check for Real Tests
         $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
         if (!$assignmentEngine->isEligibleToStart($test, $user)) {
-            return redirect()->route('candidate.available-tests')
-                ->with('error', "Real Test '{$test->title}' requires a confirmed paid assignment before you can start.");
+            abort(403, "Unauthorized access. Real Test '{$test->title}' requires a confirmed paid assignment before you can start.");
         }
 
         $attempt = $this->engine->startAttempt($test, $user);
