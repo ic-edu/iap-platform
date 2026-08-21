@@ -403,7 +403,6 @@
                                     <div style="display:inline-flex;align-items:center;gap:.35rem;background:#0f172a;border:1px solid rgba(56,189,248,.35);padding:.2rem .5rem;border-radius:.4rem;">
                                         <img src="{{ $q->image_url }}" alt="Thumbnail" style="width:22px;height:22px;object-fit:cover;border-radius:.25rem;border:1px solid #475569;">
                                         <span style="font-size:.72rem;font-weight:700;color:#38bdf8;">🖼 Image ✓</span>
-                                        <span style="font-size:.68rem;color:#cbd5e1;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $q->image_url }}">{{ basename($q->image_url) }}</span>
                                         <button type="button" 
                                                 onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')" 
                                                 style="padding:.15rem .45rem;background:#1e293b;color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:.35rem;font-size:.68rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-left:.25rem;">
@@ -414,9 +413,7 @@
 
                                 @if($qHasAudio)
                                     <div style="display:inline-flex;align-items:center;gap:.35rem;background:#0f172a;border:1px solid rgba(129,140,248,.35);padding:.2rem .5rem;border-radius:.4rem;">
-                                        <span style="font-size:.8rem;">🎧</span>
                                         <span style="font-size:.72rem;font-weight:700;color:#818cf8;">🎧 Audio ✓</span>
-                                        <span style="font-size:.68rem;color:#cbd5e1;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $q->audio_url }}">{{ basename($q->audio_url) }}</span>
                                         <button type="button" 
                                                 onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')" 
                                                 style="padding:.15rem .45rem;background:#1e293b;color:#818cf8;border:1px solid rgba(129,140,248,.35);border-radius:.35rem;font-size:.68rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-left:.25rem;">
