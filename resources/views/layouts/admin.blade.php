@@ -224,7 +224,7 @@
                                         <button type="button" 
                                                 onclick="setIapTheme('light')" 
                                                 id="theme-btn-light" 
-                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
+                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white dark:text-slate-300 transition-all cursor-pointer"
                                                 title="Light theme" 
                                                 aria-label="Select Light theme">
                                             <span class="text-sm">☼</span>
@@ -233,7 +233,7 @@
                                         <button type="button" 
                                                 onclick="setIapTheme('dark')" 
                                                 id="theme-btn-dark" 
-                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
+                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white dark:text-slate-300 transition-all cursor-pointer"
                                                 title="Dark theme" 
                                                 aria-label="Select Dark theme">
                                             <span class="text-sm">☾</span>
@@ -242,7 +242,7 @@
                                         <button type="button" 
                                                 onclick="setIapTheme('system')" 
                                                 id="theme-btn-system" 
-                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
+                                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white dark:text-slate-300 transition-all cursor-pointer"
                                                 title="System theme" 
                                                 aria-label="Select System theme">
                                             <span class="text-sm">▣</span>
