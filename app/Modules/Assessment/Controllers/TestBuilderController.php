@@ -118,6 +118,7 @@ class TestBuilderController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'test_type' => ['required', 'string'],
+            'assessment_mode' => ['nullable', 'string', 'in:simulator,real_test'],
             'scoring_method' => ['nullable', 'string', 'in:automatic,human,hybrid'],
             'duration_minutes' => ['required', 'integer', 'min:1'],
             'pass_score' => ['required', 'integer', 'min:0'],
@@ -125,10 +126,17 @@ class TestBuilderController extends Controller
             'shuffle_choices' => ['nullable', 'boolean'],
         ]);
 
+        $mode = $validated['assessment_mode'] ?? 'simulator';
+
+        if ($mode === 'real_test' && (!$user || (!$user->hasRole('repository-manager') && !$user->hasRole('super-admin')))) {
+            abort(403, 'Real Test assessments must originate from Repository Manager intake.');
+        }
+
         $test = Test::create([
             'title' => $validated['title'],
             'slug' => Str::slug($validated['title']).'-'.Str::random(5),
             'test_type' => $validated['test_type'],
+            'assessment_mode' => $mode,
             'scoring_method' => $validated['scoring_method'] ?? 'automatic',
             'duration_minutes' => $validated['duration_minutes'],
             'pass_score' => $validated['pass_score'],

@@ -6,52 +6,129 @@ use App\Models\User;
 use App\Modules\Assessment\Events\AssignmentRevoked;
 use App\Modules\Assessment\Events\TestAssigned;
 use App\Modules\Assessment\Models\Attempt;
+use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Commerce\Domain\Enums\OrderStatus;
+use App\Modules\Commerce\Domain\Enums\PaymentStatus;
+use App\Modules\Commerce\Domain\Models\Order;
+use App\Modules\Commerce\Domain\Models\Payment;
+use InvalidArgumentException;
 
 class AssignmentEngine
 {
     /**
      * Assign a test to a specific student user.
      */
-    public function assignToUser(Test $test, User $user): Attempt
+    public function assignToUser(
+        Test $test,
+        User $user,
+        ?User $assignedBy = null,
+        ?Payment $payment = null,
+        ?Order $order = null
+    ): CandidateTestAssignment {
+        // For Real Test: Validate paid payment transaction
+        if ($test->isRealTest()) {
+            $isPaid = false;
+            if ($payment && ($payment->status === PaymentStatus::Success || $payment->status->value === 'success' || $payment->status->value === 'paid')) {
+                $isPaid = true;
+            } elseif ($order && $order->status === OrderStatus::Completed) {
+                $isPaid = true;
+            } else {
+                // Check if user has any confirmed paid order/payment for this test
+                $isPaid = Payment::whereHas('invoice.order.items', function ($q) use ($test) {
+                    $q->whereHas('product', fn($p) => $p->where('test_id', $test->id));
+                })
+                ->whereIn('status', [PaymentStatus::Success, 'success', 'paid'])
+                ->whereHas('invoice.order', fn($o) => $o->where('user_id', $user->id))
+                ->exists();
+            }
+
+            if (!$isPaid) {
+                throw new InvalidArgumentException("Real Test '{$test->title}' requires a confirmed PAID transaction before candidate assignment.");
+            }
+        }
+
+        $assignment = CandidateTestAssignment::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'test_id' => $test->id,
+            ],
+            [
+                'assigned_by'  => $assignedBy?->id,
+                'payment_id'   => $payment?->id,
+                'order_id'     => $order?->id,
+                'status'       => 'active',
+                'assigned_at'  => now(),
+            ]
+        );
+
+        event(new TestAssigned($assignment));
+
+        return $assignment;
+    }
+
+    /**
+     * Check if a candidate is eligible to take a test.
+     */
+    public function isEligibleToStart(Test $test, User $user): bool
     {
-        $attempt = Attempt::create([
-            'test_id' => $test->id,
-            'user_id' => $user->id,
-            'status' => 'draft',
-            'started_at' => now(),
-        ]);
+        if ($test->isSimulator()) {
+            return true;
+        }
 
-        event(new TestAssigned($attempt));
-
-        return $attempt;
+        return CandidateTestAssignment::where('user_id', $user->id)
+            ->where('test_id', $test->id)
+            ->where('status', 'active')
+            ->exists();
     }
 
     /**
      * Assign test to all enrolled students of a course.
      *
-     * @return array<int, Attempt>
+     * @return array<int, CandidateTestAssignment>
      */
-    public function assignToCourse(Test $test, string $courseId): array
+    public function assignToCourse(Test $test, string $courseId, ?User $assignedBy = null): array
     {
         $students = User::whereHas('enrollments', function ($q) use ($courseId) {
             $q->where('course_id', $courseId)->where('status', 'active');
         })->get();
 
-        $attempts = [];
+        $assignments = [];
         foreach ($students as $student) {
-            $attempts[] = $this->assignToUser($test, $student);
+            $assignments[] = $this->assignToUser($test, $student, $assignedBy);
         }
 
-        return $attempts;
+        return $assignments;
     }
 
     /**
-     * Revoke test assignment attempt.
+     * Unassign / Revoke test assignment for a candidate.
      */
-    public function revokeAssignment(Attempt $attempt): Attempt
+    public function unassign(Test $test, User $user): bool
     {
-        $attempt->update(['status' => 'cancelled']);
+        $assignment = CandidateTestAssignment::where('test_id', $test->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->first();
+
+        if ($assignment) {
+            $assignment->update(['status' => 'unassigned']);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Backward-compatible revoke assignment method.
+     */
+    public function revokeAssignment(Attempt|CandidateTestAssignment $attempt): Attempt|CandidateTestAssignment
+    {
+        if ($attempt instanceof CandidateTestAssignment) {
+            $attempt->update(['status' => 'unassigned']);
+        } else {
+            $attempt->update(['status' => 'cancelled']);
+        }
 
         event(new AssignmentRevoked($attempt));
 

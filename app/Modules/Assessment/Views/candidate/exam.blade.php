@@ -14,6 +14,8 @@
         $answeredQuestionIds = $existingAnswers->filter(fn($a) => !is_null($a->selected_choice_id))->keys()->values();
         $totalQuestionsCount = $shuffledQuestions->count();
         $isAllInitiallyAnswered = ($totalQuestionsCount > 0 && $answeredQuestionIds->count() === $totalQuestionsCount);
+        $isRealTest = $isRealTest ?? ($attempt->test?->isRealTest() ?? false);
+        $playedAudioSet = collect($playedAudioQuestionIds ?? []);
 
         // Build section mapping and first-question indices
         $sectionFirstQuestionIndex = [];
@@ -29,15 +31,50 @@
         }
     @endphp
 
+    <!-- Fullscreen Warning Overlay for Real Test Mode -->
+    @if($isRealTest)
+        <div id="fullscreen-warning-overlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center hidden">
+            <div class="max-w-md w-full p-8 rounded-2xl bg-slate-900 border border-rose-500/40 shadow-2xl space-y-4">
+                <span class="text-4xl">⚠️</span>
+                <h2 class="text-xl font-black text-white">Secure Fullscreen Exited</h2>
+                <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    You have exited secure fullscreen mode. For official exam integrity, this incident has been logged. Please return to fullscreen mode immediately to continue your assessment.
+                </p>
+                <button type="button" onclick="enterFullscreen()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all">
+                    Return to Fullscreen &rarr;
+                </button>
+            </div>
+        </div>
+    @endif
+
     <!-- Top CBT Status Header Bar -->
     <header class="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3 sticky top-0 z-50 flex items-center justify-between flex-wrap gap-3">
-        <div>
-            <span class="text-xs text-indigo-400 font-semibold uppercase tracking-wider">CBT Examination Session</span>
-            <h1 class="text-sm sm:text-base font-bold text-white leading-snug">{{ $attempt->test?->title }}</h1>
+        <div class="flex items-center gap-2.5">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-indigo-400 font-semibold uppercase tracking-wider">CBT Examination Session</span>
+                    @if($isRealTest)
+                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wide">
+                            SECURE REAL TEST
+                        </span>
+                    @else
+                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wide">
+                            TEST SIMULATOR
+                        </span>
+                    @endif
+                </div>
+                <h1 class="text-sm sm:text-base font-bold text-white leading-snug">{{ $attempt->test?->title }}</h1>
+            </div>
         </div>
 
         <!-- Live Server-Time Timer Countdown & Final Submit -->
         <div class="flex items-center gap-3">
+            @if($isRealTest)
+                <button type="button" onclick="enterFullscreen()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors">
+                    <span>⛶</span> Fullscreen
+                </button>
+            @endif
+
             <div class="bg-slate-950 border border-slate-800 px-3 sm:px-4 py-1.5 rounded-lg text-center shadow-inner">
                 <span class="text-[10px] text-slate-400 block uppercase font-medium">Time Remaining</span>
                 <span id="countdown-timer" class="text-base sm:text-lg font-mono font-bold text-emerald-400">--:--:--</span>
@@ -127,9 +164,8 @@
 
                         <!-- Action Bar to Advance into Section Questions -->
                         <div class="pt-6 border-t border-slate-800 flex items-center justify-between flex-wrap gap-3">
-                            @if($secIndex > 0 && isset($sections[$secIndex - 1]))
+                            @if(!$isRealTest && $secIndex > 0 && isset($sections[$secIndex - 1]))
                                 @php
-                                    $prevSec = $sections[$secIndex - 1];
                                     $prevLastQIdx = ($sectionFirstQuestionIndex[$sec->id] ?? 1) - 1;
                                 @endphp
                                 <button type="button" onclick="navigateQuestion({{ $prevLastQIdx }})" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors">
@@ -139,7 +175,7 @@
                                 <div></div>
                             @endif
 
-                            <button type="button" onclick="navigateQuestion({{ $firstQIdx }})" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                            <button type="button" onclick="startSectionQuestions({{ $firstQIdx }})" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
                                 <span>🚀 {{ $btnLabel }} &rarr;</span>
                             </button>
                         </div>
@@ -147,7 +183,7 @@
                 @endforeach
             @endif
 
-            <!-- 2. INDIVIDUAL QUESTION CARDS (Streamlined, without duplicate section directions) -->
+            <!-- 2. INDIVIDUAL QUESTION CARDS -->
             @forelse ($shuffledQuestions as $index => $question)
                 @php
                     $section = $question->section_model ?? null;
@@ -159,6 +195,7 @@
                     $hasNextQuestion = $nextIndex < $totalQuestionsCount;
                     $nextQuestionSectionId = $hasNextQuestion ? ($questionSectionMap[$nextIndex] ?? null) : null;
                     $isLastQuestionOfSection = $section && $hasNextQuestion && ($nextQuestionSectionId !== $section->id);
+                    $isAudioPlayed = $playedAudioSet->contains($question->id);
                 @endphp
 
                 <div id="question-card-{{ $index }}" class="question-card bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm hidden">
@@ -168,11 +205,14 @@
                             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
                                 Question {{ $index + 1 }} of {{ $shuffledQuestions->count() }}
                             </span>
-                            @if($section)
+                            @if($section && !$isRealTest)
                                 <span class="text-slate-600">•</span>
                                 <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors">
                                     {{ $section->title }} (View Directions)
                                 </button>
+                            @elseif($section)
+                                <span class="text-slate-600">•</span>
+                                <span class="text-[11px] font-bold text-slate-400">{{ $section->title }}</span>
                             @endif
                         </div>
                         <button type="button" onclick="toggleFlag('{{ $question->id }}', {{ $index }}, this)"
@@ -196,17 +236,43 @@
                         </div>
                     @endif
 
-                    @if (!empty($question->audio_url))
-                        <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
-                            <div class="flex items-center gap-1.5 mb-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                                <span>🎧</span>
-                                <span>Question Audio Prompt</span>
+                    <!-- Question Audio (Real Test Single-Play vs Simulator Flexible Play) -->
+                    @if (!empty($question->audio_url) || ($question->mediaAsset && $question->mediaAsset->type === 'audio'))
+                        @if ($isRealTest)
+                            <div id="audio-container-{{ $question->id }}" class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
+                                <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                    <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                        <span>🎧</span>
+                                        <span>Question Audio Prompt (Single Play)</span>
+                                    </div>
+                                    <span id="audio-badge-{{ $question->id }}" class="text-[11px] font-bold {{ $isAudioPlayed ? 'text-slate-500 bg-slate-900 border-slate-800' : 'text-amber-400 bg-amber-950/40 border-amber-500/30' }} px-2.5 py-0.5 rounded-md border">
+                                        {{ $isAudioPlayed ? 'Audio Played (1/1)' : 'Play Available (1/1)' }}
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center gap-3">
+                                    <button id="btn-play-{{ $question->id }}" type="button" 
+                                            onclick="playRealTestAudio('{{ $question->id }}', '{{ route('candidate.exam.audio-stream', [$attempt, $question]) }}')"
+                                            {{ $isAudioPlayed ? 'disabled' : '' }}
+                                            class="px-4 py-2 rounded-xl {{ $isAudioPlayed ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30' }} font-bold text-xs transition-all flex items-center gap-2">
+                                        <span>▶</span>
+                                        <span id="btn-play-label-{{ $question->id }}">{{ $isAudioPlayed ? 'Already Played' : 'Play Audio Prompt' }}</span>
+                                    </button>
+                                    <audio id="audio-elem-{{ $question->id }}" class="hidden" preload="none" onended="onAudioEnded('{{ $question->id }}')"></audio>
+                                </div>
                             </div>
-                            <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $question->audio_url }}" preload="metadata"></audio>
-                        </div>
+                        @else
+                            <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
+                                <div class="flex items-center gap-1.5 mb-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                    <span>🎧</span>
+                                    <span>Question Audio Prompt</span>
+                                </div>
+                                <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $question->audio_url ?: route('candidate.exam.audio-stream', [$attempt, $question]) }}" preload="metadata"></audio>
+                            </div>
+                        @endif
                     @endif
 
-                    @if (empty($question->image_url) && empty($question->audio_url) && $question->mediaAsset)
+                    @if (empty($question->image_url) && empty($question->audio_url) && $question->mediaAsset && $question->mediaAsset->type !== 'audio')
                         <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
                             <x-media-preview :media="$question->mediaAsset" />
                         </div>
@@ -235,28 +301,32 @@
                         @endforeach
                     </div>
 
-                    <!-- Question Navigation Controls -->
-                    <div class="flex justify-between pt-6 mt-6 border-t border-slate-800">
-                        @if($index === 0 && $section)
-                            <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
-                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
-                                &larr; Section Directions
-                            </button>
+                    <!-- Question Navigation Controls (Mode-Aware) -->
+                    <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-800">
+                        @if (!$isRealTest)
+                            @if($index === 0 && $section)
+                                <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
+                                        class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                                    &larr; Section Directions
+                                </button>
+                            @else
+                                <button type="button" onclick="navigateQuestion({{ $index - 1 }})" {{ $index === 0 ? 'disabled' : '' }}
+                                        class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
+                                    &larr; Previous (P)
+                                </button>
+                            @endif
                         @else
-                            <button type="button" onclick="navigateQuestion({{ $index - 1 }})" {{ $index === 0 ? 'disabled' : '' }}
-                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
-                                &larr; Previous (P)
-                            </button>
+                            <div></div>
                         @endif
 
                         @if($isLastQuestionOfSection && $nextQuestionSectionId)
-                            <button type="button" onclick="showSectionIntro('{{ $nextQuestionSectionId }}')"
-                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
+                            <button type="button" onclick="handleNextClick({{ $index }}, 'section', '{{ $nextQuestionSectionId }}')"
+                                    class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30">
                                 Next Section &rarr;
                             </button>
                         @else
-                            <button type="button" onclick="navigateQuestion({{ $index + 1 }})" {{ $index === $shuffledQuestions->count() - 1 ? 'disabled' : '' }}
-                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">
+                            <button type="button" onclick="handleNextClick({{ $index }}, 'question', {{ $index + 1 }})" {{ $index === $shuffledQuestions->count() - 1 && $isRealTest ? 'disabled' : '' }}
+                                    class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
                                 Next (N) &rarr;
                             </button>
                         @endif
@@ -283,7 +353,7 @@
                     @php
                         $isAns = $existingAnswers->has($q->id) && !is_null($existingAnswers->get($q->id)->selected_choice_id);
                     @endphp
-                    <button id="palette-btn-{{ $idx }}" type="button" onclick="navigateQuestion({{ $idx }})"
+                    <button id="palette-btn-{{ $idx }}" type="button" onclick="handlePaletteClick({{ $idx }})"
                             class="palette-btn px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 {{ $isAns ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700' }}">
                         <span>{{ $idx + 1 }}</span>
                         <span id="palette-icon-{{ $idx }}" class="text-[10px]">{{ $isAns ? '✓' : '—' }}</span>
@@ -304,13 +374,18 @@
             </div>
 
             <div class="mt-3 text-[10px] space-y-1 text-slate-500">
-                <p><kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">N</kbd> Next • <kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">P</kbd> Previous • <kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">F</kbd> Flag</p>
+                @if(!$isRealTest)
+                    <p><kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">N</kbd> Next • <kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">P</kbd> Previous • <kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">F</kbd> Flag</p>
+                @else
+                    <p><kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">N</kbd> Next • <kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">F</kbd> Flag</p>
+                @endif
             </div>
         </div>
     </div>
 
-    <!-- Anti-Cheating & Timer JavaScript Engine -->
+    <!-- Anti-Cheating, Security & Navigation JavaScript Engine -->
     <script>
+        const isRealTest = {{ $isRealTest ? 'true' : 'false' }};
         let remainingSeconds = {{ $remainingSeconds }};
         let currentQuestionIdx = -1; // -1 represents section intro view
         const totalQuestions = {{ $shuffledQuestions->count() }};
@@ -320,7 +395,44 @@
         const firstSectionId = "{{ isset($sections) && $sections->isNotEmpty() ? $sections->first()->id : '' }}";
         let timerInterval = null;
 
-        // Timer Countdown Engine (Uninterrupted across all views)
+        // Fullscreen Mode Handler for Real Test
+        function enterFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    logViolation('fullscreen_enter');
+                    const overlay = document.getElementById('fullscreen-warning-overlay');
+                    if (overlay) overlay.classList.add('hidden');
+                }).catch(err => {
+                    console.warn('Fullscreen request failed:', err);
+                });
+            } else {
+                const overlay = document.getElementById('fullscreen-warning-overlay');
+                if (overlay) overlay.classList.add('hidden');
+            }
+        }
+
+        if (isRealTest) {
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement) {
+                    logViolation('fullscreen_exit');
+                    const overlay = document.getElementById('fullscreen-warning-overlay');
+                    if (overlay) overlay.classList.remove('hidden');
+                } else {
+                    const overlay = document.getElementById('fullscreen-warning-overlay');
+                    if (overlay) overlay.classList.add('hidden');
+                }
+            });
+        }
+
+        // Section Questions Initiation (Enters Fullscreen on user gesture for Real Test)
+        function startSectionQuestions(firstQIdx) {
+            if (isRealTest) {
+                enterFullscreen();
+            }
+            navigateQuestion(firstQIdx);
+        }
+
+        // Timer Countdown Engine
         function updateTimerDisplay() {
             if (remainingSeconds <= 0) {
                 if (timerInterval) clearInterval(timerInterval);
@@ -442,6 +554,110 @@
             updatePaletteUI();
         }
 
+        // Mode-Aware Next Action Handler
+        function handleNextClick(currentIndex, type, target) {
+            const currentQId = questionIds[currentIndex];
+
+            if (isRealTest) {
+                // Real Test: Mandatory answer before next
+                if (!answeredQuestionIds.has(currentQId)) {
+                    iapAlert({
+                        title: 'Answer Required',
+                        message: 'For Real Test examination, you must select an answer before proceeding to the next question.',
+                        variant: 'warning',
+                        okText: 'Understood'
+                    });
+                    return;
+                }
+            }
+
+            if (type === 'section') {
+                showSectionIntro(target);
+            } else {
+                if (target < totalQuestions) {
+                    navigateQuestion(target);
+                } else if (!isRealTest && answeredQuestionIds.size < totalQuestions) {
+                    // Simulator Mode: Loop back to first unanswered question
+                    for (let i = 0; i < totalQuestions; i++) {
+                        if (!answeredQuestionIds.has(questionIds[i])) {
+                            iapAlert({
+                                title: 'Review Unanswered Questions',
+                                message: 'You have reached the end of the simulation. Navigating to your first unanswered question.',
+                                variant: 'info',
+                                okText: 'Continue',
+                                onOk: () => navigateQuestion(i)
+                            });
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Mode-Aware Palette Click Handler
+        function handlePaletteClick(targetIdx) {
+            if (isRealTest) {
+                // Real Test: cannot jump forward over unanswered current question
+                if (currentQuestionIdx >= 0 && targetIdx > currentQuestionIdx && !answeredQuestionIds.has(questionIds[currentQuestionIdx])) {
+                    iapAlert({
+                        title: 'Answer Current Question First',
+                        message: 'You must answer the current question before moving forward in Real Test mode.',
+                        variant: 'warning',
+                        okText: 'Understood'
+                    });
+                    return;
+                }
+            }
+
+            navigateQuestion(targetIdx);
+        }
+
+        // Real Test Single Play Audio Engine
+        function playRealTestAudio(questionId, streamUrl) {
+            const btn = document.getElementById(`btn-play-${questionId}`);
+            const label = document.getElementById(`btn-play-label-${questionId}`);
+            const badge = document.getElementById(`audio-badge-${questionId}`);
+            const audio = document.getElementById(`audio-elem-${questionId}`);
+
+            if (!audio || (btn && btn.disabled)) return;
+
+            if (btn) {
+                btn.disabled = true;
+                btn.className = 'px-4 py-2 rounded-xl bg-slate-800 text-slate-500 cursor-not-allowed font-bold text-xs transition-all flex items-center gap-2';
+            }
+            if (label) label.textContent = 'Playing Audio...';
+            if (badge) {
+                badge.textContent = 'Audio Playing (1/1)';
+                badge.className = 'text-[11px] font-bold text-indigo-400 bg-indigo-950/40 border-indigo-500/30 px-2.5 py-0.5 rounded-md border';
+            }
+
+            audio.src = streamUrl;
+            audio.play().catch(err => {
+                console.error('Audio playback error:', err);
+                if (label) label.textContent = 'Playback Failed';
+            });
+        }
+
+        function onAudioEnded(questionId) {
+            const label = document.getElementById(`btn-play-label-${questionId}`);
+            const badge = document.getElementById(`audio-badge-${questionId}`);
+
+            if (label) label.textContent = 'Already Played';
+            if (badge) {
+                badge.textContent = 'Audio Played (1/1)';
+                badge.className = 'text-[11px] font-bold text-slate-500 bg-slate-900 border-slate-800 px-2.5 py-0.5 rounded-md border';
+            }
+
+            fetch("{{ route('candidate.exam.violation', $attempt) }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ violation_type: 'audio_completed', question_id: questionId })
+            });
+        }
+
         // Auto Save Answer AJAX with Palette & Submit State Synchronization
         function autoSaveAnswer(questionId, choiceId, index) {
             answeredQuestionIds.add(questionId);
@@ -500,20 +716,23 @@
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
             if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+            
             if (e.key === 'n' || e.key === 'N') {
                 if (currentQuestionIdx >= 0) {
-                    navigateQuestion(currentQuestionIdx + 1);
+                    handleNextClick(currentQuestionIdx, 'question', currentQuestionIdx + 1);
                 } else if (firstSectionId) {
-                    navigateQuestion(0);
+                    startSectionQuestions(0);
                 }
             }
-            if (e.key === 'p' || e.key === 'P') {
+            
+            if (!isRealTest && (e.key === 'p' || e.key === 'P')) {
                 if (currentQuestionIdx > 0) {
                     navigateQuestion(currentQuestionIdx - 1);
                 } else if (currentQuestionIdx === 0 && firstSectionId) {
                     showSectionIntro(firstSectionId);
                 }
             }
+
             if (e.key === 'f' || e.key === 'F') {
                 if (currentQuestionIdx >= 0) {
                     const currentCard = document.getElementById(`question-card-${currentQuestionIdx}`);

@@ -36,13 +36,15 @@ class Test extends Model
     protected $table = 'tests';
 
     protected $attributes = [
-        'scoring_method' => 'automatic',
+        'scoring_method'  => 'automatic',
+        'assessment_mode' => 'simulator',
     ];
 
     protected $fillable = [
         'title',
         'slug',
         'test_type',
+        'assessment_mode',
         'duration_minutes',
         'pass_score',
         'scoring_method',
@@ -59,14 +61,39 @@ class Test extends Model
     protected function casts(): array
     {
         return [
-            'test_type' => TestType::class,
-            'scoring_method' => ScoringMethod::class,
-            'duration_minutes' => 'integer',
-            'pass_score' => 'integer',
+            'test_type'         => TestType::class,
+            'assessment_mode'   => \App\Modules\Assessment\Enums\AssessmentMode::class,
+            'scoring_method'    => ScoringMethod::class,
+            'duration_minutes'  => 'integer',
+            'pass_score'        => 'integer',
             'shuffle_questions' => 'boolean',
-            'shuffle_choices' => 'boolean',
-            'is_published' => 'boolean',
+            'shuffle_choices'   => 'boolean',
+            'is_published'      => 'boolean',
         ];
+    }
+
+    /**
+     * Check if test is a practice simulator.
+     */
+    public function isSimulator(): bool
+    {
+        return ($this->assessment_mode ?? \App\Modules\Assessment\Enums\AssessmentMode::Simulator) === \App\Modules\Assessment\Enums\AssessmentMode::Simulator;
+    }
+
+    /**
+     * Check if test is an official real test.
+     */
+    public function isRealTest(): bool
+    {
+        return $this->assessment_mode === \App\Modules\Assessment\Enums\AssessmentMode::RealTest;
+    }
+
+    /**
+     * Get Assessment Mode Policy instance.
+     */
+    public function policy(): \App\Modules\Assessment\Policies\AssessmentModePolicy
+    {
+        return \App\Modules\Assessment\Policies\AssessmentModePolicy::for($this);
     }
 
     /**

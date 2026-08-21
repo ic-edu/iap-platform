@@ -18,22 +18,35 @@ class AttemptEngine
 {
     protected CertificateEngine $certificateEngine;
 
-    protected ResultEngine $resultEngine;
+    protected TimerEngine $timerEngine;
 
     public function __construct(
         protected ScoringEngine $scoringEngine,
         ?CertificateEngine $certificateEngine = null,
-        ?ResultEngine $resultEngine = null
+        ?ResultEngine $resultEngine = null,
+        ?TimerEngine $timerEngine = null
     ) {
         $this->certificateEngine = $certificateEngine ?? app(CertificateEngine::class);
         $this->resultEngine = $resultEngine ?? app(ResultEngine::class);
+        $this->timerEngine = $timerEngine ?? app(TimerEngine::class);
     }
 
     /**
-     * Start a new attempt for a test.
+     * Start a new attempt for a test, or resume existing active unexpired attempt.
      */
     public function startAttempt(Test $test, User $user): Attempt
     {
+        $existing = Attempt::where('test_id', $test->id)
+            ->where('user_id', $user->id)
+            ->where('status', AttemptStatus::InProgress)
+            ->latest('started_at')
+            ->first();
+
+        if ($existing && !$this->timerEngine->isExpired($existing)) {
+            $this->resumeAttempt($existing);
+            return $existing;
+        }
+
         $evaluationStatus = $test->requiresEvaluation()
             ? EvaluationStatus::PendingEvaluation
             : EvaluationStatus::NotRequired;

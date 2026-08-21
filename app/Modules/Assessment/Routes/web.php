@@ -31,6 +31,7 @@ Route::middleware(['web', 'auth'])->prefix('candidate')->group(function () {
     Route::post('/exam/{attempt}/autosave', [CandidatePortalController::class, 'autoSave'])->name('candidate.exam.autosave');
     Route::post('/exam/{attempt}/flag', [CandidatePortalController::class, 'toggleFlag'])->name('candidate.exam.flag');
     Route::post('/exam/{attempt}/violation', [CandidatePortalController::class, 'recordViolation'])->name('candidate.exam.violation');
+    Route::get('/exam/{attempt}/questions/{question}/audio-stream', [CandidatePortalController::class, 'streamAudio'])->name('candidate.exam.audio-stream');
     Route::post('/exam/{attempt}/submit', [CandidatePortalController::class, 'submit'])->name('candidate.exam.submit');
     Route::get('/exam/{attempt}/review', [CandidatePortalController::class, 'review'])->name('candidate.review');
 });

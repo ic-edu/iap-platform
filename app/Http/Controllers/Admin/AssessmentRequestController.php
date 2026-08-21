@@ -113,6 +113,7 @@ class AssessmentRequestController extends Controller
             'title'                 => $validated['title'],
             'slug'                  => Str::slug($validated['title']) . '-' . Str::random(5),
             'test_type'             => $validated['test_type'],
+            'assessment_mode'       => 'real_test',
             'scoring_method'        => 'automatic',
             'duration_minutes'      => $validated['duration_minutes'],
             'pass_score'            => $validated['pass_score'],

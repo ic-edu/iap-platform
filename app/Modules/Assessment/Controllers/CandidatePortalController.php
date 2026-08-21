@@ -120,7 +120,16 @@ class CandidatePortalController extends Controller
             return redirect()->route('login');
         }
 
+        // Eligibility check for Real Tests
+        $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
+        if (!$assignmentEngine->isEligibleToStart($test, $user)) {
+            return redirect()->route('candidate.available-tests')
+                ->with('error', "Real Test '{$test->title}' requires a confirmed paid assignment before you can start.");
+        }
+
         $attempt = $this->engine->startAttempt($test, $user);
+
+        \App\Services\ActivityLogger::log('EXAM_STARTED', "Started assessment attempt for '{$test->title}'", $attempt);
 
         return redirect()->route('candidate.exam', $attempt);
     }
@@ -152,11 +161,91 @@ class CandidatePortalController extends Controller
 
         $shuffledQuestions = $this->engine->randomizationEngine->getShuffledQuestions($attempt, $allQuestions);
         $remainingSeconds = $this->engine->timerEngine->getRemainingSeconds($attempt);
+        $isRealTest = $attempt->test?->isRealTest() ?? false;
+
+        // Played audio tracking for Real Test single-play
+        $playedAudioQuestionIds = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
+            ->pluck('question_id')
+            ->toArray();
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.exam';
 
-        return view($viewName, compact('attempt', 'shuffledQuestions', 'remainingSeconds', 'sections'));
+        return view($viewName, compact('attempt', 'shuffledQuestions', 'remainingSeconds', 'sections', 'isRealTest', 'playedAudioQuestionIds'));
+    }
+
+    /**
+     * Secure Audio Streaming Endpoint (Enforces Single Play for Real Tests).
+     */
+    public function streamAudio(Request $request, Attempt $attempt, \App\Modules\QuestionBank\Models\Question $question)
+    {
+        $user = $request->user();
+        if (!$user || (int)$attempt->user_id !== (int)$user->id) {
+            abort(403, 'Unauthorized attempt access.');
+        }
+
+        if ($attempt->status->value !== 'in_progress') {
+            abort(403, 'Test session is no longer in progress.');
+        }
+
+        $test = $attempt->test;
+        $isRealTest = $test?->isRealTest() ?? false;
+
+        if ($isRealTest) {
+            $existingPlay = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
+                ->where('question_id', $question->id)
+                ->first();
+
+            if ($existingPlay && $existingPlay->play_count >= 1) {
+                \App\Services\ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}", $attempt);
+                return response()->json(['error' => 'Audio already played for this question.'], 403);
+            }
+
+            \App\Modules\Assessment\Models\AttemptAudioPlay::create([
+                'attempt_id'     => $attempt->id,
+                'question_id'    => $question->id,
+                'media_asset_id' => $question->media_asset_id,
+                'play_count'     => 1,
+                'started_at'     => now(),
+                'ip_address'     => $request->ip(),
+            ]);
+
+            \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}", $attempt);
+        } else {
+            \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started simulator audio play for Question {$question->id}", $attempt);
+        }
+
+        // Resolve audio source
+        $audioUrl = $question->audio_url;
+        if (empty($audioUrl) && $question->mediaAsset) {
+            $audioUrl = $question->mediaAsset->path;
+        }
+
+        if (empty($audioUrl)) {
+            abort(404, 'Audio resource not found.');
+        }
+
+        $filePath = storage_path('app/public/' . ltrim($audioUrl, '/'));
+        if (!file_exists($filePath)) {
+            $filePath = public_path(ltrim($audioUrl, '/'));
+        }
+
+        if (file_exists($filePath)) {
+            $mime = mime_content_type($filePath) ?: 'audio/mpeg';
+            return response()->file($filePath, [
+                'Content-Type'        => $mime,
+                'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
+                'Cache-Control'       => 'no-store, no-cache, must-revalidate, private',
+                'Accept-Ranges'       => 'bytes',
+            ]);
+        }
+
+        // Return inline redirection if URL is remote
+        if (filter_var($audioUrl, FILTER_VALIDATE_URL)) {
+            return redirect()->away($audioUrl);
+        }
+
+        abort(404, 'Physical audio file not found.');
     }
 
     /**
@@ -202,6 +291,22 @@ class CandidatePortalController extends Controller
         $type = $request->input('violation_type', 'window_blur');
         event(new RuleViolationDetected($attempt, $type));
 
+        if ($type === 'fullscreen_exit') {
+            \App\Services\ActivityLogger::log('FULLSCREEN_EXITED', 'Candidate exited secure fullscreen mode', $attempt);
+        } elseif ($type === 'fullscreen_enter') {
+            \App\Services\ActivityLogger::log('FULLSCREEN_ENTERED', 'Candidate entered secure fullscreen mode', $attempt);
+        } elseif ($type === 'audio_completed') {
+            $questionId = $request->input('question_id');
+            \App\Services\ActivityLogger::log('AUDIO_PLAY_COMPLETED', "Candidate completed audio play for Question {$questionId}", $attempt);
+            if ($questionId) {
+                \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
+                    ->where('question_id', $questionId)
+                    ->update(['completed_at' => now()]);
+            }
+        } else {
+            \App\Services\ActivityLogger::log('WINDOW_BLUR_DETECTED', "Candidate window blur detected ({$type})", $attempt);
+        }
+
         return response()->json(['status' => 'logged']);
     }
 
@@ -232,6 +337,8 @@ class CandidatePortalController extends Controller
         }
 
         $this->engine->submitAttempt($attempt);
+
+        \App\Services\ActivityLogger::log('EXAM_SUBMITTED', "Candidate submitted assessment attempt for '{$attempt->test?->title}'", $attempt);
 
         return redirect()->route('candidate.review', $attempt);
     }
