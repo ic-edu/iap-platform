@@ -2,91 +2,8 @@
 
 @section('title', 'IRQA Quality Dashboard — iC.edu Platform')
 
-@push('styles')
-<style>
-.irqa-workspace { display: flex; flex-direction: column; gap: 1.75rem; }
-
-.irqa-hero {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-    border: 1px solid #1e293b;
-    border-radius: 1.25rem;
-    padding: 1.75rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-}
-.irqa-hero__title { font-size: 1.5rem; font-weight: 800; color: #fff; margin: 0 0 .3rem; }
-.irqa-hero__sub   { font-size: .85rem; color: #94a3b8; margin: 0; }
-
-.irqa-kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 1rem;
-}
-@media (max-width: 1100px) { .irqa-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-
-.irqa-kpi {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 1rem;
-    padding: 1.1rem 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: .25rem;
-    text-decoration: none;
-    transition: border-color .2s, transform .15s, box-shadow .2s;
-    cursor: pointer;
-}
-.irqa-kpi:hover {
-    border-color: #6366f1;
-    transform: translateY(-2px);
-    box-shadow: 0 12px 32px rgba(99,102,241,.15);
-}
-.irqa-kpi__count { font-size: 1.85rem; font-weight: 900; line-height: 1; }
-.irqa-kpi__label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; }
-
-.irqa-panel {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 1rem;
-    overflow: hidden;
-}
-.irqa-panel__head {
-    padding: 1.1rem 1.35rem;
-    border-bottom: 1px solid #1e293b;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
-.irqa-panel__title { font-size: 1rem; font-weight: 800; color: #f1f5f9; }
-
-.irqa-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-.irqa-table th { padding: .75rem 1rem; background: #080f1d; font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; text-align: left; border-bottom: 1px solid #1e293b; }
-.irqa-table td { padding: .9rem 1rem; border-bottom: 1px solid #1e293b; vertical-align: middle; }
-
-.irqa-badge { padding: .2rem .65rem; border-radius: 99px; font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; display: inline-block; }
-.irqa-badge--excellent { background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
-.irqa-badge--good      { background: rgba(129,140,248,.15); color: #818cf8; border: 1px solid rgba(129,140,248,.3); }
-.irqa-badge--warning   { background: rgba(251,113,133,.15); color: #fb7185; border: 1px solid rgba(251,113,133,.3); }
-
-.irqa-count--indigo  { color: #818cf8; }
-.irqa-count--emerald { color: #34d399; }
-.irqa-count--rose    { color: #fb7185; }
-.irqa-count--purple  { color: #c084fc; }
-.irqa-count--amber   { color: #fbbf24; }
-.irqa-count--sky     { color: #38bdf8; }
-
-.irqa-dup-panel { background: #1e1022; border: 1px solid rgba(244,63,94,.25); border-radius: 1rem; padding: 1.25rem 1.5rem; }
-.irqa-dup-title { font-size: .9rem; font-weight: 800; color: #fb7185; margin-bottom: .5rem; }
-.irqa-dup-list  { font-size: .8rem; color: #cbd5e1; display: flex; flex-direction: column; gap: .35rem; }
-</style>
-@endpush
-
 @section('content')
-<div class="irqa-workspace">
+<div class="space-y-6">
 
     {{-- Breadcrumb & Navigation --}}
     @php
@@ -98,78 +15,78 @@
             default            => route('admin.repository-manager.dashboard'),
         };
     @endphp
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-        <a href="{{ $qBackUrl }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+    <div class="flex justify-between items-center">
+        <a href="{{ $qBackUrl }}" class="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1">
             ← Back
         </a>
     </div>
 
     {{-- Hero Header --}}
-    <div class="irqa-hero">
+    <div class="gov-hero">
         <div>
-            <h1 class="irqa-hero__title">🛡 Institutional Repository Quality Assurance (IRQA)</h1>
-            <p class="irqa-hero__sub">Comprehensive metadata completeness, difficulty balance, explanation coverage, and governance audit dashboard.</p>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">🛡 Institutional Repository Quality Assurance (IRQA)</h1>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Comprehensive metadata completeness, difficulty balance, explanation coverage, and governance audit dashboard.</p>
         </div>
     </div>
 
     {{-- Global Quality Metrics Grid (PART 11 & TASK 1) --}}
-    <div class="irqa-kpi-grid">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {{-- Card 1: Total Repositories --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'all', 'from' => 'quality']) }}" class="irqa-kpi" title="View all institutional repositories">
-            <div class="irqa-kpi__count irqa-count--indigo">{{ $summary['total_repositories'] }}</div>
-            <div class="irqa-kpi__label">Total Repositories →</div>
-            <div class="irqa-kpi__sub">All institutional banks</div>
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'all', 'from' => 'quality']) }}" class="gov-card p-4 flex flex-col gap-1 hover:border-indigo-500 transition-all cursor-pointer no-underline group" title="View all institutional repositories">
+            <div class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 leading-none">{{ $summary['total_repositories'] }}</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Total Repositories →</div>
+            <div class="text-[10px] text-slate-400">All institutional banks</div>
         </a>
 
         {{-- Card 2: Healthy Repositories --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'healthy', 'from' => 'quality']) }}" class="irqa-kpi" title="View healthy repositories with zero issues">
-            <div class="irqa-kpi__count irqa-count--emerald">{{ $summary['healthy_count'] }}</div>
-            <div class="irqa-kpi__label">Healthy Repositories →</div>
-            <div class="irqa-kpi__sub">Zero active issues</div>
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'healthy', 'from' => 'quality']) }}" class="gov-card p-4 flex flex-col gap-1 hover:border-emerald-500 transition-all cursor-pointer no-underline group" title="View healthy repositories with zero issues">
+            <div class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 leading-none">{{ $summary['healthy_count'] }}</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Healthy Repositories →</div>
+            <div class="text-[10px] text-slate-400">Zero active issues</div>
         </a>
 
         {{-- Card 3: Unreviewed Needs Improvement --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc', 'from' => 'quality']) }}" class="irqa-kpi" title="Active IRQA issues awaiting governance review">
-            <div class="irqa-kpi__count irqa-count--rose">{{ $summary['needs_improvement_count'] }}</div>
-            <div class="irqa-kpi__label">Needing Improvement →</div>
-            <div class="irqa-kpi__sub">Unreviewed active issues</div>
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc', 'from' => 'quality']) }}" class="gov-card p-4 flex flex-col gap-1 hover:border-rose-500 transition-all cursor-pointer no-underline group" title="Active IRQA issues awaiting governance review">
+            <div class="text-2xl font-extrabold text-rose-600 dark:text-rose-400 leading-none">{{ $summary['needs_improvement_count'] }}</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">Needing Improvement →</div>
+            <div class="text-[10px] text-slate-400">Unreviewed active issues</div>
         </a>
 
         {{-- Card 4: Reviewed Issues --}}
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'reviewed_issues', 'from' => 'quality']) }}" class="irqa-kpi" title="Repositories reviewed by Repository Manager with tracked quality issues">
-            <div class="irqa-kpi__count irqa-count--purple">{{ $summary['reviewed_issues_count'] ?? 0 }}</div>
-            <div class="irqa-kpi__label">Reviewed Issues →</div>
-            <div class="irqa-kpi__sub">Reviewed with findings</div>
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'reviewed_issues', 'from' => 'quality']) }}" class="gov-card p-4 flex flex-col gap-1 hover:border-purple-500 transition-all cursor-pointer no-underline group" title="Repositories reviewed by Repository Manager with tracked quality issues">
+            <div class="text-2xl font-extrabold text-purple-600 dark:text-purple-400 leading-none">{{ $summary['reviewed_issues_count'] ?? 0 }}</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">Reviewed Issues →</div>
+            <div class="text-[10px] text-slate-400">Reviewed with findings</div>
         </a>
 
         {{-- Card 5: Awaiting Approval --}}
         @if($summary['pending_approval_count'] > 0)
-        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval', 'from' => 'quality']) }}" class="irqa-kpi" title="Repositories submitted and pending governance approval">
-            <div class="irqa-kpi__count irqa-count--amber">{{ $summary['pending_approval_count'] }}</div>
-            <div class="irqa-kpi__label">Awaiting Approval →</div>
-            <div class="irqa-kpi__sub">Pending RM decision</div>
+        <a href="{{ route('admin.academic-library.explorer', ['filter' => 'awaiting_approval', 'from' => 'quality']) }}" class="gov-card p-4 flex flex-col gap-1 hover:border-amber-500 transition-all cursor-pointer no-underline group" title="Repositories submitted and pending governance approval">
+            <div class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 leading-none">{{ $summary['pending_approval_count'] }}</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Awaiting Approval →</div>
+            <div class="text-[10px] text-slate-400">Pending RM decision</div>
         </a>
         @else
-        <button type="button" onclick="openNoApprovalModal()" class="irqa-kpi" style="text-align:left;background:#0f172a;border:1px solid #1e293b;">
-            <div class="irqa-kpi__count irqa-count--amber">{{ $summary['pending_approval_count'] }}</div>
-            <div class="irqa-kpi__label">Awaiting Approval ⓘ</div>
-            <div class="irqa-kpi__sub">No pending submissions</div>
+        <button type="button" onclick="openNoApprovalModal()" class="gov-card p-4 flex flex-col gap-1 text-left cursor-pointer group" title="No pending approvals">
+            <div class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 leading-none">{{ $summary['pending_approval_count'] }}</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Awaiting Approval ⓘ</div>
+            <div class="text-[10px] text-slate-400">No pending submissions</div>
         </button>
         @endif
 
         {{-- Card 6: Average Health Score --}}
-        <a href="{{ route('admin.academic-library.analytics') }}" class="irqa-kpi" title="Open IRQA Quality Analytics">
-            <div class="irqa-kpi__count irqa-count--sky">{{ $summary['avg_health_score'] }} <span style="font-size:.85rem;color:#64748b;">/ 100</span></div>
-            <div class="irqa-kpi__label">Average Health Score 📊</div>
-            <div class="irqa-kpi__sub">Overall quality metric</div>
+        <a href="{{ route('admin.academic-library.analytics') }}" class="gov-card p-4 flex flex-col gap-1 hover:border-sky-500 transition-all cursor-pointer no-underline group" title="Open IRQA Quality Analytics">
+            <div class="text-2xl font-extrabold text-sky-600 dark:text-sky-400 leading-none">{{ $summary['avg_health_score'] }} <span class="text-xs text-slate-400 font-medium">/ 100</span></div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">Average Health Score 📊</div>
+            <div class="text-[10px] text-slate-400">Overall quality metric</div>
         </a>
     </div>
 
     {{-- Duplicate Detection Alerts Panel (PART 6) --}}
     @if(count($summary['duplicates']['duplicate_titles']) > 0 || count($summary['duplicates']['duplicate_prompts']) > 0)
-    <div class="irqa-dup-panel">
-        <div class="irqa-dup-title">⚠️ Duplicate Detection Warnings (PART 6)</div>
-        <div class="irqa-dup-list">
+    <div class="p-4 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 space-y-2">
+        <div class="text-xs font-bold text-rose-700 dark:text-rose-400">⚠️ Duplicate Detection Warnings (PART 6)</div>
+        <div class="text-xs text-slate-700 dark:text-slate-300 space-y-1">
             @foreach($summary['duplicates']['duplicate_titles'] as $dupTitle)
             <div>• {{ $dupTitle }}</div>
             @endforeach
@@ -181,62 +98,68 @@
     @endif
 
     {{-- Repository Quality Audit Table (PART 1 to 10) --}}
-    <div class="irqa-panel">
-        <div class="irqa-panel__head">
-            <span class="irqa-panel__title">📋 Repository Health & Governance Audit</span>
+    <div class="gov-card p-0 overflow-hidden shadow-sm">
+        <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+            <span class="text-sm font-bold text-slate-900 dark:text-white">📋 Repository Health &amp; Governance Audit</span>
         </div>
-        <div style="overflow-x:auto;">
-            <table class="irqa-table">
-                <thead>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-xs">
+                <thead class="bg-slate-50 dark:bg-slate-950 text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                     <tr>
-                        <th>Repository Title</th>
-                        <th>Health Score</th>
-                        <th>Questions</th>
-                        <th>Explanation %</th>
-                        <th>Difficulty Distribution</th>
-                        <th>Governance Owner</th>
-                        <th>Quality Status</th>
+                        <th class="px-4 py-3">Repository Title</th>
+                        <th class="px-4 py-3">Health Score</th>
+                        <th class="px-4 py-3">Questions</th>
+                        <th class="px-4 py-3">Explanation %</th>
+                        <th class="px-4 py-3">Difficulty Distribution</th>
+                        <th class="px-4 py-3">Governance Owner</th>
+                        <th class="px-4 py-3">Quality Status</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
                     @foreach($summary['audits'] as $audit)
-                    <tr>
-                        <td>
-                            <a href="{{ route('admin.repository-manager.question-bank-validate', $audit['bank_id']) }}" style="font-weight:800;color:#818cf8;text-decoration:none;">
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td class="px-4 py-3.5">
+                            <a href="{{ route('admin.repository-manager.question-bank-validate', $audit['bank_id']) }}" class="font-bold text-indigo-600 dark:text-indigo-400 hover:underline block text-xs">
                                 {{ $audit['title'] }}
                             </a>
-                            <div style="font-size:.7rem;color:#64748b;margin-top:2px;">{{ $audit['governance']['current_version'] }} • {{ is_object($audit['test_type']) ? $audit['test_type']->label() : strtoupper((string) ($audit['test_type_label'] ?? $audit['test_type'] ?? 'GENERAL')) }}</div>
+                            <div class="text-[10px] text-slate-400 mt-0.5">{{ $audit['governance']['current_version'] }} • {{ is_object($audit['test_type']) ? $audit['test_type']->label() : strtoupper((string) ($audit['test_type_label'] ?? $audit['test_type'] ?? 'GENERAL')) }}</div>
                         </td>
-                        <td>
-                            <div style="font-size:1.15rem;font-weight:900;color:#f1f5f9;">
-                                {{ $audit['health_score'] }} <span style="font-size:.7rem;color:#64748b;">/ 100</span>
+                        <td class="px-4 py-3.5">
+                            <div class="text-sm font-extrabold text-slate-900 dark:text-white">
+                                {{ $audit['health_score'] }} <span class="text-[10px] text-slate-400 font-normal">/ 100</span>
                             </div>
                         </td>
-                        <td style="font-weight:700;color:#cbd5e1;">{{ $audit['total_questions'] }} items</td>
-                        <td>
-                            <span style="font-weight:700;color:{{ $audit['explanation_pct'] >= 80 ? '#34d399' : '#fb7185' }};">
+                        <td class="px-4 py-3.5 font-semibold text-slate-700 dark:text-slate-300">
+                            {{ $audit['total_questions'] }} items
+                        </td>
+                        <td class="px-4 py-3.5">
+                            <span class="font-bold {{ $audit['explanation_pct'] >= 80 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
                                 {{ $audit['explanation_pct'] }}%
                             </span>
                         </td>
-                        <td>
-                            <div style="display:flex;gap:.4rem;font-size:.72rem;">
-                                <span style="color:#34d399;font-weight:700;">Easy: {{ $audit['difficulty_counts']['easy'] }}</span> • 
-                                <span style="color:#fbbf24;font-weight:700;">Med: {{ $audit['difficulty_counts']['medium'] }}</span> • 
-                                <span style="color:#fb7185;font-weight:700;">Hard: {{ $audit['difficulty_counts']['hard'] }}</span>
+                        <td class="px-4 py-3.5">
+                            <div class="flex gap-1.5 text-[11px]">
+                                <span class="text-emerald-600 dark:text-emerald-400 font-bold">Easy: {{ $audit['difficulty_counts']['easy'] }}</span> • 
+                                <span class="text-amber-600 dark:text-amber-400 font-bold">Med: {{ $audit['difficulty_counts']['medium'] }}</span> • 
+                                <span class="text-rose-600 dark:text-rose-400 font-bold">Hard: {{ $audit['difficulty_counts']['hard'] }}</span>
                             </div>
                         </td>
-                        <td>
-                            <div style="font-size:.75rem;color:#e2e8f0;font-weight:600;">{{ $audit['governance']['institution_owner'] }}</div>
-                            <div style="font-size:.68rem;color:#64748b;">Author: {{ $audit['governance']['contributor'] }}</div>
+                        <td class="px-4 py-3.5">
+                            <div class="text-xs font-semibold text-slate-800 dark:text-slate-200">{{ $audit['governance']['institution_owner'] }}</div>
+                            <div class="text-[10px] text-slate-400">Author: {{ $audit['governance']['contributor'] }}</div>
                         </td>
-                        <td>
+                        <td class="px-4 py-3.5">
                             @if($audit['needs_improvement'])
-                            <span class="irqa-badge irqa-badge--warning">Needs Improvement</span>
-                            <div style="font-size:.65rem;color:#fb7185;margin-top:3px;max-width:220px;line-height:1.2;">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 inline-block">
+                                Needs Improvement
+                            </span>
+                            <div class="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5 max-w-[200px] leading-tight">
                                 {{ $audit['warnings'][0] ?? 'Low health rating' }}
                             </div>
                             @else
-                            <span class="irqa-badge irqa-badge--excellent">Healthy ({{ $audit['health_grade'] }})</span>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-block">
+                                Healthy ({{ $audit['health_grade'] }})
+                            </span>
                             @endif
                         </td>
                     </tr>
@@ -247,14 +170,16 @@
     </div>
 
     {{-- Floating Dialog Modal for 0 Awaiting Approval (TASK 1.4) --}}
-    <div id="noApprovalModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,.75);backdrop-filter:blur(6px);z-index:999;align-items:center;justify-content:center;padding:1rem;">
-        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;max-width:440px;width:100%;padding:2rem;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.6);">
-            <div style="font-size:2.5rem;margin-bottom:.5rem;">🎉</div>
-            <h3 style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin-bottom:.5rem;">No Repository Awaiting Approval</h3>
-            <p style="font-size:.85rem;color:#94a3b8;line-height:1.45;margin-bottom:1.5rem;">Everything has already been reviewed.</p>
-            <button type="button" onclick="closeNoApprovalModal()" style="padding:.6rem 1.5rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-weight:700;cursor:pointer;font-size:.85rem;">
-                OK, Understood
-            </button>
+    <div id="noApprovalModal" style="display:none;" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="gov-card max-w-sm w-full p-6 text-center shadow-2xl space-y-3">
+            <div class="text-4xl">🎉</div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">No Repository Awaiting Approval</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Everything has already been reviewed.</p>
+            <div class="pt-2">
+                <button type="button" onclick="closeNoApprovalModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow transition-colors cursor-pointer">
+                    OK, Understood
+                </button>
+            </div>
         </div>
     </div>
 
@@ -269,3 +194,4 @@
 
 </div>
 @endsection
+

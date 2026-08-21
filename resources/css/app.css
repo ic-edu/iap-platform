@@ -815,5 +815,185 @@ html[data-theme="light"] .rm-table tr:hover td {
     background: #f8faff !important;
 }
 
+/* ==========================================================================
+   Global Native Modal Dialog Component Theme Overrides
+   ========================================================================== */
+html.light #iap-modal-panel,
+html[data-theme="light"] #iap-modal-panel {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.12) !important;
+}
+
+html.light #iap-modal-title,
+html[data-theme="light"] #iap-modal-title {
+    color: #0f172a !important;
+}
+
+html.light #iap-modal-desc,
+html[data-theme="light"] #iap-modal-desc {
+    color: #64748b !important;
+}
+
+html.light #iap-modal-actions,
+html[data-theme="light"] #iap-modal-actions {
+    background-color: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+}
+
+html.light #iap-modal-cancel-btn,
+html[data-theme="light"] #iap-modal-cancel-btn {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html.light #iap-modal-cancel-btn:hover,
+html[data-theme="light"] #iap-modal-cancel-btn:hover {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+
+html.light #iap-global-dialog::backdrop,
+html[data-theme="light"] #iap-global-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* ==========================================================================
+   Comprehensive Governance & Quality Surfaces Theme Overrides
+   ========================================================================== */
+html.light .qbw-card,
+html[data-theme="light"] .qbw-card,
+html.light .mr-card,
+html[data-theme="light"] .mr-card,
+html.light .dd-card,
+html[data-theme="light"] .dd-card,
+html.light .qa-card,
+html[data-theme="light"] .qa-card,
+html.light .mac-card,
+html[data-theme="light"] .mac-card,
+html.light .irqa-panel,
+html[data-theme="light"] .irqa-panel,
+html.light .an-panel,
+html[data-theme="light"] .an-panel {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+html.light .qbw-q-card,
+html[data-theme="light"] .qbw-q-card,
+html.light .diff-box,
+html[data-theme="light"] .diff-box,
+html.light .dd-box,
+html[data-theme="light"] .dd-box {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: var(--text-primary) !important;
+}
+
+html.light .qbw-opt,
+html[data-theme="light"] .qbw-opt {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #334155 !important;
+}
+
+html.light .qbw-opt--correct,
+html[data-theme="light"] .qbw-opt--correct {
+    background: #ecfdf5 !important;
+    border-color: #a7f3d0 !important;
+    color: #059669 !important;
+}
+
+html.light .qbw-meta-table td,
+html[data-theme="light"] .qbw-meta-table td {
+    color: var(--text-primary) !important;
+}
+
+html.light .qbw-meta-table tr,
+html[data-theme="light"] .qbw-meta-table tr {
+    border-color: var(--border) !important;
+}
+
+html.light .irqa-hero,
+html[data-theme="light"] .irqa-hero,
+html.light .an-hero,
+html[data-theme="light"] .an-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+html.light .irqa-hero__title,
+html[data-theme="light"] .irqa-hero__title,
+html.light .an-hero__title,
+html[data-theme="light"] .an-hero__title {
+    color: var(--text-primary) !important;
+}
+
+html.light .irqa-hero__sub,
+html[data-theme="light"] .irqa-hero__sub,
+html.light .an-hero__sub,
+html[data-theme="light"] .an-hero__sub {
+    color: var(--text-secondary) !important;
+}
+
+html.light .irqa-kpi,
+html[data-theme="light"] .irqa-kpi,
+html.light .an-kpi,
+html[data-theme="light"] .an-kpi {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03) !important;
+}
+
+html.light .irqa-dup-panel,
+html[data-theme="light"] .irqa-dup-panel {
+    background: #fff1f2 !important;
+    border: 1px solid #fecdd3 !important;
+}
+
+html.light .irqa-dup-list,
+html[data-theme="light"] .irqa-dup-list {
+    color: #9f1239 !important;
+}
+
+html.light .irqa-table th,
+html[data-theme="light"] .irqa-table th,
+html.light .qa-table th,
+html[data-theme="light"] .qa-table th,
+html.light .mac-table th,
+html[data-theme="light"] .mac-table th {
+    background: #f8fafc !important;
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+html.light .irqa-table td,
+html[data-theme="light"] .irqa-table td,
+html.light .qa-table td,
+html[data-theme="light"] .qa-table td,
+html.light .mac-table td,
+html[data-theme="light"] .mac-table td {
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+html.light .mac-pill,
+html[data-theme="light"] .mac-pill {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+html.light .mac-pill.active,
+html[data-theme="light"] .mac-pill.active {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border-color: var(--accent) !important;
+}
+
+
 
 

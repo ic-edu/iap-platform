@@ -2,99 +2,91 @@
 
 @section('title', 'Question Banks Approval Queue — Repository Governance')
 
-@push('styles')
-<style>
-.qa-container { display:flex; flex-direction:column; gap:1.5rem; width:100%; max-width:100%; }
-.qa-card { background:#0f172a; border:1px solid #1e293b; border-radius:1.25rem; padding:1.5rem; }
-.qa-table { width:100%; border-collapse:collapse; font-size:.84rem; text-align:left; }
-.qa-table th { padding:.75rem 1rem; background:#1e293b; color:#94a3b8; font-weight:700; border-bottom:1px solid #334155; }
-.qa-table td { padding:.85rem 1rem; border-bottom:1px solid #1e293b; color:#e2e8f0; }
-.qa-table tr:hover td { background:rgba(30,41,59,.5); }
-</style>
-@endpush
-
 @section('content')
-<div class="qa-container">
+<div class="space-y-6">
 
     {{-- Header (Context-aware route destination) --}}
     <div>
         @if(request('from') === 'notifications')
-        <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('notifications.index') }}" class="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1">
             ← Back to Notifications
         </a>
         @elseif(request('from_url') && str_starts_with(request('from_url'), '/') && !str_starts_with(request('from_url'), '//') && !str_contains(request('from_url'), '://'))
-        <a href="{{ request('from_url') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+        <a href="{{ request('from_url') }}" class="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1">
             ← Back
         </a>
         @else
-        <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('admin.repository-manager.dashboard') }}" class="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1">
             ← Back
         </a>
         @endif
-        <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:.25rem 0 0;">
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white mt-1">
             Question Banks Approval Queue
         </h1>
-        <p style="font-size:.84rem;color:#94a3b8;margin:0;">
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Review and validate new Question Bank repositories before institutional publishing.
         </p>
     </div>
 
     {{-- Question Banks Table --}}
-    <div class="qa-card">
+    <div class="gov-card p-0 overflow-hidden shadow-sm">
         @if($questionBanks->count() > 0)
-            <table class="qa-table">
-                <thead>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-xs">
+                <thead class="bg-slate-50 dark:bg-slate-950 text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                     <tr>
-                        <th>Repository Title</th>
-                        <th>Program / Type</th>
-                        <th>Questions</th>
-                        <th>Status</th>
-                        <th>Governance Action</th>
+                        <th class="px-4 py-3">Repository Title</th>
+                        <th class="px-4 py-3">Program / Type</th>
+                        <th class="px-4 py-3">Questions</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3 text-right">Governance Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
                     @foreach($questionBanks as $bank)
-                    <tr>
-                        <td>
-                            <div style="font-weight:700;color:#fff;">{{ $bank->title }}</div>
-                            <div style="font-size:.7rem;color:#64748b;">ID: {{ $bank->id }}</div>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-slate-900 dark:text-white text-xs">{{ $bank->title }}</div>
+                            <div class="text-[10px] text-slate-400 mt-0.5">ID: {{ $bank->id }}</div>
                         </td>
-                        <td>
-                            <span style="padding:.2rem .6rem;background:#1e293b;border:1px solid #334155;color:#34d399;border-radius:.4rem;font-size:.72rem;font-weight:700;text-transform:uppercase;">
+                        <td class="px-4 py-3.5">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                 {{ is_object($bank->test_type) ? $bank->test_type->value : $bank->test_type }}
                             </span>
                         </td>
-                        <td>
-                            <span style="font-weight:700;color:#e2e8f0;">{{ $bank->questions_count ?? 15 }} Items</span>
+                        <td class="px-4 py-3.5">
+                            <span class="font-bold text-slate-800 dark:text-slate-200">{{ $bank->questions_count ?? 15 }} Items</span>
                         </td>
-                        <td>
+                        <td class="px-4 py-3.5">
                             @if($bank->status === 'approved')
-                            <span style="padding:.2rem .6rem;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:.4rem;font-size:.72rem;font-weight:700;">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                 Approved (Restored)
                             </span>
                             @else
-                            <span style="padding:.2rem .6rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:.4rem;font-size:.72rem;font-weight:700;">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                 Awaiting Approval
                             </span>
                             @endif
                         </td>
-                        <td>
-                            <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" style="padding:.4rem .85rem;background:#6366f1;color:#fff;border-radius:.45rem;font-size:.75rem;font-weight:800;text-decoration:none;">
-                                Review & Validate →
+                        <td class="px-4 py-3.5 text-right">
+                            <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow transition-colors inline-block">
+                                Review &amp; Validate →
                             </a>
                         </td>
                     </tr>
                     @endforeach
                 </tbody>
             </table>
+        </div>
         @else
-            <div style="text-align:center;padding:3rem;color:#64748b;">
-                <div style="font-size:2.5rem;margin-bottom:.5rem;">✨</div>
-                <div style="font-size:1rem;font-weight:700;color:#e2e8f0;">No Question Banks Awaiting Review</div>
-                <div style="font-size:.8rem;">All submitted institutional repositories have been audited.</div>
-            </div>
+        <div class="p-12 text-center text-slate-400">
+            <div class="text-4xl mb-2">✨</div>
+            <div class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">No Question Banks Awaiting Review</div>
+            <div class="text-xs text-slate-500">All submitted institutional repositories have been audited.</div>
+        </div>
         @endif
     </div>
 
 </div>
 @endsection
+

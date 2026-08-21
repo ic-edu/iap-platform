@@ -2,143 +2,128 @@
 
 @section('title', 'Media Approval Center — Enterprise Repository Management')
 
-@push('styles')
-<style>
-.mac-container { display:flex; flex-direction:column; gap:1.5rem; width:100%; max-width:100%; }
-.mac-card { background:#0f172a; border:1px solid #1e293b; border-radius:1.25rem; padding:1.5rem; }
-
-.mac-pills { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.25rem; }
-.mac-pill {
-    padding:.45rem 1rem; border-radius:99px; font-size:.78rem; font-weight:700;
-    text-decoration:none; color:#94a3b8; background:#1e293b; border:1px solid #334155;
-    transition: all .15s ease;
-}
-.mac-pill.active { background:#6366f1; color:#fff; border-color:#6366f1; }
-
-.mac-table { width:100%; border-collapse:collapse; font-size:.84rem; text-align:left; }
-.mac-table th { padding:.75rem 1rem; background:#1e293b; color:#94a3b8; font-weight:700; border-bottom:1px solid #334155; }
-.mac-table td { padding:.85rem 1rem; border-bottom:1px solid #1e293b; color:#e2e8f0; }
-.mac-table tr:hover td { background:rgba(30,41,59,.5); }
-</style>
-@endpush
-
 @section('content')
-<div class="mac-container">
+<div class="space-y-6">
 
     {{-- Top Header --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <div class="flex justify-between items-center flex-wrap gap-4">
         <div>
-            <a href="{{ route('admin.repository-manager.dashboard') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+            <a href="{{ route('admin.repository-manager.dashboard') }}" class="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1">
                 ← Back
             </a>
-            <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:.25rem 0 0;">
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white mt-1">
                 Media Approval Center (QA Queue)
             </h1>
         </div>
     </div>
 
     {{-- Status & Type Filters (PART F) --}}
-    <div class="mac-card">
-        <div style="font-size:.75rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:.6rem;">Filter by Submission Status</div>
-        <div class="mac-pills">
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'pending_review', 'type' => $type]) }}" class="mac-pill {{ $status === 'pending_review' ? 'active' : '' }}">
-                ⏳ Pending Review Queue
-            </a>
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'approved', 'type' => $type]) }}" class="mac-pill {{ $status === 'approved' ? 'active' : '' }}">
-                ✅ Approved Revisions
-            </a>
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'revision_requested', 'type' => $type]) }}" class="mac-pill {{ $status === 'revision_requested' ? 'active' : '' }}">
-                ⚠️ Revision Requested
-            </a>
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'rejected', 'type' => $type]) }}" class="mac-pill {{ $status === 'rejected' ? 'active' : '' }}">
-                ❌ Rejected
-            </a>
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'all', 'type' => $type]) }}" class="mac-pill {{ $status === 'all' ? 'active' : '' }}">
-                🌐 All Submissions
-            </a>
+    <div class="gov-card space-y-4">
+        <div>
+            <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Filter by Submission Status</div>
+            <div class="flex gap-2 flex-wrap">
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'pending_review', 'type' => $type]) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $status === 'pending_review' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    ⏳ Pending Review Queue
+                </a>
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'approved', 'type' => $type]) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $status === 'approved' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    ✅ Approved Revisions
+                </a>
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'revision_requested', 'type' => $type]) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $status === 'revision_requested' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    ⚠️ Revision Requested
+                </a>
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'rejected', 'type' => $type]) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $status === 'rejected' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    ❌ Rejected
+                </a>
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => 'all', 'type' => $type]) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $status === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    🌐 All Submissions
+                </a>
+            </div>
         </div>
 
-        <div style="font-size:.75rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:.6rem;">Filter by Asset Type</div>
-        <div class="mac-pills">
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status]) }}" class="mac-pill {{ empty($type) ? 'active' : '' }}">
-                All Asset Types
-            </a>
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status, 'type' => 'audio']) }}" class="mac-pill {{ $type === 'audio' ? 'active' : '' }}">
-                🎵 Audio Clips
-            </a>
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status, 'type' => 'image']) }}" class="mac-pill {{ $type === 'image' ? 'active' : '' }}">
-                🖼 Images
-            </a>
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status, 'type' => 'passage']) }}" class="mac-pill {{ $type === 'passage' ? 'active' : '' }}">
-                📖 Passages
-            </a>
-            <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status, 'type' => 'pdf']) }}" class="mac-pill {{ $type === 'pdf' ? 'active' : '' }}">
-                📄 PDF Documents
-            </a>
+        <div>
+            <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Filter by Asset Type</div>
+            <div class="flex gap-2 flex-wrap">
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status]) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ empty($type) ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    All Asset Types
+                </a>
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status, 'type' => 'audio']) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $type === 'audio' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    🎵 Audio Clips
+                </a>
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status, 'type' => 'image']) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $type === 'image' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    🖼 Images
+                </a>
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status, 'type' => 'passage']) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $type === 'passage' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    📖 Passages
+                </a>
+                <a href="{{ route('admin.repository-manager.media-approval', ['status' => $status, 'type' => 'pdf']) }}" class="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all {{ $type === 'pdf' ? 'bg-indigo-600 text-white shadow-sm' : 'gov-btn-secondary' }}">
+                    📄 PDF Documents
+                </a>
+            </div>
         </div>
     </div>
 
     {{-- Review Requests Table --}}
-    <div class="mac-card">
+    <div class="gov-card p-0 overflow-hidden shadow-sm">
         @if($reviewRequests->count() > 0)
-            <table class="mac-table">
-                <thead>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-xs">
+                <thead class="bg-slate-50 dark:bg-slate-950 text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                     <tr>
-                        <th>Asset Title / Request ID</th>
-                        <th>Type</th>
-                        <th>Submitter Teacher</th>
-                        <th>Submitted At</th>
-                        <th>Status</th>
-                        <th>Reviewer Action</th>
+                        <th class="px-4 py-3">Asset Title / Request ID</th>
+                        <th class="px-4 py-3">Type</th>
+                        <th class="px-4 py-3">Submitter Teacher</th>
+                        <th class="px-4 py-3">Submitted At</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3 text-right">Reviewer Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
                     @foreach($reviewRequests as $req)
                     @php
                         $mediaType = $req->changes_data['media_type'] ?? 'Asset';
                     @endphp
-                    <tr>
-                        <td>
-                            <div style="font-weight:700;color:#fff;">
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-slate-900 dark:text-white text-xs">
                                 {{ $req->changes_data['new_title'] ?? 'Media Revision Request' }}
                             </div>
-                            <div style="font-size:.7rem;color:#64748b;">
-                                Request ID: <code style="color:#a78bfa;">{{ $req->id }}</code> • Resource ID: {{ $req->resource_id }}
+                            <div class="text-[10px] text-slate-400 mt-0.5 font-mono">
+                                Request ID: <span class="text-indigo-600 dark:text-indigo-400 font-bold">{{ $req->id }}</span> • Resource ID: {{ $req->resource_id }}
                             </div>
                         </td>
-                        <td>
-                            <span style="padding:.2rem .6rem;background:#1e293b;border:1px solid #334155;color:#818cf8;border-radius:.4rem;font-size:.72rem;font-weight:700;text-transform:uppercase;">
+                        <td class="px-4 py-3.5">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                                 {{ $mediaType }}
                             </span>
                         </td>
-                        <td>
-                            <div style="font-weight:600;color:#e2e8f0;">{{ $req->submitter?->name ?? 'Teacher' }}</div>
-                            <div style="font-size:.7rem;color:#64748b;">{{ $req->submitter?->email }}</div>
+                        <td class="px-4 py-3.5">
+                            <div class="font-semibold text-slate-800 dark:text-slate-200 text-xs">{{ $req->submitter?->name ?? 'Teacher' }}</div>
+                            <div class="text-[10px] text-slate-400">{{ $req->submitter?->email }}</div>
                         </td>
-                        <td style="font-size:.75rem;color:#94a3b8;">
+                        <td class="px-4 py-3.5 text-xs text-slate-500 dark:text-slate-400">
                             {{ $req->created_at?->format('d M Y, H:i') }}
                         </td>
-                        <td>
+                        <td class="px-4 py-3.5">
                             @if($req->status === 'pending_review')
-                                <span style="padding:.2rem .6rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:.4rem;font-size:.72rem;font-weight:700;">
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                     ⏳ Pending QA Review
                                 </span>
                             @elseif($req->status === 'approved')
-                                <span style="padding:.2rem .6rem;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:.4rem;font-size:.72rem;font-weight:700;">
-                                    ✅ Approved & Published
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                    ✅ Approved &amp; Published
                                 </span>
                             @elseif($req->status === 'revision_requested')
-                                <span style="padding:.2rem .6rem;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);color:#fb923c;border-radius:.4rem;font-size:.72rem;font-weight:700;">
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
                                     ⚠️ Revision Requested
                                 </span>
                             @else
-                                <span style="padding:.2rem .6rem;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:.4rem;font-size:.72rem;font-weight:700;">
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                                     ❌ Rejected
                                 </span>
                             @endif
                         </td>
-                        <td>
-                            <a href="{{ route('admin.repository-manager.media-review', $req->id) }}" style="padding:.45rem .9rem;background:#6366f1;color:#fff;border-radius:.5rem;font-size:.75rem;font-weight:800;text-decoration:none;display:inline-block;">
+                        <td class="px-4 py-3.5 text-right">
+                            <a href="{{ route('admin.repository-manager.media-review', $req->id) }}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow transition-colors inline-block">
                                 Review Diff →
                             </a>
                         </td>
@@ -146,16 +131,17 @@
                     @endforeach
                 </tbody>
             </table>
+        </div>
 
-            <div style="margin-top:1.25rem;">
-                {{ $reviewRequests->links() }}
-            </div>
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+            {{ $reviewRequests->links() }}
+        </div>
         @else
-            <div style="text-align:center;padding:3rem;color:#64748b;">
-                <div style="font-size:2.5rem;margin-bottom:.5rem;">✨</div>
-                <div style="font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:.25rem;">No Submissions Matching Selected Filter</div>
-                <div style="font-size:.8rem;">All teacher media revision requests in this queue have been processed.</div>
-            </div>
+        <div class="p-12 text-center text-slate-400">
+            <div class="text-4xl mb-2">✨</div>
+            <div class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">No Submissions Matching Selected Filter</div>
+            <div class="text-xs text-slate-500">All teacher media revision requests in this queue have been processed.</div>
+        </div>
         @endif
     </div>
 
@@ -168,3 +154,4 @@ window.addEventListener('pageshow', function (event) {
 });
 </script>
 @endsection
+

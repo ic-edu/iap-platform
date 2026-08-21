@@ -2,66 +2,8 @@
 
 @section('title', 'IRQA Quality Analytics — iC.edu Platform')
 
-@push('styles')
-<style>
-.an-workspace { display: flex; flex-direction: column; gap: 1.75rem; }
-
-.an-hero {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-    border: 1px solid #1e293b;
-    border-radius: 1.25rem;
-    padding: 1.75rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-}
-.an-hero__title { font-size: 1.5rem; font-weight: 800; color: #fff; margin: 0 0 .3rem; }
-.an-hero__sub   { font-size: .85rem; color: #94a3b8; margin: 0; }
-
-.an-kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 1rem;
-}
-@media (max-width: 1200px) { .an-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 768px)  { .an-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-
-.an-kpi {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 1rem;
-    padding: 1.1rem 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: .25rem;
-}
-.an-kpi__count { font-size: 1.85rem; font-weight: 900; line-height: 1; }
-.an-kpi__label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; }
-
-.an-panel {
-    background: #0f172a;
-    border: 1px solid #1e293b;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-.an-panel__title { font-size: 1rem; font-weight: 800; color: #f1f5f9; }
-
-.an-spot-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.25rem;
-}
-@media (max-width: 900px) { .an-spot-grid { grid-template-columns: 1fr; } }
-</style>
-@endpush
-
 @section('content')
-<div class="an-workspace">
+<div class="space-y-6">
 
     {{-- Breadcrumb Navigation --}}
     @php
@@ -70,96 +12,96 @@
             default    => route('admin.academic-library.quality'),
         };
     @endphp
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-        <a href="{{ $anBackUrl }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+    <div class="flex justify-between items-center">
+        <a href="{{ $anBackUrl }}" class="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1">
             ← Back
         </a>
-        <span style="padding:.25rem .75rem;background:#1e293b;color:#94a3b8;border-radius:99px;font-size:.7rem;font-weight:700;">INSTITUTIONAL QUALITY ANALYTICS</span>
+        <span class="px-3 py-1 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-[10px] font-bold tracking-wider">INSTITUTIONAL QUALITY ANALYTICS</span>
     </div>
 
     {{-- Hero Header --}}
-    <div class="an-hero">
+    <div class="gov-hero">
         <div>
-            <h1 class="an-hero__title">📊 IRQA Quality Analytics</h1>
-            <p class="an-hero__sub">Comprehensive health distribution, completion percentages, coverage ratios, and quality trends.</p>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">📊 IRQA Quality Analytics</h1>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Comprehensive health distribution, completion percentages, coverage ratios, and quality trends.</p>
         </div>
         <div>
-            <a href="{{ route('admin.academic-library.explorer') }}" style="padding:.6rem 1.2rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.85rem;font-weight:700;text-decoration:none;">
+            <a href="{{ route('admin.academic-library.explorer') }}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow transition-colors inline-flex items-center gap-1.5">
                 🔍 Open Explorer
             </a>
         </div>
     </div>
 
     {{-- KPI Gauges Grid (TASK 1.5) --}}
-    <div class="an-kpi-grid">
-        <div class="an-kpi">
-            <div class="an-kpi__count" style="color:#38bdf8;">{{ $analyticsData['avg_health_score'] }}%</div>
-            <div class="an-kpi__label">Average Health Score</div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="gov-card p-4 flex flex-col gap-1">
+            <div class="text-2xl font-extrabold text-sky-600 dark:text-sky-400 leading-none">{{ $analyticsData['avg_health_score'] }}%</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Average Health Score</div>
         </div>
-        <div class="an-kpi">
-            <div class="an-kpi__count" style="color:#34d399;">{{ $analyticsData['metadata_completion'] }}%</div>
-            <div class="an-kpi__label">Metadata Completion</div>
+        <div class="gov-card p-4 flex flex-col gap-1">
+            <div class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 leading-none">{{ $analyticsData['metadata_completion'] }}%</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Metadata Completion</div>
         </div>
-        <div class="an-kpi">
-            <div class="an-kpi__count" style="color:#818cf8;">{{ $analyticsData['question_completeness'] }}%</div>
-            <div class="an-kpi__label">Question Completeness</div>
+        <div class="gov-card p-4 flex flex-col gap-1">
+            <div class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 leading-none">{{ $analyticsData['question_completeness'] }}%</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Question Completeness</div>
         </div>
-        <div class="an-kpi">
-            <div class="an-kpi__count" style="color:#fbbf24;">{{ $analyticsData['explanation_coverage'] }}%</div>
-            <div class="an-kpi__label">Explanation Coverage</div>
+        <div class="gov-card p-4 flex flex-col gap-1">
+            <div class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 leading-none">{{ $analyticsData['explanation_coverage'] }}%</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Explanation Coverage</div>
         </div>
-        <div class="an-kpi">
-            <div class="an-kpi__count" style="color:#a78bfa;">{{ $analyticsData['difficulty_balance'] }}%</div>
-            <div class="an-kpi__label">Difficulty Balance</div>
+        <div class="gov-card p-4 flex flex-col gap-1">
+            <div class="text-2xl font-extrabold text-purple-600 dark:text-purple-400 leading-none">{{ $analyticsData['difficulty_balance'] }}%</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Difficulty Balance</div>
         </div>
-        <div class="an-kpi">
-            <div class="an-kpi__count" style="color:#f43f5e;">{{ $analyticsData['overall_coverage'] }}%</div>
-            <div class="an-kpi__label">Global Category Coverage</div>
+        <div class="gov-card p-4 flex flex-col gap-1">
+            <div class="text-2xl font-extrabold text-rose-600 dark:text-rose-400 leading-none">{{ $analyticsData['overall_coverage'] }}%</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Global Category Coverage</div>
         </div>
     </div>
 
     {{-- Health Distribution Breakdown (TASK 1.5) --}}
-    <div class="an-panel">
-        <div class="an-panel__title">📈 Repository Health Distribution</div>
-        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
-            <div style="flex:1;background:#080f1d;border:1px solid #1e293b;border-radius:.75rem;padding:1.2rem;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:#34d399;">{{ $analyticsData['distribution']['excellent'] }}</div>
-                <div style="font-size:.75rem;color:#94a3b8;margin-top:.2rem;font-weight:700;">EXCELLENT (90-100)</div>
+    <div class="gov-card space-y-4">
+        <div class="text-sm font-bold text-slate-900 dark:text-white">📈 Repository Health Distribution</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl p-5 text-center">
+                <div class="text-3xl font-black text-emerald-600 dark:text-emerald-400">{{ $analyticsData['distribution']['excellent'] }}</div>
+                <div class="text-[11px] text-emerald-700 dark:text-emerald-300 mt-1 font-bold">EXCELLENT (90-100)</div>
             </div>
-            <div style="flex:1;background:#080f1d;border:1px solid #1e293b;border-radius:.75rem;padding:1.2rem;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:#818cf8;">{{ $analyticsData['distribution']['good'] }}</div>
-                <div style="font-size:.75rem;color:#94a3b8;margin-top:.2rem;font-weight:700;">GOOD (75-89)</div>
+            <div class="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/40 rounded-xl p-5 text-center">
+                <div class="text-3xl font-black text-indigo-600 dark:text-indigo-400">{{ $analyticsData['distribution']['good'] }}</div>
+                <div class="text-[11px] text-indigo-700 dark:text-indigo-300 mt-1 font-bold">GOOD (75-89)</div>
             </div>
-            <div style="flex:1;background:#080f1d;border:1px solid #1e293b;border-radius:.75rem;padding:1.2rem;text-align:center;">
-                <div style="font-size:2rem;font-weight:900;color:#fb7185;">{{ $analyticsData['distribution']['needs_improvement'] }}</div>
-                <div style="font-size:.75rem;color:#94a3b8;margin-top:.2rem;font-weight:700;">NEEDS IMPROVEMENT (<75)</div>
+            <div class="bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 rounded-xl p-5 text-center">
+                <div class="text-3xl font-black text-rose-600 dark:text-rose-400">{{ $analyticsData['distribution']['needs_improvement'] }}</div>
+                <div class="text-[11px] text-rose-700 dark:text-rose-300 mt-1 font-bold">NEEDS IMPROVEMENT (&lt;75)</div>
             </div>
         </div>
     </div>
 
     {{-- Top & Lowest Repositories Spotlight (TASK 1.5) --}}
-    <div class="an-spot-grid">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         {{-- Top Healthy Repo --}}
         @if($analyticsData['top_healthy_repo'])
-        <div style="background:#0f172a;border:1px solid rgba(52,211,153,.3);border-radius:1rem;padding:1.5rem;">
-            <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#34d399;">🏆 Top Healthy Repository</div>
-            <h3 style="font-size:1.2rem;font-weight:800;color:#f1f5f9;margin:.35rem 0 .5rem;">{{ $analyticsData['top_healthy_repo']['title'] }}</h3>
-            <div style="font-size:.8rem;color:#94a3b8;">
-                Health Score: <strong style="color:#34d399;">{{ $analyticsData['top_healthy_repo']['health_score'] }} / 100</strong> • Questions: {{ $analyticsData['top_healthy_repo']['total_questions'] }}
+        <div class="gov-card border-emerald-300 dark:border-emerald-800/60 p-5 space-y-2">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">🏆 Top Healthy Repository</div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">{{ $analyticsData['top_healthy_repo']['title'] }}</h3>
+            <div class="text-xs text-slate-600 dark:text-slate-400">
+                Health Score: <strong class="text-emerald-600 dark:text-emerald-400 font-bold">{{ $analyticsData['top_healthy_repo']['health_score'] }} / 100</strong> • Questions: {{ $analyticsData['top_healthy_repo']['total_questions'] }}
             </div>
         </div>
         @endif
 
         {{-- Lowest Repo --}}
         @if($analyticsData['lowest_repo'])
-        <div style="background:#0f172a;border:1px solid rgba(251,113,133,.3);border-radius:1rem;padding:1.5rem;">
-            <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fb7185;">⚠️ Highest Priority for Improvement</div>
-            <h3 style="font-size:1.2rem;font-weight:800;color:#f1f5f9;margin:.35rem 0 .5rem;">{{ $analyticsData['lowest_repo']['title'] }}</h3>
-            <div style="font-size:.8rem;color:#94a3b8;">
-                Health Score: <strong style="color:#fb7185;">{{ $analyticsData['lowest_repo']['health_score'] }} / 100</strong> • Questions: {{ $analyticsData['lowest_repo']['total_questions'] }}
+        <div class="gov-card border-rose-300 dark:border-rose-800/60 p-5 space-y-3">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">⚠️ Highest Priority for Improvement</div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">{{ $analyticsData['lowest_repo']['title'] }}</h3>
+            <div class="text-xs text-slate-600 dark:text-slate-400">
+                Health Score: <strong class="text-rose-600 dark:text-rose-400 font-bold">{{ $analyticsData['lowest_repo']['health_score'] }} / 100</strong> • Questions: {{ $analyticsData['lowest_repo']['total_questions'] }}
             </div>
-            <div style="margin-top:1rem;">
-                <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc']) }}" style="padding:.4rem .85rem;background:#fb7185;color:#fff;border-radius:.4rem;font-size:.75rem;font-weight:700;text-decoration:none;">
+            <div class="pt-1">
+                <a href="{{ route('admin.academic-library.explorer', ['filter' => 'needs_improvement', 'sort' => 'health_asc']) }}" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold shadow-sm transition-colors inline-block">
                     Fix Lowest Repositories →
                 </a>
             </div>
@@ -169,3 +111,4 @@
 
 </div>
 @endsection
+

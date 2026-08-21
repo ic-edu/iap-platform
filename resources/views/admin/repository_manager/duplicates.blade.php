@@ -2,73 +2,73 @@
 
 @section('title', 'Duplicate Detection & Similarity Center — Repository Governance')
 
-@push('styles')
-<style>
-.dd-container { display:flex; flex-direction:column; gap:1.5rem; width:100%; max-width:100%; }
-.dd-card { background:#0f172a; border:1px solid #1e293b; border-radius:1.25rem; padding:1.5rem; }
-.dd-box { background:#1e293b; border:1px solid #334155; border-radius:.85rem; padding:1.25rem; margin-bottom:1rem; }
-</style>
-@endpush
-
 @section('content')
-<div class="dd-container">
+<div class="space-y-6">
 
     {{-- Header --}}
     <div>
-        <a href="{{ route('admin.repository-manager.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('admin.repository-manager.dashboard') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" class="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1">
             ← Back
         </a>
-        <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:.25rem 0 0;">
-            🔍 Duplicate Detection & Content Similarity Center
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+            🔍 Duplicate Detection &amp; Content Similarity Center
         </h1>
-        <p style="font-size:.84rem;color:#94a3b8;margin:0;">
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             AI-assisted similarity audit to prevent redundant questions, passages, and media assets in institutional repositories.
         </p>
     </div>
 
     {{-- Duplicates Scanner Overview --}}
-    <div class="dd-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
+    <div class="gov-card space-y-4">
+        <div class="flex justify-between items-center flex-wrap gap-3">
             <div>
-                <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">Simulated Duplicate Flagged Items</h3>
-                <div style="font-size:.78rem;color:#94a3b8;">High-similarity content detected across TOEFL and IELTS repositories.</div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">Simulated Duplicate Flagged Items</h3>
+                <div class="text-xs text-slate-500 dark:text-slate-400">High-similarity content detected across TOEFL and IELTS repositories.</div>
             </div>
-            <button type="button" onclick="iapAlert({ title: 'Full Repository Scan', message: '⚡ Automated Full Repository Scan Triggered. Scanning 1,420 items...', variant: 'info' })" style="padding:.55rem 1.1rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;">
+            <button type="button" onclick="iapAlert({ title: 'Full Repository Scan', message: '⚡ Automated Full Repository Scan Triggered. Scanning 1,420 items...', variant: 'info' })" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow transition-colors cursor-pointer inline-flex items-center gap-1.5">
                 ⚡ Run Full Repository Scan
             </button>
         </div>
 
-        <div class="dd-box">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                <span style="font-size:.82rem;font-weight:800;color:#f87171;">⚠️ Flagged Duplicate Question Item #Q-8902</span>
-                <span style="font-size:.72rem;font-weight:800;color:#f87171;background:rgba(239,68,68,.1);padding:.2rem .6rem;border-radius:99px;border:1px solid rgba(239,68,68,.3);">
+        <div class="p-4 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 space-y-3">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <span class="text-xs font-bold text-rose-700 dark:text-rose-400">⚠️ Flagged Duplicate Question Item #Q-8902</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                     98.4% Similarity Match
                 </span>
             </div>
-            <div style="font-size:.85rem;color:#e2e8f0;line-height:1.5;">
+            <div class="text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
                 <strong>Original:</strong> "According to paragraph 2, why did early Mesopotamian civilizations construct ziggurats?"<br>
-                <strong style="color:#fb923c;">Duplicate Candidate:</strong> "Based on paragraph 2, what was the primary reason early Mesopotamian societies built ziggurats?"
+                <strong class="text-amber-700 dark:text-amber-400">Duplicate Candidate:</strong> "Based on paragraph 2, what was the primary reason early Mesopotamian societies built ziggurats?"
             </div>
-            <div style="display:flex;gap:.5rem;margin-top:1rem;">
-                <button type="button" onclick="iapAlert({ title: 'Items Merged', message: 'Merged candidate into master question item.', variant: 'success' })" style="padding:.35rem .8rem;background:#10b981;color:#fff;border:none;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Merge Items</button>
-                <button type="button" onclick="iapAlert({ title: 'Flag Dismissed', message: 'Flag dismissed as false positive.', variant: 'info' })" style="padding:.35rem .8rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Dismiss Flag</button>
+            <div class="flex gap-2 pt-1">
+                <button type="button" onclick="iapAlert({ title: 'Items Merged', message: 'Merged candidate into master question item.', variant: 'success' })" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer">
+                    Merge Items
+                </button>
+                <button type="button" onclick="iapAlert({ title: 'Flag Dismissed', message: 'Flag dismissed as false positive.', variant: 'info' })" class="px-3 py-1.5 gov-btn-secondary text-xs font-bold rounded-lg cursor-pointer">
+                    Dismiss Flag
+                </button>
             </div>
         </div>
 
-        <div class="dd-box">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                <span style="font-size:.82rem;font-weight:800;color:#fbbf24;">⚠️ Duplicate Reading Passage #P-4011</span>
-                <span style="font-size:.72rem;font-weight:800;color:#fbbf24;background:rgba(251,191,36,.1);padding:.2rem .6rem;border-radius:99px;border:1px solid rgba(251,191,36,.3);">
+        <div class="p-4 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 space-y-3">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <span class="text-xs font-bold text-amber-700 dark:text-amber-400">⚠️ Duplicate Reading Passage #P-4011</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                     92.1% Similarity Match
                 </span>
             </div>
-            <div style="font-size:.85rem;color:#e2e8f0;line-height:1.5;">
+            <div class="text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
                 <strong>Original:</strong> "The Economic Implications of Industrial Micro-Grids in Renewable Energy Systems"<br>
-                <strong style="color:#fb923c;">Duplicate Candidate:</strong> "Micro-Grid Financial Models for Industrial Renewable Power Integration"
+                <strong class="text-amber-700 dark:text-amber-400">Duplicate Candidate:</strong> "Micro-Grid Financial Models for Industrial Renewable Power Integration"
             </div>
-            <div style="display:flex;gap:.5rem;margin-top:1rem;">
-                <button type="button" onclick="iapAlert({ title: 'Passages Merged', message: 'Merged passage versions.', variant: 'success' })" style="padding:.35rem .8rem;background:#10b981;color:#fff;border:none;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Merge Passages</button>
-                <button type="button" onclick="iapAlert({ title: 'Flag Dismissed', message: 'Flag dismissed.', variant: 'info' })" style="padding:.35rem .8rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;">Dismiss Flag</button>
+            <div class="flex gap-2 pt-1">
+                <button type="button" onclick="iapAlert({ title: 'Passages Merged', message: 'Merged passage versions.', variant: 'success' })" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer">
+                    Merge Passages
+                </button>
+                <button type="button" onclick="iapAlert({ title: 'Flag Dismissed', message: 'Flag dismissed.', variant: 'info' })" class="px-3 py-1.5 gov-btn-secondary text-xs font-bold rounded-lg cursor-pointer">
+                    Dismiss Flag
+                </button>
             </div>
         </div>
 
@@ -76,3 +76,4 @@
 
 </div>
 @endsection
+
