@@ -131,8 +131,7 @@ class NavigationService
             ];
         }
 
-        // ADMIN-OPS-001 Section 2: Admin Operational Sidebar
-        // Replaced Question Banks + Test Builder with Question Publications + Assessment Publications
+        // Regular Admin Operational Navigation Sidebar
         if ($user->hasRole('admin')) {
             return [
                 [
@@ -145,12 +144,30 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
-                    'section' => 'User Management',
-                    'label' => 'Users & Access Control',
+                    'section' => 'Candidate Operations',
+                    'label' => 'Candidates & Access Control',
                     'route' => 'admin.users.index',
                     'icon' => 'users',
                     'permission' => null,
                     'active_pattern' => 'admin/users*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Candidate Operations',
+                    'label' => 'Certificate Registry',
+                    'route' => 'admin.certificates.index',
+                    'icon' => 'badge-check',
+                    'permission' => null,
+                    'active_pattern' => 'admin/certificates*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Assessment Operations',
+                    'label' => 'Assessments & Assignments',
+                    'route' => 'admin.tests.index',
+                    'icon' => 'clipboard-check',
+                    'permission' => null,
+                    'active_pattern' => 'admin/tests*',
                     'badge' => null,
                 ],
                 [
@@ -173,7 +190,7 @@ class NavigationService
                 ],
                 [
                     'section' => 'Academic Operations',
-                    'label' => 'Student Enrolments',
+                    'label' => 'Student Enrollments',
                     'route' => 'admin.academic-operations.enrollments',
                     'icon' => 'user-group',
                     'permission' => null,
@@ -199,48 +216,12 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
-                    'section' => 'Academic Operations',
-                    'label' => 'Course Monitoring',
-                    'route' => 'admin.academic-operations.monitoring',
-                    'icon' => 'chart-bar',
+                    'section' => 'Commerce & Finance',
+                    'label' => 'Commerce & Billing',
+                    'route' => 'admin.commerce.index',
+                    'icon' => 'shopping-bag',
                     'permission' => null,
-                    'active_pattern' => 'admin/academic-operations/monitoring*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Publication Queues',
-                    'label' => 'Question Publications',
-                    'route' => 'admin.publications.question-banks',
-                    'icon' => 'folder',
-                    'permission' => null,
-                    'active_pattern' => 'admin/publications/question-banks*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Publication Queues',
-                    'label' => 'Assessment Publications',
-                    'route' => 'admin.publications.assessments',
-                    'icon' => 'clipboard-check',
-                    'permission' => null,
-                    'active_pattern' => 'admin/publications/assessments*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Publication Queues',
-                    'label' => 'Published Contents',
-                    'route' => 'admin.publications.published',
-                    'icon' => 'check-circle',
-                    'permission' => null,
-                    'active_pattern' => 'admin/publications/published*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Publication Queues',
-                    'label' => 'Archive Requests',
-                    'route' => 'admin.publications.archive-requests',
-                    'icon' => 'archive',
-                    'permission' => null,
-                    'active_pattern' => 'admin/publications/archive-requests*',
+                    'active_pattern' => 'admin/commerce*',
                     'badge' => null,
                 ],
                 [
@@ -253,39 +234,12 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
-                    'section' => 'Commerce',
-                    'label' => 'Commerce & Billing',
-                    'route' => 'admin.commerce.index',
-                    'icon' => 'shopping-bag',
-                    'permission' => null,
-                    'active_pattern' => 'admin/commerce*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Candidate Management',
-                    'label' => 'Certificate Registry',
-                    'route' => 'admin.certificates.index',
-                    'icon' => 'badge-check',
-                    'permission' => null,
-                    'active_pattern' => 'admin/certificates*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Media Management',
+                    'section' => 'Media Library',
                     'label' => 'Media Library',
                     'route' => 'admin.media.index',
                     'icon' => 'folder',
                     'permission' => null,
-                    'active_pattern' => 'admin/media',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Media Management',
-                    'label' => 'Media Archive',
-                    'route' => 'admin.media.archive-index',
-                    'icon' => 'archive',
-                    'permission' => null,
-                    'active_pattern' => 'admin/media/archive*',
+                    'active_pattern' => 'admin/media*',
                     'badge' => null,
                 ],
             ];

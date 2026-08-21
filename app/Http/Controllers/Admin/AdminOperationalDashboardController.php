@@ -3,153 +3,110 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\QuestionBankArchiveRequest;
+use App\Models\User;
+use App\Modules\Assessment\Models\Attempt;
+use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Certificate\Models\Certificate;
-use App\Modules\QuestionBank\Models\QuestionBank;
-use App\Modules\Reporting\Services\SystemHealthService;
-use App\Services\ApprovalEngine;
+use App\Modules\Commerce\Domain\Enums\PaymentStatus;
+use App\Modules\Commerce\Domain\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AdminOperationalDashboardController extends Controller
 {
-    public function __construct(
-        protected SystemHealthService $healthService
-    ) {}
-
     /**
-     * Display Admin Operational Dashboard (ADMIN-OPS-001 Section 5).
-     * Redesigned around operational workload, live workflow counters, task center.
+     * Display Admin Operational Dashboard (/admin/dashboard).
+     * Operational Admin Workspace: Candidate Management, Assessment Assignments, Payment Eligibility.
      */
     public function index(Request $request): View
     {
         $user = $request->user();
 
-        // Section 5 Required Cards (live workflow data)
-        $readyToPublishQuestionBanks = QuestionBank::where('status', 'approved')
-            ->whereNotIn('status', ['published'])
+        // 1. Total Registered Candidates
+        $totalCandidates = User::role('student')->count();
+
+        // 2. Paid / Eligible Candidates (Candidates with confirmed paid transactions)
+        $paidEligibleCandidatesCount = User::role('student')
+            ->whereHas('orders', function ($q) {
+                $q->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, 'success', 'paid']));
+            })
             ->count();
 
-        $readyToPublishAssessments = Test::where('status', 'approved')
-            ->where('is_published', false)
-            ->count();
+        // 3. Active Candidate Test Assignments
+        $activeAssignmentsCount = CandidateTestAssignment::where('status', 'active')->count();
 
-        $pendingArchiveRequests = QuestionBankArchiveRequest::where('status', 'pending')->count();
+        // 4. Completed Tests / Attempts
+        $completedAttemptsCount = Attempt::whereIn('status', ['submitted', 'completed'])->count();
 
-        $publishedTodayBanks = QuestionBank::where('status', 'published')
-            ->whereDate('updated_at', today())
-            ->count();
-        $publishedTodayAssessments = Test::where('is_published', true)
-            ->whereDate('updated_at', today())
-            ->count();
-        $publishedToday = $publishedTodayBanks + $publishedTodayAssessments;
+        // 5. In-Progress Candidate Attempts (Live exam sessions)
+        $inProgressAttemptsCount = Attempt::where('status', 'in_progress')->count();
 
-        $publishedThisWeekBanks = QuestionBank::where('status', 'published')
-            ->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()])
-            ->count();
-        $publishedThisWeekAssessments = Test::where('is_published', true)
-            ->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()])
-            ->count();
-        $publishedThisWeek = $publishedThisWeekBanks + $publishedThisWeekAssessments;
+        // 6. Total Verified Certificates Issued
+        $totalCertificatesIssued = Certificate::count();
 
-        $certificatesGeneratedToday = Certificate::whereDate('created_at', today())->count();
-
-        // Section 6 Task Center: My Tasks (clickable)
-        $tasks = [];
-
-        $readyBanksList = QuestionBank::where('status', 'approved')
-            ->latest('updated_at')
-            ->take(5)
-            ->get();
-
-        foreach ($readyBanksList as $bank) {
-            $tasks[] = [
-                'icon' => '📂',
-                'title' => "Question Bank ready for publication",
-                'entity' => $bank->title,
-                'url' => route('admin.publications.question-banks', ['status' => 'approved', 'highlight' => $bank->id]),
-                'priority' => 'HIGH',
-                'type' => 'QUESTION_BANK_READY',
-            ];
-        }
-
-        $readyAssessmentsList = Test::where('status', 'approved')
-            ->where('is_published', false)
-            ->latest('updated_at')
-            ->take(5)
-            ->get();
-
-        foreach ($readyAssessmentsList as $assessment) {
-            $tasks[] = [
-                'icon' => '📋',
-                'title' => "Assessment ready for publication",
-                'entity' => $assessment->title,
-                'url' => route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $assessment->id]),
-                'priority' => 'HIGH',
-                'type' => 'ASSESSMENT_READY',
-            ];
-        }
-
-        $approvedArchives = QuestionBankArchiveRequest::with('questionBank')
-            ->where('status', 'approved')
+        // ACTION PANEL: Candidates Requiring Action (Paid Real Test awaiting Admin Assignment)
+        $paidOrders = Order::with(['user', 'items.product.test', 'invoice.payments'])
+            ->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, 'success', 'paid']))
+            ->whereHas('items.product.test', fn($t) => $t->where('assessment_mode', 'real_test'))
             ->latest()
-            ->take(3)
             ->get();
 
-        foreach ($approvedArchives as $archReq) {
-            $tasks[] = [
-                'icon' => '📦',
-                'title' => "Archive request approved — action complete",
-                'entity' => $archReq->questionBank?->title ?? 'Question Bank',
-                'url' => route('admin.publications.archive-requests'),
-                'priority' => 'NORMAL',
-                'type' => 'ARCHIVE_COMPLETE',
-            ];
+        $actionRequiredCandidates = [];
+        foreach ($paidOrders as $order) {
+            $candidateUser = $order->user;
+            if (!$candidateUser) {
+                continue;
+            }
+
+            foreach ($order->items as $item) {
+                $test = $item->product?->test;
+                if ($test && $test->isRealTest()) {
+                    $hasAssignment = CandidateTestAssignment::where('user_id', $candidateUser->id)
+                        ->where('test_id', $test->id)
+                        ->where('status', 'active')
+                        ->exists();
+
+                    if (!$hasAssignment) {
+                        $actionRequiredCandidates[] = [
+                            'user'       => $candidateUser,
+                            'test'       => $test,
+                            'order'      => $order,
+                            'paid_at'    => $order->invoice?->paid_at ?? $order->created_at,
+                            'type'       => 'PAID_REAL_TEST_UNASSIGNED',
+                            'priority'   => 'HIGH',
+                        ];
+                    }
+                }
+            }
         }
 
-        // Recent publications feed
-        $recentPublications = collect();
-        $recentBanks = QuestionBank::where('status', 'published')
-            ->latest('updated_at')
-            ->take(5)
-            ->get()
-            ->map(fn ($b) => [
-                'icon' => '📂',
-                'title' => $b->title,
-                'type' => 'Question Bank',
-                'date' => $b->updated_at?->diffForHumans(),
-                'url' => route('admin.publications.question-banks'),
-            ]);
-        $recentAssessments = Test::where('is_published', true)
-            ->latest('updated_at')
-            ->take(5)
-            ->get()
-            ->map(fn ($t) => [
-                'icon' => '📋',
-                'title' => $t->title,
-                'type' => 'Assessment',
-                'date' => $t->updated_at?->diffForHumans(),
-                'url' => route('admin.publications.assessments'),
-            ]);
+        // Recent Active Assignments (Live Database Records)
+        $recentAssignments = CandidateTestAssignment::with(['user', 'test', 'assignedBy'])
+            ->latest('assigned_at')
+            ->take(6)
+            ->get();
 
-        $recentPublications = $recentBanks->concat($recentAssessments)
-            ->sortByDesc('date')
-            ->take(8)
-            ->values();
+        // Published Tests Catalog for Quick Assignment
+        $availableTests = Test::where('is_published', true)
+            ->withCount(['assignments as active_assignments_count' => function ($q) {
+                $q->where('status', 'active');
+            }])
+            ->get();
 
-        // Unread notifications for task center alert badge
+        // Unread Notifications Count
         $unreadNotificationsCount = $user ? $user->unreadNotifications->count() : 0;
 
         return view('admin.operational_dashboard', compact(
-            'readyToPublishQuestionBanks',
-            'readyToPublishAssessments',
-            'pendingArchiveRequests',
-            'publishedToday',
-            'publishedThisWeek',
-            'certificatesGeneratedToday',
-            'tasks',
-            'recentPublications',
+            'totalCandidates',
+            'paidEligibleCandidatesCount',
+            'activeAssignmentsCount',
+            'completedAttemptsCount',
+            'inProgressAttemptsCount',
+            'totalCertificatesIssued',
+            'actionRequiredCandidates',
+            'recentAssignments',
+            'availableTests',
             'unreadNotificationsCount'
         ));
     }

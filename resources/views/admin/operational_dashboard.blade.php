@@ -1,358 +1,265 @@
 @extends('layouts.admin')
 
-@section('title', 'Admin — Operational Dashboard')
+@section('title', 'Operational Dashboard — Candidate & Assessment Operations')
 
 @section('content')
-<div class="operational-dashboard" x-data="operationalDashboard()">
+<div class="p-6 space-y-6 max-w-7xl mx-auto">
 
     {{-- Page Header --}}
-    <div class="page-header">
-        <div class="page-header__inner">
-            <div class="page-header__meta">
-                <span class="page-badge page-badge--ops">OPS CENTER</span>
-                <h1 class="page-title">Operational Dashboard</h1>
-                <p class="page-subtitle">Publication Queue &amp; Task Center — {{ now()->format('l, d F Y') }}</p>
-            </div>
-            <div class="page-header__actions">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded text-[11px] font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    OPERATIONAL WORKSPACE
+                </span>
                 @if($unreadNotificationsCount > 0)
-                <a href="{{ route('notifications.index') }}" class="notif-alert">
-                    <span class="notif-alert__icon">🔔</span>
-                    <span class="notif-alert__badge">{{ $unreadNotificationsCount }}</span>
-                    <span class="notif-alert__label">{{ $unreadNotificationsCount }} Unread</span>
-                </a>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    🔔 {{ $unreadNotificationsCount }} New Alerts
+                </span>
                 @endif
-                <a href="{{ route('admin.publications.question-banks') }}" class="btn btn--primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
-                    </svg>
-                    Publication Queues
-                </a>
             </div>
+            <h1 class="text-2xl font-black text-white tracking-tight">Operational Dashboard</h1>
+            <p class="text-sm text-slate-400">Candidate Operations, Payment Eligibility &amp; Test Assignments — {{ now()->format('l, d F Y') }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-slate-700 transition-colors shadow-sm">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Manage Candidates
+            </a>
+            <a href="{{ route('admin.tests.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors shadow-lg shadow-indigo-600/20">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Assessment Catalog
+            </a>
         </div>
     </div>
 
     @if(session('status'))
-    <div class="alert alert--success" x-data="{ show: true }" x-show="show" x-transition>
-        <span>✅ {{ session('status') }}</span>
-        <button @click="show = false" class="alert__close">×</button>
+    <div class="p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-sm flex items-center justify-between shadow-lg">
+        <span class="flex items-center gap-2">✅ {{ session('status') }}</span>
     </div>
     @endif
 
-    {{-- Section 5: Operational Counters --}}
-    <section class="ops-stats">
-        <h2 class="section-label">Live Workflow Counters</h2>
-        <div class="stats-grid stats-grid--6">
+    @if(session('error'))
+    <div class="p-4 rounded-xl bg-rose-950/60 border border-rose-500/30 text-rose-300 text-sm flex items-center justify-between shadow-lg">
+        <span class="flex items-center gap-2">⚠️ {{ session('error') }}</span>
+    </div>
+    @endif
 
-            {{-- Card 1: Ready to Publish — Question Banks --}}
-            <a href="{{ route('admin.publications.question-banks', ['status' => 'approved']) }}" class="stat-card stat-card--action stat-card--amber">
-                <div class="stat-card__icon">📂</div>
-                <div class="stat-card__body">
-                    <p class="stat-card__value">{{ $readyToPublishQuestionBanks }}</p>
-                    <p class="stat-card__label">Question Banks Ready to Publish</p>
-                    @if($readyToPublishQuestionBanks > 0)
-                    <span class="stat-card__badge stat-card__badge--warn">ACTION REQUIRED</span>
-                    @else
-                    <span class="stat-card__badge stat-card__badge--ok">QUEUE CLEAR</span>
-                    @endif
+    {{-- Operational KPI Grid --}}
+    <section>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+            <span>Live Operational Metrics</span>
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+            {{-- 1. Total Candidates --}}
+            <a href="{{ route('admin.users.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-indigo-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400">Total Registered Candidates</p>
+                        <p class="text-3xl font-black text-white mt-1 group-hover:text-indigo-300 transition-colors">{{ number_format($totalCandidates) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xl">
+                        👥
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                    <span class="text-indigo-400 group-hover:translate-x-0.5 transition-transform">View Student Directory &rarr;</span>
                 </div>
             </a>
 
-            {{-- Card 2: Ready to Publish — Assessments --}}
-            <a href="{{ route('admin.publications.assessments', ['status' => 'approved']) }}" class="stat-card stat-card--action stat-card--blue">
-                <div class="stat-card__icon">📋</div>
-                <div class="stat-card__body">
-                    <p class="stat-card__value">{{ $readyToPublishAssessments }}</p>
-                    <p class="stat-card__label">Assessments Ready to Publish</p>
-                    @if($readyToPublishAssessments > 0)
-                    <span class="stat-card__badge stat-card__badge--warn">ACTION REQUIRED</span>
-                    @else
-                    <span class="stat-card__badge stat-card__badge--ok">QUEUE CLEAR</span>
-                    @endif
+            {{-- 2. Paid / Eligible Candidates --}}
+            <div class="p-5 rounded-xl bg-slate-950/80 border border-slate-800 shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400">Paid &amp; Eligible Candidates</p>
+                        <p class="text-3xl font-black text-white mt-1">{{ number_format($paidEligibleCandidatesCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xl">
+                        💳
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
+                    <span>Verified Transactions</span>
+                </div>
+            </div>
+
+            {{-- 3. Active Test Assignments --}}
+            <a href="{{ route('admin.tests.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-amber-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400">Active Test Assignments</p>
+                        <p class="text-3xl font-black text-white mt-1 group-hover:text-amber-300 transition-colors">{{ number_format($activeAssignmentsCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xl">
+                        🎯
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                    <span class="text-amber-400 group-hover:translate-x-0.5 transition-transform">Manage Candidate Assignments &rarr;</span>
                 </div>
             </a>
 
-            {{-- Card 3: Pending Archive Requests --}}
-            <a href="{{ route('admin.publications.archive-requests') }}" class="stat-card stat-card--action stat-card--orange">
-                <div class="stat-card__icon">📦</div>
-                <div class="stat-card__body">
-                    <p class="stat-card__value">{{ $pendingArchiveRequests }}</p>
-                    <p class="stat-card__label">Pending Archive Requests</p>
-                    @if($pendingArchiveRequests > 0)
-                    <span class="stat-card__badge stat-card__badge--warn">AWAITING SA</span>
-                    @else
-                    <span class="stat-card__badge stat-card__badge--ok">NONE PENDING</span>
-                    @endif
+            {{-- 4. Completed Tests --}}
+            <div class="p-5 rounded-xl bg-slate-950/80 border border-slate-800 shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-sky-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400">Completed Assessments</p>
+                        <p class="text-3xl font-black text-white mt-1">{{ number_format($completedAttemptsCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xl">
+                        ✅
+                    </div>
                 </div>
-            </a>
-
-            {{-- Card 4: Published Today --}}
-            <a href="{{ route('admin.publications.published') }}" class="stat-card stat-card--green">
-                <div class="stat-card__icon">✅</div>
-                <div class="stat-card__body">
-                    <p class="stat-card__value">{{ $publishedToday }}</p>
-                    <p class="stat-card__label">Published Today</p>
-                    <span class="stat-card__badge stat-card__badge--info">TODAY</span>
-                </div>
-            </a>
-
-            {{-- Card 5: Published This Week --}}
-            <a href="{{ route('admin.publications.published') }}" class="stat-card stat-card--teal">
-                <div class="stat-card__icon">📈</div>
-                <div class="stat-card__body">
-                    <p class="stat-card__value">{{ $publishedThisWeek }}</p>
-                    <p class="stat-card__label">Published This Week</p>
-                    <span class="stat-card__badge stat-card__badge--info">WEEK</span>
-                </div>
-            </a>
-
-            {{-- Card 6: Certificates Generated Today --}}
-            <div class="stat-card stat-card--indigo">
-                <div class="stat-card__icon">🏅</div>
-                <div class="stat-card__body">
-                    <p class="stat-card__value">{{ $certificatesGeneratedToday }}</p>
-                    <p class="stat-card__label">Certificates Generated Today</p>
-                    <span class="stat-card__badge stat-card__badge--info">TODAY</span>
+                <div class="mt-3 flex items-center gap-2 text-[11px] text-slate-400">
+                    <span class="text-sky-400 font-semibold">{{ $inProgressAttemptsCount }}</span> active in progress
                 </div>
             </div>
 
         </div>
     </section>
 
-    {{-- Section 6: Task Center --}}
-    <section class="task-center">
-        <div class="task-center__header">
-            <h2 class="section-label">Task Center</h2>
-            <span class="task-count">{{ count($tasks) }} Active Task{{ count($tasks) !== 1 ? 's' : '' }}</span>
+    {{-- Action Panel: Candidates Requiring Action --}}
+    <section class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+            <div class="flex items-center gap-2.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                <h2 class="text-sm font-bold text-white uppercase tracking-wider">Candidates Requiring Action</h2>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-800 text-slate-300 border border-slate-700">
+                    {{ count($actionRequiredCandidates) }} Awaiting Assignment
+                </span>
+            </div>
+            <span class="text-xs text-slate-400 font-medium">Real Test Payment Verification</span>
         </div>
 
-        @if(count($tasks) === 0)
-        <div class="empty-state empty-state--tasks">
-            <div class="empty-state__icon">🎉</div>
-            <h3>All Clear!</h3>
-            <p>No pending publication tasks. Your operational queue is clear.</p>
+        @if(count($actionRequiredCandidates) === 0)
+        <div class="py-8 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40">
+            <span class="text-3xl block mb-2">🎉</span>
+            <p class="text-sm font-bold text-slate-300">All Clear</p>
+            <p class="text-xs text-slate-400 mt-1">There are no paid candidates currently waiting for Real Test assignment.</p>
         </div>
         @else
-        <div class="task-list">
-            @foreach($tasks as $task)
-            <a href="{{ $task['url'] }}" class="task-item task-item--{{ strtolower($task['priority']) }}">
-                <span class="task-item__icon">{{ $task['icon'] }}</span>
-                <div class="task-item__body">
-                    <p class="task-item__title">{{ $task['title'] }}</p>
-                    <p class="task-item__entity">{{ $task['entity'] }}</p>
+        <div class="divide-y divide-slate-800/80">
+            @foreach($actionRequiredCandidates as $item)
+            <div class="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-900/40 px-3 rounded-lg transition-colors">
+                <div class="flex items-start gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                        {{ strtoupper(substr($item['user']->name, 0, 2)) }}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm font-bold text-white truncate">{{ $item['user']->name }}</p>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                PAID
+                            </span>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                REAL TEST
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            Target: <span class="text-slate-200 font-semibold">{{ $item['test']->title }}</span> &bull; Paid: {{ \Carbon\Carbon::parse($item['paid_at'])->diffForHumans() }}
+                        </p>
+                    </div>
                 </div>
-                <div class="task-item__meta">
-                    <span class="task-priority task-priority--{{ strtolower($task['priority']) }}">{{ $task['priority'] }}</span>
-                    <span class="task-item__arrow">→</span>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <form action="{{ route('admin.tests.assign-candidate', $item['test']->id) }}" method="POST" class="inline-flex">
+                        @csrf
+                        <input type="hidden" name="candidate_id" value="{{ $item['user']->id }}">
+                        <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5">
+                            <span>✓ Assign Real Test</span>
+                        </button>
+                    </form>
                 </div>
-            </a>
+            </div>
             @endforeach
         </div>
         @endif
     </section>
 
-    {{-- Recent Publications Feed --}}
-    <section class="recent-feed">
-        <h2 class="section-label">Recent Publications</h2>
-        @if($recentPublications->isEmpty())
-        <div class="empty-state">
-            <div class="empty-state__icon">📭</div>
-            <p>No content has been published yet.</p>
-        </div>
-        @else
-        <div class="feed-list">
-            @foreach($recentPublications as $item)
-            <a href="{{ $item['url'] }}" class="feed-item">
-                <span class="feed-item__icon">{{ $item['icon'] }}</span>
-                <div class="feed-item__body">
-                    <p class="feed-item__title">{{ $item['title'] }}</p>
-                    <p class="feed-item__meta">{{ $item['type'] }} · {{ $item['date'] }}</p>
+    {{-- Two Column Layout: Recent Active Assignments & Assessment Catalog --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {{-- Column 1: Recent Active Candidate Assignments --}}
+        <section class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <span>🎯</span> Recent Active Assignments
+                </h2>
+                <a href="{{ route('admin.tests.index') }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">View All &rarr;</a>
+            </div>
+
+            @if($recentAssignments->isEmpty())
+            <div class="py-8 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40">
+                <p class="text-xs text-slate-400">No active candidate assignments on record.</p>
+            </div>
+            @else
+            <div class="space-y-2.5">
+                @foreach($recentAssignments as $assignment)
+                <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-white truncate">{{ $assignment->user?->name ?? 'Candidate' }}</p>
+                        <p class="text-[11px] text-slate-400 truncate">{{ $assignment->test?->title ?? 'Test' }}</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $assignment->test?->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                            {{ $assignment->test?->assessment_mode?->label() ?? 'Assessment' }}
+                        </span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            ACTIVE
+                        </span>
+                    </div>
                 </div>
-                <span class="feed-item__badge">PUBLISHED</span>
-            </a>
-            @endforeach
-        </div>
-        @endif
-    </section>
+                @endforeach
+            </div>
+            @endif
+        </section>
+
+        {{-- Column 2: Available Assessments for Assignment --}}
+        <section class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <span>📋</span> Assessment Inventory
+                </h2>
+                <a href="{{ route('admin.tests.index') }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">Browse Tests &rarr;</a>
+            </div>
+
+            @if($availableTests->isEmpty())
+            <div class="py-8 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40">
+                <p class="text-xs text-slate-400">No published assessments available.</p>
+            </div>
+            @else
+            <div class="space-y-2.5">
+                @foreach($availableTests->take(6) as $test)
+                <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs font-bold text-white truncate">{{ $test->title }}</p>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $test->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                                {{ $test->assessment_mode?->label() ?? 'Assessment' }}
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">
+                            {{ $test->active_assignments_count }} Active Candidate(s) Assigned
+                        </p>
+                    </div>
+                    <a href="{{ route('admin.tests.show', $test->id) }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 transition-colors flex-shrink-0">
+                        Details &rarr;
+                    </a>
+                </div>
+                @endforeach
+            </div>
+            @endif
+        </section>
+
+    </div>
 
 </div>
-
-<style>
-:root {
-    --col-amber: #f59e0b;
-    --col-blue: #3b82f6;
-    --col-orange: #f97316;
-    --col-green: #22c55e;
-    --col-teal: #14b8a6;
-    --col-indigo: #6366f1;
-}
-
-.operational-dashboard {
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 2.5rem;
-}
-
-/* Page Header */
-.page-header { margin-bottom: 0; }
-.page-header__inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-.page-badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-bottom: 0.4rem;
-}
-.page-badge--ops { background: #1e293b; color: #94a3b8; }
-.page-title { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 0.2rem; }
-.page-subtitle { color: #64748b; font-size: 0.95rem; margin: 0; }
-
-.page-header__actions { display: flex; align-items: center; gap: 0.75rem; }
-.notif-alert {
-    display: flex; align-items: center; gap: 0.4rem;
-    background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
-    padding: 0.45rem 0.9rem; border-radius: 8px; font-size: 0.85rem;
-    font-weight: 600; text-decoration: none;
-    transition: background 0.2s;
-}
-.notif-alert:hover { background: #fde68a; }
-.notif-alert__badge {
-    background: #dc2626; color: white; font-size: 0.7rem; font-weight: 700;
-    padding: 1px 6px; border-radius: 999px;
-}
-
-/* Alert */
-.alert {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.875rem 1.25rem; border-radius: 10px; font-size: 0.9rem;
-}
-.alert--success { background: #dcfce7; border: 1px solid #86efac; color: #15803d; }
-.alert__close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; margin-left: 1rem; }
-
-/* Section Label */
-.section-label { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; margin: 0 0 1rem; }
-
-/* Stats Grid */
-.stats-grid { display: grid; gap: 1rem; }
-.stats-grid--6 { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 1024px) { .stats-grid--6 { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .stats-grid--6 { grid-template-columns: 1fr; } }
-
-.stat-card {
-    position: relative;
-    background: white;
-    border-radius: 14px;
-    padding: 1.25rem;
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
-    text-decoration: none;
-    color: inherit;
-    border: 1.5px solid transparent;
-    transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s;
-    overflow: hidden;
-}
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-}
-.stat-card--action { cursor: pointer; }
-.stat-card--action:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-.stat-card--amber::before { background: var(--col-amber); }
-.stat-card--blue::before { background: var(--col-blue); }
-.stat-card--orange::before { background: var(--col-orange); }
-.stat-card--green::before { background: var(--col-green); }
-.stat-card--teal::before { background: var(--col-teal); }
-.stat-card--indigo::before { background: var(--col-indigo); }
-
-.stat-card__icon { font-size: 1.8rem; line-height: 1; }
-.stat-card__value { font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.1; margin: 0 0 0.2rem; }
-.stat-card__label { font-size: 0.82rem; color: #64748b; margin: 0 0 0.5rem; }
-.stat-card__badge { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 4px; }
-.stat-card__badge--warn { background: #fef3c7; color: #92400e; }
-.stat-card__badge--ok { background: #dcfce7; color: #15803d; }
-.stat-card__badge--info { background: #e0f2fe; color: #0369a1; }
-
-/* Task Center */
-.task-center__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-.task-count { font-size: 0.8rem; font-weight: 600; background: #f1f5f9; color: #475569; padding: 3px 10px; border-radius: 999px; }
-
-.task-list { display: flex; flex-direction: column; gap: 0.5rem; }
-.task-item {
-    display: flex; align-items: center; gap: 1rem;
-    padding: 1rem 1.25rem; background: white; border-radius: 10px;
-    border: 1px solid #f1f5f9; text-decoration: none; color: inherit;
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
-}
-.task-item:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59,130,246,0.12); transform: translateX(2px); }
-.task-item--high { border-left: 3px solid #ef4444; }
-.task-item--normal { border-left: 3px solid #94a3b8; }
-
-.task-item__icon { font-size: 1.3rem; }
-.task-item__body { flex: 1; min-width: 0; }
-.task-item__title { font-size: 0.88rem; color: #475569; margin: 0 0 0.15rem; }
-.task-item__entity { font-size: 0.95rem; font-weight: 600; color: #0f172a; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.task-item__meta { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-.task-priority { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 4px; }
-.task-priority--high { background: #fee2e2; color: #dc2626; }
-.task-priority--normal { background: #f1f5f9; color: #64748b; }
-.task-item__arrow { color: #94a3b8; font-size: 1rem; }
-
-/* Recent Feed */
-.feed-list { display: flex; flex-direction: column; gap: 0.5rem; }
-.feed-item {
-    display: flex; align-items: center; gap: 1rem;
-    padding: 0.875rem 1.25rem; background: white; border-radius: 10px;
-    border: 1px solid #f1f5f9; text-decoration: none; color: inherit;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-.feed-item:hover { border-color: #22c55e; box-shadow: 0 4px 12px rgba(34,197,94,0.1); }
-.feed-item__icon { font-size: 1.2rem; }
-.feed-item__body { flex: 1; min-width: 0; }
-.feed-item__title { font-size: 0.95rem; font-weight: 600; color: #0f172a; margin: 0 0 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.feed-item__meta { font-size: 0.78rem; color: #94a3b8; margin: 0; }
-.feed-item__badge { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.07em; background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
-
-/* Empty States */
-.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; background: white; border-radius: 14px; border: 1.5px dashed #e2e8f0; text-align: center; }
-.empty-state__icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
-.empty-state h3 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin: 0 0 0.4rem; }
-.empty-state p { color: #94a3b8; font-size: 0.88rem; margin: 0; }
-</style>
 @endsection
-
-@push('scripts')
-<script>
-function operationalDashboard() {
-    return {
-        init() {
-            // Periodically refresh unread notification count via AJAX
-            setInterval(() => this.refreshNotifCount(), 60000);
-        },
-        async refreshNotifCount() {
-            try {
-                const res = await fetch('{{ route('notifications.feed') }}', {
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                const data = await res.json();
-                if (data.unread_count !== undefined) {
-                    const badge = document.querySelector('.notif-alert__badge');
-                    if (badge) badge.textContent = data.unread_count;
-                }
-            } catch (e) { /* silent */ }
-        }
-    };
-}
-</script>
-@endpush

@@ -105,6 +105,36 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get orders placed by user.
+     *
+     * @return HasMany<\App\Modules\Commerce\Domain\Models\Order, $this>
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Commerce\Domain\Models\Order::class, 'user_id');
+    }
+
+    /**
+     * Get test assignments for candidate user.
+     *
+     * @return HasMany<\App\Modules\Assessment\Models\CandidateTestAssignment, $this>
+     */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Assessment\Models\CandidateTestAssignment::class, 'user_id');
+    }
+
+    /**
+     * Get assessment attempts for candidate user.
+     *
+     * @return HasMany<\App\Modules\Assessment\Models\Attempt, $this>
+     */
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Assessment\Models\Attempt::class, 'user_id');
+    }
+
+    /**
      * Defensive permission check for downloading repository assets.
      * Never throws PermissionDoesNotExist exception even if permissions are unseeded.
      */
