@@ -1558,7 +1558,48 @@ html[data-theme="light"] .imr-card__preview {
 
 html.light .imr-foot,
 html[data-theme="light"] .imr-foot {
+    background: #f8fafc !important;
     border-top: 1px solid #e2e8f0 !important;
+}
+
+html.light .imr-btn-neutral,
+html[data-theme="light"] .imr-btn-neutral {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04) !important;
+}
+
+html.light .imr-btn-neutral:hover,
+html[data-theme="light"] .imr-btn-neutral:hover {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+
+html.light .imr-btn-edit,
+html[data-theme="light"] .imr-btn-edit {
+    background: var(--accent) !important;
+    border: 1px solid var(--accent) !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(91,92,226,0.2) !important;
+}
+
+html.light .imr-btn-edit:hover,
+html[data-theme="light"] .imr-btn-edit:hover {
+    background: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+    color: #ffffff !important;
+}
+
+html.light .imr-btn-tracker,
+html[data-theme="light"] .imr-btn-tracker {
+    color: var(--accent) !important;
+}
+
+html.light .imr-btn-tracker:hover,
+html[data-theme="light"] .imr-btn-tracker:hover {
+    color: var(--accent-hover) !important;
+    background: #eef0ff !important;
 }
 
 html.light .imr-exam-btn,
@@ -1579,6 +1620,57 @@ html[data-theme="light"] .imr-exam-btn--active {
     background: var(--accent) !important;
     color: #ffffff !important;
     border-color: var(--accent) !important;
+}
+
+/* 6. Media Detail & Edit Pages (.imd-*, .tme-*) */
+html.light .imd-card,
+html[data-theme="light"] .imd-card,
+html.light .tme-card,
+html[data-theme="light"] .tme-card,
+html.light .imd-passage-reader,
+html[data-theme="light"] .imd-passage-reader {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04) !important;
+}
+
+html.light .imd-preview-box,
+html[data-theme="light"] .imd-preview-box,
+html.light .imd-paragraph-box,
+html[data-theme="light"] .imd-paragraph-box {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: var(--text-primary) !important;
+}
+
+html.light .tme-header,
+html[data-theme="light"] .tme-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%) !important;
+    border: 1px solid #dbe0fc !important;
+    box-shadow: 0 12px 25px -8px rgba(91,92,226,0.1) !important;
+}
+
+html.light .tme-section-title,
+html[data-theme="light"] .tme-section-title {
+    color: var(--text-primary) !important;
+    border-color: #e2e8f0 !important;
+}
+
+html.light .tme-label,
+html[data-theme="light"] .tme-label,
+html.light .imd-meta-table th,
+html[data-theme="light"] .imd-meta-table th {
+    color: var(--text-secondary) !important;
+}
+
+html.light .imd-meta-table td,
+html[data-theme="light"] .imd-meta-table td {
+    color: var(--text-primary) !important;
+}
+
+html.light .imd-meta-table tr,
+html[data-theme="light"] .imd-meta-table tr {
+    border-color: #e2e8f0 !important;
 }
 
 

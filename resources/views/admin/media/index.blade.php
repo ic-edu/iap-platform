@@ -118,7 +118,13 @@
 .imr-tag--ielts   { background: rgba(251,113,133,.15); color: #fb7185; border: 1px solid rgba(251,113,133,.3); }
 .imr-tag--general { background: rgba(148,163,184,.15); color: #94a3b8; border: 1px solid rgba(148,163,184,.3); }
 
-.imr-foot { padding: .85rem 1.1rem; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.imr-foot { padding: .75rem 1rem; background: #0b1329; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.imr-btn-neutral { padding: .3rem .55rem; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; border-radius: .4rem; font-size: .7rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
+.imr-btn-neutral:hover { background: #334155; color: #fff; }
+.imr-btn-edit { padding: .3rem .55rem; background: #1e1b4b; border: 1px solid #4338ca; color: #a5b4fc; border-radius: .4rem; font-size: .7rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
+.imr-btn-edit:hover { background: #312e81; color: #fff; }
+.imr-btn-tracker { background: none; border: none; color: #818cf8; font-size: .7rem; font-weight: 700; cursor: pointer; padding: .2rem .4rem; border-radius: .35rem; transition: color .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
+.imr-btn-tracker:hover { color: #6366f1; text-decoration: underline; }
 
 .imr-modal-bg { position: fixed; inset: 0; background: rgba(2,6,23,.82); backdrop-filter: blur(8px); z-index: 990; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
 .imr-modal { background: #0f172a; border: 1px solid #1e293b; border-radius: 1.25rem; max-width: 650px; max-height: 85vh; overflow-y: auto; width: 100%; padding: 2rem; box-shadow: 0 24px 64px rgba(0,0,0,.7); }
@@ -316,18 +322,18 @@
                 <div style="font-size:.68rem;color:#475569;margin-top:2px;">Size: {{ $asset->humanSize() }} • {{ $asset->created_at?->format('d M Y') }}</div>
             </div>
 
-            {{-- TASK 1: Action Column / Action Buttons (Preview, Edit, Version History) --}}
-            <div class="imr-foot" style="display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#0b1329;border-top:1px solid #1e293b;">
-                <a href="{{ route('admin.media.show', $asset->id) }}" style="padding:.3rem .55rem;background:#1e293b;border:1px solid #334155;color:#38bdf8;border-radius:.4rem;font-size:.7rem;font-weight:700;text-decoration:none;">
+            {{-- TASK 1: Action Column / Action Buttons (Preview, Edit, Version History, Tracker) --}}
+            <div class="imr-foot">
+                <a href="{{ route('admin.media.show', $asset->id) }}" class="imr-btn-neutral">
                     👁 Preview
                 </a>
-                <a href="{{ route('admin.media.edit', $asset->id) }}" style="padding:.3rem .55rem;background:#1e1b4b;border:1px solid #4338ca;color:#a5b4fc;border-radius:.4rem;font-size:.7rem;font-weight:700;text-decoration:none;">
+                <a href="{{ route('admin.media.edit', $asset->id) }}" class="imr-btn-edit">
                     ✏ Edit
                 </a>
-                <a href="{{ route('admin.media.versions', $asset->id) }}" style="padding:.3rem .55rem;background:#1e293b;border:1px solid #334155;color:#fbbf24;border-radius:.4rem;font-size:.7rem;font-weight:700;text-decoration:none;">
+                <a href="{{ route('admin.media.versions', $asset->id) }}" class="imr-btn-neutral">
                     📄 Version History
                 </a>
-                <button type="button" onclick="showUsageModal('{{ $asset->id }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" style="background:none;border:none;color:#818cf8;font-size:.7rem;font-weight:700;cursor:pointer;padding:0;">
+                <button type="button" onclick="showUsageModal('{{ $asset->id }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" class="imr-btn-tracker">
                     🔗 Tracker
                 </button>
             </div>
