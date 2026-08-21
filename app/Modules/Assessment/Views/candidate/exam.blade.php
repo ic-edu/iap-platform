@@ -14,6 +14,19 @@
         $answeredQuestionIds = $existingAnswers->filter(fn($a) => !is_null($a->selected_choice_id))->keys()->values();
         $totalQuestionsCount = $shuffledQuestions->count();
         $isAllInitiallyAnswered = ($totalQuestionsCount > 0 && $answeredQuestionIds->count() === $totalQuestionsCount);
+
+        // Build section mapping and first-question indices
+        $sectionFirstQuestionIndex = [];
+        $questionSectionMap = [];
+        foreach ($shuffledQuestions as $idx => $q) {
+            $s = $q->section_model ?? (isset($sections) ? $sections->first(fn($sec) => $sec->testQuestions->contains('question_id', $q->id)) : null);
+            if ($s) {
+                if (!isset($sectionFirstQuestionIndex[$s->id])) {
+                    $sectionFirstQuestionIndex[$s->id] = $idx;
+                }
+                $questionSectionMap[$idx] = $s->id;
+            }
+        }
     @endphp
 
     <!-- Top CBT Status Header Bar -->
@@ -55,81 +68,118 @@
 
     <!-- Main Workspace -->
     <div class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid gap-6 lg:grid-cols-4">
-        <!-- Question Workspace (3 Cols) -->
+        <!-- Question & Section Workspace (3 Cols) -->
         <div class="lg:col-span-3 space-y-6">
+
+            <!-- 1. DEDICATED SECTION DIRECTIONS SCREENS (Rendered per Section) -->
+            @if(isset($sections) && $sections->isNotEmpty())
+                @foreach($sections as $secIndex => $sec)
+                    @php
+                        $firstQIdx = $sectionFirstQuestionIndex[$sec->id] ?? 0;
+                        $btnLabel = 'Begin ' . $sec->title;
+                    @endphp
+                    <div id="section-intro-card-{{ $sec->id }}" class="section-intro-card bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-lg space-y-6 hidden">
+                        <div class="border-b border-slate-800 pb-4">
+                            <div class="flex items-center gap-2.5 mb-2">
+                                <span class="px-3 py-1 text-xs font-extrabold rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                                    {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type) }} SECTION
+                                </span>
+                                <span class="text-xs text-slate-400 font-medium">
+                                    Section {{ $secIndex + 1 }} of {{ $sections->count() }}
+                                </span>
+                            </div>
+                            <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">
+                                {{ $sec->title }}
+                            </h2>
+                        </div>
+
+                        <!-- Directions Text -->
+                        <div class="space-y-3">
+                            <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>📌</span> Section Directions
+                            </h3>
+                            <div class="p-5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+                                {{ $sec->instructions ?: 'Please read the questions carefully and select the best answer option.' }}
+                            </div>
+                        </div>
+
+                        <!-- Section Media Assets / Examples (if any) -->
+                        @if($sec->mediaAssets && $sec->mediaAssets->isNotEmpty())
+                            <div class="space-y-3 pt-2">
+                                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>🎧</span> Section Reference / Example Media
+                                </h3>
+                                <div class="space-y-4">
+                                    @foreach($sec->mediaAssets as $sectionMedia)
+                                        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-200">
+                                            @if($sectionMedia->pivot?->caption)
+                                                <div class="flex items-center gap-1.5 mb-2 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                                                    <span>{{ $sectionMedia->typeIcon() }}</span>
+                                                    <span>{{ $sectionMedia->pivot->caption }}</span>
+                                                </div>
+                                            @endif
+                                            <x-media-preview :media="$sectionMedia" />
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- Action Bar to Advance into Section Questions -->
+                        <div class="pt-6 border-t border-slate-800 flex items-center justify-between flex-wrap gap-3">
+                            @if($secIndex > 0 && isset($sections[$secIndex - 1]))
+                                @php
+                                    $prevSec = $sections[$secIndex - 1];
+                                    $prevLastQIdx = ($sectionFirstQuestionIndex[$sec->id] ?? 1) - 1;
+                                @endphp
+                                <button type="button" onclick="navigateQuestion({{ $prevLastQIdx }})" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors">
+                                    &larr; Previous Section
+                                </button>
+                            @else
+                                <div></div>
+                            @endif
+
+                            <button type="button" onclick="navigateQuestion({{ $firstQIdx }})" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                                <span>🚀 {{ $btnLabel }} &rarr;</span>
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            @endif
+
+            <!-- 2. INDIVIDUAL QUESTION CARDS (Streamlined, without duplicate section directions) -->
             @forelse ($shuffledQuestions as $index => $question)
                 @php
                     $section = $question->section_model ?? null;
                     if (!$section && isset($sections)) {
                         $section = $sections->first(fn($s) => $s->testQuestions->contains('question_id', $question->id));
                     }
-                    $prevQuestion = $index > 0 ? $shuffledQuestions[$index - 1] : null;
-                    $prevSectionId = $prevQuestion ? ($prevQuestion->section_model?->id ?? (isset($sections) ? $sections->first(fn($s) => $s->testQuestions->contains('question_id', $prevQuestion->id))?->id : null)) : null;
-                    $isFirstOfSection = !$prevSectionId || ($section && $section->id !== $prevSectionId);
                     $existingAnswer = $existingAnswers->get($question->id);
+                    $nextIndex = $index + 1;
+                    $hasNextQuestion = $nextIndex < $totalQuestionsCount;
+                    $nextQuestionSectionId = $hasNextQuestion ? ($questionSectionMap[$nextIndex] ?? null) : null;
+                    $isLastQuestionOfSection = $section && $hasNextQuestion && ($nextQuestionSectionId !== $section->id);
                 @endphp
 
-                <div id="question-card-{{ $index }}" class="question-card bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm {{ $index === 0 ? '' : 'hidden' }}">
-                    <!-- Header with Part & Flag -->
-                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                            Question {{ $index + 1 }} of {{ $shuffledQuestions->count() }}
-                        </span>
+                <div id="question-card-{{ $index }}" class="question-card bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm hidden">
+                    <!-- Header with Part, Breadcrumb & Flag -->
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                Question {{ $index + 1 }} of {{ $shuffledQuestions->count() }}
+                            </span>
+                            @if($section)
+                                <span class="text-slate-600">•</span>
+                                <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors">
+                                    {{ $section->title }} (View Directions)
+                                </button>
+                            @endif
+                        </div>
                         <button type="button" onclick="toggleFlag('{{ $question->id }}', {{ $index }}, this)"
                                 class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
                             🚩 Flag Question
                         </button>
                     </div>
-
-                    <!-- Section Directions: Full Intro for First Question of Section, Streamlined Badge for Subsequent -->
-                    @if($section)
-                        @if($isFirstOfSection)
-                            <div class="mb-5 p-4 rounded-xl bg-slate-950/80 border border-indigo-500/30 text-slate-300 shadow-sm">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="px-2.5 py-0.5 text-xs font-extrabold rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wide">
-                                        {{ $section->title }}
-                                    </span>
-                                    <span class="text-xs text-slate-400 font-semibold">
-                                        • {{ is_object($section->section_type) ? $section->section_type->label() : ucfirst($section->section_type) }}
-                                    </span>
-                                </div>
-
-                                @if(!empty($section->instructions))
-                                    <div class="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line border-t border-slate-800/80 pt-2">
-                                        <div class="flex items-center gap-1.5 mb-1 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                                            <span>📌</span> Section Directions
-                                        </div>
-                                        {{ $section->instructions }}
-                                    </div>
-                                @endif
-
-                                @if($section->mediaAssets && $section->mediaAssets->isNotEmpty())
-                                    <div class="mt-4 space-y-3">
-                                        @foreach($section->mediaAssets as $sectionMedia)
-                                            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
-                                                @if($sectionMedia->pivot?->caption)
-                                                    <div class="flex items-center gap-1.5 mb-1.5 text-xs font-bold text-indigo-300 uppercase tracking-wider">
-                                                        <span>{{ $sectionMedia->typeIcon() }}</span>
-                                                        <span>{{ $sectionMedia->pivot->caption }}</span>
-                                                    </div>
-                                                @endif
-                                                <x-media-preview :media="$sectionMedia" />
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-                        @else
-                            <div class="mb-4 flex items-center gap-2">
-                                <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-wide">
-                                    {{ $section->title }}
-                                </span>
-                                <span class="text-[11px] text-slate-400 font-medium">
-                                    • {{ is_object($section->section_type) ? $section->section_type->label() : ucfirst($section->section_type) }}
-                                </span>
-                            </div>
-                        @endif
-                    @endif
 
                     <!-- Passage Text if Available -->
                     @if ($question->passage)
@@ -187,14 +237,29 @@
 
                     <!-- Question Navigation Controls -->
                     <div class="flex justify-between pt-6 mt-6 border-t border-slate-800">
-                        <button type="button" onclick="navigateQuestion({{ $index - 1 }})" {{ $index === 0 ? 'disabled' : '' }}
-                                class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
-                            &larr; Previous (P)
-                        </button>
-                        <button type="button" onclick="navigateQuestion({{ $index + 1 }})" {{ $index === $shuffledQuestions->count() - 1 ? 'disabled' : '' }}
-                                class="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">
-                            Next (N) &rarr;
-                        </button>
+                        @if($index === 0 && $section)
+                            <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
+                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                                &larr; Section Directions
+                            </button>
+                        @else
+                            <button type="button" onclick="navigateQuestion({{ $index - 1 }})" {{ $index === 0 ? 'disabled' : '' }}
+                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
+                                &larr; Previous (P)
+                            </button>
+                        @endif
+
+                        @if($isLastQuestionOfSection && $nextQuestionSectionId)
+                            <button type="button" onclick="showSectionIntro('{{ $nextQuestionSectionId }}')"
+                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
+                                Next Section &rarr;
+                            </button>
+                        @else
+                            <button type="button" onclick="navigateQuestion({{ $index + 1 }})" {{ $index === $shuffledQuestions->count() - 1 ? 'disabled' : '' }}
+                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">
+                                Next (N) &rarr;
+                            </button>
+                        @endif
                     </div>
                 </div>
             @empty
@@ -219,7 +284,7 @@
                         $isAns = $existingAnswers->has($q->id) && !is_null($existingAnswers->get($q->id)->selected_choice_id);
                     @endphp
                     <button id="palette-btn-{{ $idx }}" type="button" onclick="navigateQuestion({{ $idx }})"
-                            class="palette-btn px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 {{ $idx === 0 ? 'ring-2 ring-indigo-400 border-indigo-500 bg-indigo-950/80 text-white shadow-sm' : ($isAns ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700') }}">
+                            class="palette-btn px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 {{ $isAns ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700' }}">
                         <span>{{ $idx + 1 }}</span>
                         <span id="palette-icon-{{ $idx }}" class="text-[10px]">{{ $isAns ? '✓' : '—' }}</span>
                     </button>
@@ -247,14 +312,15 @@
     <!-- Anti-Cheating & Timer JavaScript Engine -->
     <script>
         let remainingSeconds = {{ $remainingSeconds }};
-        let currentQuestionIdx = 0;
+        let currentQuestionIdx = -1; // -1 represents section intro view
         const totalQuestions = {{ $shuffledQuestions->count() }};
         const questionIds = @json($shuffledQuestions->pluck('id'));
         const answeredQuestionIds = new Set(@json($answeredQuestionIds));
         const flaggedQuestionIndices = new Set();
+        const firstSectionId = "{{ isset($sections) && $sections->isNotEmpty() ? $sections->first()->id : '' }}";
         let timerInterval = null;
 
-        // Timer Countdown Engine
+        // Timer Countdown Engine (Uninterrupted across all views)
         function updateTimerDisplay() {
             if (remainingSeconds <= 0) {
                 if (timerInterval) clearInterval(timerInterval);
@@ -352,13 +418,27 @@
             updateFinalSubmitButton();
         }
 
-        // Question Navigation
+        // Show Dedicated Section Introduction Screen
+        function showSectionIntro(sectionId) {
+            if (!sectionId) return;
+            document.querySelectorAll('.question-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
+            const targetSection = document.getElementById('section-intro-card-' + sectionId);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                currentQuestionIdx = -1;
+                window.location.hash = 'section=' + sectionId;
+                updatePaletteUI();
+            }
+        }
+
+        // Navigate to Specific Question
         function navigateQuestion(index) {
             if (index < 0 || index >= totalQuestions) return;
-            document.querySelectorAll('.question-card').forEach(card => card.classList.add('hidden'));
+            document.querySelectorAll('.question-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
             const targetCard = document.getElementById(`question-card-${index}`);
             if (targetCard) targetCard.classList.remove('hidden');
             currentQuestionIdx = index;
+            window.location.hash = 'q=' + index;
             updatePaletteUI();
         }
 
@@ -420,17 +500,48 @@
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
             if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-            if (e.key === 'n' || e.key === 'N') navigateQuestion(currentQuestionIdx + 1);
-            if (e.key === 'p' || e.key === 'P') navigateQuestion(currentQuestionIdx - 1);
+            if (e.key === 'n' || e.key === 'N') {
+                if (currentQuestionIdx >= 0) {
+                    navigateQuestion(currentQuestionIdx + 1);
+                } else if (firstSectionId) {
+                    navigateQuestion(0);
+                }
+            }
+            if (e.key === 'p' || e.key === 'P') {
+                if (currentQuestionIdx > 0) {
+                    navigateQuestion(currentQuestionIdx - 1);
+                } else if (currentQuestionIdx === 0 && firstSectionId) {
+                    showSectionIntro(firstSectionId);
+                }
+            }
             if (e.key === 'f' || e.key === 'F') {
-                const currentCard = document.getElementById(`question-card-${currentQuestionIdx}`);
-                const flagBtn = currentCard ? currentCard.querySelector('.btn-flag') : null;
-                toggleFlag(questionIds[currentQuestionIdx], currentQuestionIdx, flagBtn);
+                if (currentQuestionIdx >= 0) {
+                    const currentCard = document.getElementById(`question-card-${currentQuestionIdx}`);
+                    const flagBtn = currentCard ? currentCard.querySelector('.btn-flag') : null;
+                    toggleFlag(questionIds[currentQuestionIdx], currentQuestionIdx, flagBtn);
+                }
             }
         });
 
-        // Initialize state on page ready
+        // Initialize view based on URL hash or default to Section 1 Intro
         document.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash;
+            if (hash.startsWith('#q=')) {
+                const qIdx = parseInt(hash.replace('#q=', ''), 10);
+                if (!isNaN(qIdx) && qIdx >= 0 && qIdx < totalQuestions) {
+                    navigateQuestion(qIdx);
+                } else {
+                    navigateQuestion(0);
+                }
+            } else if (hash.startsWith('#section=')) {
+                const sId = hash.replace('#section=', '');
+                showSectionIntro(sId);
+            } else if (firstSectionId) {
+                showSectionIntro(firstSectionId);
+            } else {
+                navigateQuestion(0);
+            }
+
             updatePaletteUI();
         });
     </script>

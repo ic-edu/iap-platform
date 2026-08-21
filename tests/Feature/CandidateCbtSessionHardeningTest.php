@@ -292,9 +292,9 @@ class CandidateCbtSessionHardeningTest extends TestCase
     }
 
     /**
-     * TEST 9: Section Directions render full intro for first question and streamlined badge for subsequent.
+     * TEST 9: Dedicated Section Directions screen renders before first question with title, directions, and begin button.
      */
-    public function test_section_directions_rendered_once_per_section(): void
+    public function test_dedicated_section_directions_screen_renders_with_begin_action(): void
     {
         $attempt = Attempt::create([
             'test_id'    => $this->test->id,
@@ -306,8 +306,57 @@ class CandidateCbtSessionHardeningTest extends TestCase
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
         $response->assertStatus(200);
 
-        // Section directions appear
+        // Section directions screen elements
+        $response->assertSee('section-intro-card-', false);
+        $response->assertSee('Listening Section');
+        $response->assertSee('Part 1: Photographs');
         $response->assertSee('Section Directions');
-        $response->assertSee('Look at the photograph and select the statement');
+        $response->assertSee('Look at the photograph and select the statement that best describes what you see.');
+        $response->assertSee('Begin Part 1: Photographs');
+        $response->assertSee('showSectionIntro(', false);
+    }
+
+    /**
+     * TEST 10: Multi-section assessment renders dedicated directions cards for each section.
+     */
+    public function test_multi_section_assessment_renders_directions_cards_for_all_sections(): void
+    {
+        // Add Section 2 (Reading Section)
+        $section2 = TestSection::create([
+            'test_id'      => $this->test->id,
+            'title'        => 'Part 5: Incomplete Sentences',
+            'section_type' => SectionType::Reading,
+            'instructions' => 'Select the one word or phrase that best completes the sentence.',
+            'order'        => 2,
+        ]);
+
+        $q4 = Question::create([
+            'question_bank_id' => $this->bank->id,
+            'prompt'           => 'Question 4: Complete the sentence.',
+            'question_type'    => QuestionType::MultipleChoice,
+            'points'           => 5,
+        ]);
+        QuestionChoice::create(['question_id' => $q4->id, 'label' => 'A', 'content' => 'Option A', 'is_correct' => true]);
+        TestQuestion::create(['test_section_id' => $section2->id, 'question_id' => $q4->id, 'order' => 1]);
+
+        $attempt = Attempt::create([
+            'test_id'    => $this->test->id,
+            'user_id'    => $this->student->id,
+            'started_at' => now(),
+            'status'     => AttemptStatus::InProgress,
+        ]);
+
+        $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
+        $response->assertStatus(200);
+
+        // Section 1 Intro Card
+        $response->assertSee('Part 1: Photographs');
+        $response->assertSee('Begin Part 1: Photographs');
+
+        // Section 2 Intro Card
+        $response->assertSee('Part 5: Incomplete Sentences');
+        $response->assertSee('Reading Section');
+        $response->assertSee('Select the one word or phrase that best completes the sentence.');
+        $response->assertSee('Begin Part 5: Incomplete Sentences');
     }
 }
