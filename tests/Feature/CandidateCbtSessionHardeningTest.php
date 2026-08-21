@@ -359,4 +359,74 @@ class CandidateCbtSessionHardeningTest extends TestCase
         $response->assertSee('Select the one word or phrase that best completes the sentence.');
         $response->assertSee('Begin Part 5: Incomplete Sentences');
     }
+
+    /**
+     * TEST 11: Candidate portal dashboard lists multiple ongoing sessions ordered by latest started_at first.
+     */
+    public function test_candidate_portal_shows_multiple_ongoing_sessions_ordered_latest_first(): void
+    {
+        $test2 = Test::create([
+            'title'            => 'TOEIC Full Simulation Test 01',
+            'slug'             => 'toeic-full-sim-01',
+            'test_type'        => TestType::Toeic,
+            'duration_minutes' => 120,
+            'pass_score'       => 500,
+            'is_published'     => true,
+            'created_by'       => $this->teacher->id,
+        ]);
+
+        // Old attempt started 30 mins ago
+        $oldAttempt = Attempt::create([
+            'test_id'    => $test2->id,
+            'user_id'    => $this->student->id,
+            'started_at' => now()->subMinutes(30),
+            'status'     => AttemptStatus::InProgress,
+        ]);
+
+        // Recent attempt started 5 mins ago
+        $recentAttempt = Attempt::create([
+            'test_id'    => $this->test->id,
+            'user_id'    => $this->student->id,
+            'started_at' => now()->subMinutes(5),
+            'status'     => AttemptStatus::InProgress,
+        ]);
+
+        $response = $this->actingAs($this->student)->get(route('candidate.portal'));
+        $response->assertStatus(200);
+
+        $response->assertSee('Ongoing Sessions (2)');
+        $response->assertSee('TOEIC Listening & Reading Hardening');
+        $response->assertSee('TOEIC Full Simulation Test 01');
+
+        // Verify both exact resume links exist
+        $response->assertSee(route('candidate.exam', $recentAttempt));
+        $response->assertSee(route('candidate.exam', $oldAttempt));
+
+        // Verify recent attempt appears before older attempt in the HTML content
+        $content = $response->getContent();
+        $recentPos = strpos($content, route('candidate.exam', $recentAttempt));
+        $oldPos = strpos($content, route('candidate.exam', $oldAttempt));
+        $this->assertTrue($recentPos !== false && $oldPos !== false && $recentPos < $oldPos);
+    }
+
+    /**
+     * TEST 12: Expired in-progress attempts are excluded from ongoing sessions display.
+     */
+    public function test_expired_in_progress_attempts_are_excluded_from_ongoing_sessions(): void
+    {
+        // Expired attempt (started 2 hours ago for 60 min test)
+        $expiredAttempt = Attempt::create([
+            'test_id'    => $this->test->id,
+            'user_id'    => $this->student->id,
+            'started_at' => now()->subMinutes(120),
+            'status'     => AttemptStatus::InProgress,
+        ]);
+
+        $response = $this->actingAs($this->student)->get(route('candidate.portal'));
+        $response->assertStatus(200);
+
+        // Expired attempt must NOT appear as an active ongoing session
+        $response->assertDontSee('Ongoing Sessions');
+        $response->assertDontSee(route('candidate.exam', $expiredAttempt));
+    }
 }

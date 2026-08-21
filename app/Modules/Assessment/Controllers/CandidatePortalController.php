@@ -30,7 +30,15 @@ class CandidatePortalController extends Controller
         $myAttemptsCount = Attempt::where('user_id', $userId)->count();
         $completedAttemptsCount = Attempt::where('user_id', $userId)->whereIn('status', ['submitted', 'expired'])->count();
         $issuedCertificatesCount = Certificate::where('user_id', $userId)->count();
-        $ongoingAttempt = Attempt::where('user_id', $userId)->where('status', 'in_progress')->first();
+        $ongoingAttempts = Attempt::with(['test.sections'])
+            ->where('user_id', $userId)
+            ->where('status', 'in_progress')
+            ->orderBy('started_at', 'desc')
+            ->get()
+            ->filter(function (Attempt $attempt) {
+                return !$this->engine->timerEngine->isExpired($attempt);
+            })
+            ->values();
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.portal';
@@ -40,7 +48,7 @@ class CandidatePortalController extends Controller
             'myAttemptsCount',
             'completedAttemptsCount',
             'issuedCertificatesCount',
-            'ongoingAttempt'
+            'ongoingAttempts'
         ));
     }
 

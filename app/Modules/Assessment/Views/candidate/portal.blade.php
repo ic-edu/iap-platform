@@ -27,20 +27,44 @@
         </a>
     </div>
 
-    <!-- Active / Ongoing Attempt Alert -->
-    @if ($ongoingAttempt)
-        <div class="mb-8 p-6 rounded-xl bg-indigo-600/10 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300">
-                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                    Ongoing Session
-                </span>
-                <h3 class="text-lg font-bold text-white mt-2">{{ $ongoingAttempt->test?->title }}</h3>
-                <p class="text-xs text-slate-400 mt-0.5">Started at {{ $ongoingAttempt->started_at?->format('H:i, d M Y') }}</p>
+    <!-- Active / Ongoing Attempts Section -->
+    @if (isset($ongoingAttempts) && $ongoingAttempts->isNotEmpty())
+        <div class="mb-8 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                    Ongoing Sessions ({{ $ongoingAttempts->count() }})
+                </h2>
             </div>
-            <a href="{{ route('candidate.exam', $ongoingAttempt) }}" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-colors shadow-md shadow-indigo-600/30">
-                Resume Test Exam &rarr;
-            </a>
+
+            <div class="grid gap-4 sm:grid-cols-{{ $ongoingAttempts->count() > 1 ? '2' : '1' }}">
+                @foreach ($ongoingAttempts as $attempt)
+                    <div class="p-5 sm:p-6 rounded-2xl bg-indigo-600/10 border border-indigo-500/30 flex flex-col justify-between gap-4 shadow-sm hover:border-indigo-500/50 transition-all">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wide">
+                                    {{ is_object($attempt->test?->test_type) ? $attempt->test->test_type->label() : strtoupper($attempt->test?->test_type ?? 'CBT') }}
+                                </span>
+                                <span class="text-xs text-slate-400">
+                                    Started: {{ $attempt->started_at?->format('H:i, d M Y') }}
+                                </span>
+                            </div>
+                            <h3 class="text-base sm:text-lg font-bold text-white leading-snug">
+                                {{ $attempt->test?->title ?? 'Assessment Session' }}
+                            </h3>
+                        </div>
+
+                        <div class="pt-3 flex items-center justify-between border-t border-indigo-500/20">
+                            <span class="text-xs text-indigo-300 font-medium">
+                                In-Progress Session
+                            </span>
+                            <a href="{{ route('candidate.exam', $attempt) }}" class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98]">
+                                Resume Test Exam &rarr;
+                            </a>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
         </div>
     @endif
 
