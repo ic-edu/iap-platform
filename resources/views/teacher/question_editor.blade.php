@@ -106,6 +106,20 @@
                         </div>
                     </div>
 
+                    {{-- Image empty placeholder --}}
+                    <div id="eq-empty-image-card" style="display:{{ $hasImg ? 'none' : 'flex' }};align-items:center;justify-content:space-between;background:#0f172a;border:1px dashed #334155;border-radius:.5rem;padding:.55rem .75rem;">
+                        <div style="display:flex;align-items:center;gap:.5rem;">
+                            <span style="font-size:1.1rem;">🖼️</span>
+                            <div>
+                                <span style="font-size:.75rem;font-weight:700;color:#cbd5e1;display:block;">Question Photograph / Image</span>
+                                <span style="font-size:.68rem;color:#64748b;">No image attached</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openQuestionMediaPicker('image')" style="padding:.3rem .65rem;background:rgba(56,189,248,.12);color:#38bdf8;border:1px solid rgba(56,189,248,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
+                            + Attach Image
+                        </button>
+                    </div>
+
                     {{-- Audio preview card --}}
                     <div id="eq-preview-audio-card" style="display:{{ $hasAudio ? 'flex' : 'none' }};background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
                         <div style="display:flex;align-items:center;gap:.75rem;flex:1;">
@@ -126,8 +140,18 @@
                         </div>
                     </div>
 
-                    <div id="eq-no-media-msg" style="display:{{ (!$hasImg && !$hasAudio) ? 'block' : 'none' }};font-size:.75rem;color:#64748b;font-style:italic;">
-                        No question-level media attached.
+                    {{-- Audio empty placeholder --}}
+                    <div id="eq-empty-audio-card" style="display:{{ $hasAudio ? 'none' : 'flex' }};align-items:center;justify-content:space-between;background:#0f172a;border:1px dashed #334155;border-radius:.5rem;padding:.55rem .75rem;">
+                        <div style="display:flex;align-items:center;gap:.5rem;">
+                            <span style="font-size:1.1rem;">🎧</span>
+                            <div>
+                                <span style="font-size:.75rem;font-weight:700;color:#cbd5e1;display:block;">Question Audio Prompt</span>
+                                <span style="font-size:.68rem;color:#64748b;">No audio attached</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openQuestionMediaPicker('audio')" style="padding:.3rem .65rem;background:rgba(129,140,248,.12);color:#818cf8;border:1px solid rgba(129,140,248,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
+                            + Attach Audio
+                        </button>
                     </div>
                 </div>
             </div>
@@ -540,6 +564,8 @@ function applySelectedQuestionMedia(item) {
     const imgInput = document.getElementById('eq-image-url');
     const audioInput = document.getElementById('eq-audio-url');
     const noMediaMsg = document.getElementById('eq-no-media-msg');
+    const emptyImg = document.getElementById('eq-empty-image-card');
+    const emptyAudio = document.getElementById('eq-empty-audio-card');
 
     if (!mediaIdInput.value) {
         mediaIdInput.value = item.id;
@@ -551,6 +577,7 @@ function applySelectedQuestionMedia(item) {
         const thumb = document.getElementById('eq-preview-image-thumb');
         const title = document.getElementById('eq-preview-image-title');
         if (card) card.style.display = 'flex';
+        if (emptyImg) emptyImg.style.display = 'none';
         if (thumb) thumb.src = item.url;
         if (title) title.innerText = item.title || item.name || 'Photograph';
     } else if (item.type === 'audio') {
@@ -559,6 +586,7 @@ function applySelectedQuestionMedia(item) {
         const player = document.getElementById('eq-preview-audio-player');
         const title = document.getElementById('eq-preview-audio-title');
         if (card) card.style.display = 'flex';
+        if (emptyAudio) emptyAudio.style.display = 'none';
         if (player) player.src = item.url;
         if (title) title.innerText = item.title || item.name || 'Audio Statement';
     } else {
@@ -567,6 +595,7 @@ function applySelectedQuestionMedia(item) {
         const card = document.getElementById('eq-preview-image-card');
         const title = document.getElementById('eq-preview-image-title');
         if (card) card.style.display = 'flex';
+        if (emptyImg) emptyImg.style.display = 'none';
         if (title) title.innerText = `[${item.type.toUpperCase()}] ` + (item.title || item.name);
     }
 
@@ -579,17 +608,21 @@ function removeQuestionAttachedMedia(type) {
     const imgInput = document.getElementById('eq-image-url');
     const audioInput = document.getElementById('eq-audio-url');
     const noMediaMsg = document.getElementById('eq-no-media-msg');
+    const emptyImg = document.getElementById('eq-empty-image-card');
+    const emptyAudio = document.getElementById('eq-empty-audio-card');
 
     if (type === 'image') {
         imgInput.value = '';
         const card = document.getElementById('eq-preview-image-card');
         if (card) card.style.display = 'none';
+        if (emptyImg) emptyImg.style.display = 'flex';
     } else if (type === 'audio') {
         audioInput.value = '';
         const card = document.getElementById('eq-preview-audio-card');
         const player = document.getElementById('eq-preview-audio-player');
         if (card) card.style.display = 'none';
         if (player) player.src = '';
+        if (emptyAudio) emptyAudio.style.display = 'flex';
     }
 
     if (!imgInput.value && !audioInput.value) {

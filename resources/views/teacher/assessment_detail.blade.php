@@ -391,6 +391,37 @@
                             <div style="font-size:.88rem;font-weight:700;color:#f1f5f9;">
                                 {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
                             </div>
+
+                            {{-- Question-level Media Status Display --}}
+                            @php
+                                $qHasImg = !empty($q->image_url);
+                                $qHasAudio = !empty($q->audio_url);
+                            @endphp
+                            <div style="margin-top:.6rem;padding-top:.5rem;border-top:1px solid rgba(51,65,85,0.7);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+                                <span style="font-size:.7rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">MEDIA:</span>
+                                @if($qHasImg)
+                                    <div style="display:inline-flex;align-items:center;gap:.35rem;background:#0f172a;border:1px solid rgba(56,189,248,.35);padding:.2rem .5rem;border-radius:.4rem;">
+                                        <img src="{{ $q->image_url }}" alt="Thumbnail" style="width:22px;height:22px;object-fit:cover;border-radius:.25rem;border:1px solid #475569;">
+                                        <span style="font-size:.72rem;font-weight:700;color:#38bdf8;">🖼 Image ✓</span>
+                                        <span style="font-size:.68rem;color:#cbd5e1;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $q->image_url }}">{{ basename($q->image_url) }}</span>
+                                    </div>
+                                @endif
+
+                                @if($qHasAudio)
+                                    <div style="display:inline-flex;align-items:center;gap:.35rem;background:#0f172a;border:1px solid rgba(129,140,248,.35);padding:.2rem .5rem;border-radius:.4rem;">
+                                        <span style="font-size:.8rem;">🎧</span>
+                                        <audio src="{{ $q->audio_url }}" controls style="height:20px;width:120px;"></audio>
+                                        <span style="font-size:.72rem;font-weight:700;color:#818cf8;">🔊 Audio ✓</span>
+                                        <span style="font-size:.68rem;color:#cbd5e1;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $q->audio_url }}">{{ basename($q->audio_url) }}</span>
+                                    </div>
+                                @endif
+
+                                @if(!$qHasImg && !$qHasAudio)
+                                    <span style="font-size:.72rem;color:#64748b;font-style:italic;">
+                                        No question-level media attached.
+                                    </span>
+                                @endif
+                            </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;">
                             @if($isMaster)
@@ -670,9 +701,6 @@
                         <span style="font-size:.78rem;font-weight:800;color:#e2e8f0;display:block;">🖼️ / 🎧 Question Media (Optional)</span>
                         <span style="font-size:.7rem;color:#94a3b8;">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
                     </div>
-                    <button type="button" onclick="openQuestionMediaPicker('create')" style="padding:.35rem .75rem;background:#4f46e5;color:#fff;border:none;border-radius:.45rem;font-size:.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
-                        📎 + Attach Media
-                    </button>
                 </div>
 
                 <input type="hidden" id="q-media-asset-id" name="media_asset_id" value="">
@@ -686,12 +714,31 @@
                         <div style="display:flex;align-items:center;gap:.75rem;">
                             <img id="q-preview-image-thumb" src="" alt="Thumbnail" style="width:48px;height:48px;object-fit:cover;border-radius:.35rem;border:1px solid #475569;">
                             <div>
-                                <span style="font-size:.75rem;font-weight:700;color:#38bdf8;display:block;">🖼️ Attached Image</span>
-                                <span id="q-preview-image-title" style="font-size:.7rem;color:#cbd5e1;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;"></span>
+                                <span style="font-size:.75rem;font-weight:700;color:#38bdf8;display:block;">🖼️ Attached Image (Photograph)</span>
+                                <span id="q-preview-image-title" style="font-size:.7rem;color:#cbd5e1;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;"></span>
                             </div>
                         </div>
-                        <button type="button" onclick="removeQuestionAttachedMedia('create', 'image')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
-                            ✕ Remove
+                        <div style="display:flex;align-items:center;gap:.4rem;">
+                            <button type="button" onclick="openQuestionMediaPicker('create', 'image')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                                Change
+                            </button>
+                            <button type="button" onclick="removeQuestionAttachedMedia('create', 'image')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                                ✕ Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Image empty placeholder --}}
+                    <div id="q-empty-image-card" style="display:flex;align-items:center;justify-content:space-between;background:#0f172a;border:1px dashed #334155;border-radius:.5rem;padding:.55rem .75rem;">
+                        <div style="display:flex;align-items:center;gap:.5rem;">
+                            <span style="font-size:1.1rem;">🖼️</span>
+                            <div>
+                                <span style="font-size:.75rem;font-weight:700;color:#cbd5e1;display:block;">Question Photograph / Image</span>
+                                <span style="font-size:.68rem;color:#64748b;">No image attached</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openQuestionMediaPicker('create', 'image')" style="padding:.3rem .65rem;background:rgba(56,189,248,.12);color:#38bdf8;border:1px solid rgba(56,189,248,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
+                            + Attach Image
                         </button>
                     </div>
 
@@ -700,18 +747,33 @@
                         <div style="display:flex;align-items:center;gap:.75rem;flex:1;">
                             <span style="font-size:1.4rem;">🎧</span>
                             <div style="flex:1;">
-                                <span style="font-size:.75rem;font-weight:700;color:#818cf8;display:block;">🎵 Attached Audio</span>
-                                <span id="q-preview-audio-title" style="font-size:.7rem;color:#cbd5e1;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-bottom:.3rem;"></span>
-                                <audio id="q-preview-audio-player" controls style="height:28px;width:100%;max-width:280px;" src=""></audio>
+                                <span style="font-size:.75rem;font-weight:700;color:#818cf8;display:block;">🎵 Attached Audio Prompt</span>
+                                <span id="q-preview-audio-title" style="font-size:.7rem;color:#cbd5e1;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-bottom:.25rem;"></span>
+                                <audio id="q-preview-audio-player" controls style="height:26px;width:100%;max-width:260px;" src=""></audio>
                             </div>
                         </div>
-                        <button type="button" onclick="removeQuestionAttachedMedia('create', 'audio')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
-                            ✕ Remove
-                        </button>
+                        <div style="display:flex;align-items:center;gap:.4rem;">
+                            <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                                Change
+                            </button>
+                            <button type="button" onclick="removeQuestionAttachedMedia('create', 'audio')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                                ✕ Remove
+                            </button>
+                        </div>
                     </div>
 
-                    <div id="q-no-media-msg" style="font-size:.72rem;color:#64748b;font-style:italic;">
-                        No question-level media attached.
+                    {{-- Audio empty placeholder --}}
+                    <div id="q-empty-audio-card" style="display:flex;align-items:center;justify-content:space-between;background:#0f172a;border:1px dashed #334155;border-radius:.5rem;padding:.55rem .75rem;">
+                        <div style="display:flex;align-items:center;gap:.5rem;">
+                            <span style="font-size:1.1rem;">🎧</span>
+                            <div>
+                                <span style="font-size:.75rem;font-weight:700;color:#cbd5e1;display:block;">Question Audio Prompt</span>
+                                <span style="font-size:.68rem;color:#64748b;">No audio attached</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" style="padding:.3rem .65rem;background:rgba(129,140,248,.12);color:#818cf8;border:1px solid rgba(129,140,248,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
+                            + Attach Audio
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1082,11 +1144,11 @@
     let currentAsmSectionId = null;
     let currentQuestionMediaTargetMode = 'create';
 
-    function openQuestionMediaPicker(mode = 'create') {
+    function openQuestionMediaPicker(mode = 'create', defaultType = 'all') {
         currentQuestionMediaTargetMode = mode;
         const modal = document.getElementById('question-media-picker-modal');
         if (modal) modal.style.display = 'flex';
-        fetchQuestionMediaLibrary();
+        fetchQuestionMediaLibrary(defaultType);
     }
 
     function closeQuestionMediaPicker(e) {
@@ -1096,10 +1158,10 @@
         }
     }
 
-    function fetchQuestionMediaLibrary() {
+    function fetchQuestionMediaLibrary(defaultType = 'all') {
         const container = document.getElementById('qm-media-list-container');
         if (questionMediaLibrary.length > 0) {
-            renderQuestionMediaGrid(questionMediaLibrary);
+            filterQuestionMediaModal(defaultType);
             return;
         }
 
@@ -1109,7 +1171,7 @@
             .then(data => {
                 if (data.success && Array.isArray(data.data)) {
                     questionMediaLibrary = data.data;
-                    renderQuestionMediaGrid(questionMediaLibrary);
+                    filterQuestionMediaModal(defaultType);
                 } else {
                     container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#f43f5e;font-size:.75rem;padding:2rem;">Failed to load media library.</div>';
                 }
@@ -1125,12 +1187,12 @@
             btn.style.background = '#1e293b';
             btn.style.color = '#cbd5e1';
             btn.style.border = '1px solid #334155';
+            if (btn.getAttribute('data-type') === type || (type === 'all' && (!btn.getAttribute('data-type') || btn.getAttribute('data-type') === 'all'))) {
+                btn.style.background = '#6366f1';
+                btn.style.color = '#fff';
+                btn.style.border = 'none';
+            }
         });
-        if (event && event.target) {
-            event.target.style.background = '#6366f1';
-            event.target.style.color = '#fff';
-            event.target.style.border = 'none';
-        }
 
         const query = (document.getElementById('qm-search-input')?.value || '').toLowerCase();
         let filtered = questionMediaLibrary;
@@ -1261,6 +1323,8 @@
         const imgInput = document.getElementById(prefix + 'image-url');
         const audioInput = document.getElementById(prefix + 'audio-url');
         const noMediaMsg = document.getElementById(prefix + 'no-media-msg');
+        const emptyImg = document.getElementById(prefix + 'empty-image-card');
+        const emptyAudio = document.getElementById(prefix + 'empty-audio-card');
 
         if (!mediaIdInput.value) {
             mediaIdInput.value = item.id;
@@ -1272,6 +1336,7 @@
             const thumb = document.getElementById(prefix + 'preview-image-thumb');
             const title = document.getElementById(prefix + 'preview-image-title');
             if (card) card.style.display = 'flex';
+            if (emptyImg) emptyImg.style.display = 'none';
             if (thumb) thumb.src = item.url;
             if (title) title.innerText = item.title || item.name || 'Photograph';
         } else if (item.type === 'audio') {
@@ -1280,6 +1345,7 @@
             const player = document.getElementById(prefix + 'preview-audio-player');
             const title = document.getElementById(prefix + 'preview-audio-title');
             if (card) card.style.display = 'flex';
+            if (emptyAudio) emptyAudio.style.display = 'none';
             if (player) player.src = item.url;
             if (title) title.innerText = item.title || item.name || 'Audio Statement';
         } else {
@@ -1289,6 +1355,7 @@
             const card = document.getElementById(prefix + 'preview-image-card');
             const title = document.getElementById(prefix + 'preview-image-title');
             if (card) card.style.display = 'flex';
+            if (emptyImg) emptyImg.style.display = 'none';
             if (title) title.innerText = `[${item.type.toUpperCase()}] ` + (item.title || item.name);
         }
 
@@ -1302,17 +1369,21 @@
         const imgInput = document.getElementById(prefix + 'image-url');
         const audioInput = document.getElementById(prefix + 'audio-url');
         const noMediaMsg = document.getElementById(prefix + 'no-media-msg');
+        const emptyImg = document.getElementById(prefix + 'empty-image-card');
+        const emptyAudio = document.getElementById(prefix + 'empty-audio-card');
 
         if (type === 'image') {
             imgInput.value = '';
             const card = document.getElementById(prefix + 'preview-image-card');
             if (card) card.style.display = 'none';
+            if (emptyImg) emptyImg.style.display = 'flex';
         } else if (type === 'audio') {
             audioInput.value = '';
             const card = document.getElementById(prefix + 'preview-audio-card');
             const player = document.getElementById(prefix + 'preview-audio-player');
             if (card) card.style.display = 'none';
             if (player) player.src = '';
+            if (emptyAudio) emptyAudio.style.display = 'flex';
         }
 
         if (!imgInput.value && !audioInput.value) {
@@ -1380,6 +1451,27 @@
             checkedRadios.forEach(r => r.checked = false);
             const errBox = document.getElementById('create-q-validation-error');
             if (errBox) errBox.style.display = 'none';
+
+            // Reset media inputs
+            const imgInput = document.getElementById('q-image-url');
+            const audioInput = document.getElementById('q-audio-url');
+            const mediaIdInput = document.getElementById('q-media-asset-id');
+            if (imgInput) imgInput.value = '';
+            if (audioInput) audioInput.value = '';
+            if (mediaIdInput) mediaIdInput.value = '';
+
+            const prevImg = document.getElementById('q-preview-image-card');
+            const emptyImg = document.getElementById('q-empty-image-card');
+            const prevAudio = document.getElementById('q-preview-audio-card');
+            const emptyAudio = document.getElementById('q-empty-audio-card');
+            const audioPlayer = document.getElementById('q-preview-audio-player');
+
+            if (prevImg) prevImg.style.display = 'none';
+            if (emptyImg) emptyImg.style.display = 'flex';
+            if (prevAudio) prevAudio.style.display = 'none';
+            if (emptyAudio) emptyAudio.style.display = 'flex';
+            if (audioPlayer) audioPlayer.src = '';
+
             updateCreateModalCorrectChoice();
         }
     }
