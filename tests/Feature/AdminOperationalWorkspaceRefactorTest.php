@@ -8,6 +8,7 @@ use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Certificate\Models\Certificate;
 use App\Modules\Commerce\Application\BillingEngine;
 use App\Modules\Commerce\Application\CheckoutEngine;
 use App\Modules\Commerce\Application\InvoiceEngine;
@@ -271,7 +272,15 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 10. Regular Admin Opens Assessment Assignment & Operations Workspace Without Authoring Controls
+     * 10. Regular Admin Cannot Access RM Dashboard
+     */
+    public function test_regular_admin_cannot_access_rm_dashboard(): void
+    {
+        $this->actingAs($this->admin)->get(route('admin.repository-manager.dashboard'))->assertStatus(403);
+    }
+
+    /**
+     * 11. Regular Admin Opens Assessment Assignment & Operations Workspace Without Authoring Controls
      */
     public function test_regular_admin_opens_assessment_operations_workspace_cleanly(): void
     {
@@ -301,7 +310,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 11. Regular Admin Dashboard Shows Candidates Requiring Action When Real Test is Paid
+     * 12. Regular Admin Dashboard Shows Candidates Requiring Action When Real Test is Paid
      */
     public function test_regular_admin_dashboard_shows_paid_candidate_in_action_panel(): void
     {
@@ -345,7 +354,37 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 12. Teacher, RM, and Super Admin Access Rights Remain Fully Intact
+     * 13. Regular Admin Operational Domain Access (Candidates, Certificates, Commerce, Reports, Academic Ops)
+     */
+    public function test_regular_admin_operational_domain_access(): void
+    {
+        // Candidates
+        $this->actingAs($this->admin)->get(route('admin.users.index'))->assertStatus(200);
+
+        // Certificates
+        $this->actingAs($this->admin)->get(route('admin.certificates.index'))->assertStatus(200);
+
+        // Commerce & Billing
+        $this->actingAs($this->admin)->get(route('admin.commerce.index'))->assertStatus(200);
+
+        // Reports & Analytics
+        $this->actingAs($this->admin)->get(route('admin.reporting.index'))->assertStatus(200);
+
+        // Student Applications
+        $this->actingAs($this->admin)->get(route('admin.academic-operations.applications'))->assertStatus(200);
+
+        // Student Enrollments
+        $this->actingAs($this->admin)->get(route('admin.academic-operations.enrollments'))->assertStatus(200);
+
+        // Teacher Assignments
+        $this->actingAs($this->admin)->get(route('admin.academic-operations.teacher-assignments'))->assertStatus(200);
+
+        // Courses backend route exists and returns 200 (though menu is hidden from sidebar)
+        $this->actingAs($this->admin)->get(route('admin.academic-operations.courses'))->assertStatus(200);
+    }
+
+    /**
+     * 14. Teacher, RM, and Super Admin Access Rights Remain Fully Intact
      */
     public function test_teacher_rm_and_super_admin_routes_remain_functional(): void
     {

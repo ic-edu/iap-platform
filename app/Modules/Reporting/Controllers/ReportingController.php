@@ -22,15 +22,15 @@ class ReportingController extends Controller
             abort(403, 'Finance users are restricted to Financial & Commerce Reports.');
         }
 
-        $totalAttempts = Attempt::where('status', 'submitted')->count();
-        $totalPassed = Attempt::where('status', 'submitted')->get()->filter(fn ($att) => ($att->result_summary['is_passed'] ?? false))->count();
+        $totalAttempts = Attempt::whereIn('status', ['submitted', 'completed'])->count();
+        $totalPassed = Attempt::whereIn('status', ['submitted', 'completed'])->get()->filter(fn ($att) => ($att->result_summary['is_passed'] ?? false))->count();
         $passRate = $totalAttempts > 0 ? round(($totalPassed / $totalAttempts) * 100, 1) : 0;
         $totalCertificates = Certificate::count();
         $totalTests = Test::count();
 
         $recentAttempts = Attempt::with(['test', 'user'])
-            ->where('status', 'submitted')
-            ->latest('submitted_at')
+            ->whereIn('status', ['submitted', 'completed'])
+            ->latest('updated_at')
             ->limit(10)
             ->get();
 
@@ -49,7 +49,7 @@ class ReportingController extends Controller
             abort(403, 'Finance users are restricted to Financial & Commerce Reports.');
         }
 
-        $attempts = Attempt::with(['user', 'test', 'certificate'])->where('status', 'submitted')->get();
+        $attempts = Attempt::with(['user', 'test', 'certificate'])->whereIn('status', ['submitted', 'completed'])->get();
 
         $headers = [
             'Content-Type' => 'text/csv',
