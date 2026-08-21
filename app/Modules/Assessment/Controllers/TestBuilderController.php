@@ -52,6 +52,15 @@ class TestBuilderController extends Controller
             $query->where('test_type', $type);
         }
 
+        // Filter by Active Assignments
+        if ($filter = $request->input('filter')) {
+            if ($filter === 'active-assignments' || $filter === 'active') {
+                $query->whereHas('assignments', function ($aq) {
+                    $aq->where('status', 'active');
+                });
+            }
+        }
+
         if ($user && $user->hasRole('teacher')) {
             $query->where(function ($q) use ($user) {
                 $q->where('created_by', $user->id)

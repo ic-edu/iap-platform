@@ -59,13 +59,25 @@
             <button type="submit" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors">
                 Filter
             </button>
-            @if(request()->hasAny(['search', 'type', 'status']))
+            @if(request()->hasAny(['search', 'type', 'status', 'filter']))
             <a href="{{ route('admin.tests.index') }}" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/20 transition-colors">
                 Reset
             </a>
             @endif
         </div>
     </form>
+
+    @if(request('filter') === 'active-assignments' || request('filter') === 'active')
+    <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between shadow-md">
+        <span class="flex items-center gap-2">
+            <span>🎯</span>
+            <span>Filtered: <strong>Assessments with Active Candidate Assignments</strong></span>
+        </span>
+        <a href="{{ route('admin.tests.index') }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition-colors">
+            Clear Filter ✕
+        </a>
+    </div>
+    @endif
 
     {{-- Assessments Table --}}
     <div class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-xl overflow-hidden">

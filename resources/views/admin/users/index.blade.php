@@ -53,13 +53,25 @@
             <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
                 Apply Filters
             </button>
-            @if (request()->hasAny(['search', 'role', 'status']))
+            @if (request()->hasAny(['search', 'role', 'status', 'filter']))
                 <a href="{{ route('admin.users.index') }}" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-medium rounded-lg text-center transition-colors">
                     Reset
                 </a>
             @endif
         </form>
     </div>
+
+    @if(request('filter') === 'paid-eligible' || request('filter') === 'eligible')
+    <div class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium flex items-center justify-between shadow-sm">
+        <span class="flex items-center gap-2">
+            <span>💳</span>
+            <span>Filtered: <strong>Paid &amp; Eligible Candidates</strong> (Candidates with confirmed paid transactions)</span>
+        </span>
+        <a href="{{ route('admin.users.index') }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition-colors">
+            Clear Filter ✕
+        </a>
+    </div>
+    @endif
 
     <!-- Users Table -->
     <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-6">

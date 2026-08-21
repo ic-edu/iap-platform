@@ -73,6 +73,15 @@ class UserController extends Controller
             $query->where('status', $status);
         }
 
+        if ($filter = $request->input('filter')) {
+            if ($filter === 'paid-eligible' || $filter === 'eligible') {
+                $query->role('student')
+                    ->whereHas('orders', function ($oq) {
+                        $oq->whereHas('invoice.payments', fn($pq) => $pq->whereIn('status', [\App\Modules\Commerce\Domain\Enums\PaymentStatus::Success, 'success', 'paid']));
+                    });
+            }
+        }
+
         $users = $query->latest()->paginate(15)->withQueryString();
 
         return view('admin.users.index', compact('users'));

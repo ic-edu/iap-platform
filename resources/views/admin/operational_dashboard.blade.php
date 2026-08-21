@@ -28,12 +28,6 @@
                 </svg>
                 Manage Candidates
             </a>
-            <a href="{{ route('admin.tests.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors shadow-lg shadow-indigo-600/20">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                Assessment Catalog
-            </a>
         </div>
     </div>
 
@@ -69,29 +63,29 @@
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                    <span class="text-indigo-400 group-hover:translate-x-0.5 transition-transform">View Student Directory &rarr;</span>
+                    <span class="text-indigo-400 group-hover:translate-x-0.5 transition-transform">View Candidates &rarr;</span>
                 </div>
             </a>
 
             {{-- 2. Paid / Eligible Candidates --}}
-            <div class="p-5 rounded-xl bg-slate-950/80 border border-slate-800 shadow-md relative overflow-hidden">
+            <a href="{{ route('admin.users.index', ['filter' => 'paid-eligible']) }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
                 <div class="flex items-start justify-between">
                     <div>
                         <p class="text-xs font-semibold text-slate-400">Paid &amp; Eligible Candidates</p>
-                        <p class="text-3xl font-black text-white mt-1">{{ number_format($paidEligibleCandidatesCount) }}</p>
+                        <p class="text-3xl font-black text-white mt-1 group-hover:text-emerald-300 transition-colors">{{ number_format($paidEligibleCandidatesCount) }}</p>
                     </div>
                     <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xl">
                         💳
                     </div>
                 </div>
-                <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
-                    <span>Verified Transactions</span>
+                <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                    <span class="text-emerald-400 group-hover:translate-x-0.5 transition-transform">View Eligible Candidates &rarr;</span>
                 </div>
-            </div>
+            </a>
 
             {{-- 3. Active Test Assignments --}}
-            <a href="{{ route('admin.tests.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+            <a href="{{ route('admin.tests.index', ['filter' => 'active-assignments']) }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-amber-500"></div>
                 <div class="flex items-start justify-between">
                     <div>
@@ -103,32 +97,32 @@
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                    <span class="text-amber-400 group-hover:translate-x-0.5 transition-transform">Manage Candidate Assignments &rarr;</span>
+                    <span class="text-amber-400 group-hover:translate-x-0.5 transition-transform">View Active Assignments &rarr;</span>
                 </div>
             </a>
 
             {{-- 4. Completed Tests --}}
-            <div class="p-5 rounded-xl bg-slate-950/80 border border-slate-800 shadow-md relative overflow-hidden">
+            <a href="{{ route('admin.reporting.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-sky-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-sky-500"></div>
                 <div class="flex items-start justify-between">
                     <div>
                         <p class="text-xs font-semibold text-slate-400">Completed Assessments</p>
-                        <p class="text-3xl font-black text-white mt-1">{{ number_format($completedAttemptsCount) }}</p>
+                        <p class="text-3xl font-black text-white mt-1 group-hover:text-sky-300 transition-colors">{{ number_format($completedAttemptsCount) }}</p>
                     </div>
                     <div class="p-2.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xl">
                         ✅
                     </div>
                 </div>
-                <div class="mt-3 flex items-center gap-2 text-[11px] text-slate-400">
-                    <span class="text-sky-400 font-semibold">{{ $inProgressAttemptsCount }}</span> active in progress
+                <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                    <span class="text-sky-400 group-hover:translate-x-0.5 transition-transform">View Completed Results &rarr;</span>
                 </div>
-            </div>
+            </a>
 
         </div>
     </section>
 
     {{-- Action Panel: Candidates Requiring Action --}}
-    <section class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
+    <section id="action-queue" class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
         <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
             <div class="flex items-center gap-2.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
@@ -184,7 +178,7 @@
         @endif
     </section>
 
-    {{-- Two Column Layout: Recent Active Assignments & Assessment Catalog --}}
+    {{-- Two Column Layout: Recent Active Assignments & Assessment Inventory --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {{-- Column 1: Recent Active Candidate Assignments --}}
@@ -193,7 +187,7 @@
                 <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                     <span>🎯</span> Recent Active Assignments
                 </h2>
-                <a href="{{ route('admin.tests.index') }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">View All &rarr;</a>
+                <a href="{{ route('admin.tests.index', ['filter' => 'active-assignments']) }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">View Active Assignments &rarr;</a>
             </div>
 
             @if($recentAssignments->isEmpty())
@@ -222,13 +216,12 @@
             @endif
         </section>
 
-        {{-- Column 2: Available Assessments for Assignment --}}
+        {{-- Column 2: Assessment Inventory --}}
         <section class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
                 <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                     <span>📋</span> Assessment Inventory
                 </h2>
-                <a href="{{ route('admin.tests.index') }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">Browse Tests &rarr;</a>
             </div>
 
             @if($availableTests->isEmpty())

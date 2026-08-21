@@ -94,13 +94,29 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $response->assertViewHas('activeAssignmentsCount', 0);
         $response->assertViewHas('completedAttemptsCount', 0);
 
-        // Assert UI Text
+        // Assert UI Text & Links
         $response->assertSee('Operational Dashboard');
         $response->assertSee('OPERATIONAL WORKSPACE');
         $response->assertSee('Total Registered Candidates');
         $response->assertSee('Paid &amp; Eligible Candidates', false);
         $response->assertSee('Active Test Assignments');
         $response->assertSee('Completed Assessments');
+
+        // Assert Clean CTAs
+        $response->assertSee('View Candidates &rarr;', false);
+        $response->assertSee('View Eligible Candidates &rarr;', false);
+        $response->assertSee('View Active Assignments &rarr;', false);
+        $response->assertSee('View Completed Results &rarr;', false);
+
+        // Header redundant Assessment Catalog button must NOT be present
+        $response->assertDontSee('Assessment Catalog</a>', false);
+
+        // Assessment Inventory Browse Tests redundant link must NOT be present
+        $response->assertDontSee('Browse Tests &rarr;', false);
+
+        // Assessment Inventory must be present with Details link
+        $response->assertSee('Assessment Inventory');
+        $response->assertSee('Details &rarr;', false);
     }
 
     /**
@@ -121,7 +137,27 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 3. Regular Admin Sidebar Excludes Media Library, Academic Libraries, and Course Management
+     * 3. KPI Filtered Destinations Route Properly
+     */
+    public function test_kpi_destinations_route_and_filter_correctly(): void
+    {
+        // 1. Paid & Eligible Filter on Users
+        $userResponse = $this->actingAs($this->admin)->get(route('admin.users.index', ['filter' => 'paid-eligible']));
+        $userResponse->assertStatus(200);
+        $userResponse->assertSee('Paid &amp; Eligible Candidates', false);
+
+        // 2. Active Assignments Filter on Tests
+        $testResponse = $this->actingAs($this->admin)->get(route('admin.tests.index', ['filter' => 'active-assignments']));
+        $testResponse->assertStatus(200);
+        $testResponse->assertSee('Assessments with Active Candidate Assignments', false);
+
+        // 3. Completed Assessments routes to Reporting
+        $reportResponse = $this->actingAs($this->admin)->get(route('admin.reporting.index'));
+        $reportResponse->assertStatus(200);
+    }
+
+    /**
+     * 4. Regular Admin Sidebar Excludes Media Library, Academic Libraries, and Course Management
      */
     public function test_regular_admin_sidebar_menu_isolation(): void
     {
@@ -148,7 +184,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 4. Regular Admin Cannot Access Super Admin Approval Governance Routes
+     * 5. Regular Admin Cannot Access Super Admin Approval Governance Routes
      */
     public function test_regular_admin_cannot_access_super_admin_approval_governance_routes(): void
     {
@@ -161,7 +197,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 5. Regular Admin Cannot Access Publication Queues
+     * 6. Regular Admin Cannot Access Publication Queues
      */
     public function test_regular_admin_cannot_access_publication_queues(): void
     {
@@ -172,7 +208,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 6. Regular Admin Cannot Access Teacher Authoring Workspace Routes
+     * 7. Regular Admin Cannot Access Teacher Authoring Workspace Routes
      */
     public function test_regular_admin_cannot_access_teacher_authoring_routes(): void
     {
@@ -196,7 +232,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 7. Regular Admin Cannot Access Question Bank Authoring
+     * 8. Regular Admin Cannot Access Question Bank Authoring
      */
     public function test_regular_admin_cannot_author_question_banks_or_questions(): void
     {
@@ -225,7 +261,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 8. Regular Admin Cannot Access Media Library or Academic Libraries
+     * 9. Regular Admin Cannot Access Media Library or Academic Libraries
      */
     public function test_regular_admin_cannot_access_media_or_academic_libraries(): void
     {
@@ -235,7 +271,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 9. Regular Admin Opens Assessment Assignment & Operations Workspace Without Authoring Controls
+     * 10. Regular Admin Opens Assessment Assignment & Operations Workspace Without Authoring Controls
      */
     public function test_regular_admin_opens_assessment_operations_workspace_cleanly(): void
     {
@@ -265,7 +301,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 10. Regular Admin Dashboard Shows Candidates Requiring Action When Real Test is Paid
+     * 11. Regular Admin Dashboard Shows Candidates Requiring Action When Real Test is Paid
      */
     public function test_regular_admin_dashboard_shows_paid_candidate_in_action_panel(): void
     {
@@ -309,7 +345,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * 11. Teacher, RM, and Super Admin Access Rights Remain Fully Intact
+     * 12. Teacher, RM, and Super Admin Access Rights Remain Fully Intact
      */
     public function test_teacher_rm_and_super_admin_routes_remain_functional(): void
     {
