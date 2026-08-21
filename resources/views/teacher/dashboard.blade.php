@@ -459,17 +459,46 @@ a.tw-hero__pill:hover { opacity: .8; }
         </div>
     </div>
     @elseif($inProgressReviewCount > 0)
-    {{-- STATE C: INSTITUTIONAL REVIEW IN PROGRESS --}}
+    {{-- STATE C: INSTITUTIONAL REVIEW IN PROGRESS (ENTITY-AWARE) --}}
+    @php
+        $onlyPendingAssessments = ($pendingAssessments ?? 0) > 0 && ($pendingApprovalQuestionBanks ?? 0) === 0;
+        $onlyPendingBanks = ($pendingApprovalQuestionBanks ?? 0) > 0 && ($pendingAssessments ?? 0) === 0;
+    @endphp
     <div style="background:#0f172a;border:1px solid #3730a3;border-radius:1.25rem;padding:1.5rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
         <div>
-            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#818cf8;">⏳ Institutional Review In Progress</div>
-            <h3 style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin:.25rem 0 .3rem;">You have work requiring attention</h3>
-            <div style="font-size:.82rem;color:#94a3b8;">You have {{ $inProgressReviewCount }} workflow item(s) that are awaiting institutional review.</div>
+            @if($onlyPendingAssessments)
+                <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#818cf8;">⏳ ASSESSMENT REVIEW IN PROGRESS</div>
+                <h3 style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin:.25rem 0 .3rem;">Assessment Submitted for Review</h3>
+                <div style="font-size:.82rem;color:#94a3b8;">You have {{ $pendingAssessments }} assessment(s) awaiting institutional review.</div>
+            @elseif($onlyPendingBanks)
+                <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#818cf8;">⏳ REPOSITORY REVIEW IN PROGRESS</div>
+                <h3 style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin:.25rem 0 .3rem;">Repository Submitted for Review</h3>
+                <div style="font-size:.82rem;color:#94a3b8;">You have {{ $pendingApprovalQuestionBanks }} repository bank(s) awaiting institutional review.</div>
+            @else
+                <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#818cf8;">⏳ INSTITUTIONAL REVIEW IN PROGRESS</div>
+                <h3 style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin:.25rem 0 .3rem;">You have work requiring attention</h3>
+                <div style="font-size:.82rem;color:#94a3b8;">
+                    You have {{ $pendingApprovalQuestionBanks }} repository bank(s) and {{ $pendingAssessments }} assessment(s) awaiting institutional review.
+                </div>
+            @endif
         </div>
-        <div>
-            <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="tw-qa-btn tw-qa-btn--secondary">
-                📋 View Submitted Repositories →
-            </a>
+        <div style="display:flex;gap:.65rem;flex-wrap:wrap;align-items:center;">
+            @if($onlyPendingAssessments)
+                <a href="{{ route('admin.tests.index', ['status' => 'pending_approval']) }}" class="tw-qa-btn tw-qa-btn--secondary">
+                    📋 View Submitted Assessments →
+                </a>
+            @elseif($onlyPendingBanks)
+                <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="tw-qa-btn tw-qa-btn--secondary">
+                    📋 View Submitted Repositories →
+                </a>
+            @else
+                <a href="{{ route('admin.tests.index', ['status' => 'pending_approval']) }}" class="tw-qa-btn tw-qa-btn--secondary">
+                    📋 View Submitted Assessments →
+                </a>
+                <a href="{{ route('admin.question-banks.index', ['status' => 'pending_approval']) }}" class="tw-qa-btn tw-qa-btn--secondary">
+                    📁 View Submitted Repositories →
+                </a>
+            @endif
         </div>
     </div>
     @else

@@ -148,4 +148,130 @@ class RoleDashboardRoutingAndWorkspaceIsolationTest extends TestCase
         $this->actingAs($finance)->get(route('admin.users.index'))->assertStatus(403);
         $this->actingAs($finance)->get(route('admin.monitoring.index'))->assertStatus(403);
     }
+
+    /**
+     * Requirement 1: Teacher with only pending Assessment:
+     * - sees "ASSESSMENT REVIEW IN PROGRESS"
+     * - sees "View Submitted Assessments"
+     * - link targets admin.tests.index?status=pending_approval
+     * - does NOT show "View Submitted Repositories"
+     */
+    public function test_teacher_with_only_pending_assessment_sees_assessment_spotlight(): void
+    {
+        $teacher = User::factory()->create();
+        $teacher->assignRole('teacher');
+
+        AssessmentTest::create([
+            'title'       => 'SMK Assessment Test 1',
+            'slug'        => 'smk-assessment-test-1',
+            'test_type'   => 'general',
+            'status'      => 'pending_approval',
+            'created_by'  => $teacher->id,
+        ]);
+
+        $response = $this->actingAs($teacher)
+            ->get(route('teacher.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('⏳ ASSESSMENT REVIEW IN PROGRESS', false);
+        $response->assertSee('Assessment Submitted for Review', false);
+        $response->assertSee('You have 1 assessment(s) awaiting institutional review.', false);
+        $response->assertSee('📋 View Submitted Assessments →', false);
+        $response->assertSee(route('admin.tests.index', ['status' => 'pending_approval']), false);
+
+        $response->assertDontSee('⏳ REPOSITORY REVIEW IN PROGRESS', false);
+        $response->assertDontSee('📋 View Submitted Repositories →', false);
+    }
+
+    /**
+     * Requirement 2: Teacher with only pending Question Bank:
+     * - sees "REPOSITORY REVIEW IN PROGRESS"
+     * - sees "View Submitted Repositories"
+     * - link targets admin.question-banks.index?status=pending_approval
+     * - does NOT show "View Submitted Assessments"
+     */
+    public function test_teacher_with_only_pending_question_bank_sees_repository_spotlight(): void
+    {
+        $teacher = User::factory()->create();
+        $teacher->assignRole('teacher');
+
+        QuestionBank::create([
+            'title'      => 'SMK Question Bank 1',
+            'slug'       => 'smk-qb-1',
+            'test_type'  => 'general',
+            'status'     => 'pending_approval',
+            'created_by' => $teacher->id,
+        ]);
+
+        $response = $this->actingAs($teacher)
+            ->get(route('teacher.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('⏳ REPOSITORY REVIEW IN PROGRESS', false);
+        $response->assertSee('Repository Submitted for Review', false);
+        $response->assertSee('You have 1 repository bank(s) awaiting institutional review.', false);
+        $response->assertSee('📋 View Submitted Repositories →', false);
+        $response->assertSee(route('admin.question-banks.index', ['status' => 'pending_approval']), false);
+
+        $response->assertDontSee('⏳ ASSESSMENT REVIEW IN PROGRESS', false);
+        $response->assertDontSee('📋 View Submitted Assessments →', false);
+    }
+
+    /**
+     * Requirement 3: Teacher with both pending:
+     * - sees "INSTITUTIONAL REVIEW IN PROGRESS"
+     * - sees both CTAs
+     */
+    public function test_teacher_with_both_pending_sees_dual_cta_spotlight(): void
+    {
+        $teacher = User::factory()->create();
+        $teacher->assignRole('teacher');
+
+        AssessmentTest::create([
+            'title'       => 'SMK Assessment Test Dual',
+            'slug'        => 'smk-assessment-test-dual',
+            'test_type'   => 'general',
+            'status'      => 'pending_approval',
+            'created_by'  => $teacher->id,
+        ]);
+
+        QuestionBank::create([
+            'title'      => 'SMK Question Bank Dual',
+            'slug'       => 'smk-qb-dual',
+            'test_type'  => 'general',
+            'status'     => 'pending_approval',
+            'created_by' => $teacher->id,
+        ]);
+
+        $response = $this->actingAs($teacher)
+            ->get(route('teacher.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('⏳ INSTITUTIONAL REVIEW IN PROGRESS', false);
+        $response->assertSee('You have work requiring attention', false);
+        $response->assertSee('You have 1 repository bank(s) and 1 assessment(s) awaiting institutional review.', false);
+        $response->assertSee('📋 View Submitted Assessments →', false);
+        $response->assertSee(route('admin.tests.index', ['status' => 'pending_approval']), false);
+        $response->assertSee('📁 View Submitted Repositories →', false);
+        $response->assertSee(route('admin.question-banks.index', ['status' => 'pending_approval']), false);
+    }
+
+    /**
+     * Requirement 4: Teacher with neither pending:
+     * - existing "all caught up" state remains intact.
+     */
+    public function test_teacher_with_neither_pending_sees_all_caught_up(): void
+    {
+        $teacher = User::factory()->create();
+        $teacher->assignRole('teacher');
+
+        $response = $this->actingAs($teacher)
+            ->get(route('teacher.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee("You're all caught up.", false);
+        $response->assertDontSee('⏳ ASSESSMENT REVIEW IN PROGRESS', false);
+        $response->assertDontSee('⏳ REPOSITORY REVIEW IN PROGRESS', false);
+        $response->assertDontSee('⏳ INSTITUTIONAL REVIEW IN PROGRESS', false);
+    }
 }
