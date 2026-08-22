@@ -45,21 +45,49 @@
                 <textarea name="prompt" rows="4" required style="width:100%;padding:.75rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.9rem;line-height:1.5;">{{ old('prompt', $question->prompt) }}</textarea>
             </div>
 
+            @php
+                $isToeic = ($test && ((is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic')) || !empty($question->part_number);
+                $curPart = $question->part_number ?? 1;
+            @endphp
+
+            @if($isToeic)
+            <div style="background:#1e1b4b;border:1px solid #4f46e5;padding:1rem;border-radius:.75rem;">
+                <label style="display:block;font-size:.85rem;font-weight:800;color:#c7d2fe;margin-bottom:.4rem;">🎯 TOEIC Part Selection *</label>
+                <select name="part_number" id="eq-part-number" onchange="onToeicPartChange(this.value)" style="width:100%;padding:.7rem;background:#0f172a;border:1px solid #6366f1;border-radius:.6rem;color:#fff;font-size:.88rem;font-weight:700;">
+                    <option value="1" {{ $curPart == 1 ? 'selected' : '' }}>Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
+                    <option value="2" {{ $curPart == 2 ? 'selected' : '' }}>Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
+                    <option value="3" {{ $curPart == 3 ? 'selected' : '' }}>Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
+                    <option value="4" {{ $curPart == 4 ? 'selected' : '' }}>Part 4: Talks (Listening — Audio Required, 4 Choices)</option>
+                    <option value="5" {{ $curPart == 5 ? 'selected' : '' }}>Part 5: Incomplete Sentences (Reading — Audio Forbidden, 4 Choices)</option>
+                    <option value="6" {{ $curPart == 6 ? 'selected' : '' }}>Part 6: Text Completion (Reading — Passage Required, 4 Choices)</option>
+                    <option value="7" {{ $curPart == 7 ? 'selected' : '' }}>Part 7: Reading Comprehension (Reading — Passage Required, 4 Choices)</option>
+                </select>
+                <input type="hidden" name="section" id="eq-section" value="{{ in_array($curPart, [1,2,3,4]) ? 'listening' : 'reading' }}">
+            </div>
+
+            <div id="eq-passage-container" style="display:{{ in_array($curPart, [6,7]) ? 'block' : 'none' }};background:#1e293b;padding:1rem;border-radius:.75rem;border:1px solid #334155;">
+                <label style="display:block;font-size:.85rem;font-weight:800;color:#cbd5e1;margin-bottom:.4rem;">📖 Reading Passage Text <span style="color:#f43f5e;">*</span></label>
+                <textarea name="passage_text" id="eq-passage-text" rows="4" placeholder="Enter passage text for Part 6 / 7..." style="width:100%;padding:.75rem;background:#0f172a;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;">{{ old('passage_text', $question->passage_text ?? ($question->passage?->content ?? '')) }}</textarea>
+            </div>
+            @endif
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                 <div>
                     <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Question Type</label>
                     <select name="question_type" style="width:100%;padding:.7rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;">
                         <option value="multiple_choice" {{ $question->question_type === 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
                         <option value="single_choice" {{ $question->question_type === 'single_choice' ? 'selected' : '' }}>Single Choice</option>
+                        @if(!$isToeic)
                         <option value="true_false" {{ $question->question_type === 'true_false' ? 'selected' : '' }}>True / False</option>
+                        @endif
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Difficulty</label>
+                    <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Difficulty *</label>
                     @php $diffVal = is_object($question->difficulty) ? $question->difficulty->value : $question->difficulty; @endphp
-                    <select name="difficulty" style="width:100%;padding:.7rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;">
+                    <select name="difficulty" required style="width:100%;padding:.7rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;">
                         <option value="easy" {{ $diffVal === 'easy' ? 'selected' : '' }}>Easy</option>
-                        <option value="medium" {{ $diffVal === 'medium' ? 'selected' : '' }}>Medium</option>
+                        <option value="medium" {{ $diffVal === 'medium' || empty($diffVal) ? 'selected' : '' }}>Medium</option>
                         <option value="hard" {{ $diffVal === 'hard' ? 'selected' : '' }}>Hard</option>
                     </select>
                 </div>
@@ -205,6 +233,48 @@
             </div>
 
             <script>
+            function onToeicPartChange(part) {
+                part = parseInt(part);
+                const secInput = document.getElementById('eq-section');
+                if (secInput) {
+                    secInput.value = (part >= 1 && part <= 4) ? 'listening' : 'reading';
+                }
+
+                const passageBox = document.getElementById('eq-passage-container');
+                if (passageBox) {
+                    passageBox.style.display = (part === 6 || part === 7) ? 'block' : 'none';
+                }
+
+                const addChoiceBtn = document.querySelector('button[onclick="addChoiceRow()"]');
+                const choiceRows = document.querySelectorAll('#choices-container .choice-row');
+
+                if (part === 2) {
+                    if (addChoiceBtn) addChoiceBtn.style.display = 'none';
+                    if (choiceRows.length > 3) {
+                        for (let i = 3; i < choiceRows.length; i++) {
+                            choiceRows[i].remove();
+                        }
+                    }
+                    document.querySelectorAll('.btn-remove-choice').forEach(btn => btn.style.display = 'none');
+                } else {
+                    if (addChoiceBtn) addChoiceBtn.style.display = 'inline-block';
+                    document.querySelectorAll('.btn-remove-choice').forEach(btn => btn.style.display = 'inline-block');
+                    const currentCount = document.querySelectorAll('#choices-container .choice-row').length;
+                    if (currentCount < 4) {
+                        for (let i = currentCount; i < 4; i++) {
+                            addChoiceRow();
+                        }
+                    }
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const partSelect = document.getElementById('eq-part-number');
+                if (partSelect) {
+                    onToeicPartChange(partSelect.value);
+                }
+            });
+
             function updateEditorCorrectChoice() {
                 const selected = document.querySelector('#edit-question-form input[name="correct_choice"]:checked');
                 const errBox = document.getElementById('edit-q-validation-error');

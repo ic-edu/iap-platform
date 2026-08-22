@@ -233,12 +233,32 @@
                     </span>
                     @endif
                 </div>
+                @php
+                    $isToeic = ($bank && ((is_object($bank->test_type) ? $bank->test_type->value : (string)$bank->test_type) === 'toeic')) || !empty($question->part_number);
+                    $curPart = $question->part_number ?? 1;
+                @endphp
                 <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;">
+                    @if($isToeic)
+                    <div style="grid-column: 1 / -1;background:#1e1b4b;border:1px solid #4f46e5;padding:.85rem;border-radius:.6rem;">
+                        <label style="font-size:.78rem;font-weight:800;color:#c7d2fe;display:block;margin-bottom:.3rem;">🎯 TOEIC Part Selection *</label>
+                        <select name="part_number" id="fre_part_number" class="w-full bg-slate-950 border border-indigo-500/50 text-white rounded-xl p-2.5 text-sm font-bold">
+                            <option value="1" {{ $curPart == 1 ? 'selected' : '' }}>Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
+                            <option value="2" {{ $curPart == 2 ? 'selected' : '' }}>Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
+                            <option value="3" {{ $curPart == 3 ? 'selected' : '' }}>Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
+                            <option value="4" {{ $curPart == 4 ? 'selected' : '' }}>Part 4: Talks (Listening — Audio Required, 4 Choices)</option>
+                            <option value="5" {{ $curPart == 5 ? 'selected' : '' }}>Part 5: Incomplete Sentences (Reading — Audio Forbidden, 4 Choices)</option>
+                            <option value="6" {{ $curPart == 6 ? 'selected' : '' }}>Part 6: Text Completion (Reading — Passage Required, 4 Choices)</option>
+                            <option value="7" {{ $curPart == 7 ? 'selected' : '' }}>Part 7: Reading Comprehension (Reading — Passage Required, 4 Choices)</option>
+                        </select>
+                        <input type="hidden" name="section" value="{{ in_array($curPart, [1,2,3,4]) ? 'listening' : 'reading' }}">
+                    </div>
+                    @endif
                     <div>
                         <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Question Type</label>
                         <select id="fre_question_type" name="question_type" onchange="updateRevisionAnswerOptionsUI()" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-indigo-500">
                             <option value="multiple_choice" {{ $qTypeVal === 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
                             <option value="single_choice" {{ $qTypeVal === 'single_choice' ? 'selected' : '' }}>Single Choice</option>
+                            @if(!$isToeic)
                             <option value="listening" {{ $qTypeVal === 'listening' ? 'selected' : '' }}>Listening</option>
                             <option value="reading" {{ $qTypeVal === 'reading' ? 'selected' : '' }}>Reading</option>
                             <option value="true_false" {{ $qTypeVal === 'true_false' ? 'selected' : '' }}>True / False</option>
@@ -247,13 +267,14 @@
                             <option value="speaking" {{ $qTypeVal === 'speaking' ? 'selected' : '' }}>Speaking</option>
                             <option value="matching" {{ $qTypeVal === 'matching' ? 'selected' : '' }}>Matching Pairs</option>
                             <option value="ordering" {{ $qTypeVal === 'ordering' ? 'selected' : '' }}>Ordering Sequence</option>
+                            @endif
                         </select>
                     </div>
                     <div>
-                        <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Difficulty</label>
-                        <select name="difficulty" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                        <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Difficulty *</label>
+                        <select name="difficulty" required class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
                             <option value="easy" {{ $qDiffVal === 'easy' ? 'selected' : '' }}>Easy</option>
-                            <option value="medium" {{ $qDiffVal === 'medium' ? 'selected' : '' }}>Medium</option>
+                            <option value="medium" {{ $qDiffVal === 'medium' || empty($qDiffVal) ? 'selected' : '' }}>Medium</option>
                             <option value="hard" {{ $qDiffVal === 'hard' ? 'selected' : '' }}>Hard</option>
                         </select>
                     </div>

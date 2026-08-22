@@ -8,6 +8,7 @@ use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Assessment\Services\TestBuilderService;
 use App\Modules\QuestionBank\Models\Question;
+use App\Services\ToeicQuestionValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -428,6 +429,8 @@ class TestBuilderController extends Controller
             abort(403, "Assessment is {$test->status} and locked from editing.");
         }
 
+        $isToeic = ToeicQuestionValidator::isToeic($test) || $request->filled('part_number');
+
         $validated = $request->validate([
             'test_section_id' => ['required', 'exists:test_sections,id'],
             'prompt'          => ['required', 'string'],
@@ -440,9 +443,25 @@ class TestBuilderController extends Controller
             'media_asset_id'  => ['nullable', 'string'],
             'image_url'       => ['nullable', 'string'],
             'audio_url'       => ['nullable', 'string'],
+            'passage_id'      => ['nullable', 'string'],
+            'passage_text'    => ['nullable', 'string'],
+            'part_number'     => ['nullable', 'integer', 'between:1,7'],
+            'section'         => ['nullable', 'string'],
         ]);
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
+
+        if ($request->filled('part_number')) {
+            $toeicData = $request->all();
+            $toeicData['prompt'] = $validated['prompt'];
+            $toeicData['difficulty'] = $validated['difficulty'] ?? 'medium';
+            ToeicQuestionValidator::validate($toeicData);
+            $partNumber = (int) $request->input('part_number');
+            $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
+        } else {
+            $partNumber = $validated['part_number'] ?? null;
+            $sectionType = $validated['section'] ?? ($section->section_type->value ?? $section->section_type ?? 'reading');
+        }
 
         $qType = $validated['question_type'] ?? 'multiple_choice';
         if (is_object($qType)) {
@@ -482,6 +501,8 @@ class TestBuilderController extends Controller
 
         $this->builderService->createAssessmentQuestion($section, [
             'prompt'         => $validated['prompt'],
+            'section'        => $sectionType,
+            'part_number'    => $partNumber,
             'question_type'  => $validated['question_type'],
             'difficulty'     => $validated['difficulty'] ?? 'medium',
             'points'         => $validated['points'] ?? 1,
@@ -489,6 +510,8 @@ class TestBuilderController extends Controller
             'media_asset_id' => $validated['media_asset_id'] ?? null,
             'image_url'      => $validated['image_url'] ?? null,
             'audio_url'      => $validated['audio_url'] ?? null,
+            'passage_id'     => $validated['passage_id'] ?? null,
+            'passage_text'   => $validated['passage_text'] ?? null,
             'choices'        => $choices,
         ]);
 
@@ -746,6 +769,8 @@ class TestBuilderController extends Controller
                 ->with('error', 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.');
         }
 
+        $isToeic = ToeicQuestionValidator::isToeic($test) || ToeicQuestionValidator::isToeic($question) || $request->filled('part_number');
+
         $validated = $request->validate([
             'prompt'         => ['required', 'string'],
             'question_type'  => ['nullable', 'string'],
@@ -756,13 +781,34 @@ class TestBuilderController extends Controller
             'media_asset_id' => ['nullable', 'string'],
             'image_url'      => ['nullable', 'string'],
             'audio_url'      => ['nullable', 'string'],
+            'passage_id'     => ['nullable', 'string'],
+            'passage_text'   => ['nullable', 'string'],
+            'part_number'    => ['nullable', 'integer', 'between:1,7'],
+            'section'        => ['nullable', 'string'],
         ]);
+
+        if ($request->filled('part_number')) {
+            $toeicData = $request->all();
+            $toeicData['prompt'] = $validated['prompt'];
+            $toeicData['difficulty'] = $validated['difficulty'] ?? $question->difficulty ?? 'medium';
+            ToeicQuestionValidator::validate($toeicData, $question);
+            $partNumber = (int) $request->input('part_number');
+            $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
+            $question->part_number = $partNumber;
+            $question->section = $sectionType;
+        } elseif ($request->filled('section')) {
+            $question->section = $request->input('section');
+        } elseif (empty($question->section)) {
+            $question->section = 'reading';
+        }
 
         // Reuse existing Question ID (TASK 3 & TASK 9)
         $question->prompt = $validated['prompt'];
         if (isset($validated['question_type'])) $question->question_type = $validated['question_type'];
         if (isset($validated['difficulty'])) $question->difficulty = $validated['difficulty'];
         if (isset($validated['explanation'])) $question->explanation = $validated['explanation'];
+        if (isset($validated['passage_id'])) $question->passage_id = $validated['passage_id'];
+        if (isset($validated['passage_text'])) $question->passage_text = $validated['passage_text'];
         
         if ($request->has('image_url')) {
             $question->image_url = $request->input('image_url') ?: null;

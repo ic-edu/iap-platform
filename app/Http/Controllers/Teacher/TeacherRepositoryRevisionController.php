@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use App\Services\RepositoryQualityService;
+use App\Services\ToeicQuestionValidator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -154,12 +155,35 @@ class TeacherRepositoryRevisionController extends Controller
 
         $question = $item->question ?? Question::findOrFail($request->input('question_id'));
 
+        if ($request->filled('part_number')) {
+            $toeicData = $request->all();
+            ToeicQuestionValidator::validate($toeicData, $question);
+            $partNumber = (int) $request->input('part_number');
+            $question->part_number = $partNumber;
+            $question->section = ToeicQuestionValidator::deriveSection($partNumber);
+        } elseif (empty($question->section)) {
+            $question->section = 'reading';
+        }
+
         // 1. Update Question core fields
         $question->prompt        = $request->input('prompt', $question->prompt);
         $question->question_type = $request->input('question_type', $question->question_type ?? 'multiple_choice');
         $question->explanation   = $request->input('explanation', $question->explanation);
         $question->difficulty    = $request->input('difficulty', $question->difficulty);
-        $question->points        = $request->input('points', $question->points);
+        $question->points        = $request->input('points', $question->points ?? 1);
+
+        if ($request->has('image_url')) {
+            $question->image_url = $request->input('image_url') ?: null;
+        }
+        if ($request->has('audio_url')) {
+            $question->audio_url = $request->input('audio_url') ?: null;
+        }
+        if ($request->has('passage_id')) {
+            $question->passage_id = $request->input('passage_id') ?: null;
+        }
+        if ($request->has('passage_text')) {
+            $question->passage_text = $request->input('passage_text') ?: null;
+        }
 
         // Update Media Attachment
         if ($request->has('remove_media') && $request->input('remove_media') == '1') {
@@ -416,6 +440,53 @@ class TeacherRepositoryRevisionController extends Controller
      */
     protected function computeQuestionValidation(Question $question, $bank): array
     {
+        $isToeic = ($bank && ToeicQuestionValidator::isToeic($bank) && !empty($question->part_number)) || !empty($question->part_number);
+
+        if ($isToeic) {
+            $toeicCheck = ToeicQuestionValidator::check($question->toArray(), $question);
+            $errors = $toeicCheck['errors'] ?? [];
+            $part = $toeicCheck['part_number'] ?? ($question->part_number ?? 1);
+
+            $hasPrompt     = !isset($errors['prompt']);
+            $hasCategory   = !empty($bank->acl_category_id);
+            $hasDifficulty = !isset($errors['difficulty']);
+            $hasChoices    = !isset($errors['choices']);
+            $hasCorrect    = !isset($errors['correct_choice']);
+            $hasExplanation = !empty(trim($question->explanation ?? ''));
+            $hasMetadata   = !empty($bank->title) && !empty($bank->test_type);
+
+            $mediaLabel = match ($part) {
+                1 => 'Image & Audio Required',
+                2, 3, 4 => 'Audio Required',
+                5 => 'No Audio Allowed',
+                6, 7 => 'Passage Required',
+                default => 'Media Attachment',
+            };
+            $hasMedia = !isset($errors['media']) && !isset($errors['image_url']) && !isset($errors['audio_url']) && !isset($errors['passage']);
+
+            $choicesLabel = ($part === 2) ? '3 Answer Choices (A, B, C)' : '4 Answer Choices (A, B, C, D)';
+
+            $checks = [
+                'prompt'         => ['label' => "Question Prompt (Part {$part})", 'passed' => $hasPrompt],
+                'category'       => ['label' => 'Category', 'passed' => $hasCategory],
+                'difficulty'     => ['label' => 'Difficulty', 'passed' => $hasDifficulty],
+                'choices'        => ['label' => $choicesLabel, 'passed' => $hasChoices],
+                'correct_answer' => ['label' => 'Correct Answer', 'passed' => $hasCorrect],
+                'media'          => ['label' => $mediaLabel, 'passed' => $hasMedia],
+                'explanation'    => ['label' => 'Explanation', 'passed' => $hasExplanation],
+                'metadata'       => ['label' => 'Metadata', 'passed' => $hasMetadata],
+            ];
+
+            $passedCount = count(array_filter($checks, fn($c) => $c['passed']));
+            $totalCount  = count($checks);
+
+            return [
+                'checks'       => $checks,
+                'passed_count' => $passedCount,
+                'total_count'  => $totalCount,
+            ];
+        }
+
         $qTypeVal = is_object($question->question_type) ? $question->question_type->value : (string) ($question->question_type ?? 'multiple_choice');
         $nonChoiceTypes = ['essay', 'speaking', 'writing', 'short_answer'];
         $isChoiceType = !in_array($qTypeVal, $nonChoiceTypes, true);

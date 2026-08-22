@@ -20,6 +20,7 @@ use App\Services\AclHealthScoreService;
 use App\Services\AclVersioningService;
 use App\Services\ActivityLogger;
 use App\Services\RepositoryQualityService;
+use App\Services\ToeicQuestionValidator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -800,6 +801,8 @@ class QuestionBankController extends Controller
             }
         }
 
+        $isToeic = ToeicQuestionValidator::isToeic($questionBank) || $request->filled('part_number');
+
         $validated = $request->validate([
             'prompt'                => ['required', 'string'],
             'question_type'         => ['required', 'string'],
@@ -807,8 +810,12 @@ class QuestionBankController extends Controller
             'points'                => ['nullable', 'integer', 'min:1'],
             'explanation'           => ['nullable', 'string'],
             'passage_text'          => ['nullable', 'string'],
+            'passage_id'            => ['nullable', 'string'],
+            'image_url'             => ['nullable', 'string'],
             'audio_url'             => ['nullable', 'string'],
             'media_asset_id'        => ['nullable', 'string'],
+            'part_number'           => ['nullable', 'integer', 'between:1,7'],
+            'section'               => ['nullable', 'string'],
             'choices'               => ['nullable', 'array'],
             'choices.*.label'       => ['nullable', 'string'],
             'choices.*.content'     => ['nullable', 'string'],
@@ -819,18 +826,34 @@ class QuestionBankController extends Controller
             'reference_answer_text' => ['nullable', 'string'],
         ]);
 
-        $qType = $validated['question_type'];
+        if ($request->filled('part_number')) {
+            $toeicData = $request->all();
+            $toeicData['prompt'] = $validated['prompt'];
+            $toeicData['difficulty'] = $validated['difficulty'];
+            ToeicQuestionValidator::validate($toeicData);
+            $partNumber = (int) $request->input('part_number');
+            $section = ToeicQuestionValidator::deriveSection($partNumber);
+        } else {
+            $partNumber = $validated['part_number'] ?? null;
+            $section = $validated['section'] ?? ($partNumber ? ToeicQuestionValidator::deriveSection($partNumber) : 'reading');
+        }
+
+        $qType = $validated['question_type'] === 'single_choice' ? 'multiple_choice' : $validated['question_type'];
 
         $question = Question::create([
             'question_bank_id' => $questionBank->id,
             'media_asset_id'   => $validated['media_asset_id'] ?? null,
+            'passage_id'       => $validated['passage_id'] ?? null,
+            'image_url'        => $validated['image_url'] ?? null,
             'prompt'           => $validated['prompt'],
+            'section'          => $section ?: 'reading',
+            'part_number'      => $partNumber,
             'question_type'    => $qType,
-            'difficulty'        => $validated['difficulty'],
-            'points'            => $validated['points'] ?? 1,
-            'explanation'       => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
-            'passage_text'      => $validated['passage_text'] ?? null,
-            'audio_url'         => $validated['audio_url'] ?? null,
+            'difficulty'       => $validated['difficulty'],
+            'points'           => $validated['points'] ?? 1,
+            'explanation'      => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
+            'passage_text'     => $validated['passage_text'] ?? null,
+            'audio_url'        => $validated['audio_url'] ?? null,
         ]);
 
         $this->saveChoicesForQuestion($question, $qType, $validated);
@@ -862,6 +885,8 @@ class QuestionBankController extends Controller
             }
         }
 
+        $isToeic = ($questionBank && ToeicQuestionValidator::isToeic($questionBank)) || ToeicQuestionValidator::isToeic($question) || $request->filled('part_number');
+
         $validated = $request->validate([
             'prompt'                => ['required', 'string'],
             'question_type'         => ['required', 'string'],
@@ -869,8 +894,12 @@ class QuestionBankController extends Controller
             'points'                => ['nullable', 'integer', 'min:1'],
             'explanation'           => ['nullable', 'string'],
             'passage_text'          => ['nullable', 'string'],
+            'passage_id'            => ['nullable', 'string'],
+            'image_url'             => ['nullable', 'string'],
             'audio_url'             => ['nullable', 'string'],
             'media_asset_id'        => ['nullable', 'string'],
+            'part_number'           => ['nullable', 'integer', 'between:1,7'],
+            'section'               => ['nullable', 'string'],
             'choices'               => ['nullable', 'array'],
             'choices.*.label'       => ['nullable', 'string'],
             'choices.*.content'     => ['nullable', 'string'],
@@ -881,11 +910,27 @@ class QuestionBankController extends Controller
             'reference_answer_text' => ['nullable', 'string'],
         ]);
 
-        $qType = $validated['question_type'];
+        if ($request->filled('part_number')) {
+            $toeicData = $request->all();
+            $toeicData['prompt'] = $validated['prompt'];
+            $toeicData['difficulty'] = $validated['difficulty'];
+            ToeicQuestionValidator::validate($toeicData, $question);
+            $partNumber = (int) $request->input('part_number');
+            $section = ToeicQuestionValidator::deriveSection($partNumber);
+        } else {
+            $partNumber = $validated['part_number'] ?? $question->part_number;
+            $section = $validated['section'] ?? ($question->section ?: 'reading');
+        }
+
+        $qType = $validated['question_type'] === 'single_choice' ? 'multiple_choice' : $validated['question_type'];
 
         $question->update([
             'prompt'         => $validated['prompt'],
             'media_asset_id' => $validated['media_asset_id'] ?? $question->media_asset_id,
+            'passage_id'     => $validated['passage_id'] ?? $question->passage_id,
+            'image_url'      => $validated['image_url'] ?? $question->image_url,
+            'section'        => $section ?: 'reading',
+            'part_number'    => $partNumber,
             'question_type'  => $qType,
             'difficulty'     => $validated['difficulty'],
             'points'         => $validated['points'] ?? $question->points ?? 1,

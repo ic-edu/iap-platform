@@ -92,6 +92,17 @@ class RepositoryQualityService
                     }
                 }
 
+                // TOEIC Part-Aware Quality Check
+                if ((ToeicQuestionValidator::isToeic($bank) || ToeicQuestionValidator::isToeic($q)) && !empty($q->part_number)) {
+                    $toeicCheck = ToeicQuestionValidator::check($q->toArray(), $q);
+                    if (!$toeicCheck['is_valid']) {
+                        $incompleteQuestions++;
+                        foreach ($toeicCheck['errors'] as $tErr) {
+                            $warnings[] = "Question '{$q->prompt}' TOEIC Part " . ($toeicCheck['part_number'] ?? '?') . " finding: {$tErr}";
+                        }
+                    }
+                }
+
                 // Difficulty counting
                 $diff = strtolower(is_object($q->difficulty) ? $q->difficulty->value : ($q->difficulty ?? 'medium'));
                 if (isset($difficultyCounts[$diff])) {

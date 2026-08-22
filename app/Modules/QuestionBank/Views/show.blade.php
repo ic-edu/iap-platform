@@ -329,22 +329,49 @@
                     <textarea name="prompt" rows="3" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm focus:border-indigo-500 focus:outline-none" required placeholder="Enter question text..."></textarea>
                 </div>
 
+                @php
+                    $isToeicBank = (is_object($questionBank->test_type) ? $questionBank->test_type->value : (string)$questionBank->test_type) === 'toeic';
+                @endphp
+
+                @if($isToeicBank)
+                <div class="p-3 bg-indigo-950/60 border border-indigo-500/30 rounded-xl space-y-2">
+                    <label class="block text-xs font-bold text-indigo-300">🎯 TOEIC Part Selection *</label>
+                    <select id="q_part_number" name="part_number" onchange="onQbToeicPartChange('create', this.value)" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-bold focus:border-indigo-500 focus:outline-none">
+                        <option value="1">Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
+                        <option value="2">Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
+                        <option value="3">Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
+                        <option value="4">Part 4: Talks (Listening — Audio Required, 4 Choices)</option>
+                        <option value="5">Part 5: Incomplete Sentences (Reading — Audio Forbidden, 4 Choices)</option>
+                        <option value="6">Part 6: Text Completion (Reading — Passage Required, 4 Choices)</option>
+                        <option value="7">Part 7: Reading Comprehension (Reading — Passage Required, 4 Choices)</option>
+                    </select>
+                    <input type="hidden" id="q_section" name="section" value="listening">
+                </div>
+
+                <div id="q_passage_box" class="hidden p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
+                    <label class="block text-xs font-bold text-slate-300">📖 Reading Passage Text *</label>
+                    <textarea name="passage_text" rows="3" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs" placeholder="Enter reading passage text..."></textarea>
+                </div>
+                @endif
+
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-medium text-slate-300 mb-1">Question Type *</label>
                         <select id="q_question_type" name="question_type" onchange="updateAnswerOptionsUI('create')" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="single_choice" selected>Single Choice</option>
                             <option value="multiple_choice">Multiple Choice</option>
+                            @if(!$isToeicBank)
                             <option value="true_false">True / False</option>
                             <option value="short_answer">Short Answer</option>
                             <option value="essay">Essay</option>
                             <option value="listening">Listening Prompt</option>
                             <option value="reading">Reading Passage</option>
+                            @endif
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty</label>
-                        <select name="difficulty" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty *</label>
+                        <select name="difficulty" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="easy">Easy</option>
                             <option value="medium" selected>Medium</option>
                             <option value="hard">Hard</option>
@@ -409,22 +436,45 @@
                     <textarea id="eq_prompt" name="prompt" rows="3" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm focus:border-indigo-500 focus:outline-none" required></textarea>
                 </div>
 
+                @if($isToeicBank)
+                <div class="p-3 bg-indigo-950/60 border border-indigo-500/30 rounded-xl space-y-2">
+                    <label class="block text-xs font-bold text-indigo-300">🎯 TOEIC Part Selection *</label>
+                    <select id="eq_part_number" name="part_number" onchange="onQbToeicPartChange('edit', this.value)" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-bold focus:border-indigo-500 focus:outline-none">
+                        <option value="1">Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
+                        <option value="2">Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
+                        <option value="3">Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
+                        <option value="4">Part 4: Talks (Listening — Audio Required, 4 Choices)</option>
+                        <option value="5">Part 5: Incomplete Sentences (Reading — Audio Forbidden, 4 Choices)</option>
+                        <option value="6">Part 6: Text Completion (Reading — Passage Required, 4 Choices)</option>
+                        <option value="7">Part 7: Reading Comprehension (Reading — Passage Required, 4 Choices)</option>
+                    </select>
+                    <input type="hidden" id="eq_section" name="section" value="listening">
+                </div>
+
+                <div id="eq_passage_box" class="hidden p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
+                    <label class="block text-xs font-bold text-slate-300">📖 Reading Passage Text *</label>
+                    <textarea id="eq_passage_text_input" name="passage_text" rows="3" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs" placeholder="Enter reading passage text..."></textarea>
+                </div>
+                @endif
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-medium text-slate-300 mb-1">Question Type *</label>
                         <select id="eq_question_type" name="question_type" onchange="updateAnswerOptionsUI('edit')" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="single_choice">Single Choice</option>
                             <option value="multiple_choice">Multiple Choice</option>
+                            @if(!$isToeicBank)
                             <option value="true_false">True / False</option>
                             <option value="short_answer">Short Answer</option>
                             <option value="essay">Essay</option>
                             <option value="listening">Listening Prompt</option>
                             <option value="reading">Reading Passage</option>
+                            @endif
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty</label>
-                        <select id="eq_difficulty" name="difficulty" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty *</label>
+                        <select id="eq_difficulty" name="difficulty" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="easy">Easy</option>
                             <option value="medium">Medium</option>
                             <option value="hard">Hard</option>
@@ -536,22 +586,49 @@
             updateAnswerOptionsUI('create');
         });
 
+        function onQbToeicPartChange(mode, part) {
+            part = parseInt(part);
+            const prefix = (mode === 'edit') ? 'eq_' : 'q_';
+            const secInput = document.getElementById(prefix + 'section');
+            if (secInput) {
+                secInput.value = (part >= 1 && part <= 4) ? 'listening' : 'reading';
+            }
+            const passageBox = document.getElementById(prefix + 'passage_box');
+            if (passageBox) {
+                passageBox.classList.toggle('hidden', !(part === 6 || part === 7));
+            }
+            updateAnswerOptionsUI(mode);
+        }
+
         function updateAnswerOptionsUI(mode = 'create', existingChoices = null) {
             const prefix = (mode === 'edit') ? 'eq_' : 'q_';
             const containerId = (mode === 'edit') ? 'eq_dynamic_answer_container' : 'dynamic_answer_container';
             const type = document.getElementById(prefix + 'question_type').value;
             const container = document.getElementById(containerId);
 
+            const isToeic = {{ $isToeicBank ? 'true' : 'false' }};
+            let partNumber = 1;
+            const partEl = document.getElementById(prefix + 'part_number');
+            if (partEl) {
+                partNumber = parseInt(partEl.value);
+            }
+
             if (['single_choice', 'listening', 'reading', 'multiple_choice'].includes(type)) {
                 const isMultiple = (type === 'multiple_choice');
                 const titleText = isMultiple
                     ? 'Multiple Choice Answer Options (Check all correct choices)'
-                    : 'Single Choice Answer Options (Select 1 Correct Answer)';
+                    : (isToeic && partNumber === 2 
+                        ? 'Part 2 Answer Options (Exactly 3 choices: A, B, C)'
+                        : 'Single Choice Answer Options (Select 1 Correct Answer)');
                 const inputType = isMultiple ? 'checkbox' : 'radio';
                 const inputName = isMultiple ? 'correct_choices[]' : 'correct_choice';
 
-                // Standard initial set: exactly 4 choices (A, B, C, D)
-                let choicesData = [
+                // Standard initial set: 3 choices for Part 2, 4 choices for others
+                let choicesData = (isToeic && partNumber === 2) ? [
+                    { label: 'A', content: '', is_correct: true },
+                    { label: 'B', content: '', is_correct: false },
+                    { label: 'C', content: '', is_correct: false }
+                ] : [
                     { label: 'A', content: '', is_correct: true },
                     { label: 'B', content: '', is_correct: false },
                     { label: 'C', content: '', is_correct: false },
@@ -564,14 +641,20 @@
                         content: c.content || '',
                         is_correct: !!c.is_correct
                     }));
+                    if (isToeic && partNumber === 2 && choicesData.length > 3) {
+                        choicesData = choicesData.slice(0, 3);
+                    }
                 }
+
+                const hideAddBtn = isToeic && partNumber === 2;
 
                 container.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-xs font-bold text-white">${titleText}</label>
+                        ${hideAddBtn ? '' : `
                         <button type="button" onclick="addDynamicChoice('${prefix}', '${type}')" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-950/60 border border-indigo-500/30 px-2.5 py-1 rounded cursor-pointer transition-colors">
                             + Add Option
-                        </button>
+                        </button>`}
                     </div>
                     <div id="${prefix}choices_list" class="space-y-2.5">
                         ${choicesData.map((c, i) => `
@@ -757,6 +840,11 @@
                 showAttachedBadge(q.audio_url ? '🎵 Audio Attached: ' + q.audio_url : '📖 Passage Attached', 'edit');
             } else {
                 removeAttachedMedia('edit');
+            }
+
+            if (document.getElementById('eq_part_number') && q.part_number) {
+                document.getElementById('eq_part_number').value = q.part_number;
+                onQbToeicPartChange('edit', q.part_number);
             }
 
             updateAnswerOptionsUI('edit', q.choices || null);

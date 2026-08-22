@@ -658,8 +658,31 @@
             <button type="button" onclick="closeCreateAuthoredQuestionModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
         </div>
 
-        <form id="create-authored-question-form" method="POST" action="{{ route('teacher.tests.create-question', $test->id) }}" onsubmit="return validateCreateQuestionForm(this)">
-            @csrf
+            @php
+                $isToeicTest = (is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic';
+            @endphp
+
+            @if($isToeicTest)
+            <div style="margin-bottom:1rem;background:#1e1b4b;border:1px solid #4f46e5;padding:.85rem;border-radius:.6rem;">
+                <label style="display:block;font-size:.75rem;font-weight:800;color:#c7d2fe;margin-bottom:.3rem;">🎯 TOEIC Part Selection <span style="color:#f43f5e;">*</span></label>
+                <select name="part_number" id="create-q-part-number" onchange="onCreateModalToeicPartChange(this.value)" style="width:100%;padding:.6rem;background:#0f172a;border:1px solid #6366f1;border-radius:.5rem;color:#fff;font-size:.82rem;font-weight:700;">
+                    <option value="1">Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
+                    <option value="2">Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
+                    <option value="3">Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
+                    <option value="4">Part 4: Talks (Listening — Audio Required, 4 Choices)</option>
+                    <option value="5">Part 5: Incomplete Sentences (Reading — Audio Forbidden, 4 Choices)</option>
+                    <option value="6">Part 6: Text Completion (Reading — Passage Required, 4 Choices)</option>
+                    <option value="7">Part 7: Reading Comprehension (Reading — Passage Required, 4 Choices)</option>
+                </select>
+                <input type="hidden" name="section" id="create-q-section" value="listening">
+            </div>
+
+            <div id="create-q-passage-container" style="display:none;margin-bottom:1rem;background:#1e293b;padding:.85rem;border-radius:.6rem;border:1px solid #334155;">
+                <label style="display:block;font-size:.75rem;font-weight:800;color:#cbd5e1;margin-bottom:.3rem;">📖 Reading Passage Text <span style="color:#f43f5e;">*</span></label>
+                <textarea name="passage_text" id="create-q-passage-text" rows="3" placeholder="Enter reading passage text for Part 6 / 7..." style="width:100%;padding:.6rem;background:#0f172a;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;"></textarea>
+            </div>
+            @endif
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
                 <div>
                     <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Target Section <span style="color:#f43f5e;">*</span></label>
@@ -674,8 +697,10 @@
                     <select name="question_type" required style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="single_choice">Single Choice</option>
+                        @if(!$isToeicTest)
                         <option value="short_answer">Short Answer</option>
                         <option value="essay">Essay</option>
+                        @endif
                     </select>
                 </div>
             </div>
@@ -686,8 +711,8 @@
             </div>
 
             <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Difficulty</label>
-                <select name="difficulty" style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Difficulty <span style="color:#f43f5e;">*</span></label>
+                <select name="difficulty" required style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
                     <option value="easy">Easy</option>
                     <option value="medium" selected>Medium</option>
                     <option value="hard">Hard</option>
@@ -1410,6 +1435,32 @@
         }
     }
 
+    function onCreateModalToeicPartChange(part) {
+        part = parseInt(part);
+        const secInput = document.getElementById('create-q-section');
+        if (secInput) {
+            secInput.value = (part >= 1 && part <= 4) ? 'listening' : 'reading';
+        }
+
+        const passageBox = document.getElementById('create-q-passage-container');
+        if (passageBox) {
+            passageBox.style.display = (part === 6 || part === 7) ? 'block' : 'none';
+        }
+
+        const choiceRow3 = document.getElementById('create-choice-row-3');
+        const choiceInput3 = choiceRow3 ? choiceRow3.querySelector('input[type="text"]') : null;
+
+        if (part === 2) {
+            if (choiceRow3) choiceRow3.style.display = 'none';
+            if (choiceInput3) {
+                choiceInput3.value = '';
+                choiceInput3.removeAttribute('required');
+            }
+        } else {
+            if (choiceRow3) choiceRow3.style.display = 'flex';
+        }
+    }
+
     function updateCreateModalCorrectChoice() {
         const form = document.getElementById('create-authored-question-form');
         if (!form) return;
@@ -1478,6 +1529,11 @@
             if (prevAudio) prevAudio.style.display = 'none';
             if (emptyAudio) emptyAudio.style.display = 'flex';
             if (audioPlayer) audioPlayer.src = '';
+
+            const partSelect = document.getElementById('create-q-part-number');
+            if (partSelect) {
+                onCreateModalToeicPartChange(partSelect.value);
+            }
 
             updateCreateModalCorrectChoice();
         }

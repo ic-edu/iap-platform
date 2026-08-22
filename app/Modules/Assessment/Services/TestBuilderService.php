@@ -6,6 +6,7 @@ use App\Models\MediaAsset;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
+use App\Services\ToeicQuestionValidator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -82,12 +83,18 @@ class TestBuilderService
      */
     public function createAssessmentQuestion(TestSection $section, array $data): TestQuestion
     {
+        $partNumber = isset($data['part_number']) && $data['part_number'] !== '' ? (int) $data['part_number'] : null;
+        $sectionType = $data['section'] ?? ($partNumber ? ToeicQuestionValidator::deriveSection($partNumber) : ($section->section_type->value ?? $section->section_type ?? 'reading'));
+
         $question = \App\Modules\QuestionBank\Models\Question::create([
             'question_bank_id' => null,
             'media_asset_id'   => $data['media_asset_id'] ?? null,
             'image_url'        => $data['image_url'] ?? null,
             'audio_url'        => $data['audio_url'] ?? null,
+            'passage_id'       => $data['passage_id'] ?? null,
             'prompt'           => $data['prompt'],
+            'section'          => $sectionType ?: 'reading',
+            'part_number'      => $partNumber,
             'question_type'    => $data['question_type'] ?? 'multiple_choice',
             'difficulty'       => $data['difficulty'] ?? 'medium',
             'points'           => $data['points'] ?? 1,
@@ -416,6 +423,17 @@ class TestBuilderService
                         $hasCorrect = $choices->contains(fn($c) => (bool) $c->is_correct);
                         if (!$hasCorrect) {
                             $qErrors[] = "No correct answer option selected.";
+                        }
+                    }
+                }
+
+                // TOEIC Part-Aware Validation Check
+                $isToeic = ToeicQuestionValidator::isToeic($test) || ToeicQuestionValidator::isToeic($q);
+                if ($isToeic && !empty($q->part_number)) {
+                    $toeicCheck = ToeicQuestionValidator::check($q->toArray(), $q);
+                    if (!$toeicCheck['is_valid']) {
+                        foreach ($toeicCheck['errors'] as $toeicErr) {
+                            $qErrors[] = $toeicErr;
                         }
                     }
                 }
