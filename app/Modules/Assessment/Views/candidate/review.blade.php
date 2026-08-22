@@ -41,14 +41,14 @@
         @endphp
 
         @if($isToeic && $isFullToeic)
-        <!-- Full Official TOEIC Score Summary Card -->
+        <!-- Full Mock Test Institutional Scaled Score Summary Card -->
         <div class="mb-8 p-6 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-2xl shadow-xl">
             <div class="flex items-center justify-between flex-wrap gap-3 pb-4 mb-4 border-b border-indigo-500/20">
                 <div class="flex items-center gap-2">
                     <span class="text-2xl">🏆</span>
                     <div>
-                        <h2 class="text-lg font-bold text-white">Official TOEIC® Scaled Score</h2>
-                        <p class="text-xs text-indigo-300">Standardized Institutional Conversion Model</p>
+                        <h2 class="text-lg font-bold text-white">Institutional Scaled Score</h2>
+                        <p class="text-xs text-indigo-300">Institutional Conversion Scoring</p>
                     </div>
                 </div>
                 <div class="text-right">
@@ -78,13 +78,17 @@
                     </div>
                 </div>
             </div>
+
+            <div class="mt-4 pt-3 border-t border-indigo-500/20 text-[11px] text-slate-400 italic">
+                This is an institutional mock assessment result and is not an official third-party examination score.
+            </div>
         </div>
         @elseif($isToeic && $isPractice)
         <!-- Practice / UAT Mini Test Notice -->
         <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-2.5 text-xs text-amber-300">
                 <span class="text-lg">ℹ️</span>
-                <span><strong>Practice / Raw Score Mode:</strong> This is a {{ $summary['total_questions'] }}-question practice assessment. Official 990-point scaled scoring applies to standard 200-question TOEIC assessments.</span>
+                <span><strong>Practice Score Mode:</strong> This is a {{ $summary['total_questions'] }}-question practice assessment. Institutional scaled scoring applies to full 200-question mock assessments.</span>
             </div>
             <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider">
                 Practice Assessment
@@ -95,7 +99,7 @@
         <!-- Metrics & Performance Card Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
-                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">{{ ($isToeic && $isFullToeic) ? 'TOEIC Total Score' : 'Final Test Score' }}</span>
+                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">{{ $isToeic ? ($isFullToeic ? 'Institutional Scaled Score' : 'Practice Score') : 'Final Test Score' }}</span>
                 <span class="text-3xl font-extrabold {{ ($summary['is_passed'] ?? false) ? 'text-emerald-400' : 'text-rose-400' }} mt-1 block">
                     {{ $summary['total_score'] ?? 0 }}
                 </span>

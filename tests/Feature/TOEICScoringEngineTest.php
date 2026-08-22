@@ -7,6 +7,7 @@ use App\Modules\Assessment\Engines\AttemptEngine;
 use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Engines\ScoringEngine;
 use App\Modules\Assessment\Engines\TOEICScoringEngine;
+use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\ScoringMethod;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
@@ -112,14 +113,15 @@ class TOEICScoringEngineTest extends TestCase
     }
 
     /**
-     * 2. Full 100+100 TOEIC assessment scoring: 83 Listening + 78 Reading => 795 total score.
+     * 2. Full 100+100 Mock Test assessment scoring: 83 Listening + 78 Reading => 795 Institutional Scaled Score.
      */
-    public function test_full_toeic_scoring_calculates_scaled_score_and_pass_fail(): void
+    public function test_full_mock_test_scoring_calculates_institutional_scaled_score(): void
     {
         $test = Test::create([
-            'title' => 'Official TOEIC Standard Assessment',
-            'slug' => 'official-toeic-standard-' . uniqid(),
+            'title' => 'TOEIC Full Mock Test 01',
+            'slug' => 'toeic-full-mock-test-01-' . uniqid(),
             'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest, // Internal enum represents Mock Test
             'scoring_method' => ScoringMethod::Automatic,
             'duration_minutes' => 120,
             'pass_score' => 700,
@@ -213,11 +215,13 @@ class TOEICScoringEngineTest extends TestCase
         $this->assertEquals(355, $sectionScores['reading']['score']);
         $this->assertTrue($sectionScores['is_full_toeic']);
         $this->assertFalse($sectionScores['is_practice']);
+        $this->assertEquals('Institutional Scaled Score', $sectionScores['score_label']);
 
         $result = app(ResultEngine::class)->generateResult($attempt);
         $this->assertEquals(795.0, (float) $result['final_score']);
         $this->assertTrue($result['is_passed']); // 795 >= 700
         $this->assertTrue($result['is_full_toeic']);
+        $this->assertEquals('Institutional Scaled Score', $result['score_label']);
 
         // Digital certificate must be issued
         $this->assertDatabaseHas('certificates', [
@@ -227,76 +231,207 @@ class TOEICScoringEngineTest extends TestCase
     }
 
     /**
-     * 3. Practice / UAT / Mini Test does NOT map partial questions (e.g. 3/3) to 990 scaled score.
+     * 3. Simulator with 40 questions returns raw Practice Score and does NOT scale to 990.
      */
-    public function test_practice_assessment_does_not_scale_to_990(): void
+    public function test_simulator_with_40_questions_returns_practice_score(): void
     {
         $test = Test::create([
-            'title' => 'TOEIC Mini Practice Test',
-            'slug' => 'toeic-mini-practice-' . uniqid(),
+            'title' => 'TOEIC 40-Question Simulator',
+            'slug' => 'toeic-40-simulator-' . uniqid(),
             'test_type' => TestType::Toeic,
-            'scoring_method' => ScoringMethod::Automatic,
-            'duration_minutes' => 15,
-            'pass_score' => 2,
+            'assessment_mode' => AssessmentMode::Simulator,
+            'duration_minutes' => 45,
+            'pass_score' => 20,
             'status' => 'published',
             'created_by' => $this->teacher->id,
         ]);
 
         $section = TestSection::create([
             'test_id' => $test->id,
-            'title' => 'Part 1: Mini Practice',
+            'title' => 'Listening & Reading Overview',
             'section_type' => SectionType::Listening,
             'order' => 1,
         ]);
 
         $bank = QuestionBank::create([
-            'title' => 'Practice Bank',
-            'slug' => 'practice-bank-' . uniqid(),
+            'title' => 'Simulator Bank',
+            'slug' => 'sim-bank-' . uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
         ]);
 
-        /** @var AttemptEngine $attemptEngine */
         $attemptEngine = app(AttemptEngine::class);
         $attempt = $attemptEngine->startAttempt($test, $this->candidate);
 
-        // 3 questions, all answered correctly
-        for ($i = 1; $i <= 3; $i++) {
+        // 40 questions, candidate gets 28 correct
+        for ($i = 1; $i <= 40; $i++) {
             $q = Question::create([
                 'question_bank_id' => $bank->id,
-                'prompt' => "Mini Practice Q#{$i}",
-                'section' => SectionType::Listening,
+                'prompt' => "Sim Q#{$i}",
+                'section' => ($i <= 20) ? SectionType::Listening : SectionType::Reading,
                 'question_type' => QuestionType::MultipleChoice,
                 'points' => 1,
             ]);
-            $c1 = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct Choice', 'is_correct' => true, 'order' => 1]);
+            $cCorrect = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            $cWrong = QuestionChoice::create(['question_id' => $q->id, 'label' => 'B', 'content' => 'Wrong', 'is_correct' => false, 'order' => 2]);
 
             TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q->id, 'order' => $i]);
 
             Answer::create([
                 'attempt_id' => $attempt->id,
                 'question_id' => $q->id,
-                'selected_choice_id' => $c1->id,
+                'selected_choice_id' => ($i <= 28) ? $cCorrect->id : $cWrong->id,
             ]);
         }
 
         $attemptEngine->submitAttempt($attempt);
         $attempt->refresh();
 
-        // Must NOT be 990 or scaled TOEIC maximum! Must be raw performance (3.0)
+        $this->assertEquals(28.0, (float) $attempt->total_score);
         $this->assertNotEquals(990.0, (float) $attempt->total_score);
-        $this->assertEquals(3.0, (float) $attempt->total_score);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertTrue($result['is_practice']);
+        $this->assertFalse($result['is_full_toeic']);
+        $this->assertEquals('Practice Score', $result['score_label']);
+        $this->assertEquals('simulator', $result['toeic_breakdown']['assessment_mode']);
+    }
+
+    /**
+     * 4. Simulator with 50 questions returns raw Practice Score and does NOT scale to 990.
+     */
+    public function test_simulator_with_50_questions_returns_practice_score(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC 50-Question Diagnostic Simulator',
+            'slug' => 'toeic-50-simulator-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::Simulator,
+            'duration_minutes' => 50,
+            'pass_score' => 25,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $section = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Diagnostic Core',
+            'section_type' => SectionType::Listening,
+            'order' => 1,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'Diagnostic Bank',
+            'slug' => 'diag-bank-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $attemptEngine = app(AttemptEngine::class);
+        $attempt = $attemptEngine->startAttempt($test, $this->candidate);
+
+        // 50 questions, all 50 correct
+        for ($i = 1; $i <= 50; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "Diagnostic Q#{$i}",
+                'section' => ($i <= 25) ? SectionType::Listening : SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $cCorrect = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+
+            TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q->id, 'order' => $i]);
+
+            Answer::create([
+                'attempt_id' => $attempt->id,
+                'question_id' => $q->id,
+                'selected_choice_id' => $cCorrect->id,
+            ]);
+        }
+
+        $attemptEngine->submitAttempt($attempt);
+        $attempt->refresh();
+
+        // 50 correct in a 50-question simulator must NOT be converted to 990 or scaled TOEIC max
+        $this->assertEquals(50.0, (float) $attempt->total_score);
+        $this->assertNotEquals(990.0, (float) $attempt->total_score);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertTrue($result['is_practice']);
+        $this->assertFalse($result['is_full_toeic']);
+        $this->assertEquals('Practice Score', $result['score_label']);
+    }
+
+    /**
+     * 5. Short Mock Test with < 200 questions returns Practice / Raw Score.
+     */
+    public function test_short_mock_test_returns_practice_raw_score(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC Short Mock Assessment',
+            'slug' => 'toeic-short-mock-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 30,
+            'pass_score' => 5,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $section = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Mini Mock Section',
+            'section_type' => SectionType::Reading,
+            'order' => 1,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'Mini Mock Bank',
+            'slug' => 'mini-mock-bank-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $attemptEngine = app(AttemptEngine::class);
+        $attempt = $attemptEngine->startAttempt($test, $this->candidate);
+
+        for ($i = 1; $i <= 10; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "Short Mock Q#{$i}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+
+            TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q->id, 'order' => $i]);
+
+            Answer::create([
+                'attempt_id' => $attempt->id,
+                'question_id' => $q->id,
+                'selected_choice_id' => $c->id,
+            ]);
+        }
+
+        $attemptEngine->submitAttempt($attempt);
+        $attempt->refresh();
+
+        $this->assertEquals(10.0, (float) $attempt->total_score);
+        $this->assertNotEquals(990.0, (float) $attempt->total_score);
 
         $result = app(ResultEngine::class)->generateResult($attempt);
         $this->assertTrue($result['is_practice']);
         $this->assertFalse($result['is_full_toeic']);
         $this->assertEquals('Practice / Raw Score', $result['score_label']);
-        $this->assertEquals(3.0, (float) $result['final_score']);
     }
 
     /**
-     * 4. Question Difficulty is metadata only and does not alter raw count scaling.
+     * 6. Question Difficulty is metadata only and does not alter raw count scaling.
      */
     public function test_question_difficulty_does_not_affect_toeic_score(): void
     {
@@ -304,6 +439,7 @@ class TOEICScoringEngineTest extends TestCase
             'title' => 'TOEIC Difficulty Invariant Test',
             'slug' => 'toeic-diff-invariant-' . uniqid(),
             'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::Simulator,
             'scoring_method' => ScoringMethod::Automatic,
             'duration_minutes' => 60,
             'pass_score' => 1,
@@ -351,7 +487,7 @@ class TOEICScoringEngineTest extends TestCase
     }
 
     /**
-     * 5. Teacher Question Authoring accepts questions without manual points.
+     * 7. Teacher Question Authoring accepts questions without manual points.
      */
     public function test_teacher_can_create_question_without_manual_points(): void
     {
@@ -383,7 +519,7 @@ class TOEICScoringEngineTest extends TestCase
     }
 
     /**
-     * 6. Edge cases: All Incorrect (0 correct), All Correct (100+100), Unanswered.
+     * 8. Edge cases: All Incorrect (0 correct), All Correct (100+100), Unanswered.
      */
     public function test_edge_cases_all_incorrect_and_all_correct(): void
     {

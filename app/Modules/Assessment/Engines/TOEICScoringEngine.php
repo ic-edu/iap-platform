@@ -235,29 +235,34 @@ class TOEICScoringEngine
 
         $passScore = (float) ($test?->pass_score ?? 0.0);
 
-        // A full official TOEIC assessment has 100 Listening + 100 Reading questions (200 total)
-        $isFullToeic = ($listeningTotal === 100 && $readingTotal === 100) || ($totalQuestions === 200);
+        $assessmentMode = $test?->assessment_mode?->value ?? (is_string($test?->assessment_mode) ? $test->assessment_mode : 'simulator');
+        $isMockTest = in_array($assessmentMode, ['mock_test', 'real_test'], true);
+        $userFacingMode = $isMockTest ? 'mock_test' : 'simulator';
+
+        // A full institutional mock test requires Mock Test mode AND exactly 100 Listening + 100 Reading questions (200 total)
+        $isFullToeic = $isMockTest && (($listeningTotal === 100 && $readingTotal === 100) || ($totalQuestions === 200));
 
         if ($isFullToeic) {
             $listeningScore = $this->convertListeningScore($listeningCorrect);
             $readingScore = $this->convertReadingScore($readingCorrect);
             $totalScore = (float) ($listeningScore + $readingScore);
             $isPractice = false;
-            $scoreLabel = 'Official Scaled TOEIC Score';
+            $scoreLabel = 'Institutional Scaled Score';
             $passed = ($totalScore >= $passScore);
         } else {
-            // Practice / Mini Test / UAT / Partial test
-            // Critical: DO NOT map partial practice questions (e.g. 3/3) to 990!
+            // Simulator (40-50 questions) / Mini Mock / Practice / UAT / Partial test
+            // Critical: DO NOT map short assessments (e.g. 40, 50, 3 questions) to 990!
             $listeningScore = $listeningCorrect;
             $readingScore = $readingCorrect;
             $percentage = $totalQuestions > 0 ? round(($totalCorrect / $totalQuestions) * 100, 2) : 0.0;
             $totalScore = (float) $totalCorrect;
             $isPractice = true;
-            $scoreLabel = 'Practice / Raw Score';
+            $scoreLabel = $isMockTest ? 'Practice / Raw Score' : 'Practice Score';
             $passed = ($totalScore >= $passScore) || ($percentage >= $passScore);
         }
 
         return [
+            'assessment_mode'   => $userFacingMode,
             'listening_total'   => $listeningTotal,
             'listening_correct' => $listeningCorrect,
             'listening_score'   => $listeningScore,
