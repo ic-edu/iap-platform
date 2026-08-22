@@ -236,37 +236,62 @@
                         </div>
                     @endif
 
-                    <!-- Question Audio (Real Test Single-Play vs Simulator Flexible Play) -->
-                    @if (!empty($question->audio_url) || ($question->mediaAsset && $question->mediaAsset->type === 'audio'))
+                    <!-- Question Audio (Shared Audio Group or Individual Audio) -->
+                    @php
+                        $hasAudioSource = !empty($question->audio_url) || ($question->mediaAsset && $question->mediaAsset->type === 'audio') || ($question->audioGroup && (!empty($question->audioGroup->audio_url) || $question->audioGroup->media_asset_id));
+                        $isAudioGroup = (bool) $question->audioGroup;
+                        $audioGroupModel = $question->audioGroup;
+                        $groupTypeLabel = $audioGroupModel ? ($audioGroupModel->isTalk() ? 'Talk' : 'Conversation') : 'Audio';
+                    @endphp
+
+                    @if ($hasAudioSource)
                         @if ($isRealTest)
-                            <div id="audio-container-{{ $question->id }}" class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
+                            <div id="audio-container-{{ $question->id }}" class="mb-5 p-4 rounded-xl bg-slate-950/90 border {{ $isAudioGroup ? 'border-indigo-500/40 bg-indigo-950/20' : 'border-slate-800' }} text-slate-200" data-audio-group-id="{{ $question->audio_group_id }}">
                                 <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
                                     <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
                                         <span>🎧</span>
-                                        <span>Question Audio Prompt (Single Play)</span>
+                                        <span>{{ $isAudioGroup ? "Shared {$groupTypeLabel} Audio (Part " . ($audioGroupModel->part_number ?? 3) . " — Single Play)" : 'Question Audio Prompt (Single Play)' }}</span>
                                     </div>
                                     <span id="audio-badge-{{ $question->id }}" class="text-[11px] font-bold {{ $isAudioPlayed ? 'text-slate-500 bg-slate-900 border-slate-800' : 'text-amber-400 bg-amber-950/40 border-amber-500/30' }} px-2.5 py-0.5 rounded-md border">
                                         {{ $isAudioPlayed ? 'Audio Played (1/1)' : 'Play Available (1/1)' }}
                                     </span>
                                 </div>
 
+                                @if($isAudioGroup && $audioGroupModel->title)
+                                    <div class="text-xs text-slate-300 font-medium mb-2.5 italic">
+                                        📌 Questions refer to the following {{ strtolower($groupTypeLabel) }}: <strong class="text-white">{{ $audioGroupModel->title }}</strong>
+                                    </div>
+                                @endif
+
                                 <div class="flex items-center gap-3">
                                     <button id="btn-play-{{ $question->id }}" type="button" 
-                                            onclick="playRealTestAudio('{{ $question->id }}', '{{ route('candidate.exam.audio-stream', [$attempt, $question]) }}')"
+                                            onclick="playRealTestAudio('{{ $question->id }}', '{{ route('candidate.exam.audio-stream', [$attempt, $question]) }}', '{{ $question->audio_group_id }}')"
                                             {{ $isAudioPlayed ? 'disabled' : '' }}
                                             class="px-4 py-2 rounded-xl {{ $isAudioPlayed ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30' }} font-bold text-xs transition-all flex items-center gap-2">
                                         <span>▶</span>
-                                        <span id="btn-play-label-{{ $question->id }}">{{ $isAudioPlayed ? 'Already Played' : 'Play Audio Prompt' }}</span>
+                                        <span id="btn-play-label-{{ $question->id }}">{{ $isAudioPlayed ? 'Already Played' : ($isAudioGroup ? "Play {$groupTypeLabel} Audio" : 'Play Audio Prompt') }}</span>
                                     </button>
-                                    <audio id="audio-elem-{{ $question->id }}" class="hidden" preload="none" onended="onAudioEnded('{{ $question->id }}')"></audio>
+                                    <audio id="audio-elem-{{ $question->id }}" class="hidden" preload="none" onended="onAudioEnded('{{ $question->id }}', '{{ $question->audio_group_id }}')"></audio>
                                 </div>
                             </div>
                         @else
-                            <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
-                                <div class="flex items-center gap-1.5 mb-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                                    <span>🎧</span>
-                                    <span>Question Audio Prompt</span>
+                            <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border {{ $isAudioGroup ? 'border-indigo-500/40 bg-indigo-950/20' : 'border-slate-800' }} text-slate-200">
+                                <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                    <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                        <span>🎧</span>
+                                        <span>{{ $isAudioGroup ? "Shared {$groupTypeLabel} Audio (Part " . ($audioGroupModel->part_number ?? 3) . ")" : 'Question Audio Prompt' }}</span>
+                                    </div>
+                                    @if($isAudioGroup)
+                                        <span class="text-[10px] font-bold text-indigo-300 bg-indigo-950/60 border border-indigo-500/30 px-2 py-0.5 rounded">
+                                            Shared Group
+                                        </span>
+                                    @endif
                                 </div>
+                                @if($isAudioGroup && $audioGroupModel->title)
+                                    <div class="text-xs text-slate-300 font-medium mb-2 italic">
+                                        📌 Questions refer to the following {{ strtolower($groupTypeLabel) }}: <strong class="text-white">{{ $audioGroupModel->title }}</strong>
+                                    </div>
+                                @endif
                                 <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $question->audio_url ?: route('candidate.exam.audio-stream', [$attempt, $question]) }}" preload="metadata"></audio>
                             </div>
                         @endif
@@ -613,7 +638,7 @@
         }
 
         // Real Test Single Play Audio Engine
-        function playRealTestAudio(questionId, streamUrl) {
+        function playRealTestAudio(questionId, streamUrl, audioGroupId) {
             const btn = document.getElementById(`btn-play-${questionId}`);
             const label = document.getElementById(`btn-play-label-${questionId}`);
             const badge = document.getElementById(`audio-badge-${questionId}`);
@@ -631,6 +656,22 @@
                 badge.className = 'text-[11px] font-bold text-indigo-400 bg-indigo-950/40 border-indigo-500/30 px-2.5 py-0.5 rounded-md border';
             }
 
+            // If question belongs to an audio group, disable other group buttons
+            if (audioGroupId) {
+                document.querySelectorAll(`[data-audio-group-id="${audioGroupId}"]`).forEach(container => {
+                    const otherBtn = container.querySelector('button[id^="btn-play-"]');
+                    const otherBadge = container.querySelector('span[id^="audio-badge-"]');
+                    if (otherBtn && otherBtn !== btn) {
+                        otherBtn.disabled = true;
+                        otherBtn.className = 'px-4 py-2 rounded-xl bg-slate-800 text-slate-500 cursor-not-allowed font-bold text-xs transition-all flex items-center gap-2';
+                    }
+                    if (otherBadge && otherBadge !== badge) {
+                        otherBadge.textContent = 'Audio Playing (1/1)';
+                        otherBadge.className = 'text-[11px] font-bold text-indigo-400 bg-indigo-950/40 border-indigo-500/30 px-2.5 py-0.5 rounded-md border';
+                    }
+                });
+            }
+
             audio.src = streamUrl;
             audio.play().catch(err => {
                 console.error('Audio playback error:', err);
@@ -638,7 +679,7 @@
             });
         }
 
-        function onAudioEnded(questionId) {
+        function onAudioEnded(questionId, audioGroupId) {
             const label = document.getElementById(`btn-play-label-${questionId}`);
             const badge = document.getElementById(`audio-badge-${questionId}`);
 
@@ -646,6 +687,18 @@
             if (badge) {
                 badge.textContent = 'Audio Played (1/1)';
                 badge.className = 'text-[11px] font-bold text-slate-500 bg-slate-900 border-slate-800 px-2.5 py-0.5 rounded-md border';
+            }
+
+            if (audioGroupId) {
+                document.querySelectorAll(`[data-audio-group-id="${audioGroupId}"]`).forEach(container => {
+                    const otherLabel = container.querySelector('span[id^="btn-play-label-"]');
+                    const otherBadge = container.querySelector('span[id^="audio-badge-"]');
+                    if (otherLabel) otherLabel.textContent = 'Already Played';
+                    if (otherBadge) {
+                        otherBadge.textContent = 'Audio Played (1/1)';
+                        otherBadge.className = 'text-[11px] font-bold text-slate-500 bg-slate-900 border-slate-800 px-2.5 py-0.5 rounded-md border';
+                    }
+                });
             }
 
             fetch("{{ route('candidate.exam.violation', $attempt) }}", {

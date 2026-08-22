@@ -209,4 +209,14 @@ class Test extends Model
     {
         return $this->hasMany(\App\Modules\Assessment\Models\CandidateTestAssignment::class, 'test_id');
     }
+
+    /**
+     * Get associated shared audio groups.
+     *
+     * @return HasMany<\App\Modules\QuestionBank\Models\AudioGroup, $this>
+     */
+    public function audioGroups(): HasMany
+    {
+        return $this->hasMany(\App\Modules\QuestionBank\Models\AudioGroup::class, 'test_id');
+    }
 }

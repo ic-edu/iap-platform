@@ -101,6 +101,15 @@ class RepositoryQualityService
                             $warnings[] = "Question '{$q->prompt}' TOEIC Part " . ($toeicCheck['part_number'] ?? '?') . " finding: {$tErr}";
                         }
                     }
+
+                    if (in_array((int) $q->part_number, [3, 4], true) && $q->audio_group_id && $q->audioGroup) {
+                        $agCheck = ToeicQuestionValidator::checkAudioGroup($q->audioGroup);
+                        if (!$agCheck['is_valid']) {
+                            foreach ($agCheck['errors'] as $agErr) {
+                                $warnings[] = "Question '{$q->prompt}' TOEIC Part {$q->part_number} Audio Group finding: {$agErr}";
+                            }
+                        }
+                    }
                 }
 
                 // Difficulty counting

@@ -43,6 +43,7 @@ class Question extends Model
         'media_asset_id',
         'passage_id',
         'passage_text',
+        'audio_group_id',
         'audio_url',
         'image_url',
         'prompt',
@@ -83,6 +84,39 @@ class Question extends Model
     public function passage(): BelongsTo
     {
         return $this->belongsTo(Passage::class, 'passage_id');
+    }
+
+    /**
+     * Get associated shared audio group (Part 3 Conversations / Part 4 Talks).
+     *
+     * @return BelongsTo<AudioGroup, $this>
+     */
+    public function audioGroup(): BelongsTo
+    {
+        return $this->belongsTo(AudioGroup::class, 'audio_group_id');
+    }
+
+    /**
+     * Resolve effective audio URL, checking group first then question.
+     */
+    public function getEffectiveAudioUrl(): ?string
+    {
+        if ($this->audioGroup) {
+            $groupUrl = $this->audioGroup->getEffectiveAudioUrl();
+            if (!empty($groupUrl)) {
+                return $groupUrl;
+            }
+        }
+
+        if (!empty($this->audio_url)) {
+            return $this->audio_url;
+        }
+
+        if ($this->mediaAsset) {
+            return $this->mediaAsset->path;
+        }
+
+        return null;
     }
 
     /**

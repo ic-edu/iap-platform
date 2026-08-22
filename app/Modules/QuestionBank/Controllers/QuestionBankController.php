@@ -11,6 +11,7 @@ use App\Models\RepositoryActivityLog;
 use App\Models\RepositoryRevisionRequest;
 use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
+use App\Modules\QuestionBank\Models\AudioGroup;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionBank\Models\QuestionChoice;
@@ -23,6 +24,7 @@ use App\Services\RepositoryQualityService;
 use App\Services\ToeicQuestionValidator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -863,6 +865,137 @@ class QuestionBankController extends Controller
 
         return redirect()->route('admin.question-banks.show', $questionBank->id)
             ->with('status', "Question successfully authored and saved. Total questions in bank: {$questionBank->questions()->count()}.");
+    }
+
+    /**
+     * Store a new TOEIC Shared Audio Group (Part 3 Conversations / Part 4 Talks) with 3 child questions.
+     */
+    public function storeAudioGroup(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot author questions directly.');
+        }
+
+        if ($user && $user->hasRole('teacher') && (int) $questionBank->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to question bank.');
+        }
+
+        if ($user && $user->hasRole('teacher') && !in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null], true)) {
+            abort(403, 'Repository is locked while awaiting governance approval.');
+        }
+
+        $validated = $request->validate([
+            'title'          => ['nullable', 'string', 'max:255'],
+            'group_type'     => ['required', 'string', 'in:conversation,talk'],
+            'part_number'    => ['required', 'integer', 'in:3,4'],
+            'media_asset_id' => ['nullable', 'string'],
+            'audio_url'      => ['nullable', 'string'],
+            'audio_script'   => ['nullable', 'string'],
+            'questions'      => ['required', 'array', 'size:3'],
+            'questions.*.prompt'         => ['required', 'string'],
+            'questions.*.difficulty'     => ['required', 'string'],
+            'questions.*.explanation'    => ['nullable', 'string'],
+            'questions.*.choices'        => ['required', 'array', 'size:4'],
+            'questions.*.correct_choice' => ['required'],
+        ]);
+
+        $partNumber = (int) $validated['part_number'];
+        $groupType = $validated['group_type'];
+        $section = ToeicQuestionValidator::deriveSection($partNumber);
+
+        // Run strict Audio Group validation
+        ToeicQuestionValidator::validateAudioGroup([
+            'group_type'     => $groupType,
+            'part_number'    => $partNumber,
+            'media_asset_id' => $validated['media_asset_id'] ?? null,
+            'audio_url'      => $validated['audio_url'] ?? null,
+        ], $validated['questions']);
+
+        DB::transaction(function () use ($questionBank, $validated, $partNumber, $groupType, $section, $user) {
+            $audioGroup = AudioGroup::create([
+                'question_bank_id' => $questionBank->id,
+                'title'            => $validated['title'] ?? (ucfirst($groupType) . ' Group (' . $questionBank->title . ')'),
+                'group_type'       => $groupType,
+                'part_number'      => $partNumber,
+                'media_asset_id'   => $validated['media_asset_id'] ?? null,
+                'audio_url'        => $validated['audio_url'] ?? null,
+                'audio_script'     => $validated['audio_script'] ?? null,
+                'order'            => (AudioGroup::where('question_bank_id', $questionBank->id)->max('order') ?? 0) + 1,
+                'created_by'       => $user?->id,
+            ]);
+
+            foreach ($validated['questions'] as $qData) {
+                $question = Question::create([
+                    'question_bank_id' => $questionBank->id,
+                    'audio_group_id'   => $audioGroup->id,
+                    'prompt'           => $qData['prompt'],
+                    'section'          => $section,
+                    'part_number'      => $partNumber,
+                    'question_type'    => 'multiple_choice',
+                    'difficulty'       => $qData['difficulty'],
+                    'points'           => 1,
+                    'explanation'      => $qData['explanation'] ?? null,
+                ]);
+
+                $correctChoiceIdx = $qData['correct_choice'];
+                foreach ($qData['choices'] as $cIdx => $choice) {
+                    $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                    $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                    QuestionChoice::create([
+                        'question_id' => $question->id,
+                        'label'       => chr(65 + $cIdx),
+                        'content'     => $content,
+                        'choice_text' => $content,
+                        'is_correct'  => $isCorrect,
+                        'order'       => $cIdx + 1,
+                    ]);
+                }
+            }
+        });
+
+        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+
+        return redirect()->route('admin.question-banks.show', $questionBank->id)
+            ->with('status', "Part {$partNumber} Shared Audio Group successfully created with 3 questions.");
+    }
+
+    /**
+     * Update an existing Audio Group and its shared media.
+     */
+    public function updateAudioGroup(Request $request, AudioGroup $audioGroup): RedirectResponse
+    {
+        $user = $request->user();
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot edit question groups directly.');
+        }
+
+        $bank = $audioGroup->questionBank;
+        if ($user && $user->hasRole('teacher') && $bank && (int) $bank->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to audio group.');
+        }
+
+        $validated = $request->validate([
+            'title'          => ['nullable', 'string', 'max:255'],
+            'media_asset_id' => ['nullable', 'string'],
+            'audio_url'      => ['nullable', 'string'],
+            'audio_script'   => ['nullable', 'string'],
+        ]);
+
+        $audioGroup->update([
+            'title'          => $validated['title'] ?? $audioGroup->title,
+            'media_asset_id' => $validated['media_asset_id'] ?? $audioGroup->media_asset_id,
+            'audio_url'      => $validated['audio_url'] ?? $audioGroup->audio_url,
+            'audio_script'   => $validated['audio_script'] ?? $audioGroup->audio_script,
+        ]);
+
+        if ($bank) {
+            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($bank);
+            return redirect()->route('admin.question-banks.show', $bank->id)
+                ->with('status', "Shared Audio Group updated successfully.");
+        }
+
+        return redirect()->back()->with('status', "Shared Audio Group updated successfully.");
     }
 
     /**

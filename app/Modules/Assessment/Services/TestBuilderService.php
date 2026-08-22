@@ -6,6 +6,9 @@ use App\Models\MediaAsset;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
+use App\Modules\QuestionBank\Models\AudioGroup;
+use App\Modules\QuestionBank\Models\Question;
+use App\Modules\QuestionBank\Models\QuestionChoice;
 use App\Services\ToeicQuestionValidator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -121,6 +124,79 @@ class TestBuilderService
             'order'           => $nextOrder,
             'points'          => $data['points'] ?? 1,
         ]);
+    }
+
+    /**
+     * Create an Assessment-authored Shared Audio Group (Part 3 / Part 4) with 3 child questions.
+     */
+    public function createAudioGroup(TestSection $section, array $data): AudioGroup
+    {
+        $test = $section->test;
+        $partNumber = (int) ($data['part_number'] ?? 3);
+        $groupType = $data['group_type'] ?? ($partNumber === 4 ? 'talk' : 'conversation');
+        $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
+
+        // Run validation
+        ToeicQuestionValidator::validateAudioGroup([
+            'group_type'     => $groupType,
+            'part_number'    => $partNumber,
+            'media_asset_id' => $data['media_asset_id'] ?? null,
+            'audio_url'      => $data['audio_url'] ?? null,
+        ], $data['questions'] ?? []);
+
+        return DB::transaction(function () use ($section, $test, $data, $partNumber, $groupType, $sectionType) {
+            $audioGroup = AudioGroup::create([
+                'test_id'        => $test?->id,
+                'title'          => $data['title'] ?? (ucfirst($groupType) . ' Group (' . ($test?->title ?? 'Assessment') . ')'),
+                'group_type'     => $groupType,
+                'part_number'    => $partNumber,
+                'media_asset_id' => $data['media_asset_id'] ?? null,
+                'audio_url'      => $data['audio_url'] ?? null,
+                'audio_script'   => $data['audio_script'] ?? null,
+                'order'          => (AudioGroup::where('test_id', $test?->id)->max('order') ?? 0) + 1,
+                'created_by'     => $test?->created_by,
+            ]);
+
+            $questions = $data['questions'] ?? [];
+            foreach ($questions as $qData) {
+                $question = Question::create([
+                    'question_bank_id' => null,
+                    'audio_group_id'   => $audioGroup->id,
+                    'prompt'           => $qData['prompt'],
+                    'section'          => $sectionType,
+                    'part_number'      => $partNumber,
+                    'question_type'    => 'multiple_choice',
+                    'difficulty'       => $qData['difficulty'] ?? 'medium',
+                    'points'           => 1,
+                    'explanation'      => $qData['explanation'] ?? null,
+                ]);
+
+                $correctChoiceIdx = $qData['correct_choice'] ?? 0;
+                $choices = $qData['choices'] ?? [];
+                foreach ($choices as $cIdx => $choice) {
+                    $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                    $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                    QuestionChoice::create([
+                        'question_id' => $question->id,
+                        'label'       => chr(65 + $cIdx),
+                        'content'     => $content,
+                        'choice_text' => $content,
+                        'is_correct'  => $isCorrect,
+                        'order'       => $cIdx + 1,
+                    ]);
+                }
+
+                $nextOrder = (TestQuestion::where('test_section_id', $section->id)->max('order') ?? 0) + 1;
+                TestQuestion::create([
+                    'test_section_id' => $section->id,
+                    'question_id'     => $question->id,
+                    'order'           => $nextOrder,
+                    'points'          => 1,
+                ]);
+            }
+
+            return $audioGroup;
+        });
     }
 
     /**
@@ -434,6 +510,15 @@ class TestBuilderService
                     if (!$toeicCheck['is_valid']) {
                         foreach ($toeicCheck['errors'] as $toeicErr) {
                             $qErrors[] = $toeicErr;
+                        }
+                    }
+
+                    if (in_array((int) $q->part_number, [3, 4], true) && $q->audio_group_id && $q->audioGroup) {
+                        $agCheck = ToeicQuestionValidator::checkAudioGroup($q->audioGroup);
+                        if (!$agCheck['is_valid']) {
+                            foreach ($agCheck['errors'] as $agErr) {
+                                $qErrors[] = "Audio Group Finding: {$agErr}";
+                            }
                         }
                     }
                 }

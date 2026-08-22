@@ -207,4 +207,14 @@ class QuestionBank extends Model
     {
         return $this->hasMany(RepositoryActivityLog::class, 'resource_id')->where('resource_type', 'QuestionBank')->orderBy('created_at', 'desc');
     }
+
+    /**
+     * Get associated shared audio groups.
+     *
+     * @return HasMany<\App\Modules\QuestionBank\Models\AudioGroup, $this>
+     */
+    public function audioGroups(): HasMany
+    {
+        return $this->hasMany(\App\Modules\QuestionBank\Models\AudioGroup::class, 'question_bank_id');
+    }
 }

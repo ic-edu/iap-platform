@@ -20,7 +20,9 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-man
     Route::post('/versions/{version}/rollback', [QuestionBankController::class, 'rollbackVersion'])->name('admin.question-banks.rollback-version');
 
     Route::post('/{questionBank}/questions', [QuestionBankController::class, 'storeQuestion'])->name('admin.question-banks.store-question');
+    Route::post('/{questionBank}/audio-groups', [QuestionBankController::class, 'storeAudioGroup'])->name('admin.question-banks.store-audio-group');
     Route::put('/questions/{question}', [QuestionBankController::class, 'updateQuestion'])->name('admin.question-banks.update-question');
+    Route::put('/audio-groups/{audioGroup}', [QuestionBankController::class, 'updateAudioGroup'])->name('admin.question-banks.update-audio-group');
     Route::post('/questions/{question}/duplicate', [QuestionBankController::class, 'duplicateQuestion'])->name('admin.question-banks.duplicate-question');
     Route::post('/{questionBank}/import', [QuestionBankController::class, 'importQuestions'])->name('admin.question-banks.import');
     Route::post('/{questionBank}/duplicate', [QuestionBankController::class, 'duplicate'])->name('admin.question-banks.duplicate');

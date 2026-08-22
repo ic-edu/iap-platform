@@ -520,6 +520,45 @@ class TestBuilderController extends Controller
     }
 
     /**
+     * Create an Assessment-authored Shared Audio Group (Part 3 / Part 4) with 3 child questions.
+     */
+    public function createAudioGroup(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $validated = $request->validate([
+            'test_section_id' => ['required', 'exists:test_sections,id'],
+            'title'           => ['nullable', 'string', 'max:255'],
+            'group_type'      => ['required', 'string', 'in:conversation,talk'],
+            'part_number'     => ['required', 'integer', 'in:3,4'],
+            'media_asset_id'  => ['nullable', 'string'],
+            'audio_url'       => ['nullable', 'string'],
+            'audio_script'    => ['nullable', 'string'],
+            'questions'       => ['required', 'array', 'size:3'],
+            'questions.*.prompt'         => ['required', 'string'],
+            'questions.*.difficulty'     => ['required', 'string'],
+            'questions.*.explanation'    => ['nullable', 'string'],
+            'questions.*.choices'        => ['required', 'array', 'size:4'],
+            'questions.*.correct_choice' => ['required'],
+        ]);
+
+        $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
+
+        $this->builderService->createAudioGroup($section, $validated);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Part {$validated['part_number']} Shared Audio Group successfully created and attached to '{$section->title}'.");
+    }
+
+    /**
      * Remove question reference from Assessment.
      */
     public function destroyQuestion(Request $request, Test $test, Question $question): RedirectResponse

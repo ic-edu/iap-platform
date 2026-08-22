@@ -331,6 +331,15 @@ class ToeicQuestionValidator
         $hasAudio = !empty($data['audio_url']);
         $hasPassage = !empty($data['passage_id']) || !empty(trim((string) ($data['passage_text'] ?? '')));
 
+        // Check if question references a shared AudioGroup
+        $audioGroupId = $data['audio_group_id'] ?? ($question?->audio_group_id ?? null);
+        if (!empty($audioGroupId)) {
+            $audioGroup = \App\Modules\QuestionBank\Models\AudioGroup::find($audioGroupId);
+            if ($audioGroup && (!empty($audioGroup->audio_url) || !empty($audioGroup->media_asset_id))) {
+                $hasAudio = true;
+            }
+        }
+
         $mediaAssetId = $data['media_asset_id'] ?? null;
         if (!empty($mediaAssetId)) {
             $mediaAsset = MediaAsset::find($mediaAssetId);
@@ -353,6 +362,9 @@ class ToeicQuestionValidator
             if (!$hasAudio && !empty($question->audio_url)) {
                 $hasAudio = true;
             }
+            if (!$hasAudio && $question->audioGroup && (!empty($question->audioGroup->audio_url) || !empty($question->audioGroup->media_asset_id))) {
+                $hasAudio = true;
+            }
             if (!$hasPassage && (!empty($question->passage_id) || !empty(trim((string) ($question->passage_text ?? ''))))) {
                 $hasPassage = true;
             }
@@ -372,5 +384,104 @@ class ToeicQuestionValidator
             'has_audio'   => $hasAudio,
             'has_passage' => $hasPassage,
         ];
+    }
+
+    /**
+     * Check TOEIC Audio Group rules (Part 3 Conversations & Part 4 Talks).
+     *
+     * @param \App\Modules\QuestionBank\Models\AudioGroup|array<string, mixed> $group
+     * @param array<int, mixed> $questionsData
+     * @return array<string, mixed>
+     */
+    public static function checkAudioGroup(mixed $group, array $questionsData = []): array
+    {
+        $errors = [];
+        $isModel = $group instanceof \App\Modules\QuestionBank\Models\AudioGroup;
+
+        $groupType = $isModel ? $group->group_type : ($group['group_type'] ?? 'conversation');
+        $partNumber = $isModel ? (int) $group->part_number : (int) ($group['part_number'] ?? ($groupType === 'talk' ? 4 : 3));
+
+        if (!in_array($partNumber, [3, 4], true)) {
+            $errors['part_number'] = 'Audio Group part number must be 3 (Conversation) or 4 (Talk).';
+        }
+
+        if ($partNumber === 3 && $groupType !== 'conversation') {
+            $errors['group_type'] = 'Part 3 audio group must have group_type set to conversation.';
+        } elseif ($partNumber === 4 && $groupType !== 'talk') {
+            $errors['group_type'] = 'Part 4 audio group must have group_type set to talk.';
+        }
+
+        // Audio presence at group level
+        $hasAudio = false;
+        if ($isModel) {
+            $hasAudio = !empty($group->audio_url) || !empty($group->media_asset_id);
+        } else {
+            $hasAudio = !empty($group['audio_url']) || !empty($group['media_asset_id']);
+        }
+
+        if (!$hasAudio) {
+            $errors['audio_url'] = 'Audio group requires a valid audio attachment.';
+        }
+
+        // Question count check (Must be EXACTLY 3 questions)
+        $questionCount = 0;
+        if (!empty($questionsData)) {
+            $questionCount = count($questionsData);
+        } elseif ($isModel) {
+            $questionCount = $group->questions()->count();
+        } elseif (isset($group['questions']) && is_array($group['questions'])) {
+            $questionCount = count($group['questions']);
+        }
+
+        if ($questionCount !== 3) {
+            $errors['question_count'] = "Audio Group for Part {$partNumber} requires exactly 3 questions (found {$questionCount}).";
+        }
+
+        // Check each question in the group
+        $qList = !empty($questionsData) ? $questionsData : ($isModel ? $group->questions()->with('choices')->get() : ($group['questions'] ?? []));
+        $idx = 1;
+        foreach ($qList as $qItem) {
+            $qData = is_array($qItem) ? $qItem : $qItem->toArray();
+            $qData['part_number'] = $partNumber;
+            // Group audio satisfies child audio requirement
+            if ($hasAudio) {
+                $qData['audio_url'] = $qData['audio_url'] ?? ($isModel ? $group->audio_url : ($group['audio_url'] ?? 'group_audio'));
+            }
+            $qCheck = self::check($qData, is_object($qItem) && $qItem instanceof Question ? $qItem : null);
+            if (!$qCheck['is_valid']) {
+                foreach ($qCheck['errors'] as $errKey => $errMsg) {
+                    if ($errKey !== 'audio_url' && $errKey !== 'media') {
+                        $errors["question_{$idx}_{$errKey}"] = "Question #{$idx}: {$errMsg}";
+                    }
+                }
+            }
+            $idx++;
+        }
+
+        return [
+            'is_valid'       => empty($errors),
+            'errors'         => $errors,
+            'group_type'     => $groupType,
+            'part_number'    => $partNumber,
+            'question_count' => $questionCount,
+        ];
+    }
+
+    /**
+     * Validate TOEIC Audio Group and throw ValidationException if invalid.
+     *
+     * @param \App\Modules\QuestionBank\Models\AudioGroup|array<string, mixed> $group
+     * @param array<int, mixed> $questionsData
+     * @throws ValidationException
+     */
+    public static function validateAudioGroup(mixed $group, array $questionsData = []): array
+    {
+        $result = self::checkAudioGroup($group, $questionsData);
+
+        if (!$result['is_valid']) {
+            throw ValidationException::withMessages($result['errors']);
+        }
+
+        return $result;
     }
 }

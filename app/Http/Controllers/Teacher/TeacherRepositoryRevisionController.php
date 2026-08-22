@@ -184,6 +184,9 @@ class TeacherRepositoryRevisionController extends Controller
         if ($request->has('passage_text')) {
             $question->passage_text = $request->input('passage_text') ?: null;
         }
+        if ($request->has('audio_group_id')) {
+            $question->audio_group_id = $request->input('audio_group_id') ?: null;
+        }
 
         // Update Media Attachment
         if ($request->has('remove_media') && $request->input('remove_media') == '1') {

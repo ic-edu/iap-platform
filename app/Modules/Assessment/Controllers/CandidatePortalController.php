@@ -221,34 +221,49 @@ class CandidatePortalController extends Controller
         $test = $attempt->test;
         $isRealTest = $test?->isRealTest() ?? false;
 
+        $groupQuestionIds = $question->audio_group_id
+            ? \App\Modules\QuestionBank\Models\Question::where('audio_group_id', $question->audio_group_id)->pluck('id')->toArray()
+            : [];
+
         if ($isRealTest) {
-            $existingPlay = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
-                ->where('question_id', $question->id)
-                ->first();
+            $existingPlayQuery = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id);
+            if (!empty($groupQuestionIds)) {
+                $existingPlayQuery->whereIn('question_id', $groupQuestionIds);
+            } else {
+                $existingPlayQuery->where('question_id', $question->id);
+            }
+            $existingPlay = $existingPlayQuery->first();
 
             if ($existingPlay && $existingPlay->play_count >= 1) {
-                \App\Services\ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}", $attempt);
-                return response()->json(['error' => 'Audio already played for this question.'], 403);
+                \App\Services\ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
+                return response()->json(['error' => 'Audio already played for this question group.'], 403);
             }
 
-            \App\Modules\Assessment\Models\AttemptAudioPlay::create([
-                'attempt_id'     => $attempt->id,
-                'question_id'    => $question->id,
-                'media_asset_id' => $question->media_asset_id,
-                'play_count'     => 1,
-                'started_at'     => now(),
-                'ip_address'     => $request->ip(),
-            ]);
+            $targetQuestionIds = !empty($groupQuestionIds) ? $groupQuestionIds : [$question->id];
+            foreach ($targetQuestionIds as $targetQId) {
+                \App\Modules\Assessment\Models\AttemptAudioPlay::firstOrCreate([
+                    'attempt_id'  => $attempt->id,
+                    'question_id' => $targetQId,
+                ], [
+                    'media_asset_id' => $question->media_asset_id ?? $question->audioGroup?->media_asset_id,
+                    'play_count'     => 1,
+                    'started_at'     => now(),
+                    'ip_address'     => $request->ip(),
+                ]);
+            }
 
-            \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}", $attempt);
+            \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
         } else {
             \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started simulator audio play for Question {$question->id}", $attempt);
         }
 
-        // Resolve audio source
-        $audioUrl = $question->audio_url;
-        if (empty($audioUrl) && $question->mediaAsset) {
-            $audioUrl = $question->mediaAsset->path;
+        // Resolve audio source (Group or Question)
+        $audioUrl = $question->getEffectiveAudioUrl();
+        if (empty($audioUrl)) {
+            $audioUrl = $question->audio_url;
+            if (empty($audioUrl) && $question->mediaAsset) {
+                $audioUrl = $question->mediaAsset->path;
+            }
         }
 
         if (empty($audioUrl)) {
