@@ -87,7 +87,7 @@ class MasterQuestionGovernanceTest extends TestCase
         $test = Test::create([
             'title' => 'Assessment ' . ucfirst($status),
             'slug' => 'test-' . $status . '-' . uniqid(),
-            'test_type' => TestType::Toeic,
+            'test_type' => TestType::General,
             'scoring_method' => ScoringMethod::Automatic,
             'duration_minutes' => 60,
             'pass_score' => 70,

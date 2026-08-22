@@ -33,10 +33,69 @@
             </div>
         </div>
 
+        @php
+            $toeic = $summary['toeic_breakdown'] ?? null;
+            $isToeic = !empty($toeic);
+            $isFullToeic = $summary['is_full_toeic'] ?? false;
+            $isPractice = $summary['is_practice'] ?? false;
+        @endphp
+
+        @if($isToeic && $isFullToeic)
+        <!-- Full Official TOEIC Score Summary Card -->
+        <div class="mb-8 p-6 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-2xl shadow-xl">
+            <div class="flex items-center justify-between flex-wrap gap-3 pb-4 mb-4 border-b border-indigo-500/20">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🏆</span>
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Official TOEIC® Scaled Score</h2>
+                        <p class="text-xs text-indigo-300">Standardized Institutional Conversion Model</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Total Score</span>
+                    <div class="text-3xl font-black text-indigo-400">{{ $summary['total_score'] }} <span class="text-sm font-normal text-slate-400">/ 990</span></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="p-4 bg-slate-900/90 border border-indigo-500/20 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">🎧 Listening Section</div>
+                        <div class="text-xs text-slate-300 mt-0.5">{{ $toeic['listening_correct'] }} / {{ $toeic['listening_total'] }} correct</div>
+                    </div>
+                    <div class="text-2xl font-black text-white">
+                        {{ $toeic['listening_score'] }} <span class="text-xs font-normal text-slate-400">/ 495</span>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-900/90 border border-indigo-500/20 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">📖 Reading Section</div>
+                        <div class="text-xs text-slate-300 mt-0.5">{{ $toeic['reading_correct'] }} / {{ $toeic['reading_total'] }} correct</div>
+                    </div>
+                    <div class="text-2xl font-black text-white">
+                        {{ $toeic['reading_score'] }} <span class="text-xs font-normal text-slate-400">/ 495</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @elseif($isToeic && $isPractice)
+        <!-- Practice / UAT Mini Test Notice -->
+        <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-2.5 text-xs text-amber-300">
+                <span class="text-lg">ℹ️</span>
+                <span><strong>Practice / Raw Score Mode:</strong> This is a {{ $summary['total_questions'] }}-question practice assessment. Official 990-point scaled scoring applies to standard 200-question TOEIC assessments.</span>
+            </div>
+            <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider">
+                Practice Assessment
+            </span>
+        </div>
+        @endif
+
         <!-- Metrics & Performance Card Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
-                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Final Test Score</span>
+                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">{{ ($isToeic && $isFullToeic) ? 'TOEIC Total Score' : 'Final Test Score' }}</span>
                 <span class="text-3xl font-extrabold {{ ($summary['is_passed'] ?? false) ? 'text-emerald-400' : 'text-rose-400' }} mt-1 block">
                     {{ $summary['total_score'] ?? 0 }}
                 </span>

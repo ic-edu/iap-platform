@@ -72,6 +72,35 @@ class ScoringEngine
             $totalScore += $earnedScore;
         }
 
+        $testType = $test?->test_type;
+        $isToeic = $testType === \App\Modules\QuestionBank\Enums\TestType::Toeic || (is_string($testType) && strtolower($testType) === 'toeic');
+
+        if ($isToeic) {
+            $toeicEngine = app(TOEICScoringEngine::class);
+            $toeicEval = $toeicEngine->evaluateAttempt($attempt);
+
+            $attempt->update([
+                'total_score' => $toeicEval['total_score'],
+                'section_scores' => [
+                    'listening' => [
+                        'correct' => $toeicEval['listening_correct'],
+                        'total'   => $toeicEval['listening_total'],
+                        'score'   => $toeicEval['listening_score'],
+                    ],
+                    'reading' => [
+                        'correct' => $toeicEval['reading_correct'],
+                        'total'   => $toeicEval['reading_total'],
+                        'score'   => $toeicEval['reading_score'],
+                    ],
+                    'is_full_toeic' => $toeicEval['is_full_toeic'],
+                    'is_practice'   => $toeicEval['is_practice'],
+                    'score_label'   => $toeicEval['score_label'],
+                ],
+            ]);
+
+            return (float) $toeicEval['total_score'];
+        }
+
         $attempt->update(['total_score' => $totalScore]);
 
         return $totalScore;

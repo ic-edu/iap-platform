@@ -257,10 +257,7 @@
                             <option value="hard" {{ $qDiffVal === 'hard' ? 'selected' : '' }}>Hard</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Points</label>
-                        <input type="number" name="points" value="{{ old('points', $question->points ?? 1) }}" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
-                    </div>
+                    <input type="hidden" name="points" value="{{ old('points', $question->points ?? 1) }}">
                 </div>
             </div>
 

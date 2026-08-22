@@ -320,7 +320,7 @@ test('submitting passing assessment attempt automatically generates digital cert
     expect($summary['certificate_id'])->toBe($certificate->id);
 });
 
-test('toeic full simulation test scales raw percentage to 10-990 score range', function () {
+test('toeic practice assessment scores correctly without generic percentage scaling', function () {
     $student = User::factory()->create();
     $student->assignRole('student');
 
@@ -332,11 +332,11 @@ test('toeic full simulation test scales raw percentage to 10-990 score range', f
     ]);
 
     $test = AssessmentTest::create([
-        'title' => 'TOEIC Full Simulation Test 01',
+        'title' => 'TOEIC Mini Practice Test 01',
         'slug' => 'toeic-simulation-'.Str::random(5),
         'test_type' => 'toeic',
         'duration_minutes' => 120,
-        'pass_score' => 700,
+        'pass_score' => 2,
         'is_published' => true,
         'created_by' => $student->id,
     ]);
@@ -389,7 +389,8 @@ test('toeic full simulation test scales raw percentage to 10-990 score range', f
     $result = $resultEngine->generateResult($attempt);
 
     expect($result['percentage'])->toBe(100.0);
-    expect($result['final_score'])->toBe(990.0);
+    expect($result['final_score'])->toBe(2.0);
+    expect($result['is_practice'])->toBeTrue();
     expect($result['is_passed'])->toBeTrue();
 
     $certificate = Certificate::where('attempt_id', $attempt->id)->first();
@@ -508,7 +509,7 @@ test('authenticated candidate can access my certificates view and see issued cer
         ->assertSee('Verify Online');
 });
 
-test('attempt history my-attempts view displays synchronized PASSED status and scaled score', function () {
+test('attempt history my-attempts view displays synchronized PASSED status and score', function () {
     $student = User::factory()->create();
     $student->assignRole('student');
 
@@ -520,11 +521,11 @@ test('attempt history my-attempts view displays synchronized PASSED status and s
     ]);
 
     $test = AssessmentTest::create([
-        'title' => 'TOEIC Full Simulation Test 01',
+        'title' => 'TOEIC Mini Practice Test Sync',
         'slug' => 'toeic-simulation-sync-'.Str::random(5),
         'test_type' => 'toeic',
         'duration_minutes' => 120,
-        'pass_score' => 700,
+        'pass_score' => 1,
         'is_published' => true,
         'created_by' => $student->id,
     ]);
@@ -558,8 +559,8 @@ test('attempt history my-attempts view displays synchronized PASSED status and s
 
     $response->assertStatus(200)
         ->assertSee('PASSED')
-        ->assertSee('990')
-        ->assertSee('/ 700');
+        ->assertSee('TOEIC Mini Practice Test Sync')
+        ->assertSee('/ 1');
 });
 
 test('candidate review page renders detailed question breakdown with explanation and section stats', function () {

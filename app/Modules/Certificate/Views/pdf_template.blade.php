@@ -27,6 +27,25 @@
         <div class="subtitle">for successfully demonstrating mastery and passing the examination:</div>
         <div class="course"><strong>{{ $certificate->attempt?->test?->title ?? 'Evaluation Test' }}</strong></div>
 
+        @php
+            $attempt = $certificate->attempt;
+            $testType = $attempt?->test?->test_type;
+            $isToeic = $testType === 'toeic' || (is_object($testType) && $testType->value === 'toeic');
+            $summary = $attempt?->result_summary;
+            $isFullToeic = $summary['is_full_toeic'] ?? false;
+        @endphp
+
+        @if($isToeic && $isFullToeic && !empty($summary['final_score']))
+            <div style="margin: 20px 0; font-size: 15px; color: #1e1b4b;">
+                <strong>Official TOEIC® Scaled Score:</strong> <span style="font-size: 22px; font-weight: 900; color: #4338ca;">{{ $summary['final_score'] }}</span> <span style="font-size: 13px; color: #64748b;">/ 990</span>
+                @if(!empty($summary['toeic_breakdown']))
+                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+                        Listening: {{ $summary['toeic_breakdown']['listening_score'] }}/495 • Reading: {{ $summary['toeic_breakdown']['reading_score'] }}/495
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <div class="qr-box">
             <div class="qr-title">Official Verification QR Code</div>
             <div style="margin-bottom: 8px;">

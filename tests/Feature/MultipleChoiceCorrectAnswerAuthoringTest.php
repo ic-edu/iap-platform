@@ -45,9 +45,9 @@ class MultipleChoiceCorrectAnswerAuthoringTest extends TestCase
         $this->candidate->assignRole('student');
 
         $this->test = Test::create([
-            'title'            => 'TOEIC Assessment for Question Authoring',
-            'slug'             => 'toeic-assessment-question-authoring',
-            'test_type'        => 'toeic',
+            'title'            => 'General Assessment for Question Authoring',
+            'slug'             => 'general-assessment-question-authoring',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 70,
             'created_by'       => $this->teacher->id,

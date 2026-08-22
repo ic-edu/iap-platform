@@ -350,10 +350,7 @@
                             <option value="hard">Hard</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Points</label>
-                        <input type="number" name="points" value="5" min="1" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
-                    </div>
+                    <input type="hidden" name="points" value="1">
                 </div>
 
                 <!-- Media Attachment Section -->
@@ -412,7 +409,7 @@
                     <textarea id="eq_prompt" name="prompt" rows="3" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm focus:border-indigo-500 focus:outline-none" required></textarea>
                 </div>
 
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-medium text-slate-300 mb-1">Question Type *</label>
                         <select id="eq_question_type" name="question_type" onchange="updateAnswerOptionsUI('edit')" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
@@ -433,10 +430,7 @@
                             <option value="hard">Hard</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Points</label>
-                        <input type="number" id="eq_points" name="points" value="5" min="1" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
-                    </div>
+                    <input type="hidden" id="eq_points" name="points" value="1">
                 </div>
 
                 <!-- Media Attachment Section for Edit -->

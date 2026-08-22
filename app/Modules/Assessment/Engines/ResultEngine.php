@@ -29,16 +29,17 @@ class ResultEngine
         $isToeic = $testType === TestType::Toeic || (is_string($testType) && strtolower($testType) === 'toeic');
 
         if ($isToeic) {
-            // TOEIC Scaled Score Range: 10 to 990 points
-            // Scales accuracy percentage (0-100%) to TOEIC scale (10-990)
-            $finalScore = (float) round(10 + ($percentage / 100) * 980);
-            $isPassed = !$isPendingEvaluation && ($finalScore >= $passScore);
+            $toeicEval = app(TOEICScoringEngine::class)->evaluateAttempt($attempt);
+            $finalScore = (float) $toeicEval['total_score'];
+            $isPassed = !$isPendingEvaluation && $toeicEval['passed'];
+            $toeicData = $toeicEval;
         } else {
             // General or standard test scoring
             $finalScore = $rawScore;
             // Check both raw score and accuracy percentage against pass_score threshold
             $effectiveScore = max($rawScore, $percentage);
             $isPassed = !$isPendingEvaluation && ($effectiveScore >= $passScore);
+            $toeicData = null;
         }
 
         $grade = match (true) {
@@ -70,6 +71,10 @@ class ResultEngine
             'completion_status' => $completionStatus,
             'total_questions' => $totalQuestions,
             'correct_count' => $correctCount,
+            'toeic_breakdown' => $toeicData,
+            'is_full_toeic' => $toeicData['is_full_toeic'] ?? false,
+            'is_practice' => $toeicData['is_practice'] ?? false,
+            'score_label' => $toeicData['score_label'] ?? null,
         ];
     }
 }
