@@ -27,6 +27,9 @@ class MediaController extends Controller
         $user  = $request->user();
         $query = MediaAsset::with(['uploader']);
 
+        // Institutional Media Repository: Strictly approved assets
+        $query->where('approval_status', 'approved');
+
         // Teacher & Admin access active/published assets
         if ($user->hasRole('teacher')) {
             $query->whereIn('status', ['active', 'published']);
@@ -87,14 +90,14 @@ class MediaController extends Controller
         $mediaAssets = $query->latest()->paginate(12)->withQueryString();
 
         // Calculate Media Health Cards & Metrics (PART 1 & 7)
-        $allAssets = MediaAsset::all();
+        $allAssets = MediaAsset::where('approval_status', 'approved')->get();
         $totalAssets = $allAssets->count();
         $imagesCount = $allAssets->where('type', 'image')->count();
         $audioCount  = $allAssets->where('type', 'audio')->count();
         $videoCount  = $allAssets->where('type', 'video')->count();
         $pdfCount    = $allAssets->where('type', 'pdf')->count();
         $passageCount= $allAssets->where('type', 'passage')->count();
-        $pendingCount= $allAssets->where('approval_status', 'pending')->count();
+        $pendingCount= MediaAsset::where('approval_status', 'pending_review')->count();
         $totalSizeBytes = $allAssets->sum('size');
 
         $usedMediaUrls = \DB::table('questions')
@@ -130,12 +133,22 @@ class MediaController extends Controller
      */
     public function list(Request $request): JsonResponse
     {
+        $user     = $request->user();
         $type     = $request->query('type');
         $examType = $request->query('exam_type');
         $category = $request->query('category');
         $search   = $request->query('search');
 
         $query = MediaAsset::active()->latest()->take(100);
+
+        if ($user && $user->hasRole('teacher')) {
+            $query->where(function($q) use ($user) {
+                $q->where('uploaded_by', $user->id)
+                  ->orWhere('approval_status', 'approved');
+            });
+        } else {
+            $query->where('approval_status', 'approved');
+        }
 
         if ($type && $type !== 'all') {
             $query->where('type', $type);
@@ -174,21 +187,27 @@ class MediaController extends Controller
      * Upload media file (ROLE GOVERNANCE: TEACHER ONLY).
      * Admin is NOT allowed to upload media assets.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $user = $request->user();
 
         // Enforce Role Governance: Admin cannot upload media
         if (!$user->hasRole('teacher') && !$user->hasRole('super-admin')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only Teachers are authorized to upload academic media assets.',
-            ], 403);
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only Teachers are authorized to upload academic media assets.',
+                ], 403);
+            }
+            abort(403, 'Only Teachers are authorized to upload academic media assets.');
         }
 
         $request->validate([
-            'file'  => 'required|file|mimes:jpeg,png,webp,jpg,mp3,wav,m4a,pdf|max:10240',
-            'title' => 'nullable|string|max:255',
+            'file'        => 'required|file|mimes:jpeg,png,webp,jpg,mp3,wav,m4a,pdf|max:10240',
+            'title'       => 'nullable|string|max:255',
+            'category'    => 'nullable|string|max:100',
+            'exam_type'   => 'nullable|string|max:50',
+            'description' => 'nullable|string|max:1000',
         ]);
 
         $file = $request->file('file');
@@ -196,28 +215,37 @@ class MediaController extends Controller
         $type = $this->determineFileType($file->getClientOriginalExtension());
 
         $asset = MediaAsset::create([
-            'filename'      => basename($path),
-            'original_name' => $file->getClientOriginalName(),
-            'title'         => $request->input('title') ?: $file->getClientOriginalName(),
-            'mime_type'     => $file->getMimeType(),
-            'type'          => $type,
-            'path'          => $path,
-            'size'          => $file->getSize(),
-            'status'        => 'active',
-            'uploaded_by'   => $user->id,
+            'filename'        => basename($path),
+            'original_name'   => $file->getClientOriginalName(),
+            'title'           => $request->input('title') ?: $file->getClientOriginalName(),
+            'mime_type'       => $file->getMimeType(),
+            'type'            => $type,
+            'category'        => $request->input('category', 'General Assets'),
+            'exam_type'       => $request->input('exam_type', 'general'),
+            'description'     => $request->input('description'),
+            'path'            => $path,
+            'size'            => $file->getSize(),
+            'status'          => 'active',
+            'approval_status' => 'draft',
+            'version'         => '1.0',
+            'uploaded_by'     => $user->id,
         ]);
 
         ActivityLogger::log('media_uploaded', "Media uploaded: {$asset->original_name}", $user);
 
-        return response()->json([
-            'success'  => true,
-            'id'       => $asset->id,
-            'url'      => $asset->publicUrl(),
-            'filename' => $asset->original_name,
-            'title'    => $asset->title,
-            'type'     => $asset->type,
-            'size'     => $asset->humanSize(),
-        ]);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success'  => true,
+                'id'       => $asset->id,
+                'url'      => $asset->publicUrl(),
+                'filename' => $asset->original_name,
+                'title'    => $asset->title,
+                'type'     => $asset->type,
+                'size'     => $asset->humanSize(),
+            ]);
+        }
+
+        return redirect()->back()->with('status', "Media '{$asset->title}' uploaded successfully to My Media.");
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -984,5 +1012,195 @@ class MediaController extends Controller
             return 'pdf';
         }
         return 'other';
+    }
+
+    /**
+     * Display Teacher My Media (Working Media Workspace).
+     * Shows all media created/uploaded by the current teacher.
+     */
+    public function myMedia(Request $request): View
+    {
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('teacher') && !$user->hasRole('super-admin'))) {
+            abort(403, 'Unauthorized access to Teacher My Media workspace.');
+        }
+
+        $query = MediaAsset::with(['uploader', 'latestReviewRequest'])
+            ->where('uploaded_by', $user->id);
+
+        // Filter by type
+        if ($type = $request->input('type')) {
+            if ($type !== 'all') {
+                $query->where('type', $type);
+            }
+        }
+
+        // Filter by exam_type
+        if ($examType = $request->input('exam_type')) {
+            if ($examType !== 'all') {
+                $query->where('exam_type', $examType);
+            }
+        }
+
+        // Filter by approval_status / lifecycle
+        if ($status = $request->input('status')) {
+            if ($status !== 'all') {
+                if ($status === 'in_use') {
+                    $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')
+                        ->merge(\DB::table('test_section_media')->pluck('media_asset_id'))
+                        ->filter()->unique()->toArray();
+                    $query->whereIn('id', $usedMediaIds);
+                } elseif ($status === 'unused') {
+                    $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')
+                        ->merge(\DB::table('test_section_media')->pluck('media_asset_id'))
+                        ->filter()->unique()->toArray();
+                    $query->whereNotIn('id', $usedMediaIds);
+                } elseif ($status === 'working') {
+                    $query->whereIn('approval_status', ['draft', 'working', null]);
+                } else {
+                    $query->where('approval_status', $status);
+                }
+            }
+        }
+
+        // Search
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('original_name', 'like', "%{$search}%")
+                  ->orWhere('id', 'like', "%{$search}%")
+                  ->orWhere('title', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%")
+                  ->orWhere('content_text', 'like', "%{$search}%");
+            });
+        }
+
+        $allTeacherAssets = MediaAsset::where('uploaded_by', $user->id)->get();
+        $totalCount = $allTeacherAssets->count();
+        $workingCount = $allTeacherAssets->whereIn('approval_status', ['draft', 'working', null])->count();
+        $pendingCount = $allTeacherAssets->where('approval_status', 'pending_review')->count();
+        $approvedCount = $allTeacherAssets->where('approval_status', 'approved')->count();
+        $revisionCount = $allTeacherAssets->where('approval_status', 'revision_requested')->count();
+        $rejectedCount = $allTeacherAssets->where('approval_status', 'rejected')->count();
+
+        // Used in assessment count
+        $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')
+            ->merge(\DB::table('test_section_media')->pluck('media_asset_id'))
+            ->filter()->unique()->toArray();
+        $usedCount = $allTeacherAssets->whereIn('id', $usedMediaIds)->count();
+
+        $mediaAssets = $query->latest()->paginate(12)->withQueryString();
+
+        return view('teacher.my_media', compact(
+            'mediaAssets',
+            'totalCount',
+            'workingCount',
+            'pendingCount',
+            'approvedCount',
+            'revisionCount',
+            'rejectedCount',
+            'usedCount',
+            'usedMediaIds'
+        ));
+    }
+
+    /**
+     * Bulk Submit Selected Media to Institutional Repository for RM Review.
+     */
+    public function submitSelectedForReview(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('teacher') && !$user->hasRole('super-admin'))) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $mediaIds = $request->input('selected_media', []);
+        if (empty($mediaIds) || !is_array($mediaIds)) {
+            return redirect()->back()->with('error', 'Please select at least one media asset to submit.');
+        }
+
+        $assets = MediaAsset::whereIn('id', $mediaIds)
+            ->where('uploaded_by', $user->id)
+            ->whereIn('approval_status', ['draft', 'working', 'revision_requested', 'rejected', null])
+            ->get();
+
+        if ($assets->isEmpty()) {
+            return redirect()->back()->with('error', 'No eligible media assets found for repository submission.');
+        }
+
+        $submittedCount = 0;
+        foreach ($assets as $media) {
+            $media->update([
+                'approval_status' => 'pending_review',
+            ]);
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('repository_review_requests')) {
+                \App\Models\RepositoryReviewRequest::create([
+                    'resource_type' => 'MediaAsset',
+                    'resource_id'   => $media->id,
+                    'submitted_by'  => $user->id,
+                    'status'        => 'pending_review',
+                    'changes_data'  => [
+                        'media_type'   => $media->type,
+                        'new_title'    => $media->title ?? $media->original_name,
+                        'new_category' => $media->category ?? 'General Assets',
+                        'new_exam_type'=> $media->exam_type ?? 'general',
+                        'version'      => $media->version ?? '1.0',
+                        'submitted_at' => now()->toDateTimeString(),
+                        'author_name'  => $user->name,
+                        'old_data'     => [
+                            'title'       => $media->title,
+                            'category'    => $media->category,
+                            'exam_type'   => $media->exam_type,
+                            'description' => $media->description,
+                            'content_text'=> $media->content_text,
+                        ],
+                    ],
+                ]);
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('acl_audit_trails')) {
+                \App\Models\AclAuditTrail::create([
+                    'resource_type' => 'MediaAsset',
+                    'resource_id'   => $media->id,
+                    'action'        => 'media_submitted_for_review',
+                    'actor_id'      => $user->id,
+                    'created_by'    => $user->id,
+                    'version'       => ($media->version ?? '1.0') . '-candidate',
+                    'reason'        => 'Teacher submitted working media to Institutional Repository for RM review',
+                    'metadata'      => [
+                        'asset_name' => $media->title ?? $media->original_name,
+                        'role'       => 'Teacher',
+                        'status'     => 'pending_review',
+                    ],
+                ]);
+            }
+
+            $submittedCount++;
+        }
+
+        ActivityLogger::log('media_submitted_for_review', "Submitted {$submittedCount} media asset(s) to Institutional Repository for review", $user);
+
+        // Notify Repository Managers
+        $repoManagers = \App\Models\User::role('repository-manager')->get();
+        foreach ($repoManagers as $manager) {
+            if (method_exists($manager, 'notify')) {
+                try {
+                    $manager->notify(new \App\Notifications\EnterpriseSystemNotification(
+                        title: 'Media Submitted for Institutional Review',
+                        message: "Teacher {$user->name} submitted {$submittedCount} media asset(s) to Institutional Repository.",
+                        type: 'GOVERNANCE_SUBMISSION',
+                        priority: 'HIGH',
+                        entityType: 'MediaAsset',
+                        entityId: $assets->first()->id,
+                        targetUrl: route('admin.repository-manager.media-approval')
+                    ));
+                } catch (\Throwable $e) {
+                    // silent fallback
+                }
+            }
+        }
+
+        return redirect()->route('teacher.media.index')
+            ->with('status', "{$submittedCount} media asset(s) submitted to Institutional Repository for review.");
     }
 }

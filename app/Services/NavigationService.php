@@ -268,9 +268,18 @@ class NavigationService
 
                 [
                     'section' => 'Media',
-                    'label' => 'Media Library',
-                    'route' => 'admin.media.index',
+                    'label' => 'My Media',
+                    'route' => 'teacher.media.index',
                     'icon' => 'folder',
+                    'permission' => null,
+                    'active_pattern' => 'teacher/media*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Media',
+                    'label' => 'Institutional Media',
+                    'route' => 'admin.media.index',
+                    'icon' => 'library',
                     'permission' => null,
                     'active_pattern' => 'admin/media*',
                     'badge' => null,

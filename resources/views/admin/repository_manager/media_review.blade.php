@@ -15,6 +15,34 @@
 .diff-box.after { border-left:4px solid #10b981; }
 
 .diff-title { font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; margin-bottom:1rem; }
+
+/* Light Theme Overrides */
+html[data-theme="light"] .mr-card,
+.light .mr-card {
+    background: #ffffff;
+    border-color: #e2e8f0;
+}
+html[data-theme="light"] .diff-box,
+.light .diff-box {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+html[data-theme="light"] .mr-card h1,
+html[data-theme="light"] .mr-card h3,
+.light .mr-card h1,
+.light .mr-card h3 {
+    color: #0f172a !important;
+}
+html[data-theme="light"] .mr-card p,
+.light .mr-card p {
+    color: #64748b !important;
+}
+html[data-theme="light"] textarea,
+.light textarea {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
 </style>
 @endpush
 
@@ -23,27 +51,53 @@
 
     {{-- Header --}}
     <div>
-        <a href="{{ route('admin.repository-manager.media-approval') }}" style="color:#818cf8;font-size:.8rem;font-weight:700;text-decoration:none;">
-            ← Back
+        <a href="{{ route('admin.repository-manager.media-approval') }}" class="text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:underline inline-flex items-center gap-1">
+            ← Back to Media Approval Queue
         </a>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-top:.5rem;">
             <div>
-                <h1 style="font-size:1.5rem;font-weight:800;color:#fff;margin:0;">
-                    Review Revision Request #{{ substr($reviewRequest->id, 0, 12) }}
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                    Review Media Submission #{{ substr($reviewRequest->id, 0, 12) }}
                 </h1>
-                <p style="font-size:.82rem;color:#64748b;margin:.2rem 0 0;">
-                    Submitted by Teacher: <strong style="color:#e2e8f0;">{{ $reviewRequest->submitter?->name ?? 'Teacher' }}</strong> ({{ $reviewRequest->submitter?->email }}) • {{ $reviewRequest->created_at?->format('d M Y, H:i') }}
+                <p class="text-xs text-slate-500 mt-1">
+                    Submitted by Teacher: <strong class="text-slate-800 dark:text-slate-200">{{ $reviewRequest->submitter?->name ?? 'Teacher' }}</strong> ({{ $reviewRequest->submitter?->email }}) • {{ $reviewRequest->created_at?->format('d M Y, H:i') }}
                 </p>
             </div>
 
             <div style="display:flex;align-items:center;gap:.5rem;">
-                <span style="font-size:.78rem;font-weight:700;color:#94a3b8;">Status:</span>
+                <span class="text-xs font-bold text-slate-500">Status:</span>
                 <span style="padding:.25rem .7rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:99px;font-size:.75rem;font-weight:800;text-transform:uppercase;">
                     {{ $reviewRequest->status }}
                 </span>
             </div>
         </div>
     </div>
+
+    {{-- Media Asset Live Preview --}}
+    @if($media)
+    <div class="mr-card">
+        <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 .75rem;">🎬 Media File Preview</h3>
+        <div class="p-4 rounded-xl bg-slate-950/40 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
+            @if($media->type === 'image')
+                <img src="{{ $media->previewUrl() }}" alt="{{ $media->title }}" class="max-h-72 w-auto rounded-lg object-contain shadow">
+            @elseif($media->type === 'audio')
+                <div class="w-full max-w-md p-4 text-center space-y-2">
+                    <span class="text-4xl">🎵</span>
+                    <div class="text-xs font-bold text-slate-300">{{ $media->original_name }}</div>
+                    <audio controls class="w-full" src="{{ $media->previewUrl() }}"></audio>
+                </div>
+            @elseif($media->type === 'pdf')
+                <iframe src="{{ $media->previewUrl() }}" class="w-full h-80 rounded-lg border border-slate-700"></iframe>
+            @elseif($media->type === 'passage')
+                <div class="w-full p-4 rounded-lg bg-slate-900 text-xs font-mono text-slate-200 whitespace-pre-wrap">
+                    {{ $media->content_text ?? $media->description }}
+                </div>
+            @else
+                <div class="text-xs text-slate-400">Preview not available for this file type ({{ $media->type }}).</div>
+            @endif
+        </div>
+    </div>
+    @endif
 
     {{-- PART F: BEFORE vs AFTER DIFF COMPARISON --}}
     @php

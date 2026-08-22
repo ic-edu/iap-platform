@@ -104,6 +104,19 @@ class MediaAsset extends Model
             ->withTimestamps();
     }
 
+    public function reviewRequests(): HasMany
+    {
+        return $this->hasMany(RepositoryReviewRequest::class, 'resource_id')
+            ->where('resource_type', 'MediaAsset');
+    }
+
+    public function latestReviewRequest()
+    {
+        return $this->hasOne(RepositoryReviewRequest::class, 'resource_id')
+            ->where('resource_type', 'MediaAsset')
+            ->latestOfMany();
+    }
+
     // ──────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────
@@ -116,6 +129,44 @@ class MediaAsset extends Model
     public function isArchived(): bool
     {
         return $this->status === 'archived';
+    }
+
+    public function isInstitutional(): bool
+    {
+        return $this->approval_status === 'approved';
+    }
+
+    public function isWorking(): bool
+    {
+        return in_array($this->approval_status, ['draft', 'working', null]);
+    }
+
+    public function isPendingReview(): bool
+    {
+        return $this->approval_status === 'pending_review';
+    }
+
+    public function isRevisionRequested(): bool
+    {
+        return $this->approval_status === 'revision_requested';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->approval_status === 'rejected';
+    }
+
+    public function isUsedInAssessment(): bool
+    {
+        return \DB::table('questions')->where('media_asset_id', $this->id)->exists()
+            || \DB::table('test_section_media')->where('media_asset_id', $this->id)->exists();
+    }
+
+    public function assessmentUsageCount(): int
+    {
+        $qCount = \DB::table('questions')->where('media_asset_id', $this->id)->count();
+        $sCount = \DB::table('test_section_media')->where('media_asset_id', $this->id)->count();
+        return $qCount + $sCount;
     }
 
     public function hasPendingDeleteRequest(): bool

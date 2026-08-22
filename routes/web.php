@@ -131,6 +131,12 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.tests.sections.media.detach');
     Route::post('/teacher/assessments/{test}/resubmit', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'resubmit'])
         ->name('teacher.tests.resubmit');
+
+    // Teacher My Media Workspace
+    Route::get('/teacher/media', [MediaController::class, 'myMedia'])
+        ->name('teacher.media.index');
+    Route::post('/teacher/media/submit-selected', [MediaController::class, 'submitSelectedForReview'])
+        ->name('teacher.media.submit-selected');
 });
 
 // Finance Dedicated Landing Workspace
