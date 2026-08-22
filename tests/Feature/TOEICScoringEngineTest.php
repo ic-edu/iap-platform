@@ -531,4 +531,360 @@ class TOEICScoringEngineTest extends TestCase
         $evalMax = $this->engine->convertListeningScore(100) + $this->engine->convertReadingScore(100);
         $this->assertSame(990, $evalMax);
     }
+
+    /**
+     * 9. Mock Test with 150 Listening + 50 Reading (200 total) is NOT full TOEIC and does not scale to 990.
+     */
+    public function test_mock_test_with_150_listening_and_50_reading_is_not_full_toeic(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC Asymmetric Mock 150L 50R',
+            'slug' => 'toeic-asym-150-50-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score' => 100,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $listeningSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Listening Section',
+            'section_type' => SectionType::Listening,
+            'order' => 1,
+        ]);
+
+        $readingSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Reading Section',
+            'section_type' => SectionType::Reading,
+            'order' => 2,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'Asym Bank',
+            'slug' => 'asym-bank-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $attempt = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+
+        // 150 Listening questions
+        for ($i = 1; $i <= 150; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "L Q#{$i}",
+                'section' => SectionType::Listening,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $listeningSection->id, 'question_id' => $q->id, 'order' => $i]);
+            Answer::create(['attempt_id' => $attempt->id, 'question_id' => $q->id, 'selected_choice_id' => $c->id]);
+        }
+
+        // 50 Reading questions
+        for ($j = 1; $j <= 50; $j++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "R Q#{$j}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $j]);
+            Answer::create(['attempt_id' => $attempt->id, 'question_id' => $q->id, 'selected_choice_id' => $c->id]);
+        }
+
+        app(AttemptEngine::class)->submitAttempt($attempt);
+        $attempt->refresh();
+
+        $this->assertEquals(200.0, (float) $attempt->total_score);
+        $this->assertNotEquals(990.0, (float) $attempt->total_score);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertFalse($result['is_full_toeic']);
+        $this->assertTrue($result['is_practice']);
+        $this->assertEquals('Practice / Raw Score', $result['score_label']);
+    }
+
+    /**
+     * 10. Mock Test with 50 Listening + 150 Reading (200 total) is NOT full TOEIC and does not scale to 990.
+     */
+    public function test_mock_test_with_50_listening_and_150_reading_is_not_full_toeic(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC Asymmetric Mock 50L 150R',
+            'slug' => 'toeic-asym-50-150-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score' => 100,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $listeningSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Listening Section',
+            'section_type' => SectionType::Listening,
+            'order' => 1,
+        ]);
+
+        $readingSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Reading Section',
+            'section_type' => SectionType::Reading,
+            'order' => 2,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'Asym Bank 2',
+            'slug' => 'asym-bank-2-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $attempt = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+
+        // 50 Listening questions
+        for ($i = 1; $i <= 50; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "L Q#{$i}",
+                'section' => SectionType::Listening,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $listeningSection->id, 'question_id' => $q->id, 'order' => $i]);
+            Answer::create(['attempt_id' => $attempt->id, 'question_id' => $q->id, 'selected_choice_id' => $c->id]);
+        }
+
+        // 150 Reading questions
+        for ($j = 1; $j <= 150; $j++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "R Q#{$j}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $j]);
+            Answer::create(['attempt_id' => $attempt->id, 'question_id' => $q->id, 'selected_choice_id' => $c->id]);
+        }
+
+        app(AttemptEngine::class)->submitAttempt($attempt);
+        $attempt->refresh();
+
+        $this->assertEquals(200.0, (float) $attempt->total_score);
+        $this->assertNotEquals(990.0, (float) $attempt->total_score);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertFalse($result['is_full_toeic']);
+        $this->assertTrue($result['is_practice']);
+        $this->assertEquals('Practice / Raw Score', $result['score_label']);
+    }
+
+    /**
+     * 11. Mock Test with 200 Listening + 0 Reading is NOT full TOEIC.
+     */
+    public function test_mock_test_with_200_listening_and_0_reading_is_not_full_toeic(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC 200L 0R Mock',
+            'slug' => 'toeic-200l-0r-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score' => 100,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $listeningSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Listening Section Only',
+            'section_type' => SectionType::Listening,
+            'order' => 1,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'L200 Bank',
+            'slug' => 'l200-bank-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $attempt = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+
+        for ($i = 1; $i <= 200; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "L Q#{$i}",
+                'section' => SectionType::Listening,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $listeningSection->id, 'question_id' => $q->id, 'order' => $i]);
+            Answer::create(['attempt_id' => $attempt->id, 'question_id' => $q->id, 'selected_choice_id' => $c->id]);
+        }
+
+        app(AttemptEngine::class)->submitAttempt($attempt);
+        $attempt->refresh();
+
+        $this->assertEquals(200.0, (float) $attempt->total_score);
+        $this->assertNotEquals(990.0, (float) $attempt->total_score);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertFalse($result['is_full_toeic']);
+        $this->assertTrue($result['is_practice']);
+        $this->assertEquals('Practice / Raw Score', $result['score_label']);
+    }
+
+    /**
+     * 12. Mock Test with 0 Listening + 200 Reading is NOT full TOEIC.
+     */
+    public function test_mock_test_with_0_listening_and_200_reading_is_not_full_toeic(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC 0L 200R Mock',
+            'slug' => 'toeic-0l-200r-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score' => 100,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $readingSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Reading Section Only',
+            'section_type' => SectionType::Reading,
+            'order' => 1,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'R200 Bank',
+            'slug' => 'r200-bank-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $attempt = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+
+        for ($i = 1; $i <= 200; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "R Q#{$i}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $i]);
+            Answer::create(['attempt_id' => $attempt->id, 'question_id' => $q->id, 'selected_choice_id' => $c->id]);
+        }
+
+        app(AttemptEngine::class)->submitAttempt($attempt);
+        $attempt->refresh();
+
+        $this->assertEquals(200.0, (float) $attempt->total_score);
+        $this->assertNotEquals(990.0, (float) $attempt->total_score);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertFalse($result['is_full_toeic']);
+        $this->assertTrue($result['is_practice']);
+        $this->assertEquals('Practice / Raw Score', $result['score_label']);
+    }
+
+    /**
+     * 13. Simulator with 100 Listening + 100 Reading is STILL Practice Score.
+     */
+    public function test_simulator_with_100_listening_and_100_reading_is_still_practice_score(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC 200-Question Simulator',
+            'slug' => 'toeic-200-sim-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::Simulator,
+            'duration_minutes' => 120,
+            'pass_score' => 100,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $listeningSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Listening Section',
+            'section_type' => SectionType::Listening,
+            'order' => 1,
+        ]);
+
+        $readingSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Reading Section',
+            'section_type' => SectionType::Reading,
+            'order' => 2,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'Sim 200 Bank',
+            'slug' => 'sim-200-bank-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $attempt = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+
+        // 100 Listening questions
+        for ($i = 1; $i <= 100; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "L Sim Q#{$i}",
+                'section' => SectionType::Listening,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $listeningSection->id, 'question_id' => $q->id, 'order' => $i]);
+            Answer::create(['attempt_id' => $attempt->id, 'question_id' => $q->id, 'selected_choice_id' => $c->id]);
+        }
+
+        // 100 Reading questions
+        for ($j = 1; $j <= 100; $j++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "R Sim Q#{$j}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $c = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Correct', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $j]);
+            Answer::create(['attempt_id' => $attempt->id, 'question_id' => $q->id, 'selected_choice_id' => $c->id]);
+        }
+
+        app(AttemptEngine::class)->submitAttempt($attempt);
+        $attempt->refresh();
+
+        $this->assertEquals(200.0, (float) $attempt->total_score);
+        $this->assertNotEquals(990.0, (float) $attempt->total_score);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertFalse($result['is_full_toeic']);
+        $this->assertTrue($result['is_practice']);
+        $this->assertEquals('Practice Score', $result['score_label']);
+    }
 }

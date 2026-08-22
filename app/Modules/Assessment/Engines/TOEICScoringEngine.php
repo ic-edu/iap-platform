@@ -239,8 +239,10 @@ class TOEICScoringEngine
         $isMockTest = in_array($assessmentMode, ['mock_test', 'real_test'], true);
         $userFacingMode = $isMockTest ? 'mock_test' : 'simulator';
 
-        // A full institutional mock test requires Mock Test mode AND exactly 100 Listening + 100 Reading questions (200 total)
-        $isFullToeic = $isMockTest && (($listeningTotal === 100 && $readingTotal === 100) || ($totalQuestions === 200));
+        // A full institutional mock test strictly requires Mock Test mode AND exactly 100 Listening + 100 Reading questions
+        $isFullToeic = $isMockTest
+            && $listeningTotal === 100
+            && $readingTotal === 100;
 
         if ($isFullToeic) {
             $listeningScore = $this->convertListeningScore($listeningCorrect);
