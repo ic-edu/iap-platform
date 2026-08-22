@@ -276,16 +276,36 @@ html[data-theme="light"] header input:focus {
 html.light #notifications-bell-btn,
 html[data-theme="light"] #notifications-bell-btn {
     background-color: #ffffff !important;
-    border-color: var(--border) !important;
-    color: var(--text-secondary) !important;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light #notifications-bell-btn svg,
+html[data-theme="light"] #notifications-bell-btn svg,
+html.light #notifications-bell-btn svg path,
+html[data-theme="light"] #notifications-bell-btn svg path {
+    color: #334155 !important;
+    stroke: #334155 !important;
+    fill: none !important;
+    filter: none !important;
+    opacity: 1 !important;
 }
 
 html.light #notifications-bell-btn:hover,
 html[data-theme="light"] #notifications-bell-btn:hover {
     background-color: #f8fafc !important;
-    border-color: var(--border-strong) !important;
-    color: var(--text-primary) !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light #notifications-bell-btn:hover svg,
+html[data-theme="light"] #notifications-bell-btn:hover svg,
+html.light #notifications-bell-btn:hover svg path,
+html[data-theme="light"] #notifications-bell-btn:hover svg path {
+    color: #0f172a !important;
+    stroke: #0f172a !important;
 }
 
 html.light #candidate-profile-btn:hover,
@@ -631,8 +651,44 @@ html[data-theme="light"] .mac-pill.active *,
 html.light #iap-modal-confirm-btn *,
 html[data-theme="light"] #iap-modal-confirm-btn * {
     color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: currentColor !important;
+}
+
+/* Explicit SVG Icon rules inside primary accent buttons (Clean White Stroke Outline) */
+html.light a.bg-indigo-600:not(aside nav a) svg,
+html[data-theme="light"] a.bg-indigo-600:not(aside nav a) svg,
+html.light button.bg-indigo-600 svg,
+html[data-theme="light"] button.bg-indigo-600 svg,
+html.light a.btn-primary svg,
+html[data-theme="light"] a.btn-primary svg,
+html.light button.btn-primary svg,
+html[data-theme="light"] button.btn-primary svg,
+html.light .gov-btn-primary svg,
+html[data-theme="light"] .gov-btn-primary svg,
+html.light .exp-btn-open svg,
+html[data-theme="light"] .exp-btn-open svg,
+html.light header a.bg-indigo-600 svg,
+html[data-theme="light"] header a.bg-indigo-600 svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+    fill: none !important;
+}
+
+html.light a.bg-indigo-600:not(aside nav a) svg path,
+html[data-theme="light"] a.bg-indigo-600:not(aside nav a) svg path,
+html.light button.bg-indigo-600 svg path,
+html[data-theme="light"] button.bg-indigo-600 svg path,
+html.light a.btn-primary svg path,
+html[data-theme="light"] a.btn-primary svg path,
+html.light button.btn-primary svg path,
+html[data-theme="light"] button.btn-primary svg path,
+html.light .gov-btn-primary svg path,
+html[data-theme="light"] .gov-btn-primary svg path,
+html.light .exp-btn-open svg path,
+html[data-theme="light"] .exp-btn-open svg path,
+html.light header a.bg-indigo-600 svg path,
+html[data-theme="light"] header a.bg-indigo-600 svg path {
+    stroke: #ffffff !important;
+    fill: none !important;
 }
 
 html.light a.bg-indigo-600:not(aside *),
