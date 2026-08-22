@@ -57,6 +57,15 @@ html[data-theme="dark"] {
     --color-neutral: #94a3b8;
     --color-neutral-soft: rgba(148, 163, 184, 0.12);
     --color-neutral-border: rgba(148, 163, 184, 0.25);
+    --color-neutral-dark: #1e293b;
+    --color-neutral-dark-text: #ffffff;
+
+    --color-accent-on-solid: #ffffff;
+    --color-success-on-solid: #ffffff;
+    --color-warning-on-solid: #ffffff;
+    --color-danger-on-solid: #ffffff;
+    --color-on-accent: #ffffff;
+    --color-on-dark-surface: #ffffff;
 
     --input-bg: #020617;
     --input-border: #1e293b;
@@ -135,6 +144,15 @@ html[data-theme="light"] {
     --color-neutral: #475569;
     --color-neutral-soft: #eef2f6;
     --color-neutral-border: #d7dee8;
+    --color-neutral-dark: #374151;
+    --color-neutral-dark-text: #ffffff;
+
+    --color-accent-on-solid: #ffffff;
+    --color-success-on-solid: #ffffff;
+    --color-warning-on-solid: #ffffff;
+    --color-danger-on-solid: #ffffff;
+    --color-on-accent: #ffffff;
+    --color-on-dark-surface: #ffffff;
 
     --input-bg: #ffffff;
     --input-border: #cbd5e1;
@@ -534,7 +552,7 @@ html[data-theme="light"] .theme-switcher-btn.active {
     box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3) !important;
 }
 
-/* 10. Buttons & Actions (High-Contrast Text on Accent Surfaces) */
+/* 10. Buttons & Actions (High-Contrast White Text on Solid Accent Surfaces) */
 .btn-primary,
 .gov-btn-primary,
 .exp-btn-open {
@@ -543,8 +561,18 @@ html[data-theme="light"] .theme-switcher-btn.active {
     text-decoration: none;
 }
 
+html.light a.bg-indigo-600:not(aside nav a),
+html[data-theme="light"] a.bg-indigo-600:not(aside nav a),
+html.light a.bg-indigo-700:not(aside nav a),
+html[data-theme="light"] a.bg-indigo-700:not(aside nav a),
+html.light a.bg-purple-600:not(aside nav a),
+html[data-theme="light"] a.bg-purple-600:not(aside nav a),
 html.light button.bg-indigo-600,
 html[data-theme="light"] button.bg-indigo-600,
+html.light button.bg-indigo-700,
+html[data-theme="light"] button.bg-indigo-700,
+html.light button.bg-purple-600,
+html[data-theme="light"] button.bg-purple-600,
 html.light a.btn-primary,
 html[data-theme="light"] a.btn-primary,
 html.light button.btn-primary,
@@ -572,12 +600,22 @@ html[data-theme="light"] [style*="background: #4f46e5"]:not(aside *),
 html.light #iap-modal-confirm-btn,
 html[data-theme="light"] #iap-modal-confirm-btn {
     background-color: var(--accent) !important;
-    color: var(--text-on-accent) !important;
+    color: #ffffff !important;
 }
 
 /* Explicit rule for all child elements inside primary accent buttons (excluding sidebar nav) */
+html.light a.bg-indigo-600:not(aside nav a) *,
+html[data-theme="light"] a.bg-indigo-600:not(aside nav a) *,
+html.light a.bg-indigo-700:not(aside nav a) *,
+html[data-theme="light"] a.bg-indigo-700:not(aside nav a) *,
+html.light a.bg-purple-600:not(aside nav a) *,
+html[data-theme="light"] a.bg-purple-600:not(aside nav a) *,
 html.light button.bg-indigo-600 *,
 html[data-theme="light"] button.bg-indigo-600 *,
+html.light button.bg-indigo-700 *,
+html[data-theme="light"] button.bg-indigo-700 *,
+html.light button.bg-purple-600 *,
+html[data-theme="light"] button.bg-purple-600 *,
 html.light a.btn-primary *,
 html[data-theme="light"] a.btn-primary *,
 html.light button.btn-primary *,
@@ -592,8 +630,9 @@ html.light .mac-pill.active *,
 html[data-theme="light"] .mac-pill.active *,
 html.light #iap-modal-confirm-btn *,
 html[data-theme="light"] #iap-modal-confirm-btn * {
-    color: var(--text-on-accent) !important;
-    fill: currentColor !important;
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: currentColor !important;
 }
 
 html.light a.bg-indigo-600:not(aside *),
@@ -601,7 +640,9 @@ html[data-theme="light"] a.bg-indigo-600:not(aside *),
 html.light button.bg-indigo-600,
 html[data-theme="light"] button.bg-indigo-600,
 html.light .exp-btn-open,
-html[data-theme="light"] .exp-btn-open {
+html[data-theme="light"] .exp-btn-open,
+html.light .gov-btn-primary,
+html[data-theme="light"] .gov-btn-primary {
     box-shadow: 0 2px 8px rgba(79, 70, 229, 0.22) !important;
 }
 
@@ -611,10 +652,14 @@ html.light .hover\:bg-indigo-600:hover,
 html[data-theme="light"] .hover\:bg-indigo-600:hover,
 html.light button.bg-indigo-600:hover,
 html[data-theme="light"] button.bg-indigo-600:hover,
+html.light a.bg-indigo-600:hover:not(aside *),
+html[data-theme="light"] a.bg-indigo-600:hover:not(aside *),
 html.light .exp-btn-open:hover,
-html[data-theme="light"] .exp-btn-open:hover {
+html[data-theme="light"] .exp-btn-open:hover,
+html.light .gov-btn-primary:hover,
+html[data-theme="light"] .gov-btn-primary:hover {
     background-color: var(--accent-hover) !important;
-    color: var(--text-on-accent) !important;
+    color: #ffffff !important;
 }
 
 html.light .text-indigo-400,
@@ -651,10 +696,44 @@ html[data-theme="light"] .bg-sky-600 * {
     color: #ffffff !important;
 }
 
+/* Dark Media Badges & Dark Compact Labels (Audio Badges, Overlay Pills -> White Text) */
+html.light .bg-slate-900\/80,
+html[data-theme="light"] .bg-slate-900\/80,
+html.light .bg-slate-900\/80 *,
+html[data-theme="light"] .bg-slate-900\/80 *,
+html.light .bg-slate-900\/90,
+html[data-theme="light"] .bg-slate-900\/90,
+html.light .bg-slate-900\/90 *,
+html[data-theme="light"] .bg-slate-900\/90 *,
+html.light span.bg-slate-800,
+html[data-theme="light"] span.bg-slate-800,
+html.light span.bg-slate-800 *,
+html[data-theme="light"] span.bg-slate-800 *,
+html.light span.bg-slate-900,
+html[data-theme="light"] span.bg-slate-900,
+html.light span.bg-slate-900 *,
+html[data-theme="light"] span.bg-slate-900 *,
+html.light span.bg-gray-800,
+html[data-theme="light"] span.bg-gray-800,
+html.light span.bg-gray-800 *,
+html[data-theme="light"] span.bg-gray-800 *,
+html.light span.bg-gray-900,
+html[data-theme="light"] span.bg-gray-900,
+html.light span.bg-gray-900 *,
+html[data-theme="light"] span.bg-gray-900 *,
+html.light .badge-dark,
+html[data-theme="light"] .badge-dark,
+html.light .badge-dark *,
+html[data-theme="light"] .badge-dark * {
+    color: #ffffff !important;
+}
+
 /* 11. Status Badges & Muted Semantic Feedback (Calm, Non-Neon, Deep Contrast) */
-/* Success / Valid / Approved / Passed / Completed */
+/* Success / Valid / Approved / Passed / Completed / Published & Live */
 html.light .bg-emerald-500\/10,
 html[data-theme="light"] .bg-emerald-500\/10,
+html.light .bg-emerald-500\/15,
+html[data-theme="light"] .bg-emerald-500\/15,
 html.light .bg-emerald-500\/20,
 html[data-theme="light"] .bg-emerald-500\/20,
 html.light .bg-emerald-950\/30,
@@ -663,8 +742,14 @@ html.light .bg-emerald-950\/40,
 html[data-theme="light"] .bg-emerald-950\/40,
 html.light .bg-green-500\/10,
 html[data-theme="light"] .bg-green-500\/10,
+html.light .bg-green-500\/15,
+html[data-theme="light"] .bg-green-500\/15,
 html.light .bg-green-500\/20,
 html[data-theme="light"] .bg-green-500\/20,
+html.light .status-badge--published,
+html[data-theme="light"] .status-badge--published,
+html.light .rc-badge--published,
+html[data-theme="light"] .rc-badge--published,
 html.light [style*="background:rgba(52,211,153"],
 html[data-theme="light"] [style*="background:rgba(52,211,153"],
 html.light [style*="background: rgba(52, 211, 153"],
@@ -720,6 +805,8 @@ html[data-theme="light"] [style*="color: #4ade80"] {
 /* Warning & Amber (Pending Approval, Needs Review, Mock Test Payment Rule) */
 html.light .bg-amber-500\/10,
 html[data-theme="light"] .bg-amber-500\/10,
+html.light .bg-amber-500\/15,
+html[data-theme="light"] .bg-amber-500\/15,
 html.light .bg-amber-500\/20,
 html[data-theme="light"] .bg-amber-500\/20,
 html.light .bg-amber-950\/30,
@@ -728,8 +815,16 @@ html.light .bg-amber-950\/40,
 html[data-theme="light"] .bg-amber-950\/40,
 html.light .bg-yellow-500\/10,
 html[data-theme="light"] .bg-yellow-500\/10,
+html.light .bg-yellow-500\/15,
+html[data-theme="light"] .bg-yellow-500\/15,
 html.light .bg-yellow-500\/20,
 html[data-theme="light"] .bg-yellow-500\/20,
+html.light .bg-orange-500\/10,
+html[data-theme="light"] .bg-orange-500\/10,
+html.light .bg-orange-500\/15,
+html[data-theme="light"] .bg-orange-500\/15,
+html.light .bg-orange-500\/20,
+html[data-theme="light"] .bg-orange-500\/20,
 html.light .border-amber-500\/30,
 html[data-theme="light"] .border-amber-500\/30,
 html.light .border-amber-500\/20,
@@ -750,6 +845,8 @@ html[data-theme="light"] [style*="background: rgba(251, 191, 36"] {
 
 html.light .bg-amber-500\/10 *,
 html[data-theme="light"] .bg-amber-500\/10 *,
+html.light .bg-amber-500\/15 *,
+html[data-theme="light"] .bg-amber-500\/15 *,
 html.light .bg-amber-500\/20 *,
 html[data-theme="light"] .bg-amber-500\/20 *,
 html.light .border-amber-500\/30 *,
@@ -818,9 +915,11 @@ html[data-theme="light"] [style*="color: #fcd34d"] {
     color: #92400e !important;
 }
 
-/* Danger / Rose (Failed, Rejected, Deletions) */
+/* Danger / Rose (Failed, Completed & Failed, Rejected, Deletions) */
 html.light .bg-rose-500\/10,
 html[data-theme="light"] .bg-rose-500\/10,
+html.light .bg-rose-500\/15,
+html[data-theme="light"] .bg-rose-500\/15,
 html.light .bg-rose-500\/20,
 html[data-theme="light"] .bg-rose-500\/20,
 html.light .bg-rose-950\/30,
@@ -829,8 +928,14 @@ html.light .bg-rose-950\/40,
 html[data-theme="light"] .bg-rose-950\/40,
 html.light .bg-red-500\/10,
 html[data-theme="light"] .bg-red-500\/10,
+html.light .bg-red-500\/15,
+html[data-theme="light"] .bg-red-500\/15,
 html.light .bg-red-500\/20,
 html[data-theme="light"] .bg-red-500\/20,
+html.light .status-badge--rejected,
+html[data-theme="light"] .status-badge--rejected,
+html.light .status-badge--failed,
+html[data-theme="light"] .status-badge--failed,
 html.light [style*="background:rgba(244,63,94"],
 html[data-theme="light"] [style*="background:rgba(244,63,94"],
 html.light [style*="background: rgba(244, 63, 94"],
@@ -871,9 +976,40 @@ html[data-theme="light"] [style*="color: #f43f5e"] {
     color: #be123c !important;
 }
 
+/* Program Badges (TOEIC, TOEFL, IELTS, GENERAL) */
+html.light .imr-tag--toeic,
+html[data-theme="light"] .imr-tag--toeic {
+    background-color: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+    color: #047857 !important;
+}
+
+html.light .imr-tag--toefl,
+html[data-theme="light"] .imr-tag--toefl {
+    background-color: #eef2ff !important;
+    border: 1px solid #dbe0fc !important;
+    color: #4338ca !important;
+}
+
+html.light .imr-tag--ielts,
+html[data-theme="light"] .imr-tag--ielts {
+    background-color: #fff1f2 !important;
+    border: 1px solid #fecdd3 !important;
+    color: #be123c !important;
+}
+
+html.light .imr-tag--general,
+html[data-theme="light"] .imr-tag--general {
+    background-color: #eef2f6 !important;
+    border: 1px solid #d7dee8 !important;
+    color: #475569 !important;
+}
+
 /* Indigo Badges */
 html.light .bg-indigo-500\/10,
 html[data-theme="light"] .bg-indigo-500\/10,
+html.light .bg-indigo-500\/15,
+html[data-theme="light"] .bg-indigo-500\/15,
 html.light .bg-indigo-500\/20,
 html[data-theme="light"] .bg-indigo-500\/20,
 html.light .bg-indigo-950\/30,
@@ -907,12 +1043,16 @@ html[data-theme="light"] [style*="color: #a5b4fc"] {
 /* Sky / Info Badges (In Progress, Simulators, Audio) */
 html.light .bg-sky-500\/10,
 html[data-theme="light"] .bg-sky-500\/10,
+html.light .bg-sky-500\/15,
+html[data-theme="light"] .bg-sky-500\/15,
 html.light .bg-sky-500\/20,
 html[data-theme="light"] .bg-sky-500\/20,
 html.light .bg-sky-950\/30,
 html[data-theme="light"] .bg-sky-950\/30,
 html.light .bg-blue-500\/10,
 html[data-theme="light"] .bg-blue-500\/10,
+html.light .bg-blue-500\/15,
+html[data-theme="light"] .bg-blue-500\/15,
 html.light .bg-blue-500\/20,
 html[data-theme="light"] .bg-blue-500\/20,
 html.light [style*="background:rgba(56,189,248"],
