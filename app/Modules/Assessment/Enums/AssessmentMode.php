@@ -11,7 +11,7 @@ enum AssessmentMode: string
     {
         return match ($this) {
             self::Simulator => 'Test Simulator',
-            self::RealTest => 'Real Test',
+            self::RealTest => 'Mock Test',
         };
     }
 

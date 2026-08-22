@@ -123,14 +123,14 @@
                     {{ count($actionRequiredCandidates) }} Awaiting Assignment
                 </span>
             </div>
-            <span class="text-xs text-slate-400 font-medium">Real Test Payment Verification</span>
+            <span class="text-xs text-slate-400 font-medium">Mock Test Payment Verification</span>
         </div>
 
         @if(count($actionRequiredCandidates) === 0)
         <div class="py-3.5 px-4 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40 flex items-center justify-center gap-2 text-xs text-slate-400">
             <span class="text-base">🎉</span>
             <strong class="text-slate-300 font-semibold">All Clear:</strong>
-            <span>No paid candidates are currently waiting for Real Test assignment.</span>
+            <span>No paid candidates are currently waiting for Mock Test assignment.</span>
         </div>
         @else
         <div class="divide-y divide-slate-800/80">
@@ -147,7 +147,7 @@
                                 PAID
                             </span>
                             <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                                REAL TEST
+                                MOCK TEST
                             </span>
                         </div>
                         <p class="text-xs text-slate-400 mt-0.5">
@@ -160,7 +160,7 @@
                         @csrf
                         <input type="hidden" name="candidate_id" value="{{ $item['user']->id }}">
                         <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5">
-                            <span>✓ Assign Real Test</span>
+                            <span>✓ Assign Mock Test</span>
                         </button>
                     </form>
                 </div>

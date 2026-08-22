@@ -55,7 +55,7 @@
                     <span class="text-xs text-indigo-400 font-semibold uppercase tracking-wider">CBT Examination Session</span>
                     @if($isRealTest)
                         <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wide">
-                            SECURE REAL TEST
+                            SECURE MOCK TEST
                         </span>
                     @else
                         <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wide">
@@ -559,11 +559,11 @@
             const currentQId = questionIds[currentIndex];
 
             if (isRealTest) {
-                // Real Test: Mandatory answer before next
+                // Mock Test: Mandatory answer before next
                 if (!answeredQuestionIds.has(currentQId)) {
                     iapAlert({
                         title: 'Answer Required',
-                        message: 'For Real Test examination, you must select an answer before proceeding to the next question.',
+                        message: 'For Mock Test examination, you must select an answer before proceeding to the next question.',
                         variant: 'warning',
                         okText: 'Understood'
                     });
@@ -597,11 +597,11 @@
         // Mode-Aware Palette Click Handler
         function handlePaletteClick(targetIdx) {
             if (isRealTest) {
-                // Real Test: cannot jump forward over unanswered current question
+                // Mock Test: cannot jump forward over unanswered current question
                 if (currentQuestionIdx >= 0 && targetIdx > currentQuestionIdx && !answeredQuestionIds.has(questionIds[currentQuestionIdx])) {
                     iapAlert({
                         title: 'Answer Current Question First',
-                        message: 'You must answer the current question before moving forward in Real Test mode.',
+                        message: 'You must answer the current question before moving forward in Mock Test mode.',
                         variant: 'warning',
                         okText: 'Understood'
                     });

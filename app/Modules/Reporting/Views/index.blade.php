@@ -70,7 +70,7 @@
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
                 <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Paid / Eligible</span>
                 <span class="text-2xl font-black text-emerald-400 mt-1 block">{{ number_format($paidEligibleCandidates) }}</span>
-                <span class="text-[10px] text-slate-500 mt-0.5 block">Real Test verified</span>
+                <span class="text-[10px] text-slate-500 mt-0.5 block">Mock Test verified</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
@@ -97,11 +97,11 @@
                 <span class="text-lg font-bold text-emerald-400 mt-0.5 block">{{ number_format($publishedTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Simulator Tests</span>
+                <span class="text-[10px] font-semibold text-slate-400 block">Test Simulators</span>
                 <span class="text-lg font-bold text-amber-400 mt-0.5 block">{{ number_format($simulatorTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Real Tests</span>
+                <span class="text-[10px] font-semibold text-slate-400 block">Mock Tests</span>
                 <span class="text-lg font-bold text-rose-400 mt-0.5 block">{{ number_format($realTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
@@ -147,7 +147,7 @@
         {{-- Chart 3: Assessment Mode Breakdown --}}
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1 flex items-center justify-between">
-                <span>🛡️ Mode: Simulator vs Real Test</span>
+                <span>🛡️ Mode: Test Simulator vs Mock Test</span>
             </h3>
             <p class="text-[11px] text-slate-500 mb-4">Attempts distributed by assessment mode</p>
             <div class="relative h-48 flex items-center justify-center">
@@ -163,33 +163,26 @@
         {{-- Popular Assessments by Attempts --}}
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
-                🏆 Most Active Assessments
+                🔥 Top Assessments by Attempt Volume
             </h3>
-            @if($popularAssessments->isEmpty())
-            <div class="py-8 text-center border border-dashed border-slate-800 rounded-lg">
-                <p class="text-xs text-slate-500">No assessment attempts recorded yet.</p>
-            </div>
-            @else
-            <div class="space-y-3">
-                @foreach($popularAssessments as $t)
-                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between gap-3">
+            <div class="divide-y divide-slate-800/80">
+                @forelse($popularAssessments as $t)
+                <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
                     <div class="min-w-0">
-                        <p class="text-xs font-bold text-white truncate">{{ $t->title }}</p>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $t->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
-                                {{ $t->assessment_mode?->label() ?? 'Assessment' }}
-                            </span>
-                            <span class="text-[10px] text-slate-400 font-mono">{{ $t->test_type->label() }}</span>
-                        </div>
+                        <span class="font-bold text-white block truncate">{{ $t->title }}</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">{{ is_object($t->test_type) ? $t->test_type->label() : $t->test_type }}</span>
                     </div>
-                    <div class="text-right flex-shrink-0">
-                        <span class="text-sm font-black text-white">{{ number_format($t->attempts_count) }}</span>
-                        <span class="text-[10px] text-slate-500 block">attempt(s)</span>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $t->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                            {{ $t->assessment_mode?->label() ?? 'Assessment' }}
+                        </span>
+                        <span class="font-black text-indigo-400">{{ number_format($t->attempts_count) }} attempts</span>
                     </div>
                 </div>
-                @endforeach
+                @empty
+                <p class="text-xs text-slate-500 py-4 text-center">No assessment attempt data yet.</p>
+                @endforelse
             </div>
-            @endif
         </div>
 
         {{-- Candidate Lifecycle Status --}}
@@ -226,7 +219,6 @@
         </div>
 
     </div>
-
 </div>
 
 {{-- Chart.js Scripts --}}
@@ -235,20 +227,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof Chart === 'undefined') return;
 
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light' || document.documentElement.classList.contains('light');
-
-    const trendBorder = isLight ? '#5b5ce2' : '#6366f1';
-    const trendBg = isLight ? 'rgba(91, 92, 226, 0.08)' : 'rgba(99, 102, 241, 0.15)';
-    const trendPoint = isLight ? '#5b5ce2' : '#818cf8';
-    const gridColor = isLight ? 'rgba(226, 232, 240, 0.8)' : 'rgba(51, 65, 85, 0.3)';
-    const tickColor = isLight ? '#64748b' : '#94a3b8';
-    const legendColor = isLight ? '#475569' : '#cbd5e1';
-    const passColor = isLight ? '#059669' : '#10b981';
-    const failColor = isLight ? '#e11d48' : '#f43f5e';
-    const simColor = isLight ? '#d97706' : '#f59e0b';
-    const emptyColor = isLight ? '#e2e8f0' : '#334155';
-    const doughnutBorder = isLight ? '#ffffff' : '#0f172a';
-    const doughnutBorderWidth = isLight ? 2 : 0;
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#94a3b8' : '#475569';
+    const gridColor = isDark ? 'rgba(51, 65, 85, 0.4)' : 'rgba(226, 232, 240, 0.8)';
+    const passColor = '#10b981';
+    const failColor = '#f43f5e';
+    const simColor = '#f59e0b';
+    const emptyColor = isDark ? '#334155' : '#cbd5e1';
+    const doughnutBorder = isDark ? '#0f172a' : '#ffffff';
+    const doughnutBorderWidth = 3;
+    const legendColor = isDark ? '#cbd5e1' : '#1e293b';
 
     // 1. Activity Trend (Line Chart)
     const ctxTrend = document.getElementById('chartActivityTrend');
@@ -260,11 +248,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Attempts',
                     data: @json($activityTrend['data']),
-                    borderColor: trendBorder,
-                    backgroundColor: trendBg,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 2.5,
                     fill: true,
-                    tension: 0.3,
-                    pointBackgroundColor: trendPoint,
+                    tension: 0.35,
+                    pointBackgroundColor: '#6366f1',
                     pointRadius: 3
                 }]
             },
@@ -273,8 +262,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } },
-                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 }, stepSize: 1 } }
+                    x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } },
+                    y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 }, stepSize: 1 } }
                 }
             }
         });
@@ -309,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 3. Simulator vs Real Test (Pie/Doughnut Chart)
+    // 3. Test Simulator vs Mock Test (Pie/Doughnut Chart)
     const ctxMode = document.getElementById('chartModeBreakdown');
     if (ctxMode) {
         const simCount = {{ $simulatorAttemptsCount }};
@@ -319,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxMode, {
             type: 'doughnut',
             data: {
-                labels: hasModeData ? ['Simulator', 'Real Test'] : ['No Data'],
+                labels: hasModeData ? ['Test Simulator', 'Mock Test'] : ['No Data'],
                 datasets: [{
                     data: hasModeData ? [simCount, realCount] : [1],
                     backgroundColor: hasModeData ? [simColor, failColor] : [emptyColor],

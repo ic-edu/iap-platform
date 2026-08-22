@@ -114,7 +114,7 @@
                         </td>
                         <td class="px-5 py-4">
                             <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider {{ $isReal ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
-                                {{ $isReal ? '🛡️ Real Test' : '🎯 Simulator' }}
+                                {{ $isReal ? '🛡️ Mock Test' : '🎯 Test Simulator' }}
                             </span>
                         </td>
                         <td class="px-5 py-4">

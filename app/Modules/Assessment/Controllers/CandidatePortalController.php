@@ -129,7 +129,7 @@ class CandidatePortalController extends Controller
         $user = $request->user();
         $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
         if (!$assignmentEngine->isEligibleToStart($test, $user)) {
-            abort(403, "Unauthorized access. Real Test '{$test->title}' requires an active paid assignment.");
+            abort(403, "Unauthorized access. Mock Test '{$test->title}' requires an active paid assignment.");
         }
 
         $test->loadMissing('sections.testQuestions');
@@ -154,7 +154,7 @@ class CandidatePortalController extends Controller
         // Eligibility check for Real Tests
         $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
         if (!$assignmentEngine->isEligibleToStart($test, $user)) {
-            abort(403, "Unauthorized access. Real Test '{$test->title}' requires a confirmed paid assignment before you can start.");
+            abort(403, "Unauthorized access. Mock Test '{$test->title}' requires a confirmed paid assignment before you can start.");
         }
 
         $attempt = $this->engine->startAttempt($test, $user);

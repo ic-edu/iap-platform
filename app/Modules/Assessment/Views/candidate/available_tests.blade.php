@@ -17,11 +17,11 @@
                         </span>
                         @if($isRealTest)
                             <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wide">
-                                Real Test (Assigned)
+                                Mock Test (Assigned)
                             </span>
                         @else
                             <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wide">
-                                Simulator
+                                Test Simulator
                             </span>
                         @endif
                     </div>

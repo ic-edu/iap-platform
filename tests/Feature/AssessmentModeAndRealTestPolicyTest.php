@@ -144,7 +144,7 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
 
         $this->assertTrue($this->realTest->isRealTest());
         $this->assertFalse($this->realTest->isSimulator());
-        $this->assertSame('Real Test', $this->realTest->assessment_mode->label());
+        $this->assertSame('Mock Test', $this->realTest->assessment_mode->label());
     }
 
     /**
@@ -215,7 +215,7 @@ class AssessmentModeAndRealTestPolicyTest extends TestCase
 
         $examView = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
         $examView->assertStatus(200);
-        $examView->assertSee('SECURE REAL TEST');
+        $examView->assertSee('SECURE MOCK TEST');
         $examView->assertDontSee('Previous (P)');
     }
 

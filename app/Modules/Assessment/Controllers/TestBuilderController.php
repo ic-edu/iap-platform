@@ -143,7 +143,7 @@ class TestBuilderController extends Controller
         $mode = $validated['assessment_mode'] ?? 'simulator';
 
         if ($mode === 'real_test' && (!$user || (!$user->hasRole('repository-manager') && !$user->hasRole('super-admin')))) {
-            abort(403, 'Real Test assessments must originate from Repository Manager intake.');
+            abort(403, 'Mock Test assessments must originate from Repository Manager intake.');
         }
 
         $test = Test::create([

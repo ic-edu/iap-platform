@@ -303,7 +303,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $showResponse->assertViewIs('assessment::admin_show');
         $showResponse->assertSee('Assessment Assignment &amp; Candidates', false);
         $showResponse->assertSee('Assign Candidate');
-        $showResponse->assertSee('Real Test Payment Rule');
+        $showResponse->assertSee('Mock Test Payment Rule');
         $showResponse->assertDontSee('Add Question');
         $showResponse->assertDontSee('Add Section');
         $showResponse->assertDontSee('Submit for Approval');
@@ -339,7 +339,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $response->assertSee('Candidates Requiring Action');
         $response->assertSee('Student Ken');
         $response->assertSee('TOEIC Real Exam 01');
-        $response->assertSee('Assign Real Test');
+        $response->assertSee('Assign Mock Test');
 
         // Admin triggers explicit assignment
         $assignResponse = $this->actingAs($this->admin)->post(route('admin.tests.assign-candidate', $this->realTest), [
@@ -515,7 +515,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
 
         // Compact empty state when 0 action candidates
         $response->assertSee('All Clear:');
-        $response->assertSee('No paid candidates are currently waiting for Real Test assignment.');
+        $response->assertSee('No paid candidates are currently waiting for Mock Test assignment.');
 
         // Topbar has Dashboard button for Regular Admin instead of + Quick Action
         $response->assertSee('title="Operational Dashboard"', false);

@@ -14,7 +14,7 @@
                 </a>
                 <span class="text-slate-600">/</span>
                 <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider {{ $test->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
-                    {{ $test->isRealTest() ? '🛡️ Real Test' : '🎯 Simulator' }}
+                    {{ $test->isRealTest() ? '🛡️ Mock Test' : '🎯 Test Simulator' }}
                 </span>
             </div>
             <h1 class="text-2xl font-black text-white tracking-tight">{{ $test->title }}</h1>
@@ -71,9 +71,9 @@
             @if($test->isRealTest())
             <div class="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs mb-4 space-y-1">
                 <p class="font-bold flex items-center gap-1.5">
-                    <span>🛡️</span> Real Test Payment Rule
+                    <span>🛡️</span> Mock Test Payment Rule
                 </p>
-                <p class="text-amber-200/80">Candidates must have a confirmed <strong>PAID</strong> transaction for this Real Test before assignment can be authorized.</p>
+                <p class="text-amber-200/80">Candidates must have a confirmed <strong>PAID</strong> transaction for this Mock Test before assignment can be authorized.</p>
             </div>
             @endif
 

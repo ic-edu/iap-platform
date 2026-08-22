@@ -50,6 +50,15 @@
                     <span>📋</span> Examination Guidelines &amp; Directions
                 </h2>
 
+                @if($test->isRealTest())
+                <div class="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 text-xs sm:text-sm flex items-center gap-3">
+                    <span class="text-lg flex-shrink-0">🛡️</span>
+                    <p class="leading-relaxed">
+                        <strong>Institutional Notice:</strong> This is an institutional mock test. It is not an official third-party examination.
+                    </p>
+                </div>
+                @endif
+
                 <div class="p-5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-line">
                     {{ $test->instructions }}
                 </div>

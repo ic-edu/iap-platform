@@ -70,7 +70,7 @@ class AssignmentEngine
     ): CandidateTestAssignment {
         // For Real Test: Validate paid payment transaction
         if ($test->isRealTest() && !$this->isPaymentEligible($test, $user, $payment, $order)) {
-            throw new InvalidArgumentException("Real Test '{$test->title}' requires a confirmed PAID transaction before candidate assignment.");
+            throw new InvalidArgumentException("Mock Test '{$test->title}' requires a confirmed PAID transaction before candidate assignment.");
         }
 
         $assignment = CandidateTestAssignment::updateOrCreate(
