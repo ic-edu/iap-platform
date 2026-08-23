@@ -68,6 +68,19 @@ class AssignmentEngine
         ?Payment $payment = null,
         ?Order $order = null
     ): CandidateTestAssignment {
+        // Validate user is eligible as candidate (reject staff accounts)
+        if ($user->hasRole(['teacher', 'repository-manager', 'super-admin', 'finance'])) {
+            throw new InvalidArgumentException("User '{$user->name}' does not have a candidate role.");
+        }
+
+        // For Real Test / Mock Test: Validate published state
+        if ($test->isRealTest()) {
+            $isPublished = $test->is_published || in_array($test->status, ['published', 'approved']);
+            if (!$isPublished || in_array($test->status, ['draft', 'pending', 'pending_approval', 'needs_revision'])) {
+                throw new InvalidArgumentException("Cannot assign unpublished Mock Test '{$test->title}'. Assessment must be approved and published first.");
+            }
+        }
+
         // For Real Test: Validate paid payment transaction
         if ($test->isRealTest() && !$this->isPaymentEligible($test, $user, $payment, $order)) {
             throw new InvalidArgumentException("Mock Test '{$test->title}' requires a confirmed PAID transaction before candidate assignment.");

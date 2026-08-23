@@ -7,6 +7,7 @@ use App\Models\AssessmentRequest;
 use App\Models\User;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
+use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Notifications\EnterpriseSystemNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class AssessmentRequestController extends Controller
         $user = $request->user();
         $isRm = $user && $user->hasRole('repository-manager');
 
-        $query = AssessmentRequest::with(['requester', 'test.assignedTeacher']);
+        $query = AssessmentRequest::with(['requester', 'candidate', 'test.assignedTeacher']);
 
         if (!$isRm && $user && !$user->hasRole('super-admin')) {
             $query->where('requested_by', $user->id);
@@ -32,7 +33,14 @@ class AssessmentRequestController extends Controller
         $requests = $query->latest()->paginate(15);
         $teachers = User::role('teacher')->where('status', 'active')->get();
 
-        return view('admin.assessment_requests.index', compact('requests', 'teachers', 'isRm'));
+        // Query eligible paid candidates for RA request form
+        $eligibleCandidates = User::role('student')
+            ->where('status', 'active')
+            ->whereHas('orders.invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]))
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.assessment_requests.index', compact('requests', 'teachers', 'eligibleCandidates', 'isRm'));
     }
 
     /**
@@ -49,15 +57,54 @@ class AssessmentRequestController extends Controller
         $validated = $request->validate([
             'title'              => ['required', 'string', 'max:255'],
             'test_type'          => ['required', 'string', 'in:toeic,toefl,ielts,general'],
+            'candidate_id'       => ['nullable', 'exists:users,id'],
             'program_context'    => ['nullable', 'string', 'max:255'],
             'required_sections'  => ['nullable', 'string'],
             'notes'              => ['nullable', 'string'],
             'requested_deadline' => ['nullable', 'date'],
         ]);
 
+        $candidateId = $validated['candidate_id'] ?? null;
+
+        // Server-Side Enforcement: Verify Candidate Eligibility if candidate_id is provided
+        if ($candidateId) {
+            $candidate = User::findOrFail($candidateId);
+
+            if (!$candidate->hasRole('student')) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "User '{$candidate->name}' is not a registered candidate.");
+            }
+
+            $isPaidEligible = User::where('id', $candidate->id)
+                ->whereHas('orders.invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]))
+                ->exists();
+
+            if (!$isPaidEligible) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Candidate '{$candidate->name}' is not Paid Eligible. Special Mock Test requests require a confirmed paid transaction.");
+            }
+        }
+
+        // Duplicate Request Guard: Prevent duplicate pending brief for the same requirement & candidate
+        $duplicateQuery = AssessmentRequest::where('status', 'pending')
+            ->where('test_type', $validated['test_type'])
+            ->where('title', $validated['title']);
+
+        if ($candidateId) {
+            $duplicateQuery->where('candidate_id', $candidateId);
+        }
+
+        if ($duplicateQuery->exists()) {
+            return redirect()->route('admin.assessment-requests.index')
+                ->with('error', "A pending assessment request '{$validated['title']}' for this requirement already exists in the intake queue.");
+        }
+
         $assessmentRequest = AssessmentRequest::create([
             'title'              => $validated['title'],
             'test_type'          => $validated['test_type'],
+            'candidate_id'       => $candidateId,
             'program_context'    => $validated['program_context'] ?? null,
             'required_sections'  => $validated['required_sections'] ?? null,
             'notes'              => $validated['notes'] ?? null,

@@ -115,6 +115,35 @@
             </div>
             @endif
 
+            {{-- Candidate / Institutional Requirement Brief --}}
+            @if($test->assessmentRequest)
+            <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.3);border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+                    <div style="font-size:.78rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:.4rem;">
+                        📋 Institutional Requirement Brief
+                    </div>
+                    @if($test->assessmentRequest->candidate)
+                    <span style="font-size:.75rem;font-weight:700;color:#38bdf8;background:rgba(56,189,248,.12);padding:.2rem .6rem;border-radius:99px;border:1px solid rgba(56,189,248,.3);">
+                        Candidate: {{ $test->assessmentRequest->candidate->name }}
+                    </span>
+                    @endif
+                </div>
+                <div style="font-size:.88rem;color:#0f172a;font-weight:700;margin-bottom:.25rem;">
+                    {{ $test->assessmentRequest->title }}
+                </div>
+                @if($test->assessmentRequest->program_context)
+                <div style="font-size:.78rem;color:#4f46e5;margin-bottom:.35rem;font-weight:600;">
+                    🎯 Program / Context: {{ $test->assessmentRequest->program_context }}
+                </div>
+                @endif
+                @if($test->assessmentRequest->notes)
+                <div style="font-size:.78rem;color:#64748b;line-height:1.5;">
+                    {{ $test->assessmentRequest->notes }}
+                </div>
+                @endif
+            </div>
+            @endif
+
             {{-- Assessment Metadata Editor (TASK 1) --}}
             <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
                 <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;display:flex;align-items:center;gap:.5rem;">

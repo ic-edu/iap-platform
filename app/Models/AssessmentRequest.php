@@ -23,6 +23,7 @@ class AssessmentRequest extends Model
         'notes',
         'requested_deadline',
         'requested_by',
+        'candidate_id',
         'status',
         'test_id',
     ];
@@ -37,6 +38,11 @@ class AssessmentRequest extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function candidate(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'candidate_id');
     }
 
     public function test(): BelongsTo

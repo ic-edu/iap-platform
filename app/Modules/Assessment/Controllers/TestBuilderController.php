@@ -71,9 +71,61 @@ class TestBuilderController extends Controller
 
         $tests = $query->latest('updated_at')->paginate(10)->withQueryString();
 
-        // Regular Admin Operational View: Render Assessment Assignment & Operations workspace
+        // Regular Admin Operational View: Render Assessment Assignment & Operations workspace with catalog separation
         if ($user && $user->hasRole('admin') && !$user->hasRole(['teacher', 'repository-manager'])) {
-            return view('assessment::admin_operations', compact('tests'));
+            $rawTab = $request->input('tab', $request->input('mode', 'mock_tests'));
+            $tab = in_array($rawTab, ['simulators', 'simulator']) ? 'simulators' : 'mock_tests';
+
+            $adminQuery = Test::with(['sections.testQuestions', 'creator']);
+
+            if ($search = $request->input('search')) {
+                $adminQuery->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('test_type', 'like', "%{$search}%");
+                });
+            }
+
+            if ($type = $request->input('type')) {
+                $adminQuery->where('test_type', $type);
+            }
+
+            if ($filter = $request->input('filter')) {
+                if ($filter === 'active-assignments' || $filter === 'active') {
+                    $adminQuery->whereHas('assignments', function ($aq) {
+                        $aq->where('status', 'active');
+                    });
+                }
+            }
+
+            $countBase = clone $adminQuery;
+            $mockTestsCount = (clone $countBase)
+                ->where('assessment_mode', 'real_test')
+                ->where(function ($q) {
+                    $q->where('status', 'published')
+                      ->orWhere('status', 'approved')
+                      ->orWhere('is_published', true);
+                })
+                ->count();
+
+            $simulatorsCount = (clone $countBase)
+                ->where('assessment_mode', 'simulator')
+                ->count();
+
+            if ($tab === 'simulators') {
+                $adminQuery->where('assessment_mode', 'simulator');
+            } else {
+                // Mock Tests: Strictly assessment_mode = real_test and published/approved live
+                $adminQuery->where('assessment_mode', 'real_test')
+                    ->where(function ($q) {
+                        $q->where('status', 'published')
+                          ->orWhere('status', 'approved')
+                          ->orWhere('is_published', true);
+                    });
+            }
+
+            $tests = $adminQuery->latest('updated_at')->paginate(10)->withQueryString();
+
+            return view('assessment::admin_operations', compact('tests', 'tab', 'mockTestsCount', 'simulatorsCount'));
         }
 
         // Calculate workspace KPI statistics for Teacher (Section 2 & 7)

@@ -65,6 +65,11 @@
                             <div class="font-bold text-slate-900 dark:text-white text-xs mb-0.5">
                                 {{ $req->title }}
                             </div>
+                            @if($req->candidate)
+                            <div class="text-[11px] text-emerald-600 dark:text-emerald-400 mb-0.5 font-semibold flex items-center gap-1">
+                                <span>👤 Target Candidate:</span> <span class="font-bold">{{ $req->candidate->name }}</span>
+                            </div>
+                            @endif
                             @if($req->program_context)
                             <div class="text-[11px] text-indigo-600 dark:text-indigo-400 mb-0.5 font-semibold">
                                 🎯 Context: {{ $req->program_context }}
@@ -172,6 +177,16 @@
                     <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Target Deadline (Optional)</label>
                     <input type="date" name="requested_deadline" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
                 </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Target Candidate (Optional / Paid Candidate Requirement)</label>
+                <select name="candidate_id" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
+                    <option value="">-- General / Unassigned Institutional Requirement --</option>
+                    @foreach($eligibleCandidates ?? [] as $cand)
+                    <option value="{{ $cand->id }}">{{ $cand->name }} ({{ $cand->email }}) — Paid Eligible</option>
+                    @endforeach
+                </select>
             </div>
 
             <div>

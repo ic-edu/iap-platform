@@ -289,9 +289,16 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewIs('assessment::admin_operations');
         $response->assertSee('Assessment Assignment &amp; Operations', false);
-        $response->assertSee('TOEIC Simulator 01');
+        $response->assertSee('Published Mock Tests');
+        $response->assertSee('Practice Simulators');
         $response->assertSee('TOEIC Real Exam 01');
         $response->assertSee('Manage Assignments');
+
+        // Simulators tab shows simulator assessments
+        $simResponse = $this->actingAs($this->admin)->get(route('admin.tests.index', ['tab' => 'simulators']));
+        $simResponse->assertStatus(200);
+        $simResponse->assertSee('TOEIC Simulator 01');
+        $simResponse->assertDontSee('TOEIC Real Exam 01');
 
         // Authoring controls must be absent
         $response->assertDontSee('+ New Assessment');

@@ -16,11 +16,14 @@
             <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Assessment Assignment &amp; Operations</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">Institutional Assessment Catalog, Candidate Assignment Management &amp; Eligibility Verification</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
             <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors">
                 &larr; Operational Dashboard
             </a>
-            <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors shadow-lg shadow-indigo-600/20">
+            <a href="{{ route('admin.assessment-requests.index') }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-bold border border-indigo-500/30 transition-colors">
+                📋 Special Mock Test Request
+            </a>
+            <a href="{{ route('admin.users.index', ['role' => 'student']) }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors shadow-lg shadow-indigo-600/20">
                 👥 Candidate Directory
             </a>
         </div>
@@ -38,8 +41,32 @@
     </div>
     @endif
 
+    {{-- Catalog Navigation Tabs --}}
+    @php
+        $currentTab = $tab ?? 'mock_tests';
+    @endphp
+    <div class="flex items-center gap-3 border-b border-slate-800 pb-2">
+        <a href="{{ route('admin.tests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'mock_tests'])) }}"
+           class="px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all {{ $currentTab === 'mock_tests' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-slate-800' }}">
+            <span>🛡️</span>
+            <span>Published Mock Tests</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] {{ $currentTab === 'mock_tests' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400' }}">
+                {{ $mockTestsCount ?? 0 }}
+            </span>
+        </a>
+        <a href="{{ route('admin.tests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'simulators'])) }}"
+           class="px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all {{ $currentTab === 'simulators' ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/20' : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-slate-800' }}">
+            <span>🎯</span>
+            <span>Practice Simulators</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] {{ $currentTab === 'simulators' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400' }}">
+                {{ $simulatorsCount ?? 0 }}
+            </span>
+        </a>
+    </div>
+
     {{-- Filter & Search Bar --}}
     <form method="GET" action="{{ route('admin.tests.index') }}" class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+        <input type="hidden" name="tab" value="{{ $currentTab }}">
         <div class="flex items-center gap-3 flex-1 min-w-[280px]">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by Assessment Title..." class="w-full bg-slate-900 text-slate-200 text-sm rounded-lg border border-slate-800 px-3.5 py-2 focus:outline-none focus:border-indigo-500 transition-colors" />
         </div>
@@ -51,16 +78,19 @@
                 <option value="ielts" {{ request('type') === 'ielts' ? 'selected' : '' }}>IELTS</option>
                 <option value="general" {{ request('type') === 'general' ? 'selected' : '' }}>General English</option>
             </select>
+            @if($currentTab === 'simulators')
             <select name="status" onchange="this.form.submit()" class="bg-slate-900 text-slate-200 text-xs font-semibold rounded-lg border border-slate-800 px-3 py-2 focus:outline-none focus:border-indigo-500">
                 <option value="">All Statuses</option>
                 <option value="published" {{ request('status') === 'published' ? 'selected' : '' }}>Published Live</option>
                 <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
+                <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
             </select>
+            @endif
             <button type="submit" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors">
                 Filter
             </button>
             @if(request()->hasAny(['search', 'type', 'status', 'filter']))
-            <a href="{{ route('admin.tests.index') }}" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/20 transition-colors">
+            <a href="{{ route('admin.tests.index', ['tab' => $currentTab]) }}" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/20 transition-colors">
                 Reset
             </a>
             @endif
@@ -73,7 +103,7 @@
             <span>🎯</span>
             <span>Filtered: <strong>Assessments with Active Candidate Assignments</strong></span>
         </span>
-        <a href="{{ route('admin.tests.index') }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition-colors">
+        <a href="{{ route('admin.tests.index', ['tab' => $currentTab]) }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition-colors">
             Clear Filter ✕
         </a>
     </div>
@@ -82,8 +112,12 @@
     {{-- Assessments Table --}}
     <div class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-xl overflow-hidden">
         <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Assessment Catalog ({{ $tests->total() }})</h2>
-            <span class="text-xs text-slate-400">Institutional Approved &amp; Live Assessments</span>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">
+                {{ $currentTab === 'mock_tests' ? '🛡️ Published Mock Test Catalog' : '🎯 Practice Simulator Catalog' }} ({{ $tests->total() }})
+            </h2>
+            <span class="text-xs text-slate-400">
+                {{ $currentTab === 'mock_tests' ? 'Institutional Live Mock Tests (Assignable to Paid Candidates)' : 'Autonomous Diagnostic & Practice Simulators' }}
+            </span>
         </div>
 
         <div class="overflow-x-auto">
@@ -152,8 +186,19 @@
                     <tr>
                         <td colspan="8" class="px-5 py-12 text-center text-slate-400">
                             <span class="text-3xl block mb-2">📭</span>
-                            <p class="font-bold text-sm text-slate-300">No Assessments Found</p>
-                            <p class="text-xs text-slate-500 mt-1">There are no assessments matching the selected filters.</p>
+                            <p class="font-bold text-sm text-slate-300">
+                                {{ $currentTab === 'mock_tests' ? 'No Published Mock Tests in Catalog' : 'No Practice Simulators Found' }}
+                            </p>
+                            <p class="text-xs text-slate-500 mt-1">
+                                {{ $currentTab === 'mock_tests' ? 'If a specific institutional requirement is needed, you can submit an Assessment Request to the Repository Manager.' : 'No simulators matching the selected criteria.' }}
+                            </p>
+                            @if($currentTab === 'mock_tests')
+                            <div class="mt-4">
+                                <a href="{{ route('admin.assessment-requests.index') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors">
+                                    <span>+ Request New Mock Test</span>
+                                </a>
+                            </div>
+                            @endif
                         </td>
                     </tr>
                     @endforelse
