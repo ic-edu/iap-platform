@@ -70,12 +70,7 @@
                             @endif
                         </td>
                         <td class="px-4 py-3.5">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border
-                                @if($st === 'active' || $st === 'approved') bg-emerald-500/10 text-emerald-400 border-emerald-500/20
-                                @elseif($st === 'waiting_approval') bg-amber-500/10 text-amber-400 border-amber-500/20
-                                @else bg-slate-800 text-slate-400 border-slate-700 @endif">
-                                {{ str_replace('_', ' ', $st) }}
-                            </span>
+                            <x-status-badge :status="$st" />
                         </td>
                         <td class="px-4 py-3.5 text-right">
                             @if(Auth::user()?->hasRole('super-admin') && $st === 'waiting_approval')

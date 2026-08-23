@@ -65,22 +65,18 @@
                 <tbody class="divide-y divide-slate-800/80">
                     @forelse($applications as $app)
                     <tr class="hover:bg-slate-800/30 transition-colors">
-                        <td class="px-4 py-3.5 font-mono font-bold text-indigo-400">{{ $app->registration_id }}</td>
-                        <td class="px-4 py-3.5 font-bold text-white">{{ $app->student_name }}</td>
+                        <td class="px-4 py-3.5 font-mono font-bold text-indigo-600 dark:text-indigo-400">{{ $app->registration_id }}</td>
+                        <td class="px-4 py-3.5 font-bold text-slate-900 dark:text-white">{{ $app->student_name }}</td>
                         <td class="px-4 py-3.5">
-                            <span class="px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[11px] font-bold">{{ $app->selected_program }}</span>
+                            <span class="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-[11px] font-bold">{{ $app->selected_program }}</span>
                         </td>
-                        <td class="px-4 py-3.5 text-slate-300">{{ $app->english_level }}</td>
-                        <td class="px-4 py-3.5 text-slate-400">{{ str_replace('_', ' ', ucfirst($app->placement_test_status)) }}</td>
-                        <td class="px-4 py-3.5 font-bold text-emerald-400">{{ $app->target_score }}</td>
+                        <td class="px-4 py-3.5 text-slate-700 dark:text-slate-300 font-medium">{{ $app->english_level }}</td>
                         <td class="px-4 py-3.5">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border
-                                @if($app->application_status === 'assigned') bg-emerald-500/10 text-emerald-400 border-emerald-500/20
-                                @elseif($app->application_status === 'ready_for_assignment') bg-indigo-500/10 text-indigo-400 border-indigo-500/20
-                                @elseif($app->application_status === 'waiting_review') bg-amber-500/10 text-amber-400 border-amber-500/20
-                                @else bg-slate-800 text-slate-400 border-slate-700 @endif">
-                                {{ str_replace('_', ' ', $app->application_status) }}
-                            </span>
+                            <x-status-badge :status="$app->placement_test_status" />
+                        </td>
+                        <td class="px-4 py-3.5 font-bold text-emerald-600 dark:text-emerald-400">{{ $app->target_score }}</td>
+                        <td class="px-4 py-3.5">
+                            <x-status-badge :status="$app->application_status" />
                         </td>
                         <td class="px-4 py-3.5 text-right">
                             <form action="{{ route('admin.academic-operations.applications.status', $app->id) }}" method="POST" class="inline-flex gap-1.5">

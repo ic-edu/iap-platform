@@ -47,9 +47,7 @@
                         </td>
                         <td class="px-4 py-3.5 text-slate-300">{{ $enr->course?->lead_teacher_name ?? 'Unassigned' }}</td>
                         <td class="px-4 py-3.5">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                {{ strtoupper($enr->status ?? 'ACTIVE') }}
-                            </span>
+                            <x-status-badge :status="$enr->status ?? 'ACTIVE'" />
                         </td>
                         <td class="px-4 py-3.5 text-slate-400">{{ optional($enr->created_at)->format('M d, Y') ?? 'Recently' }}</td>
                     </tr>

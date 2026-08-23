@@ -2545,3 +2545,173 @@ html.dark .candidate-status-count,
 html[data-theme="dark"] .candidate-status-count {
     color: #ffffff;
 }
+
+/* ==========================================================================
+   REGULAR ADMIN SEMANTIC STATUS BADGES (Light & Dark Theme Accessible Contract)
+   ========================================================================== */
+
+.ra-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    line-height: 1.25;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+}
+
+/* 1. Ready For Assignment: Professional Indigo / Blue */
+.ra-status--ready-for-assignment,
+.ra-status--ready_for_assignment,
+.ra-status--ready-assignment {
+    background-color: #eef2ff !important;
+    color: #4338ca !important;
+    border-color: #c7d2fe !important;
+}
+html.dark .ra-status--ready-for-assignment,
+html[data-theme="dark"] .ra-status--ready-for-assignment,
+html.dark .ra-status--ready_for_assignment,
+html[data-theme="dark"] .ra-status--ready_for_assignment,
+html.dark .ra-status--ready-assignment,
+html[data-theme="dark"] .ra-status--ready-assignment {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+    color: #818cf8 !important;
+    border-color: rgba(99, 102, 241, 0.35) !important;
+}
+
+/* 2. Assigned / Active / Approved: Professional Emerald / Green */
+.ra-status--assigned,
+.ra-status--active,
+.ra-status--approved {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    border-color: #a7f3d0 !important;
+}
+html.dark .ra-status--assigned,
+html[data-theme="dark"] .ra-status--assigned,
+html.dark .ra-status--active,
+html[data-theme="dark"] .ra-status--active,
+html.dark .ra-status--approved,
+html[data-theme="dark"] .ra-status--approved {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* 3. Placement Required: Professional Warm Amber / Brown */
+.ra-status--placement-required,
+.ra-status--placement_required {
+    background-color: #fffbeb !important;
+    color: #92400e !important;
+    border-color: #fde68a !important;
+}
+html.dark .ra-status--placement-required,
+html[data-theme="dark"] .ra-status--placement-required,
+html.dark .ra-status--placement_required,
+html[data-theme="dark"] .ra-status--placement_required {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+/* 4. Waiting Review / Waiting Approval / Pending Approval: Professional Warm Orange/Amber */
+.ra-status--waiting-review,
+.ra-status--waiting_review,
+.ra-status--waiting-approval,
+.ra-status--waiting_approval,
+.ra-status--pending-approval,
+.ra-status--pending_approval {
+    background-color: #fff7ed !important;
+    color: #c2410c !important;
+    border-color: #fed7aa !important;
+}
+html.dark .ra-status--waiting-review,
+html[data-theme="dark"] .ra-status--waiting-review,
+html.dark .ra-status--waiting_review,
+html[data-theme="dark"] .ra-status--waiting_review,
+html.dark .ra-status--waiting-approval,
+html[data-theme="dark"] .ra-status--waiting-approval,
+html.dark .ra-status--waiting_approval,
+html[data-theme="dark"] .ra-status--waiting_approval,
+html.dark .ra-status--pending-approval,
+html[data-theme="dark"] .ra-status--pending-approval,
+html.dark .ra-status--pending_approval,
+html[data-theme="dark"] .ra-status--pending_approval {
+    background-color: rgba(249, 115, 22, 0.15) !important;
+    color: #fb923c !important;
+    border-color: rgba(249, 115, 22, 0.35) !important;
+}
+
+/* 5. Awaiting Assignment / Pending: Professional Neutral Slate */
+.ra-status--awaiting-assignment,
+.ra-status--awaiting_assignment,
+.ra-status--pending {
+    background-color: #f1f5f9 !important;
+    color: #334155 !important;
+    border-color: #cbd5e1 !important;
+}
+html.dark .ra-status--awaiting-assignment,
+html[data-theme="dark"] .ra-status--awaiting-assignment,
+html.dark .ra-status--awaiting_assignment,
+html[data-theme="dark"] .ra-status--awaiting_assignment,
+html.dark .ra-status--pending,
+html[data-theme="dark"] .ra-status--pending {
+    background-color: rgba(148, 163, 184, 0.15) !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+/* 6. Completed / Passed: Professional Green */
+.ra-status--completed,
+.ra-status--passed {
+    background-color: #f0fdf4 !important;
+    color: #15803d !important;
+    border-color: #bbf7d0 !important;
+}
+html.dark .ra-status--completed,
+html[data-theme="dark"] .ra-status--completed,
+html.dark .ra-status--passed,
+html[data-theme="dark"] .ra-status--passed {
+    background-color: rgba(34, 197, 94, 0.15) !important;
+    color: #4ade80 !important;
+    border-color: rgba(34, 197, 94, 0.35) !important;
+}
+
+/* 7. Rejected / Failed / Inactive: Professional Rose / Red */
+.ra-status--rejected,
+.ra-status--failed,
+.ra-status--inactive {
+    background-color: #fff1f2 !important;
+    color: #be123c !important;
+    border-color: #fecdd3 !important;
+}
+html.dark .ra-status--rejected,
+html[data-theme="dark"] .ra-status--rejected,
+html.dark .ra-status--failed,
+html[data-theme="dark"] .ra-status--failed,
+html.dark .ra-status--inactive,
+html[data-theme="dark"] .ra-status--inactive {
+    background-color: rgba(244, 63, 94, 0.15) !important;
+    color: #fb7185 !important;
+    border-color: rgba(244, 63, 94, 0.35) !important;
+}
+
+/* 8. Waived: Professional Sky / Blue */
+.ra-status--waived {
+    background-color: #f0f9ff !important;
+    color: #0369a1 !important;
+    border-color: #bae6fd !important;
+}
+html.dark .ra-status--waived,
+html[data-theme="dark"] .ra-status--waived {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.35) !important;
+}

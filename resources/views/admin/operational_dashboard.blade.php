@@ -119,7 +119,7 @@
             <div class="flex items-center gap-2.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
                 <h2 class="text-sm font-bold text-white uppercase tracking-wider">Candidates Requiring Action</h2>
-                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-800 text-slate-300 border border-slate-700">
+                <span class="ra-status-badge ra-status--awaiting-assignment">
                     {{ count($actionRequiredCandidates) }} Awaiting Assignment
                 </span>
             </div>
@@ -143,10 +143,10 @@
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
                             <p class="text-sm font-bold text-white truncate">{{ $item['user']->name }}</p>
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span class="ra-status-badge ra-status--approved text-[9px] py-0.5 px-2">
                                 PAID
                             </span>
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            <span class="ra-status-badge ra-status--rejected text-[9px] py-0.5 px-2">
                                 MOCK TEST
                             </span>
                         </div>
@@ -195,10 +195,10 @@
                         <p class="text-[11px] text-slate-400 truncate">{{ $assignment->test?->title ?? 'Test' }}</p>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $assignment->test?->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                        <span class="ra-status-badge {{ $assignment->test?->isRealTest() ? 'ra-status--rejected' : 'ra-status--placement-required' }} text-[9px] py-0.5 px-2">
                             {{ $assignment->test?->assessment_mode?->label() ?? 'Assessment' }}
                         </span>
-                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span class="ra-status-badge ra-status--active text-[9px] py-0.5 px-2">
                             ACTIVE
                         </span>
                     </div>

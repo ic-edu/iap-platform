@@ -149,4 +149,75 @@ class RegularAdminThemeConsistencyTest extends TestCase
         $responseDeletions = $this->actingAs($this->superAdmin)->get(route('admin.approvals.user-deletions'));
         $responseDeletions->assertStatus(200);
     }
+
+    public function test_app_css_contains_semantic_ra_status_badge_contracts_for_both_themes(): void
+    {
+        $cssContent = file_get_contents(resource_path('css/app.css'));
+
+        // Verify base ra status badge class
+        $this->assertStringContainsString('.ra-status-badge', $cssContent);
+
+        // Verify all status variants exist in CSS
+        $this->assertStringContainsString('.ra-status--ready-for-assignment', $cssContent);
+        $this->assertStringContainsString('.ra-status--assigned', $cssContent);
+        $this->assertStringContainsString('.ra-status--placement-required', $cssContent);
+        $this->assertStringContainsString('.ra-status--waiting-review', $cssContent);
+        $this->assertStringContainsString('.ra-status--awaiting-assignment', $cssContent);
+        $this->assertStringContainsString('.ra-status--completed', $cssContent);
+        $this->assertStringContainsString('.ra-status--rejected', $cssContent);
+        $this->assertStringContainsString('.ra-status--waived', $cssContent);
+
+        // Verify dark theme overrides exist for all status variants
+        $this->assertStringContainsString('html.dark .ra-status--ready-for-assignment', $cssContent);
+        $this->assertStringContainsString('html.dark .ra-status--assigned', $cssContent);
+        $this->assertStringContainsString('html.dark .ra-status--placement-required', $cssContent);
+        $this->assertStringContainsString('html.dark .ra-status--waiting-review', $cssContent);
+        $this->assertStringContainsString('html.dark .ra-status--awaiting-assignment', $cssContent);
+        $this->assertStringContainsString('html.dark .ra-status--completed', $cssContent);
+        $this->assertStringContainsString('html.dark .ra-status--rejected', $cssContent);
+        $this->assertStringContainsString('html.dark .ra-status--waived', $cssContent);
+    }
+
+    public function test_status_badge_blade_component_renders_correct_semantic_classes(): void
+    {
+        $viewReady = $this->blade('<x-status-badge status="ready_for_assignment" />');
+        $viewReady->assertSee('ra-status-badge');
+        $viewReady->assertSee('ra-status--ready-for-assignment');
+        $viewReady->assertSee('READY FOR ASSIGNMENT');
+
+        $viewAssigned = $this->blade('<x-status-badge status="assigned" />');
+        $viewAssigned->assertSee('ra-status--assigned');
+        $viewAssigned->assertSee('ASSIGNED');
+
+        $viewPlacement = $this->blade('<x-status-badge status="placement_required" />');
+        $viewPlacement->assertSee('ra-status--placement-required');
+        $viewPlacement->assertSee('PLACEMENT REQUIRED');
+
+        $viewReview = $this->blade('<x-status-badge status="waiting_review" />');
+        $viewReview->assertSee('ra-status--waiting-review');
+        $viewReview->assertSee('WAITING REVIEW');
+
+        $viewAwaiting = $this->blade('<x-status-badge status="awaiting_assignment" />');
+        $viewAwaiting->assertSee('ra-status--awaiting-assignment');
+        $viewAwaiting->assertSee('AWAITING ASSIGNMENT');
+    }
+
+    public function test_student_applications_view_renders_semantic_status_badges(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.academic-operations.applications'));
+        $response->assertStatus(200);
+        $response->assertSee('ra-status-badge');
+        $response->assertSee('ra-status--ready-for-assignment');
+        $response->assertSee('ra-status--placement-required');
+        $response->assertSee('ra-status--assigned');
+        $response->assertSee('ra-status--waiting-review');
+    }
+
+    public function test_operational_dashboard_candidates_requiring_action_renders_readable_badge(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
+        $response->assertStatus(200);
+        $response->assertSee('ra-status--awaiting-assignment');
+        $response->assertSee('Awaiting Assignment');
+    }
 }

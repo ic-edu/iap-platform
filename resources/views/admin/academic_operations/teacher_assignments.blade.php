@@ -51,9 +51,7 @@
                             </span>
                         </td>
                         <td class="px-4 py-3.5">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                {{ strtoupper($assign->status) }}
-                            </span>
+                            <x-status-badge :status="$assign->status" />
                         </td>
                         <td class="px-4 py-3.5 text-slate-400">{{ $assign->created_at->format('M d, Y') }}</td>
                     </tr>
