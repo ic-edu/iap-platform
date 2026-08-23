@@ -31,6 +31,12 @@ class TeacherLightThemeConsistencyTest extends TestCase
         $response->assertSee('tw-hero');
         $response->assertSee('tw-kpi');
         $response->assertSee('tw-workspace');
+        $response->assertSee('tw-banner');
+        $response->assertSee('tw-qa-panel');
+        $response->assertSee('html.dark .tw-hero', false);
+        $response->assertSee('html.dark .tw-kpi', false);
+        $response->assertSee('html.dark .tw-spotlight', false);
+        $response->assertSee('html.dark .tw-panel', false);
     }
 
     public function test_institutional_academic_library_renders_for_teacher(): void

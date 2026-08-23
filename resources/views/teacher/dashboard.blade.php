@@ -5,8 +5,8 @@
 @push('styles')
 <style>
 /* ──────────────────────────────────────────
-   TEACHER WORKSPACE — LIGHT THEME UNIFIED
-   Modern productivity dashboard for iC.edu
+   TEACHER WORKSPACE — THEME ARCHITECTURE
+   Unified Light & Dark Theme Design System
 ────────────────────────────────────────── */
 
 /* ── Hero ── */
@@ -23,10 +23,24 @@
     position: relative;
     overflow: hidden;
     box-shadow: 0 10px 25px -5px rgba(99,102,241,0.06);
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
+html.dark .tw-hero,
+html[data-theme="dark"] .tw-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%);
+    border-color: rgba(99,102,241,0.3);
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+}
+
 .tw-hero__greeting { font-size: 1.55rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
+html.dark .tw-hero__greeting, html[data-theme="dark"] .tw-hero__greeting { color: #f8fafc; }
+
 .tw-hero__sub { font-size: .9rem; color: #475569; margin-top: .35rem; font-weight: 500; }
+html.dark .tw-hero__sub, html[data-theme="dark"] .tw-hero__sub { color: #94a3b8; }
+
 .tw-hero__date { font-size: .78rem; color: #4f46e5; margin-top: .2rem; font-weight: 600; }
+html.dark .tw-hero__date, html[data-theme="dark"] .tw-hero__date { color: #818cf8; }
+
 .tw-hero__pills { display: flex; gap: .65rem; flex-wrap: wrap; margin-top: 1rem; }
 .tw-hero__pill {
     padding: .3rem .85rem;
@@ -38,13 +52,30 @@
     white-space: nowrap;
     cursor: default;
     text-decoration: none;
+    transition: all 0.15s ease;
 }
 a.tw-hero__pill { cursor: pointer; transition: transform .12s, box-shadow .12s; }
 a.tw-hero__pill:hover { transform: translateY(-1px); }
+
 .tw-hero__pill--amber  { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+html.dark .tw-hero__pill--amber, html[data-theme="dark"] .tw-hero__pill--amber {
+    background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.3);
+}
+
 .tw-hero__pill--emerald{ background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+html.dark .tw-hero__pill--emerald, html[data-theme="dark"] .tw-hero__pill--emerald {
+    background: rgba(16,185,129,0.15); color: #34d399; border-color: rgba(16,185,129,0.3);
+}
+
 .tw-hero__pill--indigo { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+html.dark .tw-hero__pill--indigo, html[data-theme="dark"] .tw-hero__pill--indigo {
+    background: rgba(99,102,241,0.15); color: #818cf8; border-color: rgba(99,102,241,0.3);
+}
+
 .tw-hero__pill--rose   { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+html.dark .tw-hero__pill--rose, html[data-theme="dark"] .tw-hero__pill--rose {
+    background: rgba(244,63,94,0.15); color: #fb7185; border-color: rgba(244,63,94,0.3);
+}
 
 /* ── Continue Working / Spotlight CTA ── */
 .tw-spotlight {
@@ -58,23 +89,51 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     gap: 1.5rem;
     flex-wrap: wrap;
     box-shadow: 0 4px 16px -2px rgba(15,23,42,0.04);
-    transition: border-color .15s, box-shadow .15s;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
+html.dark .tw-spotlight,
+html[data-theme="dark"] .tw-spotlight {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 4px 16px -2px rgba(0,0,0,0.4);
+}
+
 .tw-spotlight--draft {
     background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%);
     border: 1.5px solid #c7d2fe;
     box-shadow: 0 8px 24px -4px rgba(99,102,241,0.08);
 }
+html.dark .tw-spotlight--draft,
+html[data-theme="dark"] .tw-spotlight--draft {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    border-color: rgba(99,102,241,0.4);
+    box-shadow: 0 8px 24px -4px rgba(0,0,0,0.5);
+}
+
 .tw-spotlight--action {
     background: linear-gradient(135deg, #ffffff 0%, #fff1f2 100%);
     border: 1.5px solid #fecdd3;
     box-shadow: 0 8px 24px -4px rgba(244,63,94,0.08);
 }
+html.dark .tw-spotlight--action,
+html[data-theme="dark"] .tw-spotlight--action {
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+    border-color: rgba(244,63,94,0.5);
+    box-shadow: 0 8px 24px -4px rgba(244,63,94,0.2);
+}
+
 .tw-spotlight--review {
     background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
     border: 1.5px solid #bae6fd;
     box-shadow: 0 8px 24px -4px rgba(3,105,161,0.06);
 }
+html.dark .tw-spotlight--review,
+html[data-theme="dark"] .tw-spotlight--review {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    border-color: rgba(99,102,241,0.35);
+    box-shadow: 0 8px 24px -4px rgba(0,0,0,0.5);
+}
+
 .tw-spotlight--clean {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -83,6 +142,12 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     flex-direction: column;
     gap: .5rem;
 }
+html.dark .tw-spotlight--clean,
+html[data-theme="dark"] .tw-spotlight--clean {
+    background: #0f172a;
+    border-color: #1e293b;
+}
+
 .tw-spotlight__tag {
     font-size: .72rem;
     font-weight: 800;
@@ -93,13 +158,37 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     gap: .35rem;
 }
 .tw-spotlight__tag--amber { color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: .25rem .65rem; border-radius: 99px; }
+html.dark .tw-spotlight__tag--amber, html[data-theme="dark"] .tw-spotlight__tag--amber {
+    color: #fbbf24; background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.3);
+}
+
 .tw-spotlight__tag--rose  { color: #be123c; background: #ffe4e6; border: 1px solid #fecdd3; padding: .25rem .65rem; border-radius: 99px; }
+html.dark .tw-spotlight__tag--rose, html[data-theme="dark"] .tw-spotlight__tag--rose {
+    color: #fb7185; background: rgba(244,63,94,0.15); border-color: rgba(244,63,94,0.3);
+}
+
 .tw-spotlight__tag--indigo{ color: #4338ca; background: #e0e7ff; border: 1px solid #c7d2fe; padding: .25rem .65rem; border-radius: 99px; }
+html.dark .tw-spotlight__tag--indigo, html[data-theme="dark"] .tw-spotlight__tag--indigo {
+    color: #818cf8; background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3);
+}
+
 .tw-spotlight__title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: .4rem 0 .35rem; line-height: 1.3; }
+html.dark .tw-spotlight__title, html[data-theme="dark"] .tw-spotlight__title { color: #f8fafc; }
+
 .tw-spotlight__desc  { font-size: .84rem; color: #475569; line-height: 1.45; }
+html.dark .tw-spotlight__desc, html[data-theme="dark"] .tw-spotlight__desc { color: #94a3b8; }
+
 .tw-spotlight__meta  { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .78rem; color: #475569; align-items: center; margin-top: .35rem; }
+html.dark .tw-spotlight__meta, html[data-theme="dark"] .tw-spotlight__meta { color: #94a3b8; }
+
 .tw-spotlight__meta strong { color: #1e293b; }
+html.dark .tw-spotlight__meta strong, html[data-theme="dark"] .tw-spotlight__meta strong { color: #f1f5f9; }
+
 .tw-spotlight__status-badge { color: #059669; font-weight: 700; background: #ecfdf5; border: 1px solid #a7f3d0; padding: .15rem .5rem; border-radius: 99px; }
+html.dark .tw-spotlight__status-badge, html[data-theme="dark"] .tw-spotlight__status-badge {
+    color: #34d399; background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3);
+}
+
 .tw-spotlight__actions { display: flex; gap: .65rem; flex-wrap: wrap; align-items: center; }
 
 /* ── KPI Cards ── */
@@ -122,23 +211,107 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     flex-direction: column;
     gap: .3rem;
     box-shadow: 0 2px 6px rgba(15,23,42,0.03);
-    transition: border-color .2s, transform .15s, box-shadow .2s;
+    transition: background 0.2s ease, border-color .2s, transform .15s, box-shadow .2s;
 }
+html.dark .tw-kpi,
+html[data-theme="dark"] .tw-kpi {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
 .tw-kpi:hover {
     border-color: #6366f1;
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(99,102,241,.12);
 }
+html.dark .tw-kpi:hover,
+html[data-theme="dark"] .tw-kpi:hover {
+    border-color: #6366f1;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+}
+
 .tw-kpi__icon  { font-size: 1.4rem; margin-bottom: .2rem; }
 .tw-kpi__count { font-size: 2rem; font-weight: 900; line-height: 1; }
 .tw-kpi__label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; }
+html.dark .tw-kpi__label, html[data-theme="dark"] .tw-kpi__label { color: #94a3b8; }
+
 .tw-kpi__desc  { font-size: .75rem; color: #64748b; margin-top: .15rem; }
+html.dark .tw-kpi__desc, html[data-theme="dark"] .tw-kpi__desc { color: #64748b; }
+
 .tw-kpi--indigo .tw-kpi__count  { color: #4f46e5; }
+html.dark .tw-kpi--indigo .tw-kpi__count, html[data-theme="dark"] .tw-kpi--indigo .tw-kpi__count { color: #818cf8; }
+
 .tw-kpi--amber  .tw-kpi__count  { color: #d97706; }
+html.dark .tw-kpi--amber .tw-kpi__count, html[data-theme="dark"] .tw-kpi--amber .tw-kpi__count { color: #fbbf24; }
+
 .tw-kpi--emerald .tw-kpi__count { color: #059669; }
+html.dark .tw-kpi--emerald .tw-kpi__count, html[data-theme="dark"] .tw-kpi--emerald .tw-kpi__count { color: #34d399; }
+
 .tw-kpi--slate  .tw-kpi__count  { color: #334155; }
+html.dark .tw-kpi--slate .tw-kpi__count, html[data-theme="dark"] .tw-kpi--slate .tw-kpi__count { color: #cbd5e1; }
+
+/* ── Assigned Courses Banner ── */
+.tw-banner {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1.1rem 1.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .tw-banner,
+html[data-theme="dark"] .tw-banner {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
+.tw-banner__title { font-size: .88rem; font-weight: 800; color: #0f172a; }
+html.dark .tw-banner__title, html[data-theme="dark"] .tw-banner__title { color: #f8fafc; }
+
+.tw-banner__sub { font-size: .75rem; color: #64748b; margin-top: 2px; }
+html.dark .tw-banner__sub, html[data-theme="dark"] .tw-banner__sub { color: #94a3b8; }
+
+.tw-banner__badge {
+    padding: .25rem .75rem;
+    border-radius: 99px;
+    font-size: .68rem;
+    font-weight: 800;
+    background: #eef2ff;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+}
+html.dark .tw-banner__badge, html[data-theme="dark"] .tw-banner__badge {
+    background: rgba(99,102,241,0.15);
+    color: #818cf8;
+    border-color: rgba(99,102,241,0.3);
+}
 
 /* ── Quick Actions ── */
+.tw-qa-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1.1rem 1.35rem;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .tw-qa-panel,
+html[data-theme="dark"] .tw-qa-panel {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
+.tw-qa-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: .75rem; }
+html.dark .tw-qa-label, html[data-theme="dark"] .tw-qa-label { color: #94a3b8; }
+
 .tw-qa-strip {
     display: flex;
     gap: .75rem;
@@ -155,11 +328,12 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     font-weight: 700;
     border: 1px solid transparent;
     text-decoration: none;
-    transition: background .15s, transform .12s, box-shadow .15s;
+    transition: background .15s, transform .12s, box-shadow .15s, border-color .15s;
     cursor: pointer;
     white-space: nowrap;
 }
 .tw-qa-btn:hover { transform: translateY(-1px); }
+
 .tw-qa-btn--primary {
     background: #4f46e5;
     color: #ffffff;
@@ -167,6 +341,16 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     box-shadow: 0 4px 12px rgba(79,70,229,0.25);
 }
 .tw-qa-btn--primary:hover { background: #4338ca; border-color: #4338ca; }
+html.dark .tw-qa-btn--primary, html[data-theme="dark"] .tw-qa-btn--primary {
+    background: #6366f1;
+    border-color: #6366f1;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+html.dark .tw-qa-btn--primary:hover, html[data-theme="dark"] .tw-qa-btn--primary:hover {
+    background: #4f46e5;
+    border-color: #4f46e5;
+}
+
 .tw-qa-btn--secondary {
     background: #f8fafc;
     color: #334155;
@@ -174,6 +358,18 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .tw-qa-btn--secondary:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+html.dark .tw-qa-btn--secondary, html[data-theme="dark"] .tw-qa-btn--secondary {
+    background: #1e293b;
+    color: #cbd5e1;
+    border-color: #334155;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+html.dark .tw-qa-btn--secondary:hover, html[data-theme="dark"] .tw-qa-btn--secondary:hover {
+    background: #334155;
+    color: #ffffff;
+    border-color: #475569;
+}
+
 .tw-qa-btn--danger {
     background: #e11d48;
     color: #ffffff;
@@ -181,6 +377,10 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     box-shadow: 0 4px 12px rgba(225,29,72,0.25);
 }
 .tw-qa-btn--danger:hover { background: #be123c; border-color: #be123c; }
+html.dark .tw-qa-btn--danger, html[data-theme="dark"] .tw-qa-btn--danger {
+    background: #f43f5e;
+    border-color: #fb7185;
+}
 
 /* ── Layout ── */
 .tw-workspace {
@@ -198,7 +398,15 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     border-radius: 1rem;
     overflow: hidden;
     box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
+html.dark .tw-panel,
+html[data-theme="dark"] .tw-panel {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
 .tw-panel__head {
     padding: 1rem 1.25rem;
     border-bottom: 1px solid #e2e8f0;
@@ -207,10 +415,20 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     justify-content: space-between;
     gap: 1rem;
     background: #ffffff;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
+html.dark .tw-panel__head,
+html[data-theme="dark"] .tw-panel__head {
+    background: #0f172a;
+    border-color: #1e293b;
+}
+
 .tw-panel__title { font-size: .88rem; font-weight: 800; color: #0f172a; }
+html.dark .tw-panel__title, html[data-theme="dark"] .tw-panel__title { color: #f8fafc; }
+
 .tw-panel__link  { font-size: .75rem; color: #4f46e5; font-weight: 700; text-decoration: none; }
 .tw-panel__link:hover { text-decoration: underline; }
+html.dark .tw-panel__link, html[data-theme="dark"] .tw-panel__link { color: #818cf8; }
 
 /* ── Search & Filter Bar ── */
 .tw-filter-bar {
@@ -221,7 +439,14 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     align-items: center;
     flex-wrap: wrap;
     background: #fafbfc;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
+html.dark .tw-filter-bar,
+html[data-theme="dark"] .tw-filter-bar {
+    background: #0b0f19;
+    border-color: #1e293b;
+}
+
 .tw-search {
     flex: 1;
     min-width: 160px;
@@ -232,9 +457,40 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     font-size: .8rem;
     padding: .45rem .85rem;
     outline: none;
-    transition: border-color .15s, box-shadow .15s;
+    transition: border-color .15s, box-shadow .15s, background .15s, color .15s;
 }
 .tw-search:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+html.dark .tw-search,
+html[data-theme="dark"] .tw-search {
+    background: #020617;
+    border-color: #1e293b;
+    color: #f8fafc;
+}
+
+.tw-search-btn {
+    padding: .4rem .9rem;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: .5rem;
+    color: #475569;
+    font-size: .75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.tw-search-btn:hover { background: #e2e8f0; color: #0f172a; }
+html.dark .tw-search-btn,
+html[data-theme="dark"] .tw-search-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+html.dark .tw-search-btn:hover,
+html[data-theme="dark"] .tw-search-btn:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
 .tw-filter-pills { display: flex; gap: .4rem; flex-wrap: wrap; }
 .tw-fpill {
     padding: .28rem .75rem;
@@ -252,7 +508,25 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     white-space: nowrap;
 }
 .tw-fpill:hover { background: #e2e8f0; color: #0f172a; }
+html.dark .tw-fpill,
+html[data-theme="dark"] .tw-fpill {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+html.dark .tw-fpill:hover,
+html[data-theme="dark"] .tw-fpill:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
 .tw-fpill--active { background: #4f46e5; color: #ffffff; border-color: #4f46e5; }
+html.dark .tw-fpill--active,
+html[data-theme="dark"] .tw-fpill--active {
+    background: #6366f1;
+    color: #ffffff;
+    border-color: #6366f1;
+}
 
 /* ── Table ── */
 .tw-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
@@ -267,18 +541,37 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     text-align: left;
     border-bottom: 1px solid #e2e8f0;
 }
+html.dark .tw-table th,
+html[data-theme="dark"] .tw-table th {
+    background: #0b0f19;
+    color: #94a3b8;
+    border-color: #1e293b;
+}
+
 .tw-table td {
     padding: .75rem 1rem;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
     color: #0f172a;
 }
+html.dark .tw-table td,
+html[data-theme="dark"] .tw-table td {
+    border-color: #1e293b;
+    color: #f8fafc;
+}
+
 .tw-table tbody tr:last-child td { border-bottom: none; }
 .tw-table tbody tr:hover { background: #f8faff; }
+html.dark .tw-table tbody tr:hover,
+html[data-theme="dark"] .tw-table tbody tr:hover { background: #1e293b; }
 
 .tw-title-link { font-weight: 700; color: #0f172a; text-decoration: none; display: block; transition: color .15s; }
 .tw-title-link:hover { color: #4f46e5; }
+html.dark .tw-title-link, html[data-theme="dark"] .tw-title-link { color: #f8fafc; }
+html.dark .tw-title-link:hover, html[data-theme="dark"] .tw-title-link:hover { color: #818cf8; }
+
 .tw-title-sub { font-size: .72rem; color: #64748b; margin-top: 2px; }
+html.dark .tw-title-sub, html[data-theme="dark"] .tw-title-sub { color: #94a3b8; }
 
 /* ── Status Badges ── */
 .tw-badge {
@@ -293,32 +586,184 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     white-space: nowrap;
 }
 .tw-badge--draft     { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+html.dark .tw-badge--draft, html[data-theme="dark"] .tw-badge--draft { background: #1e293b; color: #94a3b8; border-color: #334155; }
+
 .tw-badge--pending   { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+html.dark .tw-badge--pending, html[data-theme="dark"] .tw-badge--pending { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
+
 .tw-badge--approved  { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+html.dark .tw-badge--approved, html[data-theme="dark"] .tw-badge--approved { background: rgba(99,102,241,0.15); color: #818cf8; border-color: rgba(99,102,241,0.3); }
+
 .tw-badge--published { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+html.dark .tw-badge--published, html[data-theme="dark"] .tw-badge--published { background: rgba(16,185,129,0.15); color: #34d399; border-color: rgba(16,185,129,0.3); }
+
 .tw-badge--archived  { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+html.dark .tw-badge--archived, html[data-theme="dark"] .tw-badge--archived { background: #1e293b; color: #64748b; border-color: #334155; }
+
 .tw-badge--rejected  { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+html.dark .tw-badge--rejected, html[data-theme="dark"] .tw-badge--rejected { background: rgba(244,63,94,0.15); color: #fb7185; border-color: rgba(244,63,94,0.3); }
 
 /* ── Action Buttons (inline) ── */
 .tw-act { font-size: .72rem; font-weight: 700; text-decoration: none; border: none; background: none; cursor: pointer; padding: .25rem .55rem; border-radius: .35rem; transition: background .15s; white-space: nowrap; }
 .tw-act--view    { color: #4f46e5; }
 .tw-act--view:hover    { background: #eef2ff; }
+html.dark .tw-act--view, html[data-theme="dark"] .tw-act--view { color: #818cf8; }
+html.dark .tw-act--view:hover, html[data-theme="dark"] .tw-act--view:hover { background: rgba(99,102,241,0.15); }
+
 .tw-act--submit  { color: #b45309; }
 .tw-act--submit:hover  { background: #fef3c7; }
+html.dark .tw-act--submit, html[data-theme="dark"] .tw-act--submit { color: #fbbf24; }
+html.dark .tw-act--submit:hover, html[data-theme="dark"] .tw-act--submit:hover { background: rgba(245,158,11,0.15); }
+
 .tw-act--dupe    { color: #475569; }
 .tw-act--dupe:hover    { background: #f1f5f9; }
+html.dark .tw-act--dupe, html[data-theme="dark"] .tw-act--dupe { color: #94a3b8; }
+html.dark .tw-act--dupe:hover, html[data-theme="dark"] .tw-act--dupe:hover { background: #1e293b; }
+
+.tw-act--restore { color: #4f46e5; border: 1px solid #c7d2fe; }
+.tw-act--restore:hover { background: #eef2ff; }
+html.dark .tw-act--restore, html[data-theme="dark"] .tw-act--restore { color: #818cf8; border-color: rgba(129,140,248,0.3); }
+html.dark .tw-act--restore:hover, html[data-theme="dark"] .tw-act--restore:hover { background: rgba(99,102,241,0.15); }
+
+/* ── Inline Action Popover Panel ── */
+.tw-popover {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .375rem .6rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: .75rem;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+}
+html.dark .tw-popover,
+html[data-theme="dark"] .tw-popover {
+    background: #0f172a;
+    border-color: #334155;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6);
+}
+
+.tw-popover__text { font-size: .75rem; font-weight: 500; color: #334155; }
+html.dark .tw-popover__text, html[data-theme="dark"] .tw-popover__text { color: #e2e8f0; }
+
+.tw-popover__input {
+    padding: .2rem .5rem;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: .5rem;
+    font-size: .75rem;
+    color: #0f172a;
+    outline: none;
+    width: 160px;
+}
+html.dark .tw-popover__input, html[data-theme="dark"] .tw-popover__input {
+    background: #020617;
+    border-color: #334155;
+    color: #ffffff;
+}
+
+.tw-popover__cancel {
+    padding: .2rem .5rem;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: .5rem;
+    font-size: .75rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.tw-popover__cancel:hover { background: #e2e8f0; color: #0f172a; }
+html.dark .tw-popover__cancel, html[data-theme="dark"] .tw-popover__cancel {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+html.dark .tw-popover__cancel:hover, html[data-theme="dark"] .tw-popover__cancel:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.tw-popover__submit {
+    padding: .2rem .65rem;
+    background: #4f46e5;
+    border: none;
+    border-radius: .5rem;
+    font-size: .75rem;
+    font-weight: 700;
+    color: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(79,70,229,0.3);
+    transition: all 0.15s ease;
+}
+.tw-popover__submit:hover { background: #4338ca; }
+html.dark .tw-popover__submit, html[data-theme="dark"] .tw-popover__submit {
+    background: #6366f1;
+}
+html.dark .tw-popover__submit:hover, html[data-theme="dark"] .tw-popover__submit:hover {
+    background: #4f46e5;
+}
 
 /* ── Sidebar Widgets ── */
-.tw-widget { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; box-shadow: 0 2px 6px rgba(15,23,42,0.03); }
+.tw-widget {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .tw-widget,
+html[data-theme="dark"] .tw-widget {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+
 .tw-widget + .tw-widget { margin-top: 1rem; }
 
 /* ── Progress Widget ── */
 .tw-prog-item { display: flex; align-items: center; gap: .75rem; padding: .65rem 1.25rem; }
 .tw-prog-item:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+html.dark .tw-prog-item:not(:last-child), html[data-theme="dark"] .tw-prog-item:not(:last-child) {
+    border-color: #1e293b;
+}
+
 .tw-prog-label { font-size: .75rem; color: #475569; width: 90px; flex-shrink: 0; font-weight: 600; }
+html.dark .tw-prog-label, html[data-theme="dark"] .tw-prog-label { color: #94a3b8; }
+
 .tw-prog-bar-wrap { flex: 1; background: #e2e8f0; border-radius: 99px; height: 6px; overflow: hidden; }
+html.dark .tw-prog-bar-wrap, html[data-theme="dark"] .tw-prog-bar-wrap { background: #1e293b; }
+
 .tw-prog-bar { height: 100%; border-radius: 99px; transition: width .5s ease; }
 .tw-prog-count { font-size: .75rem; font-weight: 800; color: #0f172a; width: 32px; text-align: right; }
+html.dark .tw-prog-count, html[data-theme="dark"] .tw-prog-count { color: #f8fafc; }
+
+/* ── Recent Activity ── */
+.tw-activity-item {
+    display: flex;
+    gap: .85rem;
+    align-items: flex-start;
+    padding: .75rem 1.25rem;
+    text-decoration: none;
+    transition: background .15s;
+    border-bottom: 1px solid #f1f5f9;
+}
+.tw-activity-item:hover { background: #f8faff; }
+html.dark .tw-activity-item,
+html[data-theme="dark"] .tw-activity-item {
+    border-color: #1e293b;
+}
+html.dark .tw-activity-item:hover,
+html[data-theme="dark"] .tw-activity-item:hover {
+    background: #1e293b;
+}
+
+.tw-activity-title { font-size: .78rem; font-weight: 700; color: #0f172a; }
+html.dark .tw-activity-title, html[data-theme="dark"] .tw-activity-title { color: #f8fafc; }
+
+.tw-activity-sub { font-size: .7rem; color: #64748b; margin-top: 2px; }
+html.dark .tw-activity-sub, html[data-theme="dark"] .tw-activity-sub { color: #64748b; }
 
 /* ── Empty States ── */
 .tw-empty {
@@ -331,7 +776,11 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
 }
 .tw-empty__icon { font-size: 2.25rem; opacity: .7; }
 .tw-empty__title { font-size: .92rem; font-weight: 800; color: #0f172a; }
+html.dark .tw-empty__title, html[data-theme="dark"] .tw-empty__title { color: #f8fafc; }
+
 .tw-empty__sub { font-size: .78rem; color: #64748b; }
+html.dark .tw-empty__sub, html[data-theme="dark"] .tw-empty__sub { color: #94a3b8; }
+
 .tw-empty__cta {
     margin-top: .5rem;
     display: inline-flex;
@@ -347,6 +796,8 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     transition: background .15s;
 }
 .tw-empty__cta:hover { background: #4338ca; }
+html.dark .tw-empty__cta, html[data-theme="dark"] .tw-empty__cta { background: #6366f1; }
+html.dark .tw-empty__cta:hover, html[data-theme="dark"] .tw-empty__cta:hover { background: #4f46e5; }
 
 /* ── Modal ── */
 .tw-modal-backdrop {
@@ -370,13 +821,35 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     overflow-y: auto;
     padding: 2rem;
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
+html.dark .tw-modal,
+html[data-theme="dark"] .tw-modal {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+}
+
 .tw-modal__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; }
+html.dark .tw-modal__head, html[data-theme="dark"] .tw-modal__head { border-color: #1e293b; }
+
 .tw-modal__title { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
+html.dark .tw-modal__title, html[data-theme="dark"] .tw-modal__title { color: #f8fafc; }
+
 .tw-modal__close { color: #64748b; font-size: 1.35rem; cursor: pointer; background: none; border: none; line-height: 1; transition: color .15s; }
 .tw-modal__close:hover { color: #0f172a; }
+html.dark .tw-modal__close:hover, html[data-theme="dark"] .tw-modal__close:hover { color: #ffffff; }
+
+.tw-modal__body-title { font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: .5rem; }
+html.dark .tw-modal__body-title, html[data-theme="dark"] .tw-modal__body-title { color: #f8fafc; }
+
+.tw-modal__body-desc { font-size: .85rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.5; }
+html.dark .tw-modal__body-desc, html[data-theme="dark"] .tw-modal__body-desc { color: #94a3b8; }
+
 .tw-form-group { margin-bottom: 1.1rem; }
 .tw-form-label { display: block; font-size: .78rem; font-weight: 700; color: #334155; margin-bottom: .4rem; }
+html.dark .tw-form-label, html[data-theme="dark"] .tw-form-label { color: #cbd5e1; }
+
 .tw-form-input, .tw-form-select, .tw-form-textarea {
     width: 100%;
     background: #f8fafc;
@@ -386,12 +859,21 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     font-size: .85rem;
     padding: .6rem .9rem;
     outline: none;
-    transition: border-color .15s, box-shadow .15s;
+    transition: border-color .15s, box-shadow .15s, background .15s, color .15s;
     box-sizing: border-box;
 }
 .tw-form-input:focus, .tw-form-select:focus, .tw-form-textarea:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
 .tw-form-select { appearance: none; }
 .tw-form-textarea { resize: vertical; min-height: 80px; }
+
+html.dark .tw-form-input, html[data-theme="dark"] .tw-form-input,
+html.dark .tw-form-select, html[data-theme="dark"] .tw-form-select,
+html.dark .tw-form-textarea, html[data-theme="dark"] .tw-form-textarea {
+    background: #020617;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
 .tw-form-submit {
     width: 100%;
     padding: .75rem;
@@ -406,9 +888,20 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     box-shadow: 0 4px 12px rgba(79,70,229,0.25);
 }
 .tw-form-submit:hover { background: #4338ca; }
+html.dark .tw-form-submit, html[data-theme="dark"] .tw-form-submit {
+    background: #6366f1;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+html.dark .tw-form-submit:hover, html[data-theme="dark"] .tw-form-submit:hover { background: #4f46e5; }
 
 /* ── Pagination ── */
 .tw-pager { padding: .85rem 1.25rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; background: #ffffff; }
+html.dark .tw-pager, html[data-theme="dark"] .tw-pager {
+    border-color: #1e293b;
+    background: #0f172a;
+}
+.tw-pager a { font-size: .75rem; color: #4f46e5; font-weight: 700; text-decoration: none; }
+html.dark .tw-pager a, html[data-theme="dark"] .tw-pager a { color: #818cf8; }
 </style>
 @endpush
 
@@ -681,15 +1174,15 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     </div>
 
     {{-- Coming Soon Section Placeholder (PART 6) --}}
-    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1rem;padding:1.1rem 1.35rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
+    <div class="tw-banner">
         <div style="display:flex;align-items:center;gap:.85rem;">
             <span style="font-size:1.5rem;">🎓</span>
             <div>
-                <div style="font-size:.88rem;font-weight:800;color:#0f172a;">Assigned Courses &amp; Student Progress</div>
-                <div style="font-size:.75rem;color:#64748b;margin-top:2px;">Academic course assignments, student roster, and placement test analytics.</div>
+                <div class="tw-banner__title">Assigned Courses &amp; Student Progress</div>
+                <div class="tw-banner__sub">Academic course assignments, student roster, and placement test analytics.</div>
             </div>
         </div>
-        <span style="padding:.25rem .75rem;border-radius:99px;font-size:.68rem;font-weight:800;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;">
+        <span class="tw-banner__badge">
             COMING SOON
         </span>
     </div>
@@ -697,8 +1190,8 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
     {{-- ══════════════════════════════════════════════
          SECTION 3 — QUICK ACTIONS STRIP
          ══════════════════════════════════════════════ --}}
-    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1rem;padding:1.1rem 1.35rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
-        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:.75rem;">Quick Actions</div>
+    <div class="tw-qa-panel">
+        <div class="tw-qa-label">Quick Actions</div>
         <div class="tw-qa-strip">
             <button type="button" onclick="openCreateModal()" class="tw-qa-btn tw-qa-btn--primary">
                 📂 New Question Bank
@@ -748,8 +1241,7 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
                             <a href="{{ route('admin.question-banks.index', ['status' => 'archived']) }}"
                                class="tw-fpill {{ request('status') === 'archived' ? 'tw-fpill--active' : '' }}">Archived</a>
                         </div>
-                        <button type="submit"
-                                style="padding:.4rem .9rem;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:.5rem;color:#475569;font-size:.75rem;font-weight:700;cursor:pointer;">
+                        <button type="submit" class="tw-search-btn">
                             Search
                         </button>
                     </form>
@@ -838,17 +1330,17 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
                                         @if($status === 'archived' && (Auth::user()?->hasRole('super-admin') || (Auth::user()?->hasRole('teacher') && $bank->created_by === Auth::user()->id)))
                                         <form method="POST" action="{{ route('admin.question-banks.request-restore', $bank->id) }}" style="display:inline;">
                                             @csrf
-                                            <button type="button" id="restore-trigger-btn-dash-{{ $bank->id }}" onclick="document.getElementById('inline-restore-panel-dash-{{ $bank->id }}').classList.remove('hidden'); this.classList.add('hidden');" class="tw-act tw-act--restore" style="color:#4f46e5;border:1px solid #c7d2fe;" title="Request restoration for Super Admin approval">↻ Request Restore</button>
+                                            <button type="button" id="restore-trigger-btn-dash-{{ $bank->id }}" onclick="document.getElementById('inline-restore-panel-dash-{{ $bank->id }}').classList.remove('hidden'); this.classList.add('hidden');" class="tw-act tw-act--restore" title="Request restoration for Super Admin approval">↻ Request Restore</button>
 
-                                            <div id="inline-restore-panel-dash-{{ $bank->id }}" class="hidden inline-flex items-center gap-2 p-1.5 bg-white border border-indigo-200 rounded-xl shadow-lg">
-                                                <span class="text-xs text-slate-800 font-medium">
+                                            <div id="inline-restore-panel-dash-{{ $bank->id }}" class="hidden tw-popover">
+                                                <span class="tw-popover__text">
                                                     Request restoration of '{{ $bank->title }}' for Super Admin approval?
                                                 </span>
-                                                <input type="text" name="reason" placeholder="Restoration reason..." class="px-2 py-0.5 bg-slate-50 border border-slate-300 text-xs text-slate-900 rounded-lg focus:outline-none focus:border-indigo-500" style="width:160px;">
-                                                <button type="button" onclick="document.getElementById('inline-restore-panel-dash-{{ $bank->id }}').classList.add('hidden'); document.getElementById('restore-trigger-btn-dash-{{ $bank->id }}').classList.remove('hidden');" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors">
+                                                <input type="text" name="reason" placeholder="Restoration reason..." class="tw-popover__input">
+                                                <button type="button" onclick="document.getElementById('inline-restore-panel-dash-{{ $bank->id }}').classList.add('hidden'); document.getElementById('restore-trigger-btn-dash-{{ $bank->id }}').classList.remove('hidden');" class="tw-popover__cancel">
                                                     Cancel
                                                 </button>
-                                                <button type="submit" class="px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
+                                                <button type="submit" class="tw-popover__submit">
                                                     Request Restore
                                                 </button>
                                             </div>
@@ -863,14 +1355,14 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
                                             @csrf
                                             <button type="button" id="submit-trigger-btn-dash-{{ $bank->id }}" onclick="document.getElementById('inline-submit-panel-dash-{{ $bank->id }}').classList.remove('hidden'); this.classList.add('hidden');" class="tw-act tw-act--submit">📤 Submit</button>
 
-                                            <div id="inline-submit-panel-dash-{{ $bank->id }}" class="hidden inline-flex items-center gap-2 p-1.5 bg-white border border-amber-200 rounded-xl shadow-lg">
-                                                <span class="text-xs text-slate-800 font-medium">
+                                            <div id="inline-submit-panel-dash-{{ $bank->id }}" class="hidden tw-popover">
+                                                <span class="tw-popover__text">
                                                     Submit '{{ $bank->title }}' for Super Admin approval?
                                                 </span>
-                                                <button type="button" onclick="document.getElementById('inline-submit-panel-dash-{{ $bank->id }}').classList.add('hidden'); document.getElementById('submit-trigger-btn-dash-{{ $bank->id }}').classList.remove('hidden');" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors">
+                                                <button type="button" onclick="document.getElementById('inline-submit-panel-dash-{{ $bank->id }}').classList.add('hidden'); document.getElementById('submit-trigger-btn-dash-{{ $bank->id }}').classList.remove('hidden');" class="tw-popover__cancel">
                                                     Cancel
                                                 </button>
-                                                <button type="submit" class="px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
+                                                <button type="submit" class="tw-popover__submit">
                                                     Submit for Approval
                                                 </button>
                                             </div>
@@ -895,8 +1387,7 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
                     </table>
                 </div>
                 <div class="tw-pager">
-                    <a href="{{ route('admin.question-banks.index') }}"
-                       style="font-size:.75rem;color:#4f46e5;font-weight:700;text-decoration:none;">
+                    <a href="{{ route('admin.question-banks.index') }}">
                         View all {{ $totalQuestionBanks }} banks →
                     </a>
                 </div>
@@ -967,16 +1458,13 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
                             default           => 'Updated draft',
                         };
                     @endphp
-                    <a href="{{ route('admin.question-banks.show', $bank->id) }}"
-                       style="display:flex;gap:.85rem;align-items:flex-start;padding:.75rem 1.25rem;text-decoration:none;transition:background .15s;border-bottom:1px solid #f1f5f9;"
-                       onmouseover="this.style.background='#f8faff'"
-                       onmouseout="this.style.background='transparent'">
+                    <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="tw-activity-item">
                         <span style="font-size:1.1rem;margin-top:1px;">{{ $actIcon }}</span>
                         <div>
-                            <div style="font-size:.78rem;font-weight:700;color:#0f172a;">
+                            <div class="tw-activity-title">
                                 {{ Str::limit($bank->title, 38) }}
                             </div>
-                            <div style="font-size:.7rem;color:#64748b;margin-top:2px;">
+                            <div class="tw-activity-sub">
                                 {{ $actVerb }} · {{ $bank->updated_at?->diffForHumans() }}
                             </div>
                         </div>
@@ -1036,8 +1524,8 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
 <div id="tw-nothing-modal" class="tw-modal-backdrop" style="display:none;" onclick="closeTwNothingModal(event)">
     <div class="tw-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:440px;">
         <div style="font-size:2.75rem;margin-bottom:.5rem;">📭</div>
-        <div style="font-size:1.15rem;font-weight:800;color:#0f172a;margin-bottom:.5rem;">Nothing Here Yet</div>
-        <p style="font-size:.85rem;color:#64748b;margin-bottom:1.5rem;line-height:1.5;">There are currently no items in this category.</p>
+        <div class="tw-modal__body-title">Nothing Here Yet</div>
+        <p class="tw-modal__body-desc">There are currently no items in this category.</p>
         <button type="button" onclick="closeTwNothingModal()" class="tw-form-submit" style="margin-top:0;">Close</button>
     </div>
 </div>
@@ -1046,8 +1534,8 @@ a.tw-hero__pill:hover { transform: translateY(-1px); }
 <div id="tw-no-draft-modal" class="tw-modal-backdrop" style="display:none;" onclick="closeNoDraftModal(event)">
     <div class="tw-modal" onclick="event.stopPropagation()" style="text-align:center;max-width:440px;">
         <div style="font-size:2.75rem;margin-bottom:.5rem;">📝</div>
-        <div style="font-size:1.15rem;font-weight:800;color:#0f172a;margin-bottom:.5rem;">No draft Question Banks.</div>
-        <p style="font-size:.85rem;color:#64748b;margin-bottom:1.5rem;line-height:1.5;">You currently have no active drafts in progress.</p>
+        <div class="tw-modal__body-title">No draft Question Banks.</div>
+        <p class="tw-modal__body-desc">You currently have no active drafts in progress.</p>
         <div style="display:flex;gap:.75rem;">
             <button type="button" onclick="closeNoDraftModal()" class="tw-qa-btn tw-qa-btn--secondary" style="flex:1;">Close</button>
             <button type="button" onclick="closeNoDraftModal();openCreateModal();" class="tw-form-submit" style="flex:1.5;margin-top:0;">Create Draft</button>
