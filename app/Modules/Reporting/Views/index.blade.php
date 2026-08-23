@@ -31,52 +31,52 @@
         </h2>
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             
-            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Total Submissions</span>
-                <span class="text-2xl font-black text-slate-900 dark:text-white mt-1 block">{{ number_format($totalAttempts) }}</span>
-                <span class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Finished tests</span>
+            <div class="kpi-card p-3.5 text-center">
+                <span class="kpi-label block truncate">Total Submissions</span>
+                <span class="kpi-value metric-value--neutral block mt-1">{{ number_format($totalAttempts) }}</span>
+                <span class="kpi-sub block mt-0.5">Finished tests</span>
             </div>
 
-            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Pass Rate</span>
-                <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ $passRate }}%</span>
-                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5 block">{{ number_format($totalPassed) }} passed</span>
+            <div class="kpi-card p-3.5 text-center">
+                <span class="kpi-label block truncate">Pass Rate</span>
+                <span class="kpi-value metric-value--success block mt-1">{{ $passRate }}%</span>
+                <span class="kpi-sub text-emerald-600 dark:text-emerald-400 block mt-0.5">{{ number_format($totalPassed) }} passed</span>
             </div>
 
-            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Failed Tests</span>
-                <span class="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1 block">{{ number_format($totalFailed) }}</span>
-                <span class="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5 block">Below passing score</span>
+            <div class="kpi-card p-3.5 text-center">
+                <span class="kpi-label block truncate">Failed Tests</span>
+                <span class="kpi-value metric-value--danger block mt-1">{{ number_format($totalFailed) }}</span>
+                <span class="kpi-sub text-rose-600 dark:text-rose-400 block mt-0.5">Below passing score</span>
             </div>
 
-            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Certificates</span>
-                <span class="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{{ number_format($totalCertificates) }}</span>
-                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5 block">Issued &amp; verified</span>
+            <div class="kpi-card p-3.5 text-center">
+                <span class="kpi-label block truncate">Certificates</span>
+                <span class="kpi-value metric-value--primary block mt-1">{{ number_format($totalCertificates) }}</span>
+                <span class="kpi-sub text-indigo-600 dark:text-indigo-400 block mt-0.5">Issued &amp; verified</span>
             </div>
 
-            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Active Assignments</span>
-                <span class="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 block">{{ number_format($activeAssignments) }}</span>
-                <span class="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 block">Allocated seats</span>
+            <div class="kpi-card p-3.5 text-center">
+                <span class="kpi-label block truncate">Active Assignments</span>
+                <span class="kpi-value metric-value--warning block mt-1">{{ number_format($activeAssignments) }}</span>
+                <span class="kpi-sub text-amber-600 dark:text-amber-400 block mt-0.5">Allocated seats</span>
             </div>
 
-            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">In Progress</span>
-                <span class="text-2xl font-black text-sky-600 dark:text-sky-400 mt-1 block">{{ number_format($inProgressAttempts) }}</span>
-                <span class="text-[10px] text-sky-600 dark:text-sky-400 mt-0.5 block">Active exam sessions</span>
+            <div class="kpi-card p-3.5 text-center">
+                <span class="kpi-label block truncate">In Progress</span>
+                <span class="kpi-value metric-value--info block mt-1">{{ number_format($inProgressAttempts) }}</span>
+                <span class="kpi-sub text-sky-600 dark:text-sky-400 block mt-0.5">Active exam sessions</span>
             </div>
 
-            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Paid / Eligible</span>
-                <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ number_format($paidEligibleCandidates) }}</span>
-                <span class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Mock Test verified</span>
+            <div class="kpi-card p-3.5 text-center">
+                <span class="kpi-label block truncate">Paid / Eligible</span>
+                <span class="kpi-value metric-value--success block mt-1">{{ number_format($paidEligibleCandidates) }}</span>
+                <span class="kpi-sub block mt-0.5">Mock Test verified</span>
             </div>
 
-            <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Registered Students</span>
-                <span class="text-2xl font-black text-slate-900 dark:text-white mt-1 block">{{ number_format($totalStudents) }}</span>
-                <span class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Total candidates</span>
+            <div class="kpi-card p-3.5 text-center">
+                <span class="kpi-label block truncate">Registered Students</span>
+                <span class="kpi-value metric-value--neutral block mt-1">{{ number_format($totalStudents) }}</span>
+                <span class="kpi-sub block mt-0.5">Total candidates</span>
             </div>
 
         </div>
@@ -88,33 +88,33 @@
             <span>Assessment Inventory &amp; Institutional Staff</span>
         </h2>
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Total Assessments</span>
-                <span class="text-lg font-bold text-slate-900 dark:text-white mt-0.5 block">{{ number_format($totalTests) }}</span>
+            <div class="kpi-card p-3">
+                <span class="kpi-label block">Total Assessments</span>
+                <span class="kpi-value text-lg font-bold block mt-0.5">{{ number_format($totalTests) }}</span>
             </div>
-            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Published / Live</span>
-                <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">{{ number_format($publishedTests) }}</span>
+            <div class="kpi-card p-3">
+                <span class="kpi-label block">Published / Live</span>
+                <span class="kpi-value metric-value--success text-lg font-bold block mt-0.5">{{ number_format($publishedTests) }}</span>
             </div>
-            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Test Simulators</span>
-                <span class="text-lg font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">{{ number_format($simulatorTests) }}</span>
+            <div class="kpi-card p-3">
+                <span class="kpi-label block">Test Simulators</span>
+                <span class="kpi-value metric-value--warning text-lg font-bold block mt-0.5">{{ number_format($simulatorTests) }}</span>
             </div>
-            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Mock Tests</span>
-                <span class="text-lg font-bold text-rose-600 dark:text-rose-400 mt-0.5 block">{{ number_format($realTests) }}</span>
+            <div class="kpi-card p-3">
+                <span class="kpi-label block">Mock Tests</span>
+                <span class="kpi-value metric-value--danger text-lg font-bold block mt-0.5">{{ number_format($realTests) }}</span>
             </div>
-            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Teachers</span>
-                <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 block">{{ number_format($totalTeachers) }}</span>
+            <div class="kpi-card p-3">
+                <span class="kpi-label block">Teachers</span>
+                <span class="kpi-value metric-value--primary text-lg font-bold block mt-0.5">{{ number_format($totalTeachers) }}</span>
             </div>
-            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Repository Managers</span>
-                <span class="text-lg font-bold text-purple-600 dark:text-purple-400 mt-0.5 block">{{ number_format($totalRMs) }}</span>
+            <div class="kpi-card p-3">
+                <span class="kpi-label block">Repository Managers</span>
+                <span class="kpi-value text-purple-600 dark:text-purple-400 text-lg font-bold block mt-0.5">{{ number_format($totalRMs) }}</span>
             </div>
-            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Admins &amp; Staff</span>
-                <span class="text-lg font-bold text-slate-900 dark:text-slate-200 mt-0.5 block">{{ number_format($totalAdmins + $totalSuperAdmins) }}</span>
+            <div class="kpi-card p-3">
+                <span class="kpi-label block">Admins &amp; Staff</span>
+                <span class="kpi-value text-lg font-bold block mt-0.5">{{ number_format($totalAdmins + $totalSuperAdmins) }}</span>
             </div>
         </div>
     </section>

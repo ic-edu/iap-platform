@@ -176,16 +176,25 @@ class GlobalThemeConsistencyTest extends TestCase
         $response->assertSee('Paid / Eligible');
         $response->assertSee('Registered Students');
 
-        // Verify responsive metric value classes are present for all 8 cards
-        $response->assertSee('text-slate-900 dark:text-white', false);
-        $response->assertSee('text-emerald-600 dark:text-emerald-400', false);
-        $response->assertSee('text-rose-600 dark:text-rose-400', false);
-        $response->assertSee('text-indigo-600 dark:text-indigo-400', false);
-        $response->assertSee('text-amber-600 dark:text-amber-400', false);
-        $response->assertSee('text-sky-600 dark:text-sky-400', false);
+        // Verify canonical semantic KPI contract classes
+        $response->assertSee('kpi-card');
+        $response->assertSee('kpi-label');
+        $response->assertSee('kpi-value');
+        $response->assertSee('kpi-sub');
+        $response->assertSee('metric-value--neutral');
+        $response->assertSee('metric-value--success');
+        $response->assertSee('metric-value--danger');
+        $response->assertSee('metric-value--primary');
+        $response->assertSee('metric-value--warning');
+        $response->assertSee('metric-value--info');
 
         // Ensure no raw text-white without dark mode prefix on KPI values
         $content = $response->getContent();
         $this->assertStringNotContainsString('text-2xl font-black text-white mt-1 block', $content);
+
+        // Ensure app.css does not have destructive wildcard white text on card surfaces
+        $css = file_get_contents(resource_path('css/app.css'));
+        $this->assertStringNotContainsString('.bg-slate-900\/90 *', $css);
+        $this->assertStringNotContainsString('.bg-slate-900\/80 *', $css);
     }
 }

@@ -815,35 +815,13 @@ html[data-theme="light"] .bg-sky-600 * {
     color: #ffffff !important;
 }
 
-/* Dark Media Badges & Dark Compact Labels (Audio Badges, Overlay Pills -> White Text) */
-html.light .bg-slate-900\/80,
-html[data-theme="light"] .bg-slate-900\/80,
-html.light .bg-slate-900\/80 *,
-html[data-theme="light"] .bg-slate-900\/80 *,
-html.light .bg-slate-900\/90,
-html[data-theme="light"] .bg-slate-900\/90,
-html.light .bg-slate-900\/90 *,
-html[data-theme="light"] .bg-slate-900\/90 *,
-html.light span.bg-slate-800,
-html[data-theme="light"] span.bg-slate-800,
-html.light span.bg-slate-800 *,
-html[data-theme="light"] span.bg-slate-800 *,
-html.light span.bg-slate-900,
-html[data-theme="light"] span.bg-slate-900,
-html.light span.bg-slate-900 *,
-html[data-theme="light"] span.bg-slate-900 *,
-html.light span.bg-gray-800,
-html[data-theme="light"] span.bg-gray-800,
-html.light span.bg-gray-800 *,
-html[data-theme="light"] span.bg-gray-800 *,
-html.light span.bg-gray-900,
-html[data-theme="light"] span.bg-gray-900,
-html.light span.bg-gray-900 *,
-html[data-theme="light"] span.bg-gray-900 *,
+/* Dark Media Badges & Dedicated Dark Pills (Explicitly Styled Badges -> White Text) */
 html.light .badge-dark,
 html[data-theme="light"] .badge-dark,
 html.light .badge-dark *,
-html[data-theme="light"] .badge-dark * {
+html[data-theme="light"] .badge-dark *,
+html.light .media-badge-dark,
+html[data-theme="light"] .media-badge-dark {
     color: #ffffff !important;
 }
 
