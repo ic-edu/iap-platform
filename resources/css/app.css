@@ -2768,6 +2768,9 @@ html[data-theme="dark"] .ra-status--waived {
     border-radius: 1rem;
     padding: 1.25rem;
     transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .kpi-label,
@@ -2777,22 +2780,29 @@ html[data-theme="dark"] .ra-status--waived {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--text-muted);
+    min-height: 1.85rem;
+    display: flex;
+    align-items: flex-start;
+    line-height: 1.25;
 }
 
 .kpi-sub,
 .metric-sub {
     font-size: 0.65rem;
     color: var(--text-muted);
+    line-height: 1.25;
+    margin-top: 0.25rem;
 }
 
 .kpi-value,
 .metric-value,
 .stat-value {
     font-size: 1.875rem;
-    line-height: 1;
+    line-height: 1.1;
     font-weight: 800;
     color: var(--metric-neutral);
     font-family: inherit;
+    margin-top: 0.25rem;
 }
 
 .metric-value--primary {

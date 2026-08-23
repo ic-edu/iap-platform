@@ -101,6 +101,9 @@ class GlobalThemeConsistencyTest extends TestCase
 
         $this->assertStringContainsString('.kpi-card', $css);
         $this->assertStringContainsString('.metric-card', $css);
+        $this->assertStringContainsString('.kpi-label', $css);
+        $this->assertStringContainsString('min-height: 1.85rem;', $css);
+        $this->assertStringContainsString('flex-direction: column;', $css);
         $this->assertStringContainsString('.kpi-value', $css);
         $this->assertStringContainsString('.metric-value', $css);
         $this->assertStringContainsString('.metric-value--primary', $css);

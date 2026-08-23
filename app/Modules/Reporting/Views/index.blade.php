@@ -32,49 +32,49 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             
             <div class="kpi-card p-3.5 text-center">
-                <span class="kpi-label block truncate">Total Submissions</span>
+                <span class="kpi-label block">Total Submissions</span>
                 <span class="kpi-value metric-value--neutral block mt-1">{{ number_format($totalAttempts) }}</span>
                 <span class="kpi-sub block mt-0.5">Finished tests</span>
             </div>
 
             <div class="kpi-card p-3.5 text-center">
-                <span class="kpi-label block truncate">Pass Rate</span>
+                <span class="kpi-label block">Pass Rate</span>
                 <span class="kpi-value metric-value--success block mt-1">{{ $passRate }}%</span>
                 <span class="kpi-sub text-emerald-600 dark:text-emerald-400 block mt-0.5">{{ number_format($totalPassed) }} passed</span>
             </div>
 
             <div class="kpi-card p-3.5 text-center">
-                <span class="kpi-label block truncate">Failed Tests</span>
+                <span class="kpi-label block">Failed Tests</span>
                 <span class="kpi-value metric-value--danger block mt-1">{{ number_format($totalFailed) }}</span>
                 <span class="kpi-sub text-rose-600 dark:text-rose-400 block mt-0.5">Below passing score</span>
             </div>
 
             <div class="kpi-card p-3.5 text-center">
-                <span class="kpi-label block truncate">Certificates</span>
+                <span class="kpi-label block">Certificates</span>
                 <span class="kpi-value metric-value--primary block mt-1">{{ number_format($totalCertificates) }}</span>
                 <span class="kpi-sub text-indigo-600 dark:text-indigo-400 block mt-0.5">Issued &amp; verified</span>
             </div>
 
             <div class="kpi-card p-3.5 text-center">
-                <span class="kpi-label block truncate">Active Assignments</span>
+                <span class="kpi-label block">Active Assignments</span>
                 <span class="kpi-value metric-value--warning block mt-1">{{ number_format($activeAssignments) }}</span>
                 <span class="kpi-sub text-amber-600 dark:text-amber-400 block mt-0.5">Allocated seats</span>
             </div>
 
             <div class="kpi-card p-3.5 text-center">
-                <span class="kpi-label block truncate">In Progress</span>
+                <span class="kpi-label block">In Progress</span>
                 <span class="kpi-value metric-value--info block mt-1">{{ number_format($inProgressAttempts) }}</span>
                 <span class="kpi-sub text-sky-600 dark:text-sky-400 block mt-0.5">Active exam sessions</span>
             </div>
 
             <div class="kpi-card p-3.5 text-center">
-                <span class="kpi-label block truncate">Paid / Eligible</span>
+                <span class="kpi-label block">Paid / Eligible</span>
                 <span class="kpi-value metric-value--success block mt-1">{{ number_format($paidEligibleCandidates) }}</span>
                 <span class="kpi-sub block mt-0.5">Mock Test verified</span>
             </div>
 
             <div class="kpi-card p-3.5 text-center">
-                <span class="kpi-label block truncate">Registered Students</span>
+                <span class="kpi-label block">Registered Students</span>
                 <span class="kpi-value metric-value--neutral block mt-1">{{ number_format($totalStudents) }}</span>
                 <span class="kpi-sub block mt-0.5">Total candidates</span>
             </div>
