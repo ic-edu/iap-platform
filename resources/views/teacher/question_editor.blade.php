@@ -41,8 +41,8 @@
             </div>
 
             <div>
-                <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Prompt Stem Text</label>
-                <textarea name="prompt" rows="4" required style="width:100%;padding:.75rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.9rem;line-height:1.5;">{{ old('prompt', $question->prompt) }}</textarea>
+                <label style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Prompt Stem Text</label>
+                <textarea name="prompt" rows="4" required style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;line-height:1.5;">{{ old('prompt', $question->prompt) }}</textarea>
             </div>
 
             @php
@@ -51,9 +51,9 @@
             @endphp
 
             @if($isToeic)
-            <div style="background:#1e1b4b;border:1px solid #4f46e5;padding:1rem;border-radius:.75rem;">
-                <label style="display:block;font-size:.85rem;font-weight:800;color:#c7d2fe;margin-bottom:.4rem;">🎯 TOEIC Part Selection *</label>
-                <select name="part_number" id="eq-part-number" onchange="onToeicPartChange(this.value)" style="width:100%;padding:.7rem;background:#0f172a;border:1px solid #6366f1;border-radius:.6rem;color:#fff;font-size:.88rem;font-weight:700;">
+            <div style="background:#eef2ff;border:1px solid #c7d2fe;padding:1rem;border-radius:.75rem;">
+                <label style="display:block;font-size:.85rem;font-weight:800;color:#4338ca;margin-bottom:.4rem;">🎯 TOEIC Part Selection *</label>
+                <select name="part_number" id="eq-part-number" onchange="onToeicPartChange(this.value)" style="width:100%;padding:.7rem;background:#ffffff;border:1px solid #818cf8;border-radius:.6rem;color:#0f172a;font-size:.88rem;font-weight:700;">
                     <option value="1" {{ $curPart == 1 ? 'selected' : '' }}>Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
                     <option value="2" {{ $curPart == 2 ? 'selected' : '' }}>Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
                     <option value="3" {{ $curPart == 3 ? 'selected' : '' }}>Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
@@ -65,16 +65,16 @@
                 <input type="hidden" name="section" id="eq-section" value="{{ in_array($curPart, [1,2,3,4]) ? 'listening' : 'reading' }}">
             </div>
 
-            <div id="eq-passage-container" style="display:{{ in_array($curPart, [6,7]) ? 'block' : 'none' }};background:#1e293b;padding:1rem;border-radius:.75rem;border:1px solid #334155;">
-                <label style="display:block;font-size:.85rem;font-weight:800;color:#cbd5e1;margin-bottom:.4rem;">📖 Reading Passage Text <span style="color:#f43f5e;">*</span></label>
-                <textarea name="passage_text" id="eq-passage-text" rows="4" placeholder="Enter passage text for Part 6 / 7..." style="width:100%;padding:.75rem;background:#0f172a;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;">{{ old('passage_text', $question->passage_text ?? ($question->passage?->content ?? '')) }}</textarea>
+            <div id="eq-passage-container" style="display:{{ in_array($curPart, [6,7]) ? 'block' : 'none' }};background:#f8fafc;padding:1rem;border-radius:.75rem;border:1px solid #e2e8f0;">
+                <label style="display:block;font-size:.85rem;font-weight:800;color:#334155;margin-bottom:.4rem;">📖 Reading Passage Text <span style="color:#f43f5e;">*</span></label>
+                <textarea name="passage_text" id="eq-passage-text" rows="4" placeholder="Enter passage text for Part 6 / 7..." style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;">{{ old('passage_text', $question->passage_text ?? ($question->passage?->content ?? '')) }}</textarea>
             </div>
             @endif
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                 <div>
-                    <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Question Type</label>
-                    <select name="question_type" style="width:100%;padding:.7rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;">
+                    <label style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Question Type</label>
+                    <select name="question_type" style="width:100%;padding:.7rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;">
                         <option value="multiple_choice" {{ $question->question_type === 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
                         <option value="single_choice" {{ $question->question_type === 'single_choice' ? 'selected' : '' }}>Single Choice</option>
                         @if(!$isToeic)
@@ -83,9 +83,9 @@
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Difficulty *</label>
+                    <label style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Difficulty *</label>
                     @php $diffVal = is_object($question->difficulty) ? $question->difficulty->value : $question->difficulty; @endphp
-                    <select name="difficulty" required style="width:100%;padding:.7rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;">
+                    <select name="difficulty" required style="width:100%;padding:.7rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;">
                         <option value="easy" {{ $diffVal === 'easy' ? 'selected' : '' }}>Easy</option>
                         <option value="medium" {{ $diffVal === 'medium' || empty($diffVal) ? 'selected' : '' }}>Medium</option>
                         <option value="hard" {{ $diffVal === 'hard' ? 'selected' : '' }}>Hard</option>
@@ -94,11 +94,11 @@
             </div>
 
             {{-- Question Media Section --}}
-            <div style="background:#1e293b;padding:1.1rem;border-radius:.75rem;border:1px solid #334155;">
+            <div style="background:#f8fafc;padding:1.1rem;border-radius:.75rem;border:1px solid #e2e8f0;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
                     <div>
-                        <span style="font-size:.85rem;font-weight:800;color:#e2e8f0;display:block;">🖼️ / 🎧 Question Media Attachments</span>
-                        <span style="font-size:.75rem;color:#94a3b8;">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
+                        <span style="font-size:.85rem;font-weight:800;color:#0f172a;display:block;">🖼️ / 🎧 Question Media Attachments</span>
+                        <span style="font-size:.75rem;color:#64748b;">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
                     </div>
                     <button type="button" onclick="openQuestionMediaPicker()" style="padding:.4rem .85rem;background:#4f46e5;color:#fff;border:none;border-radius:.45rem;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
                         📎 + Attach Media
@@ -116,74 +116,74 @@
 
                 <div id="eq-attached-media-container" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.6rem;">
                     {{-- Image preview card --}}
-                    <div id="eq-preview-image-card" style="display:{{ $hasImg ? 'flex' : 'none' }};background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
+                    <div id="eq-preview-image-card" style="display:{{ $hasImg ? 'flex' : 'none' }};background:#ffffff;border:1px solid #e2e8f0;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
                         <div style="display:flex;align-items:center;gap:.75rem;">
-                            <img id="eq-preview-image-thumb" src="{{ $question->image_url ?? '' }}" alt="Thumbnail" style="width:52px;height:52px;object-fit:cover;border-radius:.35rem;border:1px solid #475569;">
+                            <img id="eq-preview-image-thumb" src="{{ $question->image_url ?? '' }}" alt="Thumbnail" style="width:52px;height:52px;object-fit:cover;border-radius:.35rem;border:1px solid #cbd5e1;">
                             <div>
-                                <span style="font-size:.78rem;font-weight:700;color:#38bdf8;display:block;">🖼️ Attached Image (Photograph)</span>
-                                <span id="eq-preview-image-title" style="font-size:.72rem;color:#cbd5e1;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">{{ $question->image_url }}</span>
+                                <span style="font-size:.78rem;font-weight:700;color:#0369a1;display:block;">🖼️ Attached Image (Photograph)</span>
+                                <span id="eq-preview-image-title" style="font-size:.72rem;color:#475569;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">{{ $question->image_url }}</span>
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.4rem;">
-                            <button type="button" onclick="previewQuestionModalMedia('image')" style="background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="previewQuestionModalMedia('image')" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                 👁️ Preview
                             </button>
-                            <button type="button" onclick="openQuestionMediaPicker('image')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="openQuestionMediaPicker('image')" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                 Change
                             </button>
-                            <button type="button" onclick="removeQuestionAttachedMedia('image')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="removeQuestionAttachedMedia('image')" style="background:#fff1f2;color:#be123c;border:1px solid #fecdd3;border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                 ✕ Remove
                             </button>
                         </div>
                     </div>
 
                     {{-- Image empty placeholder --}}
-                    <div id="eq-empty-image-card" style="display:{{ $hasImg ? 'none' : 'flex' }};align-items:center;justify-content:space-between;background:#0f172a;border:1px dashed #334155;border-radius:.5rem;padding:.55rem .75rem;">
+                    <div id="eq-empty-image-card" style="display:{{ $hasImg ? 'none' : 'flex' }};align-items:center;justify-content:space-between;background:#ffffff;border:1px dashed #cbd5e1;border-radius:.5rem;padding:.55rem .75rem;">
                         <div style="display:flex;align-items:center;gap:.5rem;">
                             <span style="font-size:1.1rem;">🖼️</span>
                             <div>
-                                <span style="font-size:.75rem;font-weight:700;color:#cbd5e1;display:block;">Question Photograph / Image</span>
+                                <span style="font-size:.75rem;font-weight:700;color:#334155;display:block;">Question Photograph / Image</span>
                                 <span style="font-size:.68rem;color:#64748b;">No image attached</span>
                             </div>
                         </div>
-                        <button type="button" onclick="openQuestionMediaPicker('image')" style="padding:.3rem .65rem;background:rgba(56,189,248,.12);color:#38bdf8;border:1px solid rgba(56,189,248,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
+                        <button type="button" onclick="openQuestionMediaPicker('image')" style="padding:.3rem .65rem;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
                             + Attach Image
                         </button>
                     </div>
 
                     {{-- Audio preview card --}}
-                    <div id="eq-preview-audio-card" style="display:{{ $hasAudio ? 'flex' : 'none' }};background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
+                    <div id="eq-preview-audio-card" style="display:{{ $hasAudio ? 'flex' : 'none' }};background:#ffffff;border:1px solid #e2e8f0;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
                         <div style="display:flex;align-items:center;gap:.75rem;flex:1;">
                             <span style="font-size:1.5rem;">🎧</span>
                             <div style="flex:1;">
-                                <span style="font-size:.78rem;font-weight:700;color:#818cf8;display:block;">🎵 Attached Audio Prompt</span>
-                                <span id="eq-preview-audio-title" style="font-size:.72rem;color:#cbd5e1;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-bottom:.3rem;">{{ $question->audio_url }}</span>
+                                <span style="font-size:.78rem;font-weight:700;color:#4338ca;display:block;">🎵 Attached Audio Prompt</span>
+                                <span id="eq-preview-audio-title" style="font-size:.72rem;color:#475569;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-bottom:.3rem;">{{ $question->audio_url }}</span>
                                 <audio id="eq-preview-audio-player" controls style="height:28px;width:100%;max-width:300px;" src="{{ $question->audio_url ?? '' }}"></audio>
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.4rem;">
-                            <button type="button" onclick="previewQuestionModalMedia('audio')" style="background:rgba(129,140,248,.15);color:#818cf8;border:1px solid rgba(129,140,248,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="previewQuestionModalMedia('audio')" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                 👁️ Preview
                             </button>
-                            <button type="button" onclick="openQuestionMediaPicker('audio')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="openQuestionMediaPicker('audio')" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                 Change
                             </button>
-                            <button type="button" onclick="removeQuestionAttachedMedia('audio')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="removeQuestionAttachedMedia('audio')" style="background:#fff1f2;color:#be123c;border:1px solid #fecdd3;border-radius:.4rem;padding:.35rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer;">
                                 ✕ Remove
                             </button>
                         </div>
                     </div>
 
                     {{-- Audio empty placeholder --}}
-                    <div id="eq-empty-audio-card" style="display:{{ $hasAudio ? 'none' : 'flex' }};align-items:center;justify-content:space-between;background:#0f172a;border:1px dashed #334155;border-radius:.5rem;padding:.55rem .75rem;">
+                    <div id="eq-empty-audio-card" style="display:{{ $hasAudio ? 'none' : 'flex' }};align-items:center;justify-content:space-between;background:#ffffff;border:1px dashed #cbd5e1;border-radius:.5rem;padding:.55rem .75rem;">
                         <div style="display:flex;align-items:center;gap:.5rem;">
                             <span style="font-size:1.1rem;">🎧</span>
                             <div>
-                                <span style="font-size:.75rem;font-weight:700;color:#cbd5e1;display:block;">Question Audio Prompt</span>
+                                <span style="font-size:.75rem;font-weight:700;color:#334155;display:block;">Question Audio Prompt</span>
                                 <span style="font-size:.68rem;color:#64748b;">No audio attached</span>
                             </div>
                         </div>
-                        <button type="button" onclick="openQuestionMediaPicker('audio')" style="padding:.3rem .65rem;background:rgba(129,140,248,.12);color:#818cf8;border:1px solid rgba(129,140,248,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
+                        <button type="button" onclick="openQuestionMediaPicker('audio')" style="padding:.3rem .65rem;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
                             + Attach Audio
                         </button>
                     </div>
@@ -194,10 +194,10 @@
             <div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
                     <div>
-                        <label style="font-size:.85rem;font-weight:700;color:#cbd5e1;margin:0;display:block;">Choices &amp; Correct Answer Selection</label>
-                        <span style="font-size:.72rem;color:#94a3b8;">Select exactly one radio button on the left to set the correct answer.</span>
+                        <label style="font-size:.85rem;font-weight:700;color:#334155;margin:0;display:block;">Choices &amp; Correct Answer Selection</label>
+                        <span style="font-size:.72rem;color:#64748b;">Select exactly one radio button on the left to set the correct answer.</span>
                     </div>
-                    <button type="button" onclick="addChoiceRow()" style="font-size:.75rem;font-weight:700;color:#818cf8;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);padding:.25rem .65rem;border-radius:.4rem;cursor:pointer;">
+                    <button type="button" onclick="addChoiceRow()" style="font-size:.75rem;font-weight:700;color:#4338ca;background:#eef2ff;border:1px solid #c7d2fe;padding:.25rem .65rem;border-radius:.4rem;cursor:pointer;">
                         + Add Choice
                     </button>
                 </div>
@@ -219,14 +219,14 @@
                             $isCorrectChoice = (string) old('correct_choice') === (string) $cIdx;
                         }
                     @endphp
-                    <div class="choice-row" id="edit-choice-row-{{ $cIdx }}" style="display:flex;align-items:center;gap:.75rem;background:{{ $isCorrectChoice ? 'rgba(16,185,129,0.06)' : '#1e293b' }};padding:.65rem .85rem;border-radius:.6rem;border:1px solid {{ $isCorrectChoice ? 'rgba(16,185,129,0.6)' : '#334155' }};transition:all .15s ease;">
+                    <div class="choice-row" id="edit-choice-row-{{ $cIdx }}" style="display:flex;align-items:center;gap:.75rem;background:{{ $isCorrectChoice ? '#ecfdf5' : '#f8fafc' }};padding:.65rem .85rem;border-radius:.6rem;border:1px solid {{ $isCorrectChoice ? '#10b981' : '#e2e8f0' }};transition:all .15s ease;">
                         <input type="radio" name="correct_choice" value="{{ $cIdx }}" id="edit-correct-{{ $cIdx }}" onchange="updateEditorCorrectChoice()" {{ $isCorrectChoice ? 'checked' : '' }} style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
-                        <label for="edit-correct-{{ $cIdx }}" class="choice-label" style="font-weight:800;color:#818cf8;font-size:.85rem;width:1.5rem;cursor:pointer;margin:0;">{{ chr(65 + $cIdx) }}.</label>
-                        <input type="text" name="choices[{{ $cIdx }}]" value="{{ is_object($cObj) ? ($cObj->content ?? $cObj->choice_text) : '' }}" placeholder="Option {{ chr(65 + $cIdx) }} text" style="flex:1;padding:.5rem .75rem;background:#0f172a;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.88rem;">
-                        <span class="correct-indicator" id="edit-correct-badge-{{ $cIdx }}" style="display:{{ $isCorrectChoice ? 'inline-flex' : 'none' }};align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:.4rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.72rem;font-weight:800;letter-spacing:.03em;white-space:nowrap;">
+                        <label for="edit-correct-{{ $cIdx }}" class="choice-label" style="font-weight:800;color:#4f46e5;font-size:.85rem;width:1.5rem;cursor:pointer;margin:0;">{{ chr(65 + $cIdx) }}.</label>
+                        <input type="text" name="choices[{{ $cIdx }}]" value="{{ is_object($cObj) ? ($cObj->content ?? $cObj->choice_text) : '' }}" placeholder="Option {{ chr(65 + $cIdx) }} text" style="flex:1;padding:.5rem .75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.5rem;color:#0f172a;font-size:.88rem;">
+                        <span class="correct-indicator" id="edit-correct-badge-{{ $cIdx }}" style="display:{{ $isCorrectChoice ? 'inline-flex' : 'none' }};align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:.4rem;background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;font-size:.72rem;font-weight:800;letter-spacing:.03em;white-space:nowrap;">
                             ✓ CORRECT ANSWER
                         </span>
-                        <button type="button" onclick="removeChoiceRow(this)" class="btn-remove-choice" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;line-height:1;" title="Remove choice">✕</button>
+                        <button type="button" onclick="removeChoiceRow(this)" class="btn-remove-choice" style="color:#e11d48;background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;line-height:1;" title="Remove choice">✕</button>
                     </div>
                     @endforeach
                 </div>
@@ -387,10 +387,10 @@
             </div>
 
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;border-top:1px solid #1e293b;padding-top:1.25rem;">
-                <a href="{{ route('teacher.tests.show', $test->id) }}" style="padding:.75rem 1.25rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.65rem;font-size:.85rem;font-weight:700;text-decoration:none;">
+                <a href="{{ route('teacher.tests.show', $test->id) }}" style="padding:.75rem 1.25rem;background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:.65rem;font-size:.85rem;font-weight:700;text-decoration:none;">
                     Cancel
                 </a>
-                <button type="submit" style="padding:.75rem 1.75rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,.35);">
+                <button type="submit" style="padding:.75rem 1.75rem;background:#4f46e5;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.25);">
                     💾 Save Question Edits & Return to Summary
                 </button>
             </div>
@@ -399,11 +399,11 @@
 </div>
 
 {{-- General Asset Preview Modal --}}
-<div id="asset-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;padding:1.5rem;" onclick="closeAssetPreviewModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.6);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #1e293b;padding-bottom:.6rem;">
-            <div id="apm-title" style="font-size:1rem;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Preview Asset</div>
-            <button type="button" onclick="closeAssetPreviewModal()" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;">×</button>
+<div id="asset-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;padding:1.5rem;" onclick="closeAssetPreviewModal(event)">
+    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1rem;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.15);" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #e2e8f0;padding-bottom:.6rem;">
+            <div id="apm-title" style="font-size:1rem;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Preview Asset</div>
+            <button type="button" onclick="closeAssetPreviewModal()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;">×</button>
         </div>
         <div id="apm-content" style="display:flex;justify-content:center;align-items:center;min-height:180px;">
         </div>
@@ -411,27 +411,27 @@
 </div>
 
 {{-- Question Media Picker Modal --}}
-<div id="question-media-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10001;align-items:center;justify-content:center;padding:1rem;" onclick="closeQuestionMediaPicker(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1.25rem;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.7);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #1e293b;padding-bottom:.75rem;">
+<div id="question-media-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:10001;align-items:center;justify-content:center;padding:1rem;" onclick="closeQuestionMediaPicker(event)">
+    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.15);" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #e2e8f0;padding-bottom:.75rem;">
             <div>
-                <div style="font-size:1.1rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
+                <div style="font-size:1.1rem;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:.5rem;">
                     <span>📎</span> Attach Question Media
                 </div>
-                <div style="font-size:.72rem;color:#94a3b8;margin-top:.2rem;">
+                <div style="font-size:.72rem;color:#64748b;margin-top:.2rem;">
                     Select an Image (photograph) or Audio prompt from the Institutional Media Library, or upload directly.
                 </div>
             </div>
-            <button type="button" onclick="closeQuestionMediaPicker()" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeQuestionMediaPicker()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;">×</button>
         </div>
 
         {{-- Direct Upload Toggle Bar --}}
-        <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:.75rem 1rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.75rem 1rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
             <div style="display:flex;align-items:center;gap:.5rem;">
                 <span style="font-size:1.1rem;">⬆️</span>
-                <input type="file" id="eqm-direct-file-input" accept="image/*,audio/*,application/pdf" style="font-size:.75rem;color:#cbd5e1;">
+                <input type="file" id="eqm-direct-file-input" accept="image/*,audio/*,application/pdf" style="font-size:.75rem;color:#334155;">
             </div>
-            <button type="button" id="eqm-upload-btn" onclick="uploadQuestionMediaFile()" style="padding:.4rem 1rem;background:#10b981;color:#fff;border:none;border-radius:.45rem;font-size:.75rem;font-weight:800;cursor:pointer;">
+            <button type="button" id="eqm-upload-btn" onclick="uploadQuestionMediaFile()" style="padding:.4rem 1rem;background:#059669;color:#fff;border:none;border-radius:.45rem;font-size:.75rem;font-weight:800;cursor:pointer;">
                 Upload &amp; Attach
             </button>
         </div>
@@ -439,17 +439,17 @@
         {{-- Library Filters & Search --}}
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
             <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
-                <button type="button" onclick="filterQuestionMediaModal('all')" class="eqm-filter-btn active" style="padding:.35rem .7rem;background:#6366f1;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
-                <button type="button" onclick="filterQuestionMediaModal('image')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🖼️ Images</button>
-                <button type="button" onclick="filterQuestionMediaModal('audio')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🎵 Audio Tracks</button>
-                <button type="button" onclick="filterQuestionMediaModal('passage')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📖 Passages</button>
-                <button type="button" onclick="filterQuestionMediaModal('pdf')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📄 PDFs</button>
+                <button type="button" onclick="filterQuestionMediaModal('all')" class="eqm-filter-btn active" style="padding:.35rem .7rem;background:#4f46e5;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
+                <button type="button" onclick="filterQuestionMediaModal('image')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🖼️ Images</button>
+                <button type="button" onclick="filterQuestionMediaModal('audio')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🎵 Audio Tracks</button>
+                <button type="button" onclick="filterQuestionMediaModal('passage')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📖 Passages</button>
+                <button type="button" onclick="filterQuestionMediaModal('pdf')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📄 PDFs</button>
             </div>
-            <input type="text" id="eqm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." style="padding:.35rem .7rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.75rem;min-width:180px;">
+            <input type="text" id="eqm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." style="padding:.35rem .7rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.45rem;color:#0f172a;font-size:.75rem;min-width:180px;">
         </div>
 
         {{-- Media Grid Container --}}
-        <div id="eqm-media-list-container" style="flex:1;min-height:220px;max-height:300px;overflow-y:auto;background:#090d16;border:1px solid #1e293b;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:.6rem;">
+        <div id="eqm-media-list-container" style="flex:1;min-height:220px;max-height:300px;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:.6rem;">
             <div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>
         </div>
 

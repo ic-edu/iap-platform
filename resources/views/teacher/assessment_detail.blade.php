@@ -116,8 +116,8 @@
             @endif
 
             {{-- Assessment Metadata Editor (TASK 1) --}}
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.5rem;margin-bottom:1.5rem;">
-                <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0 0 1.25rem;display:flex;align-items:center;gap:.5rem;">
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
+                <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;display:flex;align-items:center;gap:.5rem;">
                     ✏️ Assessment Authoring Editor
                 </h3>
 
@@ -126,14 +126,14 @@
                     @method('PUT')
 
                     <div>
-                        <label style="display:block;font-size:.82rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Assessment Title</label>
-                        <input type="text" name="title" value="{{ old('title', $test->title) }}" required style="width:100%;padding:.75rem 1rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.9rem;font-weight:600;">
+                        <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Assessment Title</label>
+                        <input type="text" name="title" value="{{ old('title', $test->title) }}" required style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div>
-                            <label style="display:block;font-size:.82rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Assessment Type</label>
-                            <select name="test_type" style="width:100%;padding:.75rem 1rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.9rem;font-weight:600;">
+                            <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Assessment Type</label>
+                            <select name="test_type" style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
                                 <option value="toeic" {{ $test->test_type === 'toeic' ? 'selected' : '' }}>TOEIC Simulation</option>
                                 <option value="toefl" {{ $test->test_type === 'toefl' ? 'selected' : '' }}>TOEFL iBT / ITP</option>
                                 <option value="ielts" {{ $test->test_type === 'ielts' ? 'selected' : '' }}>IELTS Academic</option>
@@ -141,19 +141,19 @@
                             </select>
                         </div>
                         <div>
-                            <label style="display:block;font-size:.82rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Duration (Minutes)</label>
-                            <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $test->duration_minutes) }}" required min="1" style="width:100%;padding:.75rem 1rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.9rem;font-weight:600;">
+                            <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Duration (Minutes)</label>
+                            <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $test->duration_minutes) }}" required min="1" style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
                         </div>
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div>
-                            <label style="display:block;font-size:.82rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Pass Score Threshold</label>
-                            <input type="number" name="pass_score" value="{{ old('pass_score', $test->pass_score) }}" required min="0" style="width:100%;padding:.75rem 1rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.9rem;font-weight:600;">
+                            <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Pass Score Threshold</label>
+                            <input type="number" name="pass_score" value="{{ old('pass_score', $test->pass_score) }}" required min="0" style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
                         </div>
                         <div>
-                            <label style="display:block;font-size:.82rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Scoring Method</label>
-                            <select name="scoring_method" style="width:100%;padding:.75rem 1rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.9rem;font-weight:600;">
+                            <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Scoring Method</label>
+                            <select name="scoring_method" style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
                                 <option value="automatic" {{ ($test->scoring_method?->value ?? $test->scoring_method ?? 'automatic') === 'automatic' ? 'selected' : '' }}>Automatic (Automatically scored; no examiner required)</option>
                                 <option value="human" {{ ($test->scoring_method?->value ?? $test->scoring_method) === 'human' ? 'selected' : '' }}>Human (Requires examiner evaluation before final result)</option>
                                 <option value="hybrid" {{ ($test->scoring_method?->value ?? $test->scoring_method) === 'hybrid' ? 'selected' : '' }}>Hybrid (Automatic scoring plus examiner evaluation)</option>
@@ -162,16 +162,16 @@
                     </div>
 
                     <div>
-                        <label style="display:block;font-size:.82rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">
+                        <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">
                             General Assessment Introduction / Candidate Instructions
-                            <span style="font-size:.72rem;color:#94a3b8;font-weight:normal;margin-left:.4rem;">(Shown to candidates on pre-test instruction screen before timed session)</span>
+                            <span style="font-size:.72rem;color:#64748b;font-weight:normal;margin-left:.4rem;">(Shown to candidates on pre-test instruction screen before timed session)</span>
                         </label>
-                        <textarea name="instructions" rows="4" placeholder="e.g. Welcome to the TOEIC Listening & Reading Test. Please ensure your headphones are connected..." style="width:100%;padding:.75rem 1rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;line-height:1.5;">{{ old('instructions', $test->instructions) }}</textarea>
+                        <textarea name="instructions" rows="4" placeholder="e.g. Welcome to the TOEIC Listening & Reading Test. Please ensure your headphones are connected..." style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;line-height:1.5;">{{ old('instructions', $test->instructions) }}</textarea>
                     </div>
 
                     <div style="display:flex;gap:1rem;margin-top:.5rem;flex-wrap:wrap;align-items:center;">
                         {{-- Save Draft Button --}}
-                        <button type="submit" style="padding:.75rem 1.5rem;background:#334155;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;">
+                        <button type="submit" style="padding:.75rem 1.5rem;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;">
                             💾 Save Settings Draft
                         </button>
                     </form>
@@ -183,11 +183,11 @@
                         @if($validationResult['is_valid'])
                         <button type="button" 
                                 onclick="openResubmitModal()" 
-                                style="padding:.75rem 1.5rem;background:#6366f1;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 14px rgba(99,102,241,.35);">
+                                style="padding:.75rem 1.5rem;background:#4f46e5;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 14px rgba(79,70,229,.25);">
                             🚀 {{ $test->status === 'draft' ? 'Submit for Review' : 'Resubmit for Review' }}
                         </button>
                         @else
-                        <button type="button" disabled style="padding:.75rem 1.5rem;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:.65rem;font-size:.88rem;font-weight:700;cursor:not-allowed;" title="Resolve all validation issues to enable submission.">
+                        <button type="button" disabled style="padding:.75rem 1.5rem;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;border-radius:.65rem;font-size:.88rem;font-weight:700;cursor:not-allowed;" title="Resolve all validation issues to enable submission.">
                             🚫 Submission Disabled (Validation Required)
                         </button>
                         @endif
@@ -197,26 +197,26 @@
             </div>
 
             {{-- TASK 2 & TASK 4: Revision Summary & Lazy Question Loading Explorer --}}
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.5rem;">
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.5rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
                     <div>
-                        <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:.5rem;">
+                        <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;margin:0;display:flex;align-items:center;gap:.5rem;">
                             📋 Assessment Questions &amp; Sections — Progressive Revision Summary
                         </h3>
-                        <p style="font-size:.78rem;color:#94a3b8;margin:.25rem 0 0;">
+                        <p style="font-size:.78rem;color:#64748b;margin:.25rem 0 0;">
                             Organize institutional master questions and authored items for this assessment.
                         </p>
                     </div>
 
                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
                     <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-                        <button type="button" onclick="openAttachMasterModal()" style="padding:.5rem .9rem;background:#4f46e5;color:#fff;font-weight:800;font-size:.78rem;border:none;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(79,70,229,.3);">
+                        <button type="button" onclick="openAttachMasterModal()" style="padding:.5rem .9rem;background:#4f46e5;color:#fff;font-weight:800;font-size:.78rem;border:none;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(79,70,229,.2);">
                             🏛️ + Add from Question Bank
                         </button>
-                        <button type="button" onclick="openCreateAuthoredQuestionModal()" style="padding:.5rem .9rem;background:#10b981;color:#fff;font-weight:800;font-size:.78rem;border:none;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(16,185,129,.3);">
+                        <button type="button" onclick="openCreateAuthoredQuestionModal()" style="padding:.5rem .9rem;background:#059669;color:#fff;font-weight:800;font-size:.78rem;border:none;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(5,150,105,.2);">
                             ✏️ + Add New Question
                         </button>
-                        <button type="button" onclick="openAddSectionModal()" style="padding:.5rem .9rem;background:#334155;color:#e2e8f0;font-weight:700;font-size:.78rem;border:1px solid #475569;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+                        <button type="button" onclick="openAddSectionModal()" style="padding:.5rem .9rem;background:#f1f5f9;color:#334155;font-weight:700;font-size:.78rem;border:1px solid #cbd5e1;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
                             📑 + Add Section
                         </button>
                     </div>
@@ -481,50 +481,50 @@
         {{-- Right Sidebar: Metadata & Workflow History Timeline --}}
         <div>
             {{-- Assessment Summary Card --}}
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.35rem;margin-bottom:1.5rem;">
-                <h4 style="font-size:.9rem;font-weight:800;color:#fff;margin:0 0 1rem;text-transform:uppercase;letter-spacing:.05em;">
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.35rem;margin-bottom:1.5rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
+                <h4 style="font-size:.9rem;font-weight:800;color:#0f172a;margin:0 0 1rem;text-transform:uppercase;letter-spacing:.05em;">
                     📊 Assessment Metrics
                 </h4>
 
                 <div style="display:flex;flex-direction:column;gap:.85rem;font-size:.82rem;">
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1e293b;padding-bottom:.6rem;">
-                        <span style="color:#94a3b8;">Questions</span>
-                        <strong style="color:#818cf8;">{{ $test->sections->sum(fn($s) => $s->testQuestions->count()) }}</strong>
+                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
+                        <span style="color:#64748b;">Questions</span>
+                        <strong style="color:#4f46e5;">{{ $test->sections->sum(fn($s) => $s->testQuestions->count()) }}</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1e293b;padding-bottom:.6rem;">
-                        <span style="color:#94a3b8;">Sections</span>
-                        <strong style="color:#cbd5e1;">{{ $test->sections->count() }}</strong>
+                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
+                        <span style="color:#64748b;">Sections</span>
+                        <strong style="color:#334155;">{{ $test->sections->count() }}</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1e293b;padding-bottom:.6rem;">
-                        <span style="color:#94a3b8;">Duration</span>
-                        <strong style="color:#cbd5e1;">{{ $test->duration_minutes }} Mins</strong>
+                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
+                        <span style="color:#64748b;">Duration</span>
+                        <strong style="color:#334155;">{{ $test->duration_minutes }} Mins</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1e293b;padding-bottom:.6rem;">
-                        <span style="color:#94a3b8;">Pass Threshold</span>
-                        <strong style="color:#cbd5e1;">{{ $test->pass_score }} Points</strong>
+                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
+                        <span style="color:#64748b;">Pass Threshold</span>
+                        <strong style="color:#334155;">{{ $test->pass_score }} Points</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1e293b;padding-bottom:.6rem;">
-                        <span style="color:#94a3b8;">Author</span>
-                        <strong style="color:#cbd5e1;">{{ $test->creator?->name ?? 'Teacher' }}</strong>
+                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
+                        <span style="color:#64748b;">Author</span>
+                        <strong style="color:#334155;">{{ $test->creator?->name ?? 'Teacher' }}</strong>
                     </div>
                     <div style="display:flex;justify-content:space-between;">
-                        <span style="color:#94a3b8;">Last Updated</span>
-                        <strong style="color:#cbd5e1;">{{ $test->updated_at?->diffForHumans() }}</strong>
+                        <span style="color:#64748b;">Last Updated</span>
+                        <strong style="color:#334155;">{{ $test->updated_at?->diffForHumans() }}</strong>
                     </div>
                 </div>
             </div>
 
             {{-- Workflow History Timeline --}}
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.35rem;">
-                <h4 style="font-size:.9rem;font-weight:800;color:#fff;margin:0 0 1.25rem;text-transform:uppercase;letter-spacing:.05em;">
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.35rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
+                <h4 style="font-size:.9rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;text-transform:uppercase;letter-spacing:.05em;">
                     ⏱ Governance Timeline
                 </h4>
 
-                <div style="display:flex;flex-direction:column;gap:1.25rem;position:relative;padding-left:1.2rem;border-left:2px solid #1e293b;">
+                <div style="display:flex;flex-direction:column;gap:1.25rem;position:relative;padding-left:1.2rem;border-left:2px solid #e2e8f0;">
                     @foreach($workflowTimeline as $item)
                     <div style="position:relative;">
-                        <div style="position:absolute;left:-1.65rem;top:.2rem;width:.8rem;height:.8rem;border-radius:50%;background:{{ $item['status'] === 'active' ? '#fbbf24' : ($item['status'] === 'completed' ? '#34d399' : '#334155') }};border:2px solid #0f172a;"></div>
-                        <div style="font-size:.85rem;font-weight:700;color:{{ $item['status'] === 'active' ? '#fbbf24' : ($item['status'] === 'completed' ? '#f1f5f9' : '#64748b') }};">
+                        <div style="position:absolute;left:-1.65rem;top:.2rem;width:.8rem;height:.8rem;border-radius:50%;background:{{ $item['status'] === 'active' ? '#f59e0b' : ($item['status'] === 'completed' ? '#10b981' : '#cbd5e1') }};border:2px solid #ffffff;"></div>
+                        <div style="font-size:.85rem;font-weight:700;color:{{ $item['status'] === 'active' ? '#d97706' : ($item['status'] === 'completed' ? '#0f172a' : '#64748b') }};">
                             {{ $item['step'] }}
                         </div>
                         @if($item['date'])
