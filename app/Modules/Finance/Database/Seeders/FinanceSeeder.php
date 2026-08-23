@@ -4,7 +4,6 @@ namespace App\Modules\Finance\Database\Seeders;
 
 use App\Models\User;
 use App\Modules\Academic\Models\Course;
-use App\Modules\Assessment\Models\Test;
 use App\Modules\Finance\Enums\PaymentStatus;
 use App\Modules\Finance\Models\Payment;
 use Illuminate\Database\Seeder;
@@ -15,7 +14,6 @@ class FinanceSeeder extends Seeder
     {
         $user = User::first();
         $course = Course::first();
-        $test = Test::first();
 
         if (!$user) {
             return;
@@ -26,7 +24,7 @@ class FinanceSeeder extends Seeder
         ], [
             'user_id' => $user->id,
             'course_id' => $course?->id,
-            'test_id' => $test?->id,
+            'test_id' => null,
             'amount' => 750000.00,
             'currency' => 'IDR',
             'payment_method' => 'bank_transfer',

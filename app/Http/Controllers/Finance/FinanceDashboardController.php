@@ -20,7 +20,7 @@ class FinanceDashboardController extends Controller
         ];
 
         $transactions = [
-            ['id' => 'TXN-882194', 'user' => 'student@icedu.org', 'package' => 'TOEIC Full Simulation Test 01', 'amount' => '$25.00', 'status' => 'PAID', 'date' => now()->subHours(3)->format('d M Y, H:i')],
+            ['id' => 'TXN-882194', 'user' => 'student@icedu.org', 'package' => 'TOEIC Diagnostic Prep Package', 'amount' => '$25.00', 'status' => 'PAID', 'date' => now()->subHours(3)->format('d M Y, H:i')],
             ['id' => 'TXN-882193', 'user' => 'candidate@icedu.org', 'package' => 'TOEFL ITP Standard Exam', 'amount' => '$35.00', 'status' => 'PAID', 'date' => now()->subHours(8)->format('d M Y, H:i')],
             ['id' => 'TXN-882192', 'user' => 'finance.test@icedu.org', 'package' => 'IELTS Academic Prep Package', 'amount' => '$45.00', 'status' => 'PAID', 'date' => now()->subHours(14)->format('d M Y, H:i')],
         ];
