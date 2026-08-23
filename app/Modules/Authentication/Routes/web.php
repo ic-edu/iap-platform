@@ -15,26 +15,31 @@ use App\Modules\Reporting\Services\DashboardMetricsService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/dashboard', function (DashboardMetricsService $metricsService) {
-    /** @var User $user */
+Route::get('/dashboard', function () {
+    /** @var User|null $user */
     $user = Auth::user();
 
-    if ($user->hasRole('student')) {
-        return redirect()->route('candidate.portal');
+    if ($user?->hasRole('super-admin')) {
+        return redirect()->route('super-admin.dashboard');
     }
 
-    if ($user->hasRole('teacher')) {
-        return redirect()->route('admin.question-banks.index');
+    if ($user?->hasRole('repository-manager')) {
+        return redirect()->route('admin.repository-manager.dashboard');
     }
 
-    if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
+    if ($user?->hasRole('admin')) {
         return redirect()->route('admin.dashboard');
     }
 
-    $metrics = $metricsService->getMetricsSummary();
-    $recentActivities = $metricsService->getRecentActivities(5);
+    if ($user?->hasRole('teacher')) {
+        return redirect()->route('teacher.dashboard');
+    }
 
-    return view('authentication::dashboard', compact('metrics', 'recentActivities'));
+    if ($user?->hasRole('finance')) {
+        return redirect()->route('finance.dashboard');
+    }
+
+    return redirect()->route('candidate.portal');
 })->middleware(['auth'])->name('dashboard');
 
 Route::middleware('guest')->group(function () {

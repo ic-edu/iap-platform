@@ -50,16 +50,20 @@ class DatabaseSeeder extends Seeder
         // 2. Operational Admin Demo Account
         $findOrCreate('opadmin@icedu.org', 'Operational Admin', 'admin');
 
-        // 3. Teacher Demo Account
+        // 3. Repository Manager Demo Accounts
+        $findOrCreate('repomanager@icedu.org', 'Dr. Eleanor Vance (Repository Manager)', 'repository-manager');
+        $findOrCreate('repomanager@icedu.com', 'Dr. Eleanor Vance (Repository Manager)', 'repository-manager');
+
+        // 4. Teacher Demo Account
         $findOrCreate('teacher@icedu.org', 'Teacher Instructor', 'teacher');
 
-        // 4. Student Demo Account
+        // 5. Student Demo Account
         $findOrCreate('student@icedu.org', 'Candidate Student', 'student');
 
-        // 5. Finance Demo Account
+        // 6. Finance Demo Account
         $findOrCreate('finance@icedu.org', 'Finance Manager', 'finance');
 
-        // 6. General Test User
+        // 7. General Test User
         $findOrCreate('test@example.com', 'Test User', 'super-admin');
 
         $this->call([
