@@ -47,50 +47,50 @@
                 <div class="flex items-center gap-2">
                     <span class="text-2xl">🏆</span>
                     <div>
-                        <h2 class="text-lg font-bold text-white">Institutional Scaled Score</h2>
-                        <p class="text-xs text-indigo-300">Institutional Conversion Scoring</p>
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Institutional Scaled Score</h2>
+                        <p class="text-xs text-indigo-600 dark:text-indigo-300">Institutional Conversion Scoring</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <span class="text-xs font-bold text-slate-400 uppercase">Total Score</span>
-                    <div class="text-3xl font-black text-indigo-400">{{ $summary['total_score'] }} <span class="text-sm font-normal text-slate-400">/ 990</span></div>
+                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Total Score</span>
+                    <div class="text-3xl font-black text-indigo-600 dark:text-indigo-400">{{ $summary['total_score'] }} <span class="text-sm font-normal text-slate-500 dark:text-slate-400">/ 990</span></div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="p-4 bg-slate-900/90 border border-indigo-500/20 rounded-xl flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">🎧 Listening Section</div>
-                        <div class="text-xs text-slate-300 mt-0.5">{{ $toeic['listening_correct'] }} / {{ $toeic['listening_total'] }} correct</div>
+                        <div class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">🎧 Listening Section</div>
+                        <div class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{{ $toeic['listening_correct'] }} / {{ $toeic['listening_total'] }} correct</div>
                     </div>
-                    <div class="text-2xl font-black text-white">
-                        {{ $toeic['listening_score'] }} <span class="text-xs font-normal text-slate-400">/ 495</span>
+                    <div class="text-2xl font-black text-slate-900 dark:text-white">
+                        {{ $toeic['listening_score'] }} <span class="text-xs font-normal text-slate-500 dark:text-slate-400">/ 495</span>
                     </div>
                 </div>
 
                 <div class="p-4 bg-slate-900/90 border border-indigo-500/20 rounded-xl flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">📖 Reading Section</div>
-                        <div class="text-xs text-slate-300 mt-0.5">{{ $toeic['reading_correct'] }} / {{ $toeic['reading_total'] }} correct</div>
+                        <div class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">📖 Reading Section</div>
+                        <div class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{{ $toeic['reading_correct'] }} / {{ $toeic['reading_total'] }} correct</div>
                     </div>
-                    <div class="text-2xl font-black text-white">
-                        {{ $toeic['reading_score'] }} <span class="text-xs font-normal text-slate-400">/ 495</span>
+                    <div class="text-2xl font-black text-slate-900 dark:text-white">
+                        {{ $toeic['reading_score'] }} <span class="text-xs font-normal text-slate-500 dark:text-slate-400">/ 495</span>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-4 pt-3 border-t border-indigo-500/20 text-[11px] text-slate-400 italic">
+            <div class="mt-4 pt-3 border-t border-indigo-500/20 text-[11px] text-slate-500 dark:text-slate-400 italic">
                 This is an institutional mock assessment result and is not an official third-party examination score.
             </div>
         </div>
         @elseif($isToeic && $isPractice)
         <!-- Practice / UAT Mini Test Notice -->
         <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between flex-wrap gap-3">
-            <div class="flex items-center gap-2.5 text-xs text-amber-300">
+            <div class="flex items-center gap-2.5 text-xs text-amber-700 dark:text-amber-300">
                 <span class="text-lg">ℹ️</span>
                 <span><strong>Practice Score Mode:</strong> This is a {{ $summary['total_questions'] }}-question practice assessment. Institutional scaled scoring applies to full 200-question mock assessments.</span>
             </div>
-            <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider">
+            <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 uppercase tracking-wider">
                 Practice Assessment
             </span>
         </div>
@@ -99,32 +99,32 @@
         <!-- Metrics & Performance Card Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
-                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">{{ $isToeic ? ($isFullToeic ? 'Institutional Scaled Score' : 'Practice Score') : 'Final Test Score' }}</span>
-                <span class="text-3xl font-extrabold {{ ($summary['is_passed'] ?? false) ? 'text-emerald-400' : 'text-rose-400' }} mt-1 block">
+                <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $isToeic ? ($isFullToeic ? 'Institutional Scaled Score' : 'Practice Score') : 'Final Test Score' }}</span>
+                <span class="text-3xl font-extrabold {{ ($summary['is_passed'] ?? false) ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }} mt-1 block">
                     {{ $summary['total_score'] ?? 0 }}
                 </span>
                 <span class="text-xs text-slate-500 mt-1 block">Pass Threshold: {{ $summary['pass_score'] ?? 0 }}</span>
             </div>
 
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
-                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Accuracy &amp; Grade</span>
-                <span class="text-3xl font-extrabold text-indigo-400 mt-1 block">
+                <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Accuracy &amp; Grade</span>
+                <span class="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1 block">
                     {{ $summary['percentage'] ?? 0 }}%
                 </span>
-                <span class="text-xs font-semibold text-amber-400 mt-1 block">Grade {{ $summary['grade'] ?? 'D' }}</span>
+                <span class="text-xs font-semibold text-amber-600 dark:text-amber-400 mt-1 block">Grade {{ $summary['grade'] ?? 'D' }}</span>
             </div>
 
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
-                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Correct Answers</span>
-                <span class="text-3xl font-extrabold text-emerald-400 mt-1 block">
+                <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Correct Answers</span>
+                <span class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 block">
                     {{ $summary['correct_answers'] ?? 0 }}
                 </span>
                 <span class="text-xs text-slate-500 mt-1 block">out of {{ $summary['total_questions'] ?? 0 }} questions</span>
             </div>
 
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
-                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Incorrect Answers</span>
-                <span class="text-3xl font-extrabold text-rose-400 mt-1 block">
+                <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Incorrect Answers</span>
+                <span class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1 block">
                     {{ $summary['incorrect_answers'] ?? 0 }}
                 </span>
                 <span class="text-xs text-slate-500 mt-1 block">Review items below</span>

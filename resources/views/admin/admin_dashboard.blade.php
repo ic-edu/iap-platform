@@ -5,8 +5,8 @@
     <!-- Operational KPI Metrics Cards (SA-006 Synchronization) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Active Users</span>
-            <span class="text-3xl font-black text-white mt-1 block">{{ $totalUsers }}</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Total Active Users</span>
+            <span class="text-3xl font-black text-slate-900 dark:text-white mt-1 block">{{ $totalUsers }}</span>
             <span class="text-xs text-slate-500 mt-1 block">{{ $teachersCount }} Teachers | {{ $studentsCount }} Candidates</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">

@@ -1,29 +1,29 @@
 <x-candidate-layout>
     <div class="mb-8">
-        <h1 class="text-3xl font-bold tracking-tight text-white">Student Portal Dashboard</h1>
-        <p class="text-sm text-slate-400 mt-1">Welcome back, {{ Auth::user()?->name }}. Manage your test attempts and digital certifications.</p>
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Student Portal Dashboard</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Welcome back, {{ Auth::user()?->name }}. Manage your test attempts and digital certifications.</p>
     </div>
 
     <!-- Metrics Summary Grid -->
     <div class="grid gap-5 sm:grid-cols-4 mb-8">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Available Tests</p>
-            <p class="text-3xl font-bold text-indigo-400 mt-2">{{ $availableTestsCount }}</p>
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Available Tests</p>
+            <p class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-2">{{ $availableTestsCount }}</p>
         </div>
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">My Total Attempts</p>
-            <p class="text-3xl font-bold text-white mt-2">{{ $myAttemptsCount }}</p>
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">My Total Attempts</p>
+            <p class="text-3xl font-bold text-slate-900 dark:text-white mt-2">{{ $myAttemptsCount }}</p>
         </div>
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Completed Tests</p>
-            <p class="text-3xl font-bold text-emerald-400 mt-2">{{ $completedAttemptsCount }}</p>
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Completed Tests</p>
+            <p class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">{{ $completedAttemptsCount }}</p>
         </div>
         <a href="{{ route('candidate.my-certificates') }}" class="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl p-5 shadow-sm transition-all group">
             <div class="flex items-center justify-between">
-                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider group-hover:text-indigo-300">My Certificates</p>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-indigo-600 dark:group-hover:text-indigo-300">My Certificates</p>
                 <span class="text-xs">🎓</span>
             </div>
-            <p class="text-3xl font-bold text-amber-400 mt-2">{{ $issuedCertificatesCount ?? 0 }}</p>
+            <p class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-2">{{ $issuedCertificatesCount ?? 0 }}</p>
         </a>
     </div>
 

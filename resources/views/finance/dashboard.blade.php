@@ -5,23 +5,23 @@
     <!-- Financial KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Gross Revenue Report</span>
-            <span class="text-3xl font-black text-emerald-400 mt-1 block">{{ $grossRevenue }}</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Gross Revenue Report</span>
+            <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ $grossRevenue }}</span>
             <span class="text-xs text-slate-500 mt-1 block">↑ 12.4% vs last month</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Payment Transactions</span>
-            <span class="text-3xl font-black text-white mt-1 block">{{ $completedTransactionsCount }}</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Payment Transactions</span>
+            <span class="text-3xl font-black text-slate-900 dark:text-white mt-1 block">{{ $completedTransactionsCount }}</span>
             <span class="text-xs text-slate-500 mt-1 block">Completed online payments</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Invoices Issued</span>
-            <span class="text-3xl font-black text-indigo-400 mt-1 block">{{ $invoicesIssuedCount }}</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Invoices Issued</span>
+            <span class="text-3xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{{ $invoicesIssuedCount }}</span>
             <span class="text-xs text-slate-500 mt-1 block">Tax receipts generated</span>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Active Promotional Vouchers</span>
-            <span class="text-3xl font-black text-amber-400 mt-1 block">{{ count($vouchers) }}</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Active Promotional Vouchers</span>
+            <span class="text-3xl font-black text-amber-600 dark:text-amber-400 mt-1 block">{{ count($vouchers) }}</span>
             <span class="text-xs text-slate-500 mt-1 block">Promotions live</span>
         </div>
     </div>
@@ -46,14 +46,12 @@
             <tbody class="divide-y divide-slate-800/60 font-mono text-xs">
                 @foreach ($transactions as $txn)
                     <tr>
-                        <td class="p-4 font-bold text-slate-400">{{ $txn['id'] }}</td>
-                        <td class="p-4 font-semibold text-white font-sans text-xs">{{ $txn['user'] }}</td>
-                        <td class="p-4 text-xs text-indigo-400 font-medium font-sans">{{ $txn['package'] }}</td>
-                        <td class="p-4 font-bold text-emerald-400">{{ $txn['amount'] }}</td>
+                        <td class="p-4 font-bold text-slate-500 dark:text-slate-400">{{ $txn['id'] }}</td>
+                        <td class="p-4 font-semibold text-slate-900 dark:text-white font-sans text-xs">{{ $txn['user'] }}</td>
+                        <td class="p-4 text-xs text-indigo-600 dark:text-indigo-400 font-medium font-sans">{{ $txn['package'] }}</td>
+                        <td class="p-4 font-bold text-emerald-600 dark:text-emerald-400">{{ $txn['amount'] }}</td>
                         <td class="p-4">
-                            <span class="px-2.5 py-0.5 text-xs font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                {{ $txn['status'] }}
-                            </span>
+                            <x-status-badge :status="$txn['status']" />
                         </td>
                         <td class="p-4 text-right text-xs text-slate-400 font-sans">{{ $txn['date'] }}</td>
                     </tr>

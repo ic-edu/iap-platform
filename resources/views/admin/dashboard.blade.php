@@ -33,8 +33,8 @@
     <!-- Assessment Platform Activity KPIs (SA-006 Executive Dashboard Synchronization) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
-            <div class="text-xs font-semibold text-slate-400 uppercase">Published Question Banks</div>
-            <div class="text-3xl font-extrabold text-white mt-1">{{ $publishedQuestionBanksCount }}</div>
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Published Question Banks</div>
+            <div class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{{ $publishedQuestionBanksCount }}</div>
             <div class="text-[11px] text-slate-500 mt-1">Live item pools</div>
         </div>
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl">
