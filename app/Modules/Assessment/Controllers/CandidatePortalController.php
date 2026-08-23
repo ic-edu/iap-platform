@@ -4,6 +4,8 @@ namespace App\Modules\Assessment\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Assessment\Engines\AssessmentEngine;
+use App\Modules\Assessment\Enums\AttemptStatus;
+use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Assessment\Events\RuleViolationDetected;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
@@ -11,6 +13,8 @@ use App\Modules\Certificate\Models\Certificate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CandidatePortalController extends Controller
@@ -399,5 +403,154 @@ class CandidatePortalController extends Controller
         $viewName = 'assessment::candidate.review';
 
         return view($viewName, compact('summary', 'attempt'));
+    }
+
+    /**
+     * Finalize Attempt 1 result & release final score.
+     */
+    public function finalizeAttempt(Request $request, Attempt $attempt): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || $attempt->user_id !== $user->id) {
+            abort(403, 'Unauthorized access to assessment attempt.');
+        }
+
+        $attempt->loadMissing(['test', 'assignment.attempts']);
+        $assignment = $attempt->assignment;
+
+        // Verify attempt is submitted
+        if ($attempt->status !== AttemptStatus::Submitted) {
+            return redirect()->route('candidate.review', $attempt)
+                ->with('error', 'Only completed assessments can be finalized.');
+        }
+
+        // Idempotency: if already finalized, return success
+        if ($attempt->is_final && $attempt->decision_status === 'finalized') {
+            return redirect()->route('candidate.review', $attempt)
+                ->with('status', 'Assessment result has already been finalized.');
+        }
+
+        // Verify assignment exists and is active (or matching)
+        if (!$assignment) {
+            $attempt->update([
+                'is_final'        => true,
+                'decision_status' => 'finalized',
+            ]);
+            return redirect()->route('candidate.review', $attempt)
+                ->with('status', 'Assessment score finalized successfully.');
+        }
+
+        // If Attempt 2 has already been started, Attempt 1 cannot be arbitrarily finalized
+        $hasSecondAttempt = $assignment->attempts()->where('attempt_number', 2)->exists();
+        if ($hasSecondAttempt) {
+            return redirect()->route('candidate.review', $attempt)
+                ->with('error', 'A second attempt has already been initiated for this assessment.');
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($attempt, $assignment) {
+            $attempt->update([
+                'is_final'        => true,
+                'decision_status' => 'finalized',
+            ]);
+
+            $assignment->update([
+                'status'           => 'completed',
+                'completed_at'     => now(),
+                'final_attempt_id' => $attempt->id,
+            ]);
+
+            \App\Services\ActivityLogger::log(
+                'CANDIDATE_ATTEMPT_FINALIZED',
+                "Candidate finalized Attempt #{$attempt->attempt_number} for '{$attempt->test?->title}'",
+                $attempt
+            );
+        });
+
+        return redirect()->route('candidate.review', $attempt)
+            ->with('status', 'Result finalized. Your score has been released as your final institutional result.');
+    }
+
+    /**
+     * Retry second attempt for Mock Test.
+     */
+    public function retryAttempt(Request $request, Attempt $attempt): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || $attempt->user_id !== $user->id) {
+            abort(403, 'Unauthorized access to assessment attempt.');
+        }
+
+        $attempt->loadMissing(['test', 'assignment.attempts']);
+        $assignment = $attempt->assignment;
+
+        // Verify Attempt 1 is submitted
+        if ($attempt->status !== AttemptStatus::Submitted) {
+            return redirect()->route('candidate.review', $attempt)
+                ->with('error', 'Please complete your first attempt before starting a retry.');
+        }
+
+        // Verify Attempt 1 is not finalized
+        if ($attempt->is_final || $attempt->decision_status === 'finalized') {
+            return redirect()->route('candidate.review', $attempt)
+                ->with('error', 'Cannot retry an assessment that has already been finalized.');
+        }
+
+        if (!$assignment || $assignment->status !== 'active') {
+            return redirect()->route('candidate.review', $attempt)
+                ->with('error', 'This assessment assignment is no longer active.');
+        }
+
+        // Idempotency / Double-click check: If Attempt 2 already exists, redirect to it
+        $existingAttempt2 = $assignment->attempts()->where('attempt_number', 2)->first();
+        if ($existingAttempt2) {
+            if ($existingAttempt2->status === AttemptStatus::InProgress) {
+                return redirect()->route('candidate.exam', $existingAttempt2);
+            }
+            return redirect()->route('candidate.review', $existingAttempt2);
+        }
+
+        // Verify attempt limit
+        if ($assignment->attempts()->count() >= $assignment->max_attempts) {
+            return redirect()->route('candidate.review', $attempt)
+                ->with('error', 'Maximum number of attempts reached for this assignment.');
+        }
+
+        $attempt2 = \Illuminate\Support\Facades\DB::transaction(function () use ($attempt, $assignment, $user) {
+            $attempt->update([
+                'decision_status' => 'retried',
+                'is_final'        => false,
+            ]);
+
+            $evaluationStatus = $attempt->test?->requiresEvaluation()
+                ? EvaluationStatus::PendingEvaluation
+                : EvaluationStatus::NotRequired;
+
+            $newAttempt = Attempt::create([
+                'test_id'           => $attempt->test_id,
+                'user_id'           => $user->id,
+                'assignment_id'     => $assignment->id,
+                'attempt_number'    => 2,
+                'is_final'          => false,
+                'decision_status'   => 'pending_decision',
+                'started_at'        => now(),
+                'status'            => AttemptStatus::InProgress,
+                'evaluation_status' => $evaluationStatus,
+                'seed'              => \Illuminate\Support\Str::random(10),
+            ]);
+
+            $assignment->update([
+                'attempts_count' => 2,
+            ]);
+
+            \App\Services\ActivityLogger::log(
+                'CANDIDATE_ATTEMPT_RETRIED',
+                "Candidate started Attempt #2 for '{$attempt->test?->title}'",
+                $newAttempt
+            );
+
+            return $newAttempt;
+        });
+
+        return redirect()->route('candidate.exam', $attempt2);
     }
 }

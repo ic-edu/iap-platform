@@ -35,5 +35,7 @@ Route::middleware(['web', 'auth'])->prefix('candidate')->group(function () {
     Route::post('/exam/{attempt}/violation', [CandidatePortalController::class, 'recordViolation'])->name('candidate.exam.violation');
     Route::get('/exam/{attempt}/questions/{question}/audio-stream', [CandidatePortalController::class, 'streamAudio'])->name('candidate.exam.audio-stream');
     Route::post('/exam/{attempt}/submit', [CandidatePortalController::class, 'submit'])->name('candidate.exam.submit');
+    Route::post('/exam/{attempt}/finalize', [CandidatePortalController::class, 'finalizeAttempt'])->name('candidate.exam.finalize');
+    Route::post('/exam/{attempt}/retry', [CandidatePortalController::class, 'retryAttempt'])->name('candidate.exam.retry');
     Route::get('/exam/{attempt}/review', [CandidatePortalController::class, 'review'])->name('candidate.review');
 });

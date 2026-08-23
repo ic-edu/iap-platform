@@ -33,12 +33,90 @@
             </div>
         </div>
 
+        <!-- Flash Alerts -->
+        @if(session('status'))
+            <div class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-2">
+                <span>✅</span> {{ session('status') }}
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold flex items-center gap-2">
+                <span>⚠️</span> {{ session('error') }}
+            </div>
+        @endif
+
         @php
             $toeic = $summary['toeic_breakdown'] ?? null;
             $isToeic = !empty($toeic);
             $isFullToeic = $summary['is_full_toeic'] ?? false;
             $isPractice = $summary['is_practice'] ?? false;
+            $isRealTest = $attempt->test?->isRealTest() ?? false;
+            $isPendingDecision = ($attempt->decision_status ?? 'pending_decision') === 'pending_decision';
+            $isAssignmentActive = ($attempt->assignment?->status ?? '') === 'active';
+            $showDecisionCard = $isRealTest && ($attempt->attempt_number == 1) && $isPendingDecision && $isAssignmentActive;
         @endphp
+
+        <!-- Candidate Decision Section (Attempt 1 of Mock Test) -->
+        @if($showDecisionCard)
+        <div class="mb-8 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border-2 border-indigo-500/40 shadow-2xl">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="text-3xl">⚖️</span>
+                <div>
+                    <h2 class="text-lg font-black text-white tracking-tight">Institutional Mock Test Result Decision</h2>
+                    <p class="text-xs text-indigo-300">You have completed Attempt #1. Choose whether to lock in this result or use your 2nd attempt.</p>
+                </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-4 mt-5">
+                <!-- Option A: Finalize -->
+                <div class="p-5 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-emerald-400 font-bold text-xs uppercase tracking-wider">Option A</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-white mb-1.5">Finalize Result &amp; Release Final Score</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            Your current score (<strong>{{ $summary['total_score'] ?? 0 }} pts</strong>) will become your final institutional Mock Test result. The second attempt will no longer be available.
+                        </p>
+                    </div>
+                    <form method="POST" action="{{ route('candidate.exam.finalize', $attempt) }}" class="mt-4">
+                        @csrf
+                        <button type="submit" class="w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all text-center cursor-pointer">
+                            🔒 Finalize Result &amp; Release Score
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Option B: Retry -->
+                <div class="p-5 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-amber-400 font-bold text-xs uppercase tracking-wider">Option B</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-white mb-1.5">Retry Second Attempt</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            You will use your second and final Mock Test attempt. Your final result will automatically be based on the <strong>higher valid score</strong> from both attempts.
+                        </p>
+                    </div>
+                    <form method="POST" action="{{ route('candidate.exam.retry', $attempt) }}" class="mt-4">
+                        @csrf
+                        <button type="submit" class="w-full px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg shadow-amber-600/30 transition-all text-center cursor-pointer">
+                            ⚡ Start Second Attempt
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @elseif($attempt->is_final)
+        <div class="mb-8 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between flex-wrap gap-2">
+            <span class="text-xs text-emerald-400 font-bold flex items-center gap-2">
+                <span>✅</span> Authoritative Institutional Result Finalized
+            </span>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Final Score Released
+            </span>
+        </div>
+        @endif
 
         @if($isToeic && $isFullToeic)
         <!-- Full Mock Test Institutional Scaled Score Summary Card -->

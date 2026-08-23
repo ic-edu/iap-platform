@@ -19,6 +19,10 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $test_id
  * @property int $user_id
+ * @property string|null $assignment_id
+ * @property int $attempt_number
+ * @property bool $is_final
+ * @property string|null $decision_status
  * @property Carbon|null $started_at
  * @property Carbon|null $submitted_at
  * @property float|null $total_score
@@ -33,6 +37,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property User|null $user
  * @property Test|null $test
+ * @property CandidateTestAssignment|null $assignment
  * @property Certificate|null $certificate
  * @property array<string, mixed> $result_summary
  */
@@ -44,11 +49,17 @@ class Attempt extends Model
 
     protected $attributes = [
         'evaluation_status' => 'not_required',
+        'attempt_number'    => 1,
+        'is_final'          => false,
     ];
 
     protected $fillable = [
         'test_id',
         'user_id',
+        'assignment_id',
+        'attempt_number',
+        'is_final',
+        'decision_status',
         'started_at',
         'submitted_at',
         'total_score',
@@ -65,15 +76,17 @@ class Attempt extends Model
     protected function casts(): array
     {
         return [
-            'started_at' => 'datetime',
-            'submitted_at' => 'datetime',
-            'total_score' => 'float',
-            'section_scores' => 'array',
-            'flagged_questions' => 'array',
+            'started_at'             => 'datetime',
+            'submitted_at'           => 'datetime',
+            'total_score'            => 'float',
+            'attempt_number'         => 'integer',
+            'is_final'               => 'boolean',
+            'section_scores'         => 'array',
+            'flagged_questions'      => 'array',
             'review_later_questions' => 'array',
-            'violations_count' => 'integer',
-            'status' => AttemptStatus::class,
-            'evaluation_status' => EvaluationStatus::class,
+            'violations_count'       => 'integer',
+            'status'                 => AttemptStatus::class,
+            'evaluation_status'      => EvaluationStatus::class,
         ];
     }
 
@@ -99,6 +112,14 @@ class Attempt extends Model
     public function isEvaluated(): bool
     {
         return in_array($this->evaluation_status, [EvaluationStatus::Evaluated, EvaluationStatus::Moderated, EvaluationStatus::NotRequired], true);
+    }
+
+    /**
+     * Check if attempt passed according to ResultEngine evaluation.
+     */
+    public function isPassed(): bool
+    {
+        return (bool) ($this->result_summary['is_passed'] ?? false);
     }
 
     /**
@@ -129,6 +150,16 @@ class Attempt extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get candidate test assignment.
+     *
+     * @return BelongsTo<CandidateTestAssignment, $this>
+     */
+    public function assignment(): BelongsTo
+    {
+        return $this->belongsTo(CandidateTestAssignment::class, 'assignment_id');
     }
 
     /**

@@ -86,19 +86,31 @@ class AssignmentEngine
             throw new InvalidArgumentException("Mock Test '{$test->title}' requires a confirmed PAID transaction before candidate assignment.");
         }
 
-        $assignment = CandidateTestAssignment::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'test_id' => $test->id,
-            ],
-            [
+        $assignment = CandidateTestAssignment::where('user_id', $user->id)
+            ->where('test_id', $test->id)
+            ->where('status', 'active')
+            ->first();
+
+        if ($assignment) {
+            $assignment->update([
                 'assigned_by'  => $assignedBy?->id,
                 'payment_id'   => $payment?->id,
                 'order_id'     => $order?->id,
-                'status'       => 'active',
                 'assigned_at'  => now(),
-            ]
-        );
+            ]);
+        } else {
+            $assignment = CandidateTestAssignment::create([
+                'user_id'        => $user->id,
+                'test_id'        => $test->id,
+                'assigned_by'    => $assignedBy?->id,
+                'payment_id'     => $payment?->id,
+                'order_id'       => $order?->id,
+                'status'         => 'active',
+                'max_attempts'   => 2,
+                'attempts_count' => 0,
+                'assigned_at'    => now(),
+            ]);
+        }
 
         event(new TestAssigned($assignment));
 

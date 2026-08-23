@@ -223,8 +223,8 @@ class TOEICScoringEngineTest extends TestCase
         $this->assertTrue($result['is_full_toeic']);
         $this->assertEquals('Institutional Scaled Score', $result['score_label']);
 
-        // Digital certificate must be issued
-        $this->assertDatabaseHas('certificates', [
+        // Digital certificate is decoupled from raw attempt submission in Phase 3
+        $this->assertDatabaseMissing('certificates', [
             'attempt_id' => $attempt->id,
             'user_id' => $this->candidate->id,
         ]);
