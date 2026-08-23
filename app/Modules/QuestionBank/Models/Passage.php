@@ -23,11 +23,25 @@ class Passage extends Model
     protected $table = 'passages';
 
     protected $fillable = [
+        'passage_group_id',
         'question_bank_id',
+        'test_id',
+        'order_in_group',
+        'document_type',
         'title',
         'content',
         'audio_url',
     ];
+
+    /**
+     * Get parent passage group.
+     *
+     * @return BelongsTo<PassageGroup, $this>
+     */
+    public function passageGroup(): BelongsTo
+    {
+        return $this->belongsTo(PassageGroup::class, 'passage_group_id');
+    }
 
     /**
      * Get parent question bank.
@@ -37,6 +51,16 @@ class Passage extends Model
     public function questionBank(): BelongsTo
     {
         return $this->belongsTo(QuestionBank::class, 'question_bank_id');
+    }
+
+    /**
+     * Get parent assessment test.
+     *
+     * @return BelongsTo<\App\Modules\Assessment\Models\Test, $this>
+     */
+    public function test(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Assessment\Models\Test::class, 'test_id');
     }
 
     /**

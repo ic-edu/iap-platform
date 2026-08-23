@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('passages', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->foreignUlid('question_bank_id')->constrained('question_banks')->cascadeOnDelete();
+            $table->foreignUlid('question_bank_id')->nullable()->constrained('question_banks')->cascadeOnDelete();
             $table->string('title');
             $table->longText('content');
             $table->string('audio_url')->nullable();

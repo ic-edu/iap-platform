@@ -7,6 +7,8 @@ use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\QuestionBank\Models\AudioGroup;
+use App\Modules\QuestionBank\Models\Passage;
+use App\Modules\QuestionBank\Models\PassageGroup;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use App\Services\ToeicQuestionValidator;
@@ -196,6 +198,89 @@ class TestBuilderService
             }
 
             return $audioGroup;
+        });
+    }
+
+    /**
+     * Create an Assessment-authored Shared Passage Group (Part 6 / Part 7) with passages and child questions.
+     */
+    public function createPassageGroup(TestSection $section, array $data): PassageGroup
+    {
+        $test = $section->test;
+        $partNumber = (int) ($data['part_number'] ?? 7);
+        $passageType = $data['passage_type'] ?? 'single';
+        $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
+
+        // Run validation
+        ToeicQuestionValidator::validatePassageGroup([
+            'part_number'  => $partNumber,
+            'passage_type' => $passageType,
+        ], $data['passages'] ?? [], $data['questions'] ?? []);
+
+        return DB::transaction(function () use ($section, $test, $data, $partNumber, $passageType, $sectionType) {
+            $passageGroup = PassageGroup::create([
+                'test_id'          => $test?->id,
+                'title'            => $data['title'] ?? ('Part ' . $partNumber . ' ' . ucfirst($passageType) . ' Passage Group (' . ($test?->title ?? 'Assessment') . ')'),
+                'part_number'      => $partNumber,
+                'passage_type'     => $passageType,
+                'context_metadata' => $data['context_metadata'] ?? null,
+                'order'            => (PassageGroup::where('test_id', $test?->id)->max('order') ?? 0) + 1,
+                'created_by'       => $test?->created_by,
+            ]);
+
+            $passages = $data['passages'] ?? [];
+            $pIdx = 1;
+            foreach ($passages as $pData) {
+                Passage::create([
+                    'passage_group_id' => $passageGroup->id,
+                    'test_id'          => $test?->id,
+                    'order_in_group'   => $pIdx,
+                    'document_type'    => $pData['document_type'] ?? 'article',
+                    'title'            => $pData['title'] ?? ("Document {$pIdx}"),
+                    'content'          => $pData['content'],
+                ]);
+                $pIdx++;
+            }
+
+            $questions = $data['questions'] ?? [];
+            foreach ($questions as $qData) {
+                $question = Question::create([
+                    'question_bank_id' => null,
+                    'passage_group_id' => $passageGroup->id,
+                    'prompt'           => $qData['prompt'],
+                    'section'          => $sectionType,
+                    'part_number'      => $partNumber,
+                    'question_type'    => 'multiple_choice',
+                    'difficulty'       => $qData['difficulty'] ?? 'medium',
+                    'points'           => 1,
+                    'explanation'      => $qData['explanation'] ?? null,
+                ]);
+
+                $correctChoiceIdx = $qData['correct_choice'] ?? 0;
+                $choices = $qData['choices'] ?? [];
+                foreach ($choices as $cIdx => $choice) {
+                    $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                    $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                    QuestionChoice::create([
+                        'question_id' => $question->id,
+                        'label'       => chr(65 + $cIdx),
+                        'content'     => $content,
+                        'choice_text' => $content,
+                        'is_correct'  => $isCorrect,
+                        'order'       => $cIdx + 1,
+                    ]);
+                }
+
+                $nextOrder = (TestQuestion::where('test_section_id', $section->id)->max('order') ?? 0) + 1;
+                TestQuestion::create([
+                    'test_section_id' => $section->id,
+                    'question_id'     => $question->id,
+                    'order'           => $nextOrder,
+                    'points'          => 1,
+                ]);
+            }
+
+            return $passageGroup;
         });
     }
 
@@ -518,6 +603,15 @@ class TestBuilderService
                         if (!$agCheck['is_valid']) {
                             foreach ($agCheck['errors'] as $agErr) {
                                 $qErrors[] = "Audio Group Finding: {$agErr}";
+                            }
+                        }
+                    }
+
+                    if (in_array((int) $q->part_number, [6, 7], true) && $q->passage_group_id && $q->passageGroup) {
+                        $pgCheck = ToeicQuestionValidator::checkPassageGroup($q->passageGroup);
+                        if (!$pgCheck['is_valid']) {
+                            foreach ($pgCheck['errors'] as $pgErr) {
+                                $qErrors[] = "Passage Group Finding: {$pgErr}";
                             }
                         }
                     }

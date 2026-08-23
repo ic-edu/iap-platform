@@ -198,7 +198,14 @@
                     $isAudioPlayed = $playedAudioSet->contains($question->id);
                 @endphp
 
-                <div id="question-card-{{ $index }}" class="question-card bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm hidden">
+                @php
+                    $effectivePassages = $question->getEffectivePassages();
+                    $hasPassages = $effectivePassages->isNotEmpty();
+                    $passageGroup = $question->passageGroup;
+                    $passageGroupId = $passageGroup?->id ?? ($question->passage_id ? 'p_'.$question->passage_id : null);
+                @endphp
+
+                <div id="question-card-{{ $index }}" class="question-card bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm hidden" data-passage-group-id="{{ $passageGroupId }}">
                     <!-- Header with Part, Breadcrumb & Flag -->
                     <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 flex-wrap gap-2">
                         <div class="flex items-center gap-2">
@@ -221,141 +228,245 @@
                         </button>
                     </div>
 
-                    <!-- Passage Text if Available -->
-                    @if ($question->passage)
-                        <div class="mb-5 p-4 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-sm max-h-48 overflow-y-auto leading-relaxed">
-                            <h4 class="font-bold text-indigo-400 mb-2">{{ $question->passage->title }}</h4>
-                            {!! nl2br(e($question->passage->content)) !!}
-                        </div>
-                    @endif
-
-                    <!-- Question-Level Media (Image, Audio, MediaAsset) -->
-                    @if (!empty($question->image_url))
-                        <div class="mb-5 text-center">
-                            <img src="{{ $question->image_url }}" alt="Question Attachment" class="max-h-72 max-w-full rounded-xl mx-auto border border-slate-800 shadow-md object-contain">
-                        </div>
-                    @endif
-
-                    <!-- Question Audio (Shared Audio Group or Individual Audio) -->
-                    @php
-                        $hasAudioSource = !empty($question->audio_url) || ($question->mediaAsset && $question->mediaAsset->type === 'audio') || ($question->audioGroup && (!empty($question->audioGroup->audio_url) || $question->audioGroup->media_asset_id));
-                        $isAudioGroup = (bool) $question->audioGroup;
-                        $audioGroupModel = $question->audioGroup;
-                        $groupTypeLabel = $audioGroupModel ? ($audioGroupModel->isTalk() ? 'Talk' : 'Conversation') : 'Audio';
-                    @endphp
-
-                    @if ($hasAudioSource)
-                        @if ($isRealTest)
-                            <div id="audio-container-{{ $question->id }}" class="mb-5 p-4 rounded-xl bg-slate-950/90 border {{ $isAudioGroup ? 'border-indigo-500/40 bg-indigo-950/20' : 'border-slate-800' }} text-slate-200" data-audio-group-id="{{ $question->audio_group_id }}">
-                                <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
-                                    <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                                        <span>🎧</span>
-                                        <span>{{ $isAudioGroup ? "Shared {$groupTypeLabel} Audio (Part " . ($audioGroupModel->part_number ?? 3) . " — Single Play)" : 'Question Audio Prompt (Single Play)' }}</span>
-                                    </div>
-                                    <span id="audio-badge-{{ $question->id }}" class="text-[11px] font-bold {{ $isAudioPlayed ? 'text-slate-500 bg-slate-900 border-slate-800' : 'text-amber-400 bg-amber-950/40 border-amber-500/30' }} px-2.5 py-0.5 rounded-md border">
-                                        {{ $isAudioPlayed ? 'Audio Played (1/1)' : 'Play Available (1/1)' }}
-                                    </span>
-                                </div>
-
-                                @if($isAudioGroup && $audioGroupModel->title)
-                                    <div class="text-xs text-slate-300 font-medium mb-2.5 italic">
-                                        📌 Questions refer to the following {{ strtolower($groupTypeLabel) }}: <strong class="text-white">{{ $audioGroupModel->title }}</strong>
-                                    </div>
-                                @endif
-
-                                <div class="flex items-center gap-3">
-                                    <button id="btn-play-{{ $question->id }}" type="button" 
-                                            onclick="playRealTestAudio('{{ $question->id }}', '{{ route('candidate.exam.audio-stream', [$attempt, $question]) }}', '{{ $question->audio_group_id }}')"
-                                            {{ $isAudioPlayed ? 'disabled' : '' }}
-                                            class="px-4 py-2 rounded-xl {{ $isAudioPlayed ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30' }} font-bold text-xs transition-all flex items-center gap-2">
-                                        <span>▶</span>
-                                        <span id="btn-play-label-{{ $question->id }}">{{ $isAudioPlayed ? 'Already Played' : ($isAudioGroup ? "Play {$groupTypeLabel} Audio" : 'Play Audio Prompt') }}</span>
-                                    </button>
-                                    <audio id="audio-elem-{{ $question->id }}" class="hidden" preload="none" onended="onAudioEnded('{{ $question->id }}', '{{ $question->audio_group_id }}')"></audio>
-                                </div>
-                            </div>
-                        @else
-                            <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border {{ $isAudioGroup ? 'border-indigo-500/40 bg-indigo-950/20' : 'border-slate-800' }} text-slate-200">
-                                <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
-                                    <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                                        <span>🎧</span>
-                                        <span>{{ $isAudioGroup ? "Shared {$groupTypeLabel} Audio (Part " . ($audioGroupModel->part_number ?? 3) . ")" : 'Question Audio Prompt' }}</span>
-                                    </div>
-                                    @if($isAudioGroup)
-                                        <span class="text-[10px] font-bold text-indigo-300 bg-indigo-950/60 border border-indigo-500/30 px-2 py-0.5 rounded">
-                                            Shared Group
+                    @if ($hasPassages)
+                        <!-- TOEIC Reading Split-Screen Dual-Pane Layout (Part 6 & Part 7) -->
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                            <!-- Left Pane: Persistent Passage / Documents (Independent Scroll) -->
+                            <div class="lg:col-span-6 xl:col-span-7 bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-col min-h-[420px] max-h-[72vh] lg:sticky lg:top-4 overflow-hidden" id="passage-pane-{{ $question->id }}" data-passage-pane-id="{{ $passageGroupId }}">
+                                <!-- Document Header / Multi-Passage Selector Tabs -->
+                                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3 flex-wrap gap-2">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                            <span>📄</span>
+                                            <span>{{ $passageGroup ? ('Part ' . $passageGroup->part_number . ' ' . ucfirst($passageGroup->passage_type) . ' Passage') : 'Reading Passage' }}</span>
                                         </span>
+                                        @if($effectivePassages->count() > 1)
+                                            <div class="flex items-center gap-1.5 ml-2 flex-wrap">
+                                                @foreach($effectivePassages as $pIdx => $pass)
+                                                    <button type="button" 
+                                                            id="passage-tab-{{ $question->id }}-{{ $pIdx }}"
+                                                            onclick="switchPassageDoc('{{ $question->id }}', {{ $pIdx }})"
+                                                            class="passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all {{ $pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700' }}">
+                                                        {{ $pass->title ?: ('Document ' . ($pIdx + 1)) }} ({{ ucfirst($pass->document_type ?? 'article') }})
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                    @if($passageGroup && $passageGroup->title)
+                                        <span class="text-[11px] text-slate-400 italic truncate max-w-[200px]">{{ $passageGroup->title }}</span>
                                     @endif
                                 </div>
-                                @if($isAudioGroup && $audioGroupModel->title)
-                                    <div class="text-xs text-slate-300 font-medium mb-2 italic">
-                                        📌 Questions refer to the following {{ strtolower($groupTypeLabel) }}: <strong class="text-white">{{ $audioGroupModel->title }}</strong>
-                                    </div>
-                                @endif
-                                <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $question->audio_url ?: route('candidate.exam.audio-stream', [$attempt, $question]) }}" preload="metadata"></audio>
+
+                                <!-- Passage Scrollable Content Container -->
+                                <div class="passage-scroll-container overflow-y-auto pr-2 space-y-4 text-sm text-slate-200 leading-relaxed max-h-[60vh]" id="passage-scroll-{{ $question->id }}">
+                                    @foreach($effectivePassages as $pIdx => $pass)
+                                        <div id="passage-doc-{{ $question->id }}-{{ $pIdx }}" class="passage-doc-content {{ $pIdx > 0 ? 'hidden' : '' }}">
+                                            @if($pass->title && $effectivePassages->count() === 1)
+                                                <h4 class="font-bold text-base text-indigo-300 mb-2 border-b border-slate-800 pb-1.5">{{ $pass->title }}</h4>
+                                            @endif
+                                            <div class="prose prose-invert max-w-none text-slate-200 text-sm whitespace-pre-line leading-relaxed select-text">
+                                                {!! nl2br(e($pass->content)) !!}
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <!-- Right Pane: Active Question Stem, Choices & Navigation -->
+                            <div class="lg:col-span-6 xl:col-span-5 flex flex-col justify-between">
+                                <!-- Prompt -->
+                                <div class="text-base font-semibold text-white mb-6 leading-snug">
+                                    {!! e($question->prompt) !!}
+                                </div>
+
+                                <!-- Choices Options -->
+                                <div class="space-y-3">
+                                    @foreach ($question->choices as $choice)
+                                        @php
+                                            $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
+                                        @endphp
+                                        <label class="flex items-center p-3.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors">
+                                            <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
+                                                   {{ $isChecked ? 'checked' : '' }}
+                                                   onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $index }})"
+                                                   class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-0" />
+                                            <span class="ml-3 text-sm text-slate-200 font-medium">
+                                                <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+
+                                <!-- Question Navigation Controls -->
+                                <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-800">
+                                    @if (!$isRealTest)
+                                        @if($index === 0 && $section)
+                                            <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
+                                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                                                &larr; Section Directions
+                                            </button>
+                                        @else
+                                            <button type="button" onclick="navigateQuestion({{ $index - 1 }})" {{ $index === 0 ? 'disabled' : '' }}
+                                                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
+                                                &larr; Previous (P)
+                                            </button>
+                                        @endif
+                                    @else
+                                        <div></div>
+                                    @endif
+
+                                    @if($isLastQuestionOfSection && $nextQuestionSectionId)
+                                        <button type="button" onclick="handleNextClick({{ $index }}, 'section', '{{ $nextQuestionSectionId }}')"
+                                                class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30">
+                                            Next Section &rarr;
+                                        </button>
+                                    @else
+                                        <button type="button" onclick="handleNextClick({{ $index }}, 'question', {{ $index + 1 }})" {{ $index === $shuffledQuestions->count() - 1 && $isRealTest ? 'disabled' : '' }}
+                                                class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
+                                            Next (N) &rarr;
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <!-- Standard Single Column Layout (Parts 1, 2, 3, 4, 5) -->
+                        @if ($question->passage)
+                            <div class="mb-5 p-4 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-sm max-h-48 overflow-y-auto leading-relaxed">
+                                <h4 class="font-bold text-indigo-400 mb-2">{{ $question->passage->title }}</h4>
+                                {!! nl2br(e($question->passage->content)) !!}
                             </div>
                         @endif
-                    @endif
 
-                    @if (empty($question->image_url) && empty($question->audio_url) && $question->mediaAsset && $question->mediaAsset->type !== 'audio')
-                        <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
-                            <x-media-preview :media="$question->mediaAsset" />
+                        <!-- Question-Level Media (Image, Audio, MediaAsset) -->
+                        @if (!empty($question->image_url))
+                            <div class="mb-5 text-center">
+                                <img src="{{ $question->image_url }}" alt="Question Attachment" class="max-h-72 max-w-full rounded-xl mx-auto border border-slate-800 shadow-md object-contain">
+                            </div>
+                        @endif
+
+                        <!-- Question Audio (Shared Audio Group or Individual Audio) -->
+                        @php
+                            $hasAudioSource = !empty($question->audio_url) || ($question->mediaAsset && $question->mediaAsset->type === 'audio') || ($question->audioGroup && (!empty($question->audioGroup->audio_url) || $question->audioGroup->media_asset_id));
+                            $isAudioGroup = (bool) $question->audioGroup;
+                            $audioGroupModel = $question->audioGroup;
+                            $groupTypeLabel = $audioGroupModel ? ($audioGroupModel->isTalk() ? 'Talk' : 'Conversation') : 'Audio';
+                        @endphp
+
+                        @if ($hasAudioSource)
+                            @if ($isRealTest)
+                                <div id="audio-container-{{ $question->id }}" class="mb-5 p-4 rounded-xl bg-slate-950/90 border {{ $isAudioGroup ? 'border-indigo-500/40 bg-indigo-950/20' : 'border-slate-800' }} text-slate-200" data-audio-group-id="{{ $question->audio_group_id }}">
+                                    <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                        <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                            <span>🎧</span>
+                                            <span>{{ $isAudioGroup ? "Shared {$groupTypeLabel} Audio (Part " . ($audioGroupModel->part_number ?? 3) . " — Single Play)" : 'Question Audio Prompt (Single Play)' }}</span>
+                                        </div>
+                                        <span id="audio-badge-{{ $question->id }}" class="text-[11px] font-bold {{ $isAudioPlayed ? 'text-slate-500 bg-slate-900 border-slate-800' : 'text-amber-400 bg-amber-950/40 border-amber-500/30' }} px-2.5 py-0.5 rounded-md border">
+                                            {{ $isAudioPlayed ? 'Audio Played (1/1)' : 'Play Available (1/1)' }}
+                                        </span>
+                                    </div>
+
+                                    @if($isAudioGroup && $audioGroupModel->title)
+                                        <div class="text-xs text-slate-300 font-medium mb-2.5 italic">
+                                            📌 Questions refer to the following {{ strtolower($groupTypeLabel) }}: <strong class="text-white">{{ $audioGroupModel->title }}</strong>
+                                        </div>
+                                    @endif
+
+                                    <div class="flex items-center gap-3">
+                                        <button id="btn-play-{{ $question->id }}" type="button" 
+                                                onclick="playRealTestAudio('{{ $question->id }}', '{{ route('candidate.exam.audio-stream', [$attempt, $question]) }}', '{{ $question->audio_group_id }}')"
+                                                {{ $isAudioPlayed ? 'disabled' : '' }}
+                                                class="px-4 py-2 rounded-xl {{ $isAudioPlayed ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30' }} font-bold text-xs transition-all flex items-center gap-2">
+                                            <span>▶</span>
+                                            <span id="btn-play-label-{{ $question->id }}">{{ $isAudioPlayed ? 'Already Played' : ($isAudioGroup ? "Play {$groupTypeLabel} Audio" : 'Play Audio Prompt') }}</span>
+                                        </button>
+                                        <audio id="audio-elem-{{ $question->id }}" class="hidden" preload="none" onended="onAudioEnded('{{ $question->id }}', '{{ $question->audio_group_id }}')"></audio>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border {{ $isAudioGroup ? 'border-indigo-500/40 bg-indigo-950/20' : 'border-slate-800' }} text-slate-200">
+                                    <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                        <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                            <span>🎧</span>
+                                            <span>{{ $isAudioGroup ? "Shared {$groupTypeLabel} Audio (Part " . ($audioGroupModel->part_number ?? 3) . ")" : 'Question Audio Prompt' }}</span>
+                                        </div>
+                                        @if($isAudioGroup)
+                                            <span class="text-[10px] font-bold text-indigo-300 bg-indigo-950/60 border border-indigo-500/30 px-2 py-0.5 rounded">
+                                                Shared Group
+                                            </span>
+                                        @endif
+                                    </div>
+                                    @if($isAudioGroup && $audioGroupModel->title)
+                                        <div class="text-xs text-slate-300 font-medium mb-2 italic">
+                                            📌 Questions refer to the following {{ strtolower($groupTypeLabel) }}: <strong class="text-white">{{ $audioGroupModel->title }}</strong>
+                                        </div>
+                                    @endif
+                                    <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $question->audio_url ?: route('candidate.exam.audio-stream', [$attempt, $question]) }}" preload="metadata"></audio>
+                                </div>
+                            @endif
+                        @endif
+
+                        @if (empty($question->image_url) && empty($question->audio_url) && $question->mediaAsset && $question->mediaAsset->type !== 'audio')
+                            <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
+                                <x-media-preview :media="$question->mediaAsset" />
+                            </div>
+                        @endif
+
+                        <!-- Prompt -->
+                        <div class="text-base font-semibold text-white mb-6 leading-snug">
+                            {!! e($question->prompt) !!}
                         </div>
-                    @endif
 
-                    <!-- Prompt -->
-                    <div class="text-base font-semibold text-white mb-6 leading-snug">
-                        {!! e($question->prompt) !!}
-                    </div>
+                        <!-- Choices Options -->
+                        <div class="space-y-3">
+                            @foreach ($question->choices as $choice)
+                                @php
+                                    $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
+                                @endphp
+                                <label class="flex items-center p-3.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors">
+                                    <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
+                                           {{ $isChecked ? 'checked' : '' }}
+                                           onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $index }})"
+                                           class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-0" />
+                                    <span class="ml-3 text-sm text-slate-200 font-medium">
+                                        <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
 
-                    <!-- Choices Options -->
-                    <div class="space-y-3">
-                        @foreach ($question->choices as $choice)
-                            @php
-                                $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
-                            @endphp
-                            <label class="flex items-center p-3.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors">
-                                <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
-                                       {{ $isChecked ? 'checked' : '' }}
-                                       onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $index }})"
-                                       class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-0" />
-                                <span class="ml-3 text-sm text-slate-200 font-medium">
-                                    <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
-                                </span>
-                            </label>
-                        @endforeach
-                    </div>
+                        <!-- Question Navigation Controls (Mode-Aware) -->
+                        <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-800">
+                            @if (!$isRealTest)
+                                @if($index === 0 && $section)
+                                    <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
+                                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                                        &larr; Section Directions
+                                    </button>
+                                @else
+                                    <button type="button" onclick="navigateQuestion({{ $index - 1 }})" {{ $index === 0 ? 'disabled' : '' }}
+                                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
+                                        &larr; Previous (P)
+                                    </button>
+                                @endif
+                            @else
+                                <div></div>
+                            @endif
 
-                    <!-- Question Navigation Controls (Mode-Aware) -->
-                    <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-800">
-                        @if (!$isRealTest)
-                            @if($index === 0 && $section)
-                                <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
-                                        class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
-                                    &larr; Section Directions
+                            @if($isLastQuestionOfSection && $nextQuestionSectionId)
+                                <button type="button" onclick="handleNextClick({{ $index }}, 'section', '{{ $nextQuestionSectionId }}')"
+                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30">
+                                    Next Section &rarr;
                                 </button>
                             @else
-                                <button type="button" onclick="navigateQuestion({{ $index - 1 }})" {{ $index === 0 ? 'disabled' : '' }}
-                                        class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
-                                    &larr; Previous (P)
+                                <button type="button" onclick="handleNextClick({{ $index }}, 'question', {{ $index + 1 }})" {{ $index === $shuffledQuestions->count() - 1 && $isRealTest ? 'disabled' : '' }}
+                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
+                                    Next (N) &rarr;
                                 </button>
                             @endif
-                        @else
-                            <div></div>
-                        @endif
-
-                        @if($isLastQuestionOfSection && $nextQuestionSectionId)
-                            <button type="button" onclick="handleNextClick({{ $index }}, 'section', '{{ $nextQuestionSectionId }}')"
-                                    class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30">
-                                Next Section &rarr;
-                            </button>
-                        @else
-                            <button type="button" onclick="handleNextClick({{ $index }}, 'question', {{ $index + 1 }})" {{ $index === $shuffledQuestions->count() - 1 && $isRealTest ? 'disabled' : '' }}
-                                    class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
-                                Next (N) &rarr;
-                            </button>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                 </div>
             @empty
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-500">
@@ -568,12 +679,59 @@
             }
         }
 
+        // Passage Split-Screen & Multi-Document Helpers
+        const passageScrollPositions = {};
+
+        function switchPassageDoc(questionId, docIdx) {
+            const group = document.getElementById(`passage-pane-${questionId}`);
+            if (!group) return;
+            group.querySelectorAll('.passage-doc-content').forEach(el => el.classList.add('hidden'));
+            group.querySelectorAll('.passage-doc-tab').forEach(el => {
+                el.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500', 'shadow-sm');
+                el.classList.add('bg-slate-900', 'text-slate-400', 'border-slate-800');
+            });
+            
+            const targetDoc = document.getElementById(`passage-doc-${questionId}-${docIdx}`);
+            const targetTab = document.getElementById(`passage-tab-${questionId}-${docIdx}`);
+            if (targetDoc) targetDoc.classList.remove('hidden');
+            if (targetTab) {
+                targetTab.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+                targetTab.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500', 'shadow-sm');
+            }
+        }
+
+        function saveCurrentPassageScroll() {
+            if (currentQuestionIdx >= 0) {
+                const currentCard = document.getElementById(`question-card-${currentQuestionIdx}`);
+                if (currentCard) {
+                    const pgId = currentCard.getAttribute('data-passage-group-id');
+                    const scrollContainer = currentCard.querySelector('.passage-scroll-container');
+                    if (pgId && scrollContainer) {
+                        passageScrollPositions[pgId] = scrollContainer.scrollTop;
+                    }
+                }
+            }
+        }
+
+        function restorePassageScroll(newCard) {
+            if (!newCard) return;
+            const pgId = newCard.getAttribute('data-passage-group-id');
+            const scrollContainer = newCard.querySelector('.passage-scroll-container');
+            if (pgId && scrollContainer && passageScrollPositions[pgId] !== undefined) {
+                scrollContainer.scrollTop = passageScrollPositions[pgId];
+            }
+        }
+
         // Navigate to Specific Question
         function navigateQuestion(index) {
             if (index < 0 || index >= totalQuestions) return;
+            saveCurrentPassageScroll();
             document.querySelectorAll('.question-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
             const targetCard = document.getElementById(`question-card-${index}`);
-            if (targetCard) targetCard.classList.remove('hidden');
+            if (targetCard) {
+                targetCard.classList.remove('hidden');
+                restorePassageScroll(targetCard);
+            }
             currentQuestionIdx = index;
             window.location.hash = 'q=' + index;
             updatePaletteUI();

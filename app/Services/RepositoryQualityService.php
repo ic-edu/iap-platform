@@ -110,6 +110,15 @@ class RepositoryQualityService
                             }
                         }
                     }
+
+                    if (in_array((int) $q->part_number, [6, 7], true) && $q->passage_group_id && $q->passageGroup) {
+                        $pgCheck = ToeicQuestionValidator::checkPassageGroup($q->passageGroup);
+                        if (!$pgCheck['is_valid']) {
+                            foreach ($pgCheck['errors'] as $pgErr) {
+                                $warnings[] = "Question '{$q->prompt}' TOEIC Part {$q->part_number} Passage Group finding: {$pgErr}";
+                            }
+                        }
+                    }
                 }
 
                 // Difficulty counting

@@ -217,4 +217,14 @@ class QuestionBank extends Model
     {
         return $this->hasMany(\App\Modules\QuestionBank\Models\AudioGroup::class, 'question_bank_id');
     }
+
+    /**
+     * Get associated shared passage groups (Part 6 & Part 7).
+     *
+     * @return HasMany<\App\Modules\QuestionBank\Models\PassageGroup, $this>
+     */
+    public function passageGroups(): HasMany
+    {
+        return $this->hasMany(\App\Modules\QuestionBank\Models\PassageGroup::class, 'question_bank_id');
+    }
 }

@@ -559,6 +559,48 @@ class TestBuilderController extends Controller
     }
 
     /**
+     * Create an Assessment-authored Shared Passage Group (Part 6 / Part 7) with passages and child questions.
+     */
+    public function createPassageGroup(Request $request, Test $test): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $validated = $request->validate([
+            'test_section_id'  => ['required', 'exists:test_sections,id'],
+            'title'            => ['nullable', 'string', 'max:255'],
+            'part_number'      => ['required', 'integer', 'in:6,7'],
+            'passage_type'     => ['required', 'string', 'in:single,double,triple'],
+            'context_metadata' => ['nullable', 'array'],
+            'passages'         => ['required', 'array', 'min:1', 'max:3'],
+            'passages.*.title'         => ['nullable', 'string', 'max:255'],
+            'passages.*.content'       => ['required', 'string'],
+            'passages.*.document_type' => ['nullable', 'string'],
+            'passages.*.order_in_group'=> ['nullable', 'integer'],
+            'questions'        => ['required', 'array', 'min:2', 'max:5'],
+            'questions.*.prompt'         => ['required', 'string'],
+            'questions.*.difficulty'     => ['required', 'string'],
+            'questions.*.explanation'    => ['nullable', 'string'],
+            'questions.*.choices'        => ['required', 'array', 'size:4'],
+            'questions.*.correct_choice' => ['required'],
+        ]);
+
+        $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
+
+        $this->builderService->createPassageGroup($section, $validated);
+
+        return redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', "Part {$validated['part_number']} " . ucfirst($validated['passage_type']) . " Passage Group successfully created and attached to '{$section->title}'.");
+    }
+
+    /**
      * Remove question reference from Assessment.
      */
     public function destroyQuestion(Request $request, Test $test, Question $question): RedirectResponse

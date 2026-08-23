@@ -119,6 +119,8 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.tests.create-question');
     Route::post('/teacher/assessments/{test}/create-audio-group', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'createAudioGroup'])
         ->name('teacher.tests.create-audio-group');
+    Route::post('/teacher/assessments/{test}/create-passage-group', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'createPassageGroup'])
+        ->name('teacher.tests.create-passage-group');
     Route::delete('/teacher/assessments/{test}/questions/{question}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'destroyQuestion'])
         ->name('teacher.tests.destroy-question');
     Route::post('/teacher/assessments/{test}/sections', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'addSection'])

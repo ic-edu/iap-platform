@@ -340,6 +340,15 @@ class ToeicQuestionValidator
             }
         }
 
+        // Check if question references a shared PassageGroup
+        $passageGroupId = $data['passage_group_id'] ?? ($question?->passage_group_id ?? null);
+        if (!empty($passageGroupId)) {
+            $pGroup = \App\Modules\QuestionBank\Models\PassageGroup::find($passageGroupId);
+            if ($pGroup && $pGroup->passages()->exists()) {
+                $hasPassage = true;
+            }
+        }
+
         $mediaAssetId = $data['media_asset_id'] ?? null;
         if (!empty($mediaAssetId)) {
             $mediaAsset = MediaAsset::find($mediaAssetId);
@@ -366,6 +375,9 @@ class ToeicQuestionValidator
                 $hasAudio = true;
             }
             if (!$hasPassage && (!empty($question->passage_id) || !empty(trim((string) ($question->passage_text ?? ''))))) {
+                $hasPassage = true;
+            }
+            if (!$hasPassage && $question->passageGroup && $question->passageGroup->passages()->exists()) {
                 $hasPassage = true;
             }
             if ($question->mediaAsset) {
@@ -477,6 +489,176 @@ class ToeicQuestionValidator
     public static function validateAudioGroup(mixed $group, array $questionsData = []): array
     {
         $result = self::checkAudioGroup($group, $questionsData);
+
+        if (!$result['is_valid']) {
+            throw ValidationException::withMessages($result['errors']);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Check TOEIC Passage Group rules (Part 6 Text Completion & Part 7 Reading Comprehension).
+     *
+     * @param \App\Modules\QuestionBank\Models\PassageGroup|array<string, mixed> $group
+     * @param array<int, mixed> $passagesData
+     * @param array<int, mixed> $questionsData
+     * @return array<string, mixed>
+     */
+    public static function checkPassageGroup(mixed $group, array $passagesData = [], array $questionsData = []): array
+    {
+        $errors = [];
+        $isModel = $group instanceof \App\Modules\QuestionBank\Models\PassageGroup;
+
+        $partNumber = $isModel ? (int) $group->part_number : (int) ($group['part_number'] ?? 7);
+        $passageType = $isModel ? (string) $group->passage_type : (string) ($group['passage_type'] ?? 'single');
+
+        // 1. Part number check
+        if (!in_array($partNumber, [6, 7], true)) {
+            $errors['part_number'] = 'Passage Group part number must be 6 (Text Completion) or 7 (Reading Comprehension).';
+        }
+
+        // 2. Section is reading
+        $section = self::deriveSection($partNumber);
+        if ($section !== 'reading') {
+            $errors['section'] = 'Passage Group section must be reading.';
+        }
+
+        // 3. Passage type check
+        if ($partNumber === 6 && $passageType !== 'single') {
+            $errors['passage_type'] = 'Part 6 passage group must be single passage type.';
+        } elseif ($partNumber === 7 && !in_array($passageType, ['single', 'double', 'triple'], true)) {
+            $errors['passage_type'] = 'Part 7 passage group type must be single, double, or triple.';
+        }
+
+        // 4. Resolve and validate Passages
+        $pList = !empty($passagesData)
+            ? $passagesData
+            : ($isModel ? $group->passages()->orderBy('order_in_group', 'asc')->get() : ($group['passages'] ?? []));
+
+        $passageCount = count($pList);
+        $expectedPassageCount = match ($partNumber) {
+            6 => 1,
+            7 => match ($passageType) {
+                'double' => 2,
+                'triple' => 3,
+                default  => 1,
+            },
+            default => 1,
+        };
+
+        if ($passageCount !== $expectedPassageCount) {
+            $errors['passage_count'] = match ($partNumber) {
+                6 => "Part 6 requires exactly 1 passage (found {$passageCount}).",
+                7 => match ($passageType) {
+                    'double' => "Part 7 Double Passage requires exactly 2 passages (found {$passageCount}).",
+                    'triple' => "Part 7 Triple Passage requires exactly 3 passages (found {$passageCount}).",
+                    default  => "Part 7 Single Passage requires exactly 1 passage (found {$passageCount}).",
+                },
+                default => "Passage Group requires {$expectedPassageCount} passage(s) (found {$passageCount}).",
+            };
+        }
+
+        // Validate each passage content and ordering
+        $validDocTypes = ['email', 'memo', 'notice', 'advertisement', 'article', 'letter', 'chat', 'schedule', 'other'];
+        $pIdx = 1;
+        foreach ($pList as $pItem) {
+            $pData = is_array($pItem) ? $pItem : $pItem->toArray();
+            $content = $pData['content'] ?? ($pData['passage_text'] ?? '');
+            if (empty(trim((string) $content))) {
+                $errors["passage_{$pIdx}_content"] = "Passage #{$pIdx} content cannot be empty.";
+            }
+
+            $order = isset($pData['order_in_group']) ? (int) $pData['order_in_group'] : (isset($pData['order']) ? (int) $pData['order'] : $pIdx);
+            if ($order !== $pIdx) {
+                $errors["passage_{$pIdx}_order"] = "Passage #{$pIdx} order is invalid (expected {$pIdx}, got {$order}).";
+            }
+
+            $docType = strtolower((string) ($pData['document_type'] ?? 'article'));
+            if (!empty($docType) && !in_array($docType, $validDocTypes, true)) {
+                $errors["passage_{$pIdx}_document_type"] = "Passage #{$pIdx} has invalid document type '{$docType}'.";
+            }
+
+            $pIdx++;
+        }
+
+        // 5. Resolve and validate Questions
+        $qList = !empty($questionsData)
+            ? $questionsData
+            : ($isModel ? $group->questions()->with('choices')->get() : ($group['questions'] ?? []));
+
+        $questionCount = count($qList);
+
+        if ($partNumber === 6) {
+            if ($questionCount !== 4) {
+                $errors['question_count'] = "Part 6 Text Completion group requires exactly 4 questions (found {$questionCount}).";
+            }
+        } elseif ($partNumber === 7) {
+            if ($passageType === 'single') {
+                if ($questionCount < 2 || $questionCount > 4) {
+                    $errors['question_count'] = "Part 7 Single Passage group requires 2 to 4 questions (found {$questionCount}).";
+                }
+            } elseif ($passageType === 'double') {
+                if ($questionCount !== 5) {
+                    $errors['question_count'] = "Part 7 Double Passage group requires exactly 5 questions (found {$questionCount}).";
+                }
+            } elseif ($passageType === 'triple') {
+                if ($questionCount !== 5) {
+                    $errors['question_count'] = "Part 7 Triple Passage group requires exactly 5 questions (found {$questionCount}).";
+                }
+            }
+        }
+
+        // Validate each question in group
+        $qIdx = 1;
+        foreach ($qList as $qItem) {
+            $qData = is_array($qItem) ? $qItem : $qItem->toArray();
+            $qData['part_number'] = $partNumber;
+            // Passage group satisfies passage requirement for child questions
+            if ($passageCount > 0) {
+                $qData['passage_text'] = $qData['passage_text'] ?? 'group_passage';
+            }
+
+            // Audio is strictly forbidden for Part 6 and 7
+            if (!empty($qData['audio_url']) || !empty($qData['media_asset_id'])) {
+                $mediaAsset = !empty($qData['media_asset_id']) ? MediaAsset::find($qData['media_asset_id']) : null;
+                if (!empty($qData['audio_url']) || ($mediaAsset && $mediaAsset->type === 'audio')) {
+                    $errors["question_{$qIdx}_audio"] = "Question #{$qIdx}: Part {$partNumber} does not allow audio attachments.";
+                }
+            }
+
+            $qCheck = self::check($qData, is_object($qItem) && $qItem instanceof Question ? $qItem : null);
+            if (!$qCheck['is_valid']) {
+                foreach ($qCheck['errors'] as $errKey => $errMsg) {
+                    if ($errKey !== 'passage' && $errKey !== 'passage_id') {
+                        $errors["question_{$qIdx}_{$errKey}"] = "Question #{$qIdx}: {$errMsg}";
+                    }
+                }
+            }
+            $qIdx++;
+        }
+
+        return [
+            'is_valid'       => empty($errors),
+            'errors'         => $errors,
+            'passage_type'   => $passageType,
+            'part_number'    => $partNumber,
+            'passage_count'  => $passageCount,
+            'question_count' => $questionCount,
+        ];
+    }
+
+    /**
+     * Validate TOEIC Passage Group and throw ValidationException if invalid.
+     *
+     * @param \App\Modules\QuestionBank\Models\PassageGroup|array<string, mixed> $group
+     * @param array<int, mixed> $passagesData
+     * @param array<int, mixed> $questionsData
+     * @throws ValidationException
+     */
+    public static function validatePassageGroup(mixed $group, array $passagesData = [], array $questionsData = []): array
+    {
+        $result = self::checkPassageGroup($group, $passagesData, $questionsData);
 
         if (!$result['is_valid']) {
             throw ValidationException::withMessages($result['errors']);

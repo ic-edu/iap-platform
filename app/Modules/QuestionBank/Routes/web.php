@@ -21,8 +21,11 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-man
 
     Route::post('/{questionBank}/questions', [QuestionBankController::class, 'storeQuestion'])->name('admin.question-banks.store-question');
     Route::post('/{questionBank}/audio-groups', [QuestionBankController::class, 'storeAudioGroup'])->name('admin.question-banks.store-audio-group');
+    Route::post('/{questionBank}/passage-groups', [QuestionBankController::class, 'storePassageGroup'])->name('admin.question-banks.store-passage-group');
     Route::put('/questions/{question}', [QuestionBankController::class, 'updateQuestion'])->name('admin.question-banks.update-question');
     Route::put('/audio-groups/{audioGroup}', [QuestionBankController::class, 'updateAudioGroup'])->name('admin.question-banks.update-audio-group');
+    Route::put('/passage-groups/{passageGroup}', [QuestionBankController::class, 'updatePassageGroup'])->name('admin.question-banks.update-passage-group');
+    Route::delete('/passage-groups/{passageGroup}', [QuestionBankController::class, 'destroyPassageGroup'])->name('admin.question-banks.destroy-passage-group');
     Route::post('/questions/{question}/duplicate', [QuestionBankController::class, 'duplicateQuestion'])->name('admin.question-banks.duplicate-question');
     Route::post('/{questionBank}/import', [QuestionBankController::class, 'importQuestions'])->name('admin.question-banks.import');
     Route::post('/{questionBank}/duplicate', [QuestionBankController::class, 'duplicate'])->name('admin.question-banks.duplicate');

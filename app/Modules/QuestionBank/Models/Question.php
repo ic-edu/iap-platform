@@ -41,6 +41,7 @@ class Question extends Model
     protected $fillable = [
         'question_bank_id',
         'media_asset_id',
+        'passage_group_id',
         'passage_id',
         'passage_text',
         'audio_group_id',
@@ -77,6 +78,16 @@ class Question extends Model
     }
 
     /**
+     * Get associated shared passage group (Part 6 / Part 7 Single, Double, Triple).
+     *
+     * @return BelongsTo<PassageGroup, $this>
+     */
+    public function passageGroup(): BelongsTo
+    {
+        return $this->belongsTo(PassageGroup::class, 'passage_group_id');
+    }
+
+    /**
      * Get associated passage reading text.
      *
      * @return BelongsTo<Passage, $this>
@@ -84,6 +95,36 @@ class Question extends Model
     public function passage(): BelongsTo
     {
         return $this->belongsTo(Passage::class, 'passage_id');
+    }
+
+    /**
+     * Get all effective passages associated with this question (from group or direct passage).
+     *
+     * @return \Illuminate\Support\Collection<int, Passage>
+     */
+    public function getEffectivePassages(): \Illuminate\Support\Collection
+    {
+        if ($this->passageGroup) {
+            $passages = $this->passageGroup->passages;
+            if ($passages && $passages->isNotEmpty()) {
+                return $passages;
+            }
+        }
+
+        if ($this->passage) {
+            return collect([$this->passage]);
+        }
+
+        if (!empty($this->passage_text)) {
+            $virtualPassage = new Passage([
+                'title'         => 'Reading Passage',
+                'content'       => $this->passage_text,
+                'document_type' => 'article',
+            ]);
+            return collect([$virtualPassage]);
+        }
+
+        return collect();
     }
 
     /**

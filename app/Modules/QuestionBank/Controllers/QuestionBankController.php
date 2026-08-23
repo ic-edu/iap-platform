@@ -12,6 +12,8 @@ use App\Models\RepositoryRevisionRequest;
 use App\Models\User;
 use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\QuestionBank\Models\AudioGroup;
+use App\Modules\QuestionBank\Models\Passage;
+use App\Modules\QuestionBank\Models\PassageGroup;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionBank\Models\QuestionChoice;
@@ -996,6 +998,173 @@ class QuestionBankController extends Controller
         }
 
         return redirect()->back()->with('status', "Shared Audio Group updated successfully.");
+    }
+
+    /**
+     * Store a new TOEIC Shared Passage Group (Part 6 Text Completion & Part 7 Reading) with passages and child questions.
+     */
+    public function storePassageGroup(Request $request, QuestionBank $questionBank): RedirectResponse
+    {
+        $user = $request->user();
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot author questions directly.');
+        }
+
+        if ($user && $user->hasRole('teacher') && (int) $questionBank->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to question bank.');
+        }
+
+        if ($user && $user->hasRole('teacher') && !in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null], true)) {
+            abort(403, 'Repository is locked while awaiting governance approval.');
+        }
+
+        $validated = $request->validate([
+            'title'            => ['nullable', 'string', 'max:255'],
+            'part_number'      => ['required', 'integer', 'in:6,7'],
+            'passage_type'     => ['required', 'string', 'in:single,double,triple'],
+            'context_metadata' => ['nullable', 'array'],
+            'passages'         => ['required', 'array', 'min:1', 'max:3'],
+            'passages.*.title'         => ['nullable', 'string', 'max:255'],
+            'passages.*.content'       => ['required', 'string'],
+            'passages.*.document_type' => ['nullable', 'string'],
+            'passages.*.order_in_group'=> ['nullable', 'integer'],
+            'questions'        => ['required', 'array', 'min:2', 'max:5'],
+            'questions.*.prompt'         => ['required', 'string'],
+            'questions.*.difficulty'     => ['required', 'string'],
+            'questions.*.explanation'    => ['nullable', 'string'],
+            'questions.*.choices'        => ['required', 'array', 'size:4'],
+            'questions.*.correct_choice' => ['required'],
+        ]);
+
+        $partNumber = (int) $validated['part_number'];
+        $passageType = $validated['passage_type'];
+        $section = ToeicQuestionValidator::deriveSection($partNumber);
+
+        // Run strict centralized Passage Group validation
+        ToeicQuestionValidator::validatePassageGroup([
+            'part_number'  => $partNumber,
+            'passage_type' => $passageType,
+        ], $validated['passages'], $validated['questions']);
+
+        DB::transaction(function () use ($questionBank, $validated, $partNumber, $passageType, $section, $user) {
+            $passageGroup = PassageGroup::create([
+                'question_bank_id' => $questionBank->id,
+                'title'            => $validated['title'] ?? ('Part ' . $partNumber . ' ' . ucfirst($passageType) . ' Passage Group'),
+                'part_number'      => $partNumber,
+                'passage_type'     => $passageType,
+                'context_metadata' => $validated['context_metadata'] ?? null,
+                'order'            => (PassageGroup::where('question_bank_id', $questionBank->id)->max('order') ?? 0) + 1,
+                'created_by'       => $user?->id,
+            ]);
+
+            $pIdx = 1;
+            foreach ($validated['passages'] as $pData) {
+                Passage::create([
+                    'passage_group_id' => $passageGroup->id,
+                    'question_bank_id' => $questionBank->id,
+                    'order_in_group'   => $pIdx,
+                    'document_type'    => $pData['document_type'] ?? 'article',
+                    'title'            => $pData['title'] ?? ("Document {$pIdx}"),
+                    'content'          => $pData['content'],
+                ]);
+                $pIdx++;
+            }
+
+            foreach ($validated['questions'] as $qData) {
+                $question = Question::create([
+                    'question_bank_id' => $questionBank->id,
+                    'passage_group_id' => $passageGroup->id,
+                    'prompt'           => $qData['prompt'],
+                    'section'          => $section,
+                    'part_number'      => $partNumber,
+                    'question_type'    => 'multiple_choice',
+                    'difficulty'       => $qData['difficulty'],
+                    'points'           => 1,
+                    'explanation'      => $qData['explanation'] ?? null,
+                ]);
+
+                $correctChoiceIdx = $qData['correct_choice'];
+                foreach ($qData['choices'] as $cIdx => $choice) {
+                    $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                    $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                    QuestionChoice::create([
+                        'question_id' => $question->id,
+                        'label'       => chr(65 + $cIdx),
+                        'content'     => $content,
+                        'choice_text' => $content,
+                        'is_correct'  => $isCorrect,
+                        'order'       => $cIdx + 1,
+                    ]);
+                }
+            }
+        });
+
+        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+
+        $qCount = count($validated['questions']);
+        $pCount = count($validated['passages']);
+        return redirect()->route('admin.question-banks.show', $questionBank->id)
+            ->with('status', "Part {$partNumber} " . ucfirst($passageType) . " Passage Group successfully created with {$pCount} passage(s) and {$qCount} questions.");
+    }
+
+    /**
+     * Update an existing Passage Group.
+     */
+    public function updatePassageGroup(Request $request, PassageGroup $passageGroup): RedirectResponse
+    {
+        $user = $request->user();
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot edit question groups directly.');
+        }
+
+        $bank = $passageGroup->questionBank;
+        if ($user && $user->hasRole('teacher') && $bank && (int) $bank->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to passage group.');
+        }
+
+        $validated = $request->validate([
+            'title'            => ['nullable', 'string', 'max:255'],
+            'context_metadata' => ['nullable', 'array'],
+        ]);
+
+        $passageGroup->update([
+            'title'            => $validated['title'] ?? $passageGroup->title,
+            'context_metadata' => $validated['context_metadata'] ?? $passageGroup->context_metadata,
+        ]);
+
+        if ($bank) {
+            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($bank);
+            return redirect()->route('admin.question-banks.show', $bank->id)
+                ->with('status', "Passage Group updated successfully.");
+        }
+
+        return redirect()->back()->with('status', "Passage Group updated successfully.");
+    }
+
+    /**
+     * Delete a Passage Group and its questions.
+     */
+    public function destroyPassageGroup(Request $request, PassageGroup $passageGroup): RedirectResponse
+    {
+        $user = $request->user();
+        if ($user && ($user->hasRole('admin') || $user->hasRole('super-admin'))) {
+            abort(403, 'Administrators are Content Operators and cannot delete question groups directly.');
+        }
+
+        $bank = $passageGroup->questionBank;
+        if ($user && $user->hasRole('teacher') && $bank && (int) $bank->created_by !== (int) $user->id) {
+            abort(403, 'Unauthorized access to passage group.');
+        }
+
+        $passageGroup->delete();
+
+        if ($bank) {
+            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($bank);
+            return redirect()->route('admin.question-banks.show', $bank->id)
+                ->with('status', "Passage Group deleted successfully.");
+        }
+
+        return redirect()->back()->with('status', "Passage Group deleted successfully.");
     }
 
     /**
