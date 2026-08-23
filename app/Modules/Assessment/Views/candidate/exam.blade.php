@@ -203,9 +203,21 @@
                     $hasPassages = $effectivePassages->isNotEmpty();
                     $passageGroup = $question->passageGroup;
                     $passageGroupId = $passageGroup?->id ?? ($question->passage_id ? 'p_'.$question->passage_id : null);
+                    
+                    $isToeic = \App\Services\ToeicQuestionValidator::isToeic($attempt->test) || \App\Services\ToeicQuestionValidator::isToeic($question);
+                    $partNum = (int) ($question->part_number ?? 0);
+                    $isLetterOnly = $isToeic && in_array($partNum, [1, 2], true);
+
+                    // Filter choices for TOEIC Part 2 (strictly choices A, B, C)
+                    $renderChoices = $question->choices;
+                    if ($isToeic && $partNum === 2) {
+                        $renderChoices = $question->choices->filter(function($c) {
+                            return in_array(strtoupper((string) $c->label), ['A', 'B', 'C'], true);
+                        })->take(3);
+                    }
                 @endphp
 
-                <div id="question-card-{{ $index }}" class="question-card bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm hidden" data-passage-group-id="{{ $passageGroupId }}">
+                <div id="question-card-{{ $index }}" class="question-card bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm hidden" data-passage-group-id="{{ $passageGroupId }}" data-part-number="{{ $partNum }}">
                     <!-- Header with Part, Breadcrumb & Flag -->
                     <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 flex-wrap gap-2">
                         <div class="flex items-center gap-2">
@@ -282,7 +294,7 @@
 
                                 <!-- Choices Options -->
                                 <div class="space-y-3">
-                                    @foreach ($question->choices as $choice)
+                                    @foreach ($renderChoices as $choice)
                                         @php
                                             $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
                                         @endphp
@@ -290,10 +302,17 @@
                                             <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
                                                    {{ $isChecked ? 'checked' : '' }}
                                                    onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $index }})"
+                                                   aria-label="Option {{ $choice->label }}"
                                                    class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-0" />
-                                            <span class="ml-3 text-sm text-slate-200 font-medium">
-                                                <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
-                                            </span>
+                                            @if ($isLetterOnly)
+                                                <span class="ml-3 text-sm text-slate-200 font-bold">
+                                                    <strong class="text-indigo-400">({{ $choice->label }})</strong>
+                                                </span>
+                                            @else
+                                                <span class="ml-3 text-sm text-slate-200 font-medium">
+                                                    <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                                </span>
+                                            @endif
                                         </label>
                                     @endforeach
                                 </div>
@@ -420,7 +439,7 @@
 
                         <!-- Choices Options -->
                         <div class="space-y-3">
-                            @foreach ($question->choices as $choice)
+                            @foreach ($renderChoices as $choice)
                                 @php
                                     $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
                                 @endphp
@@ -428,10 +447,17 @@
                                     <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
                                            {{ $isChecked ? 'checked' : '' }}
                                            onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $index }})"
+                                           aria-label="Option {{ $choice->label }}"
                                            class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-0" />
-                                    <span class="ml-3 text-sm text-slate-200 font-medium">
-                                        <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
-                                    </span>
+                                    @if ($isLetterOnly)
+                                        <span class="ml-3 text-sm text-slate-200 font-bold">
+                                            <strong class="text-indigo-400">({{ $choice->label }})</strong>
+                                        </span>
+                                    @else
+                                        <span class="ml-3 text-sm text-slate-200 font-medium">
+                                            <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                        </span>
+                                    @endif
                                 </label>
                             @endforeach
                         </div>
