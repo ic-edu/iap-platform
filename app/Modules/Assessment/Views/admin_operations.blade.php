@@ -13,8 +13,8 @@
                     ASSESSMENT OPERATIONS
                 </span>
             </div>
-            <h1 class="text-2xl font-black text-white tracking-tight">Assessment Assignment &amp; Operations</h1>
-            <p class="text-sm text-slate-400">Institutional Assessment Catalog, Candidate Assignment Management &amp; Eligibility Verification</p>
+            <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Assessment Assignment &amp; Operations</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Institutional Assessment Catalog, Candidate Assignment Management &amp; Eligibility Verification</p>
         </div>
         <div class="flex items-center gap-3">
             <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors">

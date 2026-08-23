@@ -13,8 +13,8 @@
                     OPERATIONAL ANALYTICS
                 </span>
             </div>
-            <h1 class="text-2xl font-black text-white tracking-tight">Assessment Reports &amp; Analytics</h1>
-            <p class="text-sm text-slate-400">Live candidate completions, pass/fail performance, test modes, and institutional analytics.</p>
+            <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Assessment Reports &amp; Analytics</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Live candidate completions, pass/fail performance, test modes, and institutional analytics.</p>
         </div>
         <a href="{{ route('admin.reporting.export-csv') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-md shadow-emerald-600/20 transition-all">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,57 +26,57 @@
 
     {{-- KPI Section 1: Candidate Results & Performance --}}
     <section>
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
             <span>Assessment Results &amp; Candidate Activity</span>
         </h2>
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Total Submissions</span>
-                <span class="text-2xl font-black text-white mt-1 block">{{ number_format($totalAttempts) }}</span>
-                <span class="text-[10px] text-slate-500 mt-0.5 block">Finished tests</span>
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Total Submissions</span>
+                <span class="text-2xl font-black text-slate-900 dark:text-white mt-1 block">{{ number_format($totalAttempts) }}</span>
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Finished tests</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Pass Rate</span>
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Pass Rate</span>
                 <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ $passRate }}%</span>
-                <span class="text-[10px] text-emerald-600/80 dark:text-emerald-500/80 mt-0.5 block">{{ number_format($totalPassed) }} passed</span>
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5 block">{{ number_format($totalPassed) }} passed</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Failed Tests</span>
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Failed Tests</span>
                 <span class="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1 block">{{ number_format($totalFailed) }}</span>
-                <span class="text-[10px] text-rose-600/80 dark:text-rose-500/80 mt-0.5 block">Below passing score</span>
+                <span class="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5 block">Below passing score</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Certificates</span>
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Certificates</span>
                 <span class="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{{ number_format($totalCertificates) }}</span>
-                <span class="text-[10px] text-indigo-600/80 dark:text-indigo-500/80 mt-0.5 block">Issued &amp; verified</span>
+                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5 block">Issued &amp; verified</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Active Assignments</span>
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Active Assignments</span>
                 <span class="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 block">{{ number_format($activeAssignments) }}</span>
-                <span class="text-[10px] text-amber-600/80 dark:text-amber-500/80 mt-0.5 block">Allocated seats</span>
+                <span class="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 block">Allocated seats</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">In Progress</span>
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">In Progress</span>
                 <span class="text-2xl font-black text-sky-600 dark:text-sky-400 mt-1 block">{{ number_format($inProgressAttempts) }}</span>
-                <span class="text-[10px] text-sky-600/80 dark:text-sky-500/80 mt-0.5 block">Active exam sessions</span>
+                <span class="text-[10px] text-sky-600 dark:text-sky-400 mt-0.5 block">Active exam sessions</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Paid / Eligible</span>
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Paid / Eligible</span>
                 <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ number_format($paidEligibleCandidates) }}</span>
-                <span class="text-[10px] text-slate-500 mt-0.5 block">Mock Test verified</span>
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Mock Test verified</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
-                <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Registered Students</span>
-                <span class="text-2xl font-black text-white mt-1 block">{{ number_format($totalStudents) }}</span>
-                <span class="text-[10px] text-slate-500 mt-0.5 block">Total candidates</span>
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">Registered Students</span>
+                <span class="text-2xl font-black text-slate-900 dark:text-white mt-1 block">{{ number_format($totalStudents) }}</span>
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">Total candidates</span>
             </div>
 
         </div>
@@ -84,37 +84,37 @@
 
     {{-- KPI Section 2: Institutional Inventory & Staff Distribution --}}
     <section>
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
             <span>Assessment Inventory &amp; Institutional Staff</span>
         </h2>
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Total Assessments</span>
-                <span class="text-lg font-bold text-white mt-0.5 block">{{ number_format($totalTests) }}</span>
+                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Total Assessments</span>
+                <span class="text-lg font-bold text-slate-900 dark:text-white mt-0.5 block">{{ number_format($totalTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Published / Live</span>
+                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Published / Live</span>
                 <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">{{ number_format($publishedTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Test Simulators</span>
+                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Test Simulators</span>
                 <span class="text-lg font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">{{ number_format($simulatorTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Mock Tests</span>
+                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Mock Tests</span>
                 <span class="text-lg font-bold text-rose-600 dark:text-rose-400 mt-0.5 block">{{ number_format($realTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Teachers</span>
+                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Teachers</span>
                 <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 block">{{ number_format($totalTeachers) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Repository Managers</span>
+                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Repository Managers</span>
                 <span class="text-lg font-bold text-purple-600 dark:text-purple-400 mt-0.5 block">{{ number_format($totalRMs) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
-                <span class="text-[10px] font-semibold text-slate-400 block">Admins &amp; Staff</span>
-                <span class="text-lg font-bold text-slate-200 mt-0.5 block">{{ number_format($totalAdmins + $totalSuperAdmins) }}</span>
+                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block">Admins &amp; Staff</span>
+                <span class="text-lg font-bold text-slate-900 dark:text-slate-200 mt-0.5 block">{{ number_format($totalAdmins + $totalSuperAdmins) }}</span>
             </div>
         </div>
     </section>
@@ -124,10 +124,10 @@
 
         {{-- Chart 1: Assessment Activity Trend (7 Days) --}}
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1 flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-300 mb-1 flex items-center justify-between">
                 <span>📈 Attempt Activity (Last 7 Days)</span>
             </h3>
-            <p class="text-[11px] text-slate-500 mb-4">Daily volume of candidate assessment attempts</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-4">Daily volume of candidate assessment attempts</p>
             <div class="relative h-48 flex items-center justify-center">
                 <canvas id="chartActivityTrend"></canvas>
             </div>
@@ -135,10 +135,10 @@
 
         {{-- Chart 2: Pass vs Fail Distribution --}}
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1 flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-300 mb-1 flex items-center justify-between">
                 <span>🎯 Pass vs Fail Performance</span>
             </h3>
-            <p class="text-[11px] text-slate-500 mb-4">Final candidate score outcomes</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-4">Final candidate score outcomes</p>
             <div class="relative h-48 flex items-center justify-center">
                 <canvas id="chartPassFail"></canvas>
             </div>
@@ -146,10 +146,10 @@
 
         {{-- Chart 3: Assessment Mode Breakdown --}}
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1 flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-300 mb-1 flex items-center justify-between">
                 <span>🛡️ Mode: Test Simulator vs Mock Test</span>
             </h3>
-            <p class="text-[11px] text-slate-500 mb-4">Attempts distributed by assessment mode</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-4">Attempts distributed by assessment mode</p>
             <div class="relative h-48 flex items-center justify-center">
                 <canvas id="chartModeBreakdown"></canvas>
             </div>
@@ -162,32 +162,32 @@
 
         {{-- Popular Assessments by Attempts --}}
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-300 mb-3">
                 🔥 Top Assessments by Attempt Volume
             </h3>
             <div class="divide-y divide-slate-800/80">
                 @forelse($popularAssessments as $t)
                 <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
                     <div class="min-w-0">
-                        <span class="font-bold text-white block truncate">{{ $t->title }}</span>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">{{ is_object($t->test_type) ? $t->test_type->label() : $t->test_type }}</span>
+                        <span class="font-bold text-slate-900 dark:text-white block truncate">{{ $t->title }}</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ is_object($t->test_type) ? $t->test_type->label() : $t->test_type }}</span>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $t->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $t->isRealTest() ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30' }}">
                             {{ $t->assessment_mode?->label() ?? 'Assessment' }}
                         </span>
                         <span class="font-black text-indigo-600 dark:text-indigo-400">{{ number_format($t->attempts_count) }} attempts</span>
                     </div>
                 </div>
                 @empty
-                <p class="text-xs text-slate-500 py-4 text-center">No assessment attempt data yet.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 py-4 text-center">No assessment attempt data yet.</p>
                 @endforelse
             </div>
         </div>
 
         {{-- Candidate Lifecycle Status --}}
         <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl shadow-sm">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-300 mb-3">
                 📊 Candidate Assessment Status
             </h3>
             <div class="space-y-2.5">

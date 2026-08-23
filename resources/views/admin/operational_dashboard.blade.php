@@ -18,8 +18,8 @@
                 </span>
                 @endif
             </div>
-            <h1 class="text-2xl font-black text-white tracking-tight">Operational Dashboard</h1>
-            <p class="text-sm text-slate-400">Candidate Operations, Payment Eligibility &amp; Test Assignments — {{ now()->format('l, d F Y') }}</p>
+            <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Operational Dashboard</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Candidate Operations, Payment Eligibility &amp; Test Assignments — {{ now()->format('l, d F Y') }}</p>
         </div>
     </div>
 
@@ -37,8 +37,8 @@
 
     {{-- Operational KPI Grid --}}
     <section>
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-            <span>Live Operational Metrics</span>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
+            <span>Platform Candidate &amp; Testing Metrics</span>
         </h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
@@ -118,18 +118,18 @@
         <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
             <div class="flex items-center gap-2.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <h2 class="text-sm font-bold text-white uppercase tracking-wider">Candidates Requiring Action</h2>
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Candidates Requiring Action</h2>
                 <span class="ra-status-badge ra-status--awaiting-assignment">
                     {{ count($actionRequiredCandidates) }} Awaiting Assignment
                 </span>
             </div>
-            <span class="text-xs text-slate-400 font-medium">Mock Test Payment Verification</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Mock Test Payment Verification</span>
         </div>
 
         @if(count($actionRequiredCandidates) === 0)
         <div class="py-3.5 px-4 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40 flex items-center justify-center gap-2 text-xs text-slate-400">
             <span class="text-base">🎉</span>
-            <strong class="text-slate-300 font-semibold">All Clear:</strong>
+            <strong class="text-slate-700 dark:text-slate-300 font-semibold">All Clear:</strong>
             <span>No paid candidates are currently waiting for Mock Test assignment.</span>
         </div>
         @else
@@ -137,12 +137,12 @@
             @foreach($actionRequiredCandidates as $item)
             <div class="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-900/40 px-3 rounded-lg transition-colors">
                 <div class="flex items-start gap-3 min-w-0">
-                    <div class="w-9 h-9 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                    <div class="w-9 h-9 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold text-xs flex-shrink-0">
                         {{ strtoupper(substr($item['user']->name, 0, 2)) }}
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <p class="text-sm font-bold text-white truncate">{{ $item['user']->name }}</p>
+                            <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ $item['user']->name }}</p>
                             <span class="ra-status-badge ra-status--approved text-[9px] py-0.5 px-2">
                                 PAID
                             </span>
@@ -150,8 +150,8 @@
                                 MOCK TEST
                             </span>
                         </div>
-                        <p class="text-xs text-slate-400 mt-0.5">
-                            Target: <span class="text-slate-200 font-semibold">{{ $item['test']->title }}</span> &bull; Paid: {{ \Carbon\Carbon::parse($item['paid_at'])->diffForHumans() }}
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Target: <span class="text-slate-800 dark:text-slate-200 font-semibold">{{ $item['test']->title }}</span> &bull; Paid: {{ \Carbon\Carbon::parse($item['paid_at'])->diffForHumans() }}
                         </p>
                     </div>
                 </div>
@@ -176,23 +176,23 @@
         {{-- Column 1: Recent Active Candidate Assignments --}}
         <section class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-                <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                     <span>🎯</span> Recent Active Assignments
                 </h2>
-                <a href="{{ route('admin.tests.index', ['filter' => 'active-assignments']) }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">View Active Assignments &rarr;</a>
+                <a href="{{ route('admin.tests.index', ['filter' => 'active-assignments']) }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold">View Active Assignments &rarr;</a>
             </div>
 
             @if($recentAssignments->isEmpty())
             <div class="py-8 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40">
-                <p class="text-xs text-slate-400">No active candidate assignments on record.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">No active candidate assignments on record.</p>
             </div>
             @else
             <div class="space-y-2.5">
                 @foreach($recentAssignments as $assignment)
                 <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="text-xs font-bold text-white truncate">{{ $assignment->user?->name ?? 'Candidate' }}</p>
-                        <p class="text-[11px] text-slate-400 truncate">{{ $assignment->test?->title ?? 'Test' }}</p>
+                        <p class="text-xs font-bold text-slate-900 dark:text-white truncate">{{ $assignment->user?->name ?? 'Candidate' }}</p>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ $assignment->test?->title ?? 'Test' }}</p>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <span class="ra-status-badge {{ $assignment->test?->isRealTest() ? 'ra-status--rejected' : 'ra-status--placement-required' }} text-[9px] py-0.5 px-2">
@@ -211,14 +211,14 @@
         {{-- Column 2: Assessment Inventory --}}
         <section class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-                <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                     <span>📋</span> Assessment Inventory
                 </h2>
             </div>
 
             @if($availableTests->isEmpty())
             <div class="py-8 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40">
-                <p class="text-xs text-slate-400">No published assessments available.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">No published assessments available.</p>
             </div>
             @else
             <div class="space-y-2.5">
@@ -226,12 +226,12 @@
                 <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-3">
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <p class="text-xs font-bold text-white truncate">{{ $test->title }}</p>
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $test->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
+                            <p class="text-xs font-bold text-slate-900 dark:text-white truncate">{{ $test->title }}</p>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $test->isRealTest() ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30' }}">
                                 {{ $test->assessment_mode?->label() ?? 'Assessment' }}
                             </span>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-0.5">
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                             {{ $test->active_assignments_count }} Active Candidate(s) Assigned
                         </p>
                     </div>

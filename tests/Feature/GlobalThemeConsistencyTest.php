@@ -160,4 +160,32 @@ class GlobalThemeConsistencyTest extends TestCase
         $response->assertSee('text-slate-900 dark:text-white', false);
         $response->assertSee('text-indigo-600 dark:text-indigo-400', false);
     }
+
+    public function test_operational_analytics_reporting_kpis_and_theme_contract(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.reporting.index'));
+        $response->assertStatus(200);
+
+        // Verify all 8 KPI labels
+        $response->assertSee('Total Submissions');
+        $response->assertSee('Pass Rate');
+        $response->assertSee('Failed Tests');
+        $response->assertSee('Certificates');
+        $response->assertSee('Active Assignments');
+        $response->assertSee('In Progress');
+        $response->assertSee('Paid / Eligible');
+        $response->assertSee('Registered Students');
+
+        // Verify responsive metric value classes are present for all 8 cards
+        $response->assertSee('text-slate-900 dark:text-white', false);
+        $response->assertSee('text-emerald-600 dark:text-emerald-400', false);
+        $response->assertSee('text-rose-600 dark:text-rose-400', false);
+        $response->assertSee('text-indigo-600 dark:text-indigo-400', false);
+        $response->assertSee('text-amber-600 dark:text-amber-400', false);
+        $response->assertSee('text-sky-600 dark:text-sky-400', false);
+
+        // Ensure no raw text-white without dark mode prefix on KPI values
+        $content = $response->getContent();
+        $this->assertStringNotContainsString('text-2xl font-black text-white mt-1 block', $content);
+    }
 }

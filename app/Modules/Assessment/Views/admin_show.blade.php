@@ -17,8 +17,8 @@
                     {{ $test->isRealTest() ? '🛡️ Mock Test' : '🎯 Test Simulator' }}
                 </span>
             </div>
-            <h1 class="text-2xl font-black text-white tracking-tight">{{ $test->title }}</h1>
-            <p class="text-sm text-slate-400">Candidate Assignment &amp; Access Governance &bull; Program: <span class="text-slate-200 font-semibold uppercase">{{ $test->test_type instanceof \BackedEnum ? $test->test_type->value : (string) ($test->test_type ?? 'GENERAL') }}</span></p>
+            <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{{ $test->title }}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Candidate Assignment &amp; Access Governance &bull; Program: <span class="text-slate-800 dark:text-slate-200 font-semibold uppercase">{{ $test->test_type instanceof \BackedEnum ? $test->test_type->value : (string) ($test->test_type ?? 'GENERAL') }}</span></p>
         </div>
         <div class="flex items-center gap-3">
             <a href="{{ route('admin.tests.index') }}" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors">

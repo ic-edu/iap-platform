@@ -2850,3 +2850,21 @@ html[data-theme="light"] .kpi-value,
 html[data-theme="light"] .stat-value {
     color: var(--metric-neutral);
 }
+
+html.light .metric-value:not([class*="metric-value--"]),
+html.light .kpi-value:not([class*="kpi-value--"]),
+html.light .stat-value:not([class*="stat-value--"]),
+html[data-theme="light"] .metric-value:not([class*="metric-value--"]),
+html[data-theme="light"] .kpi-value:not([class*="kpi-value--"]),
+html[data-theme="light"] .stat-value:not([class*="stat-value--"]) {
+    color: var(--metric-neutral) !important;
+}
+
+html.dark .metric-value:not([class*="metric-value--"]),
+html.dark .kpi-value:not([class*="kpi-value--"]),
+html.dark .stat-value:not([class*="stat-value--"]),
+html[data-theme="dark"] .metric-value:not([class*="metric-value--"]),
+html[data-theme="dark"] .kpi-value:not([class*="kpi-value--"]),
+html[data-theme="dark"] .stat-value:not([class*="stat-value--"]) {
+    color: var(--metric-neutral) !important;
+}
