@@ -71,6 +71,16 @@
             Clear Filter ✕
         </a>
     </div>
+    @elseif(request('role') === 'student')
+    <div class="mb-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium flex items-center justify-between shadow-sm">
+        <span class="flex items-center gap-2">
+            <span>👥</span>
+            <span>Showing: <strong>Registered Candidates</strong> (Student role directory)</span>
+        </span>
+        <a href="{{ route('admin.users.index') }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition-colors">
+            Clear Filter ✕
+        </a>
+    </div>
     @endif
 
     <!-- Users Table -->

@@ -595,5 +595,89 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $this->admin->refresh();
         $this->assertSame('system', $this->admin->getThemePreference());
     }
+
+    /**
+     * TEST 1: Total Registered Candidates KPI links to student-scoped directory
+     */
+    public function test_operational_dashboard_total_registered_candidates_kpi_links_to_student_scoped_directory(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
+        $response->assertStatus(200);
+
+        // Verify the KPI anchor links specifically with role=student
+        $response->assertSee(route('admin.users.index', ['role' => 'student']));
+    }
+
+    /**
+     * TEST 2: Student-role scoped user directory excludes staff accounts
+     */
+    public function test_student_role_scoped_user_directory_excludes_staff_accounts(): void
+    {
+        $superAdminUser = User::factory()->create(['name' => 'Super Admin Target', 'email' => 'sa_unique@icedu.org', 'status' => 'active']);
+        $superAdminUser->assignRole('super-admin');
+
+        $teacherUser = User::factory()->create(['name' => 'Teacher Target', 'email' => 'teacher_unique@icedu.org', 'status' => 'active']);
+        $teacherUser->assignRole('teacher');
+
+        $financeUser = User::factory()->create(['name' => 'Finance Target', 'email' => 'finance_unique@icedu.org', 'status' => 'active']);
+        $financeUser->assignRole('finance');
+
+        $repoManagerUser = User::factory()->create(['name' => 'RM Target', 'email' => 'rm_unique@icedu.org', 'status' => 'active']);
+        $repoManagerUser->assignRole('repository-manager');
+
+        $candidateUser = User::factory()->create(['name' => 'Candidate Student Unique', 'email' => 'student_unique@icedu.org', 'status' => 'active']);
+        $candidateUser->assignRole('student');
+
+        $response = $this->actingAs($this->admin)->get(route('admin.users.index', ['role' => 'student']));
+        $response->assertStatus(200);
+
+        // Candidate must be visible
+        $response->assertSee('Candidate Student Unique');
+        $response->assertSee('student_unique@icedu.org');
+        $response->assertSee('Registered Candidates');
+
+        // Staff accounts must NOT appear in candidate-scoped list
+        $response->assertDontSee('Super Admin Target');
+        $response->assertDontSee('sa_unique@icedu.org');
+        $response->assertDontSee('Teacher Target');
+        $response->assertDontSee('teacher_unique@icedu.org');
+        $response->assertDontSee('Finance Target');
+        $response->assertDontSee('finance_unique@icedu.org');
+        $response->assertDontSee('RM Target');
+        $response->assertDontSee('rm_unique@icedu.org');
+    }
+
+    /**
+     * TEST 3: Unfiltered user directory behavior remains unchanged for authorized Super Admin
+     */
+    public function test_unfiltered_user_directory_behavior_remains_unchanged_for_authorized_super_admin(): void
+    {
+        $superAdminUser = User::factory()->create(['name' => 'Super Admin Alpha', 'email' => 'sa_alpha@icedu.org', 'status' => 'active']);
+        $superAdminUser->assignRole('super-admin');
+
+        $teacherUser = User::factory()->create(['name' => 'Teacher Beta', 'email' => 'teacher_beta@icedu.org', 'status' => 'active']);
+        $teacherUser->assignRole('teacher');
+
+        $candidateUser = User::factory()->create(['name' => 'Student Gamma', 'email' => 'student_gamma@icedu.org', 'status' => 'active']);
+        $candidateUser->assignRole('student');
+
+        $response = $this->actingAs($superAdminUser)->get(route('admin.users.index'));
+        $response->assertStatus(200);
+
+        // Unfiltered directory shows all roles for Super Admin
+        $response->assertSee('Teacher Beta');
+        $response->assertSee('Student Gamma');
+        $response->assertSee('Enterprise User &amp; Access Control Management Workspace', false);
+    }
+
+    /**
+     * TEST 4: Operational Admin can access student-scoped candidate directory
+     */
+    public function test_operational_admin_can_access_student_scoped_candidate_directory(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.users.index', ['role' => 'student']));
+        $response->assertStatus(200);
+        $response->assertSee('Registered Candidates');
+    }
 }
 

@@ -43,7 +43,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
             {{-- 1. Total Candidates --}}
-            <a href="{{ route('admin.users.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+            <a href="{{ route('admin.users.index', ['role' => 'student']) }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-indigo-500"></div>
                 <div class="flex items-start justify-between">
                     <div>
