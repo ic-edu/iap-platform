@@ -62,12 +62,6 @@
                     @php
                         $target = $createReq->targetUser;
                         $roleName = $createReq->requested_role;
-                        $roleBadge = match($roleName) {
-                            'admin' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-                            'teacher' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                            'finance' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                            default => 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-                        };
                     @endphp
                     <tr>
                         <td class="p-4">
@@ -75,9 +69,7 @@
                             <div class="text-xs font-mono text-indigo-400">{{ $target?->email ?? 'N/A' }}</div>
                         </td>
                         <td class="p-4">
-                            <span class="px-2.5 py-0.5 text-[10px] font-bold rounded border uppercase {{ $roleBadge }}">
-                                {{ $roleName }}
-                            </span>
+                            <x-role-badge :role="$roleName" />
                         </td>
                         <td class="p-4 text-xs text-slate-300">
                             {{ $createReq->requester?->name ?? 'Admin' }}

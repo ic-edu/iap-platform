@@ -91,13 +91,6 @@
                 @forelse ($users as $user)
                     @php
                         $roleName = $user->roles->first()?->name ?? 'student';
-                        $roleBadge = match($roleName) {
-                            'super-admin' => 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-                            'admin' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-                            'teacher' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                            'finance' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                            default => 'bg-slate-800 text-slate-400 border-slate-700',
-                        };
                         $isSelf = Auth::id() === $user->id;
                         $actorIsSuperAdmin = Auth::user()?->hasRole('super-admin');
                         $actorIsRegularAdmin = Auth::user()?->hasRole('admin') && !$actorIsSuperAdmin;
@@ -121,9 +114,7 @@
                         </td>
                         <td class="p-4 text-slate-300 text-xs font-mono">{{ $user->email }}</td>
                         <td class="p-4">
-                            <span class="px-2.5 py-0.5 text-[10px] font-bold rounded border uppercase {{ $roleBadge }}">
-                                {{ $roleName }}
-                            </span>
+                            <x-role-badge :role="$roleName" />
                         </td>
                         <td class="p-4">
                             @if ($hasPendingDeletion)

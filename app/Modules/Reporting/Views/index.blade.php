@@ -39,37 +39,37 @@
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
                 <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Pass Rate</span>
-                <span class="text-2xl font-black text-emerald-400 mt-1 block">{{ $passRate }}%</span>
-                <span class="text-[10px] text-emerald-500/80 mt-0.5 block">{{ number_format($totalPassed) }} passed</span>
+                <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ $passRate }}%</span>
+                <span class="text-[10px] text-emerald-600/80 dark:text-emerald-500/80 mt-0.5 block">{{ number_format($totalPassed) }} passed</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
                 <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Failed Tests</span>
-                <span class="text-2xl font-black text-rose-400 mt-1 block">{{ number_format($totalFailed) }}</span>
-                <span class="text-[10px] text-rose-500/80 mt-0.5 block">Below passing score</span>
+                <span class="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1 block">{{ number_format($totalFailed) }}</span>
+                <span class="text-[10px] text-rose-600/80 dark:text-rose-500/80 mt-0.5 block">Below passing score</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
                 <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Certificates</span>
-                <span class="text-2xl font-black text-indigo-400 mt-1 block">{{ number_format($totalCertificates) }}</span>
-                <span class="text-[10px] text-indigo-500/80 mt-0.5 block">Issued &amp; verified</span>
+                <span class="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{{ number_format($totalCertificates) }}</span>
+                <span class="text-[10px] text-indigo-600/80 dark:text-indigo-500/80 mt-0.5 block">Issued &amp; verified</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
                 <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Active Assignments</span>
-                <span class="text-2xl font-black text-amber-400 mt-1 block">{{ number_format($activeAssignments) }}</span>
-                <span class="text-[10px] text-amber-500/80 mt-0.5 block">Allocated seats</span>
+                <span class="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 block">{{ number_format($activeAssignments) }}</span>
+                <span class="text-[10px] text-amber-600/80 dark:text-amber-500/80 mt-0.5 block">Allocated seats</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
                 <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">In Progress</span>
-                <span class="text-2xl font-black text-sky-400 mt-1 block">{{ number_format($inProgressAttempts) }}</span>
-                <span class="text-[10px] text-sky-500/80 mt-0.5 block">Active exam sessions</span>
+                <span class="text-2xl font-black text-sky-600 dark:text-sky-400 mt-1 block">{{ number_format($inProgressAttempts) }}</span>
+                <span class="text-[10px] text-sky-600/80 dark:text-sky-500/80 mt-0.5 block">Active exam sessions</span>
             </div>
 
             <div class="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-center">
                 <span class="text-[10px] font-bold uppercase text-slate-400 block truncate">Paid / Eligible</span>
-                <span class="text-2xl font-black text-emerald-400 mt-1 block">{{ number_format($paidEligibleCandidates) }}</span>
+                <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ number_format($paidEligibleCandidates) }}</span>
                 <span class="text-[10px] text-slate-500 mt-0.5 block">Mock Test verified</span>
             </div>
 
@@ -94,23 +94,23 @@
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
                 <span class="text-[10px] font-semibold text-slate-400 block">Published / Live</span>
-                <span class="text-lg font-bold text-emerald-400 mt-0.5 block">{{ number_format($publishedTests) }}</span>
+                <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">{{ number_format($publishedTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
                 <span class="text-[10px] font-semibold text-slate-400 block">Test Simulators</span>
-                <span class="text-lg font-bold text-amber-400 mt-0.5 block">{{ number_format($simulatorTests) }}</span>
+                <span class="text-lg font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">{{ number_format($simulatorTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
                 <span class="text-[10px] font-semibold text-slate-400 block">Mock Tests</span>
-                <span class="text-lg font-bold text-rose-400 mt-0.5 block">{{ number_format($realTests) }}</span>
+                <span class="text-lg font-bold text-rose-600 dark:text-rose-400 mt-0.5 block">{{ number_format($realTests) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
                 <span class="text-[10px] font-semibold text-slate-400 block">Teachers</span>
-                <span class="text-lg font-bold text-indigo-400 mt-0.5 block">{{ number_format($totalTeachers) }}</span>
+                <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 block">{{ number_format($totalTeachers) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
                 <span class="text-[10px] font-semibold text-slate-400 block">Repository Managers</span>
-                <span class="text-lg font-bold text-purple-400 mt-0.5 block">{{ number_format($totalRMs) }}</span>
+                <span class="text-lg font-bold text-purple-600 dark:text-purple-400 mt-0.5 block">{{ number_format($totalRMs) }}</span>
             </div>
             <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
                 <span class="text-[10px] font-semibold text-slate-400 block">Admins &amp; Staff</span>
@@ -176,7 +176,7 @@
                         <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $t->isRealTest() ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30' }}">
                             {{ $t->assessment_mode?->label() ?? 'Assessment' }}
                         </span>
-                        <span class="font-black text-indigo-400">{{ number_format($t->attempts_count) }} attempts</span>
+                        <span class="font-black text-indigo-600 dark:text-indigo-400">{{ number_format($t->attempts_count) }} attempts</span>
                     </div>
                 </div>
                 @empty
@@ -191,29 +191,28 @@
                 📊 Candidate Assessment Status
             </h3>
             <div class="space-y-2.5">
-                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
-                    <span class="text-xs font-semibold text-amber-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-amber-400"></span> Active Assignments
+                <div class="candidate-status-card">
+                    <span class="candidate-status-item candidate-status-item--active">
+                        <span class="candidate-status-dot"></span> Active Assignments
                     </span>
-                    <span class="text-sm font-bold text-white font-mono">{{ number_format($activeAssignments) }}</span>
+                    <span class="candidate-status-count">{{ number_format($activeAssignments) }}</span>
                 </div>
-                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
-                    <span class="text-xs font-semibold text-sky-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-sky-400"></span> In Progress (Live Exams)
+                <div class="candidate-status-card">
+                    <span class="candidate-status-item candidate-status-item--in-progress">
+                        <span class="candidate-status-dot"></span> In Progress (Live Exams)
                     </span>
-                    <span class="text-sm font-bold text-white font-mono">{{ number_format($inProgressAttempts) }}</span>
+                    <span class="candidate-status-count">{{ number_format($inProgressAttempts) }}</span>
                 </div>
-                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
-                    <span class="text-xs font-semibold text-emerald-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Completed &amp; Passed
+                <div class="candidate-status-card">
+                    <span class="candidate-status-item candidate-status-item--passed">
+                        <span class="candidate-status-dot"></span> Completed &amp; Passed
                     </span>
-                    <span class="text-sm font-bold text-white font-mono">{{ number_format($totalPassed) }}</span>
+                    <span class="candidate-status-count">{{ number_format($totalPassed) }}</span>
                 </div>
-                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
-                    <span class="text-xs font-semibold text-rose-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-rose-400"></span> Completed &amp; Failed
+                <div class="candidate-status-card">
+                    <span class="candidate-status-item candidate-status-item--failed">
+                        <span class="candidate-status-dot"></span> Completed &amp; Failed
                     </span>
-                    <span class="text-sm font-bold text-white font-mono">{{ number_format($totalFailed) }}</span>
                 </div>
             </div>
         </div>

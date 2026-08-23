@@ -2318,6 +2318,230 @@ html[data-theme="light"] .imd-meta-table tr {
     border-color: #e2e8f0 !important;
 }
 
+/* ==========================================================================
+   SEMANTIC SECURITY ROLE BADGES (Light & Dark Theme Accessible Contract)
+   ========================================================================== */
 
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    line-height: 1.25;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+}
 
+/* 1. Super Admin: Professional Violet/Purple */
+.role-badge--super-admin,
+.role-badge--super_admin {
+    background-color: #faf5ff !important;
+    color: #7e22ce !important;
+    border-color: #e9d5ff !important;
+}
+html.dark .role-badge--super-admin,
+html[data-theme="dark"] .role-badge--super-admin,
+html.dark .role-badge--super_admin,
+html[data-theme="dark"] .role-badge--super_admin {
+    background-color: rgba(168, 85, 247, 0.15) !important;
+    color: #c084fc !important;
+    border-color: rgba(168, 85, 247, 0.35) !important;
+}
 
+/* 2. Admin: Professional Indigo/Blue */
+.role-badge--admin,
+.role-badge--administrator {
+    background-color: #eef2ff !important;
+    color: #4338ca !important;
+    border-color: #c7d2fe !important;
+}
+html.dark .role-badge--admin,
+html[data-theme="dark"] .role-badge--admin,
+html.dark .role-badge--administrator,
+html[data-theme="dark"] .role-badge--administrator {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+    color: #818cf8 !important;
+    border-color: rgba(99, 102, 241, 0.35) !important;
+}
+
+/* 3. Teacher: Professional Emerald/Forest */
+.role-badge--teacher,
+.role-badge--author {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    border-color: #a7f3d0 !important;
+}
+html.dark .role-badge--teacher,
+html[data-theme="dark"] .role-badge--teacher,
+html.dark .role-badge--author,
+html[data-theme="dark"] .role-badge--author {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* 4. Finance: Professional Warm Amber */
+.role-badge--finance {
+    background-color: #fffbeb !important;
+    color: #b45309 !important;
+    border-color: #fde68a !important;
+}
+html.dark .role-badge--finance,
+html[data-theme="dark"] .role-badge--finance {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+/* 5. Student / Candidate: Professional High-Contrast Slate / Ocean */
+.role-badge--student,
+.role-badge--candidate {
+    background-color: #f0f9ff !important;
+    color: #0369a1 !important;
+    border-color: #bae6fd !important;
+}
+html.dark .role-badge--student,
+html[data-theme="dark"] .role-badge--student,
+html.dark .role-badge--candidate,
+html[data-theme="dark"] .role-badge--candidate {
+    background-color: rgba(56, 189, 248, 0.15) !important;
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.35) !important;
+}
+
+/* 6. Repository Manager: Professional High-Contrast Slate / Neutral */
+.role-badge--repository-manager,
+.role-badge--repository_manager,
+.role-badge--repomanager {
+    background-color: #f1f5f9 !important;
+    color: #334155 !important;
+    border-color: #cbd5e1 !important;
+}
+html.dark .role-badge--repository-manager,
+html[data-theme="dark"] .role-badge--repository-manager,
+html.dark .role-badge--repository_manager,
+html[data-theme="dark"] .role-badge--repository_manager,
+html.dark .role-badge--repomanager,
+html[data-theme="dark"] .role-badge--repomanager {
+    background-color: rgba(148, 163, 184, 0.15) !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+/* ==========================================================================
+   CANDIDATE ASSESSMENT STATUS WIDGET SEMANTICS
+   ========================================================================== */
+
+.candidate-status-card {
+    padding: 0.75rem 1rem;
+    border-radius: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+}
+html.dark .candidate-status-card,
+html[data-theme="dark"] .candidate-status-card {
+    background-color: rgba(15, 23, 42, 0.6);
+    border-color: rgba(51, 65, 85, 0.8);
+}
+
+.candidate-status-item {
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.candidate-status-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+}
+
+/* Active Assignments: Professional Warm Amber */
+.candidate-status-item--active {
+    color: #92400e !important;
+}
+.candidate-status-item--active .candidate-status-dot {
+    background-color: #d97706;
+}
+html.dark .candidate-status-item--active,
+html[data-theme="dark"] .candidate-status-item--active {
+    color: #fbbf24 !important;
+}
+html.dark .candidate-status-item--active .candidate-status-dot,
+html[data-theme="dark"] .candidate-status-item--active .candidate-status-dot {
+    background-color: #fbbf24;
+}
+
+/* In Progress (Live Exams): Professional Blue */
+.candidate-status-item--in-progress {
+    color: #0369a1 !important;
+}
+.candidate-status-item--in-progress .candidate-status-dot {
+    background-color: #0284c7;
+}
+html.dark .candidate-status-item--in-progress,
+html[data-theme="dark"] .candidate-status-item--in-progress {
+    color: #38bdf8 !important;
+}
+html.dark .candidate-status-item--in-progress .candidate-status-dot,
+html[data-theme="dark"] .candidate-status-item--in-progress .candidate-status-dot {
+    background-color: #38bdf8;
+}
+
+/* Completed & Passed: Professional Emerald */
+.candidate-status-item--passed {
+    color: #047857 !important;
+}
+.candidate-status-item--passed .candidate-status-dot {
+    background-color: #059669;
+}
+html.dark .candidate-status-item--passed,
+html[data-theme="dark"] .candidate-status-item--passed {
+    color: #34d399 !important;
+}
+html.dark .candidate-status-item--passed .candidate-status-dot,
+html[data-theme="dark"] .candidate-status-item--passed .candidate-status-dot {
+    background-color: #34d399;
+}
+
+/* Completed & Failed: Professional Rose / Red */
+.candidate-status-item--failed {
+    color: #be123c !important;
+}
+.candidate-status-item--failed .candidate-status-dot {
+    background-color: #e11d48;
+}
+html.dark .candidate-status-item--failed,
+html[data-theme="dark"] .candidate-status-item--failed {
+    color: #fb7185 !important;
+}
+html.dark .candidate-status-item--failed .candidate-status-dot,
+html[data-theme="dark"] .candidate-status-item--failed .candidate-status-dot {
+    background-color: #fb7185;
+}
+
+.candidate-status-count {
+    font-size: 0.875rem;
+    font-weight: 800;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #0f172a;
+}
+html.dark .candidate-status-count,
+html[data-theme="dark"] .candidate-status-count {
+    color: #ffffff;
+}

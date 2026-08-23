@@ -202,7 +202,7 @@
                                 </div>
                                 <div class="hidden sm:block">
                                     <span class="block text-xs font-semibold text-slate-200 leading-tight">{{ Auth::user()->name }}</span>
-                                    <span class="block text-[10px] text-indigo-400 font-medium">{{ Auth::user()->roles->first()?->name ?? 'User' }}</span>
+                                    <span class="block text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider">{{ Auth::user()->roles->first()?->name ?? 'User' }}</span>
                                 </div>
                                 <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />

@@ -69,7 +69,9 @@
                             <div class="font-semibold text-white">{{ $target?->name ?? 'User Account' }}</div>
                             <div class="text-xs font-mono text-indigo-400">{{ $target?->email ?? 'Deleted User' }}</div>
                         </td>
-                        <td class="p-4 text-xs font-bold text-amber-400 uppercase">{{ $roleName }}</td>
+                        <td class="p-4">
+                            <x-role-badge :role="$roleName" />
+                        </td>
                         <td class="p-4 text-xs text-slate-300">
                             {{ $delReq->requester?->name ?? 'Admin' }}
                             <div class="text-slate-500 font-mono">{{ $delReq->requester?->email }}</div>

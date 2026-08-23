@@ -55,7 +55,7 @@
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                    <span class="text-indigo-400 group-hover:translate-x-0.5 transition-transform">View Candidates &rarr;</span>
+                    <span class="text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">View Candidates &rarr;</span>
                 </div>
             </a>
 
@@ -67,12 +67,12 @@
                         <p class="text-xs font-semibold text-slate-400">Paid &amp; Eligible Candidates</p>
                         <p class="text-3xl font-black text-white mt-1 group-hover:text-emerald-300 transition-colors">{{ number_format($paidEligibleCandidatesCount) }}</p>
                     </div>
-                    <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xl">
+                    <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xl">
                         💳
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                    <span class="text-emerald-400 group-hover:translate-x-0.5 transition-transform">View Eligible Candidates &rarr;</span>
+                    <span class="text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">View Eligible Candidates &rarr;</span>
                 </div>
             </a>
 
@@ -84,12 +84,12 @@
                         <p class="text-xs font-semibold text-slate-400">Active Test Assignments</p>
                         <p class="text-3xl font-black text-white mt-1 group-hover:text-amber-300 transition-colors">{{ number_format($activeAssignmentsCount) }}</p>
                     </div>
-                    <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xl">
+                    <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xl">
                         🎯
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                    <span class="text-amber-400 group-hover:translate-x-0.5 transition-transform">View Active Assignments &rarr;</span>
+                    <span class="text-amber-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform">View Active Assignments &rarr;</span>
                 </div>
             </a>
 
@@ -101,12 +101,12 @@
                         <p class="text-xs font-semibold text-slate-400">Completed Assessments</p>
                         <p class="text-3xl font-black text-white mt-1 group-hover:text-sky-300 transition-colors">{{ number_format($completedAttemptsCount) }}</p>
                     </div>
-                    <div class="p-2.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xl">
+                    <div class="p-2.5 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 text-xl">
                         ✅
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                    <span class="text-sky-400 group-hover:translate-x-0.5 transition-transform">View Completed Results &rarr;</span>
+                    <span class="text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition-transform">View Completed Results &rarr;</span>
                 </div>
             </a>
 
