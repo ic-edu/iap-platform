@@ -251,6 +251,17 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
         Route::get('/monitoring', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'monitoring'])->name('admin.academic-operations.monitoring');
     });
 
+    // Content Refresh & Controlled Hard Reset Governance (Phase 5A)
+    Route::prefix('admin/content-reset')->middleware('role:admin|super-admin|ceo')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ContentResetController::class, 'index'])->name('admin.content-reset.index');
+        Route::get('/create', [\App\Http\Controllers\Admin\ContentResetController::class, 'create'])->name('admin.content-reset.create');
+        Route::post('/', [\App\Http\Controllers\Admin\ContentResetController::class, 'store'])->name('admin.content-reset.store');
+        Route::get('/{contentResetRequest}', [\App\Http\Controllers\Admin\ContentResetController::class, 'show'])->name('admin.content-reset.show');
+        Route::post('/{contentResetRequest}/approve-ceo', [\App\Http\Controllers\Admin\ContentResetController::class, 'approveCeo'])->name('admin.content-reset.approve-ceo');
+        Route::post('/{contentResetRequest}/approve-sa', [\App\Http\Controllers\Admin\ContentResetController::class, 'approveSa'])->name('admin.content-reset.approve-sa');
+        Route::post('/{contentResetRequest}/execute', [\App\Http\Controllers\Admin\ContentResetController::class, 'execute'])->name('admin.content-reset.execute');
+    });
+
 });
 
 // Shared Media Library & Academic Library (Teacher + Super Admin + Repository Manager Governance)
