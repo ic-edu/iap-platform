@@ -201,6 +201,13 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
     Route::get('/admin/dashboard', [SuperAdminDashboardController::class, 'adminIndex'])
         ->name('admin.dashboard');
 
+    // Candidate Management Workspace (Dedicated Candidate Operations)
+    Route::prefix('admin/candidates')->middleware('role:admin|super-admin')->group(function () {
+        Route::get('/', [UserController::class, 'candidates'])->name('admin.candidates.index');
+        Route::post('/', [UserController::class, 'storeCandidate'])->name('admin.candidates.store');
+    });
+
+    // Institutional Staff & Access Control Workspace
     Route::prefix('admin/users')->middleware('role:admin|super-admin')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/', [UserController::class, 'store'])->name('admin.users.store');
@@ -211,6 +218,8 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
         Route::post('/{id}/restore', [UserController::class, 'restore'])->name('admin.users.restore');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
+
+    Route::get('/admin/staff', [UserController::class, 'index'])->middleware('role:admin|super-admin')->name('admin.staff.index');
 
     // Publication Queues (Repository Manager & Super Admin Governance Only)
     Route::prefix('admin/publications')->middleware('role:repository-manager|super-admin')->group(function () {

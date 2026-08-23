@@ -103,7 +103,7 @@ test('authorized super admin user can access user management dashboard', functio
     $response = $this->actingAs($superAdmin)->get('/admin/users');
 
     $response->assertStatus(200)
-        ->assertSee('User &amp; Access Control Management', false);
+        ->assertSee('Staff &amp; Access Control Workspace', false);
 });
 
 test('authorized teacher can access question bank authoring view', function () {

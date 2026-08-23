@@ -52,11 +52,82 @@ class UserController extends Controller
     }
 
     /**
-     * Display listing of platform users with combined search and filtering.
+     * Role Population Classifications (IA Separation).
+     */
+    public const STAFF_ROLES = ['super-admin', 'admin', 'teacher', 'repository-manager', 'finance'];
+    public const CANDIDATE_ROLES = ['student'];
+
+    /**
+     * Display Candidate Management Workspace (/admin/candidates).
+     * Strictly scopes query to candidate/student population.
+     */
+    public function candidates(Request $request): View
+    {
+        $query = User::role(self::CANDIDATE_ROLES)->with(['roles']);
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($filter = $request->input('filter')) {
+            if ($filter === 'paid-eligible' || $filter === 'eligible') {
+                $query->whereHas('orders', function ($oq) {
+                    $oq->whereHas('invoice.payments', fn($pq) => $pq->whereIn('status', [\App\Modules\Commerce\Domain\Enums\PaymentStatus::Success, \App\Modules\Commerce\Domain\Enums\PaymentStatus::Paid]));
+                });
+            }
+        }
+
+        $candidates = $query->latest()->paginate(15)->withQueryString();
+
+        return view('admin.candidates.index', compact('candidates'));
+    }
+
+    /**
+     * Register a new candidate directly with immediate active status.
+     */
+    public function storeCandidate(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8'],
+            'phone_number' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'status' => 'active',
+            'phone_number' => $validated['phone_number'] ?? null,
+        ]);
+
+        $user->assignRole('student');
+
+        ActivityLogger::log(
+            'CANDIDATE_CREATED',
+            "Created candidate account {$user->name} ({$user->email}) with student role",
+            $user
+        );
+
+        return redirect()->route('admin.candidates.index')->with('status', "Candidate {$user->name} registered and activated successfully.");
+    }
+
+    /**
+     * Display Institutional Staff & Access Control Workspace (/admin/users & /admin/staff).
+     * Strictly scopes query to institutional staff population only (excludes candidates).
      */
     public function index(Request $request): View
     {
-        $query = User::with(['roles', 'deletionRequests', 'creationRequests']);
+        $query = User::whereHas('roles', fn($q) => $q->whereIn('name', self::STAFF_ROLES))
+            ->with(['roles', 'deletionRequests', 'creationRequests']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -66,20 +137,13 @@ class UserController extends Controller
         }
 
         if ($role = $request->input('role')) {
-            $query->role($role);
+            if (in_array($role, self::STAFF_ROLES, true)) {
+                $query->role($role);
+            }
         }
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);
-        }
-
-        if ($filter = $request->input('filter')) {
-            if ($filter === 'paid-eligible' || $filter === 'eligible') {
-                $query->role('student')
-                    ->whereHas('orders', function ($oq) {
-                        $oq->whereHas('invoice.payments', fn($pq) => $pq->whereIn('status', [\App\Modules\Commerce\Domain\Enums\PaymentStatus::Success, \App\Modules\Commerce\Domain\Enums\PaymentStatus::Paid]));
-                    });
-            }
         }
 
         $users = $query->latest()->paginate(15)->withQueryString();

@@ -142,8 +142,8 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
      */
     public function test_kpi_destinations_route_and_filter_correctly(): void
     {
-        // 1. Paid & Eligible Filter on Users
-        $userResponse = $this->actingAs($this->admin)->get(route('admin.users.index', ['filter' => 'paid-eligible']));
+        // 1. Candidate Management & Paid & Eligible Filter on Candidates
+        $userResponse = $this->actingAs($this->admin)->get(route('admin.candidates.index', ['filter' => 'paid-eligible']));
         $userResponse->assertStatus(200);
         $userResponse->assertSee('Paid &amp; Eligible Candidates', false);
 
@@ -167,6 +167,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $routes = array_column($menuItems, 'route');
 
         $this->assertContains('admin.dashboard', $routes);
+        $this->assertContains('admin.candidates.index', $routes);
         $this->assertContains('admin.users.index', $routes);
         $this->assertContains('admin.certificates.index', $routes);
         $this->assertContains('admin.tests.index', $routes);
@@ -597,87 +598,128 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     }
 
     /**
-     * TEST 1: Total Registered Candidates KPI links to student-scoped directory
+     * TEST 1: Operational Admin Dashboard Total Candidates KPI routes directly to Candidate Management
      */
-    public function test_operational_dashboard_total_registered_candidates_kpi_links_to_student_scoped_directory(): void
+    public function test_operational_dashboard_total_registered_candidates_kpi_links_to_candidate_management(): void
     {
         $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
         $response->assertStatus(200);
 
-        // Verify the KPI anchor links specifically with role=student
-        $response->assertSee(route('admin.users.index', ['role' => 'student']));
+        // Verify the KPI anchor links specifically to admin.candidates.index
+        $response->assertSee(route('admin.candidates.index'));
     }
 
     /**
-     * TEST 2: Student-role scoped user directory excludes staff accounts
+     * TEST 2: Candidate Management Workspace displays ONLY candidates and strictly excludes all staff accounts
      */
-    public function test_student_role_scoped_user_directory_excludes_staff_accounts(): void
-    {
-        $superAdminUser = User::factory()->create(['name' => 'Super Admin Target', 'email' => 'sa_unique@icedu.org', 'status' => 'active']);
-        $superAdminUser->assignRole('super-admin');
-
-        $teacherUser = User::factory()->create(['name' => 'Teacher Target', 'email' => 'teacher_unique@icedu.org', 'status' => 'active']);
-        $teacherUser->assignRole('teacher');
-
-        $financeUser = User::factory()->create(['name' => 'Finance Target', 'email' => 'finance_unique@icedu.org', 'status' => 'active']);
-        $financeUser->assignRole('finance');
-
-        $repoManagerUser = User::factory()->create(['name' => 'RM Target', 'email' => 'rm_unique@icedu.org', 'status' => 'active']);
-        $repoManagerUser->assignRole('repository-manager');
-
-        $candidateUser = User::factory()->create(['name' => 'Candidate Student Unique', 'email' => 'student_unique@icedu.org', 'status' => 'active']);
-        $candidateUser->assignRole('student');
-
-        $response = $this->actingAs($this->admin)->get(route('admin.users.index', ['role' => 'student']));
-        $response->assertStatus(200);
-
-        // Candidate must be visible
-        $response->assertSee('Candidate Student Unique');
-        $response->assertSee('student_unique@icedu.org');
-        $response->assertSee('Registered Candidates');
-
-        // Staff accounts must NOT appear in candidate-scoped list
-        $response->assertDontSee('Super Admin Target');
-        $response->assertDontSee('sa_unique@icedu.org');
-        $response->assertDontSee('Teacher Target');
-        $response->assertDontSee('teacher_unique@icedu.org');
-        $response->assertDontSee('Finance Target');
-        $response->assertDontSee('finance_unique@icedu.org');
-        $response->assertDontSee('RM Target');
-        $response->assertDontSee('rm_unique@icedu.org');
-    }
-
-    /**
-     * TEST 3: Unfiltered user directory behavior remains unchanged for authorized Super Admin
-     */
-    public function test_unfiltered_user_directory_behavior_remains_unchanged_for_authorized_super_admin(): void
+    public function test_candidate_management_workspace_only_displays_candidates_and_excludes_staff(): void
     {
         $superAdminUser = User::factory()->create(['name' => 'Super Admin Alpha', 'email' => 'sa_alpha@icedu.org', 'status' => 'active']);
         $superAdminUser->assignRole('super-admin');
 
-        $teacherUser = User::factory()->create(['name' => 'Teacher Beta', 'email' => 'teacher_beta@icedu.org', 'status' => 'active']);
+        $adminUser = User::factory()->create(['name' => 'Op Admin Beta', 'email' => 'op_beta@icedu.org', 'status' => 'active']);
+        $adminUser->assignRole('admin');
+
+        $teacherUser = User::factory()->create(['name' => 'Teacher Gamma', 'email' => 'teacher_gamma@icedu.org', 'status' => 'active']);
         $teacherUser->assignRole('teacher');
 
-        $candidateUser = User::factory()->create(['name' => 'Student Gamma', 'email' => 'student_gamma@icedu.org', 'status' => 'active']);
+        $financeUser = User::factory()->create(['name' => 'Finance Delta', 'email' => 'finance_delta@icedu.org', 'status' => 'active']);
+        $financeUser->assignRole('finance');
+
+        $repoManagerUser = User::factory()->create(['name' => 'RM Epsilon', 'email' => 'rm_epsilon@icedu.org', 'status' => 'active']);
+        $repoManagerUser->assignRole('repository-manager');
+
+        $candidateUser = User::factory()->create(['name' => 'Candidate Student Zeta', 'email' => 'student_zeta@icedu.org', 'status' => 'active']);
+        $candidateUser->assignRole('student');
+
+        $response = $this->actingAs($this->admin)->get(route('admin.candidates.index'));
+        $response->assertStatus(200);
+
+        // Header and Candidate account must be present
+        $response->assertSee('Candidate Management Workspace');
+        $response->assertSee('Candidate Student Zeta');
+        $response->assertSee('student_zeta@icedu.org');
+
+        // All 5 staff roles/accounts MUST be strictly absent
+        $response->assertDontSee('Super Admin Alpha');
+        $response->assertDontSee('sa_alpha@icedu.org');
+        $response->assertDontSee('Op Admin Beta');
+        $response->assertDontSee('op_beta@icedu.org');
+        $response->assertDontSee('Teacher Gamma');
+        $response->assertDontSee('teacher_gamma@icedu.org');
+        $response->assertDontSee('Finance Delta');
+        $response->assertDontSee('finance_delta@icedu.org');
+        $response->assertDontSee('RM Epsilon');
+        $response->assertDontSee('rm_epsilon@icedu.org');
+    }
+
+    /**
+     * TEST 3: Staff & Access Control Workspace displays ONLY institutional staff and excludes candidates
+     */
+    public function test_staff_and_access_control_workspace_displays_only_staff_and_excludes_candidates(): void
+    {
+        $superAdminUser = User::factory()->create(['name' => 'Super Admin Target', 'email' => 'sa_tgt@icedu.org', 'status' => 'active']);
+        $superAdminUser->assignRole('super-admin');
+
+        $teacherUser = User::factory()->create(['name' => 'Teacher Target', 'email' => 'teacher_tgt@icedu.org', 'status' => 'active']);
+        $teacherUser->assignRole('teacher');
+
+        $candidateUser = User::factory()->create(['name' => 'Student Isolated', 'email' => 'student_isolated@icedu.org', 'status' => 'active']);
         $candidateUser->assignRole('student');
 
         $response = $this->actingAs($superAdminUser)->get(route('admin.users.index'));
         $response->assertStatus(200);
 
-        // Unfiltered directory shows all roles for Super Admin
-        $response->assertSee('Teacher Beta');
-        $response->assertSee('Student Gamma');
-        $response->assertSee('Enterprise User &amp; Access Control Management Workspace', false);
+        // Staff accounts must be visible
+        $response->assertSee('Institutional Staff &amp; Access Control Workspace', false);
+        $response->assertSee('Teacher Target');
+        $response->assertSee('teacher_tgt@icedu.org');
+
+        // Candidate account must NOT appear in staff directory
+        $response->assertDontSee('Student Isolated');
+        $response->assertDontSee('student_isolated@icedu.org');
     }
 
     /**
-     * TEST 4: Operational Admin can access student-scoped candidate directory
+     * TEST 4: Direct Candidate Registration stores active candidate account
      */
-    public function test_operational_admin_can_access_student_scoped_candidate_directory(): void
+    public function test_direct_candidate_registration_creates_active_student_account(): void
     {
-        $response = $this->actingAs($this->admin)->get(route('admin.users.index', ['role' => 'student']));
-        $response->assertStatus(200);
-        $response->assertSee('Registered Candidates');
+        $response = $this->actingAs($this->admin)->post(route('admin.candidates.store'), [
+            'name' => 'New Direct Candidate',
+            'email' => 'direct_candidate@icedu.org',
+            'password' => 'secretPassword123',
+            'phone_number' => '+6281987654321',
+        ]);
+
+        $response->assertRedirect(route('admin.candidates.index'));
+        $this->assertDatabaseHas('users', [
+            'name' => 'New Direct Candidate',
+            'email' => 'direct_candidate@icedu.org',
+            'status' => 'active',
+        ]);
+
+        $newUser = User::where('email', 'direct_candidate@icedu.org')->first();
+        $this->assertTrue($newUser->hasRole('student'));
+    }
+
+    /**
+     * TEST 5: Candidate Operations navigation items route to Candidate Management
+     */
+    public function test_candidate_operations_navigation_menu_routes_to_candidate_management(): void
+    {
+        $this->actingAs($this->admin);
+        $menuItems = NavigationService::getMenuItems();
+
+        $candidateItem = collect($menuItems)->firstWhere('label', 'Candidates');
+        $this->assertNotNull($candidateItem);
+        $this->assertSame('admin.candidates.index', $candidateItem['route']);
+        $this->assertSame('Candidate Operations', $candidateItem['section']);
+
+        $staffItem = collect($menuItems)->firstWhere('label', 'Staff & Access Control');
+        $this->assertNotNull($staffItem);
+        $this->assertSame('admin.users.index', $staffItem['route']);
+        $this->assertSame('Administrative Management', $staffItem['section']);
     }
 }
 

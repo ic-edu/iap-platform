@@ -3,11 +3,11 @@
 @section('content')
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-white">Enterprise User &amp; Access Control Management Workspace</h1>
-            <p class="text-xs text-slate-400">Manage user lifecycles, assign role-based security permissions, reset credentials, and audit access.</p>
+            <h1 class="text-2xl font-bold text-white">Institutional Staff &amp; Access Control Workspace</h1>
+            <p class="text-xs text-slate-400">Manage institutional staff lifecycles, assign role-based security permissions, audit credentials, and manage staff access.</p>
         </div>
         <button onclick="document.getElementById('create-user-modal').classList.remove('hidden')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5">
-            <span>+ Create New User</span>
+            <span>+ Create Staff Account</span>
         </button>
     </div>
 
@@ -27,7 +27,7 @@
     <div class="mb-6 p-4 bg-slate-900 border border-slate-800 rounded-xl">
         <form action="{{ route('admin.users.index') }}" method="GET" class="flex flex-col sm:flex-row gap-3">
             <div class="flex-1 relative">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by user name, email address..." 
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by staff name, email address..."
                        class="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none transition-colors">
                 <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -35,11 +35,11 @@
             </div>
             
             <select name="role" class="px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none">
-                <option value="">All Security Roles</option>
+                <option value="">All Institutional Staff Roles</option>
                 <option value="super-admin" {{ request('role') === 'super-admin' ? 'selected' : '' }}>Super Admin</option>
-                <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Admin</option>
-                <option value="teacher" {{ request('role') === 'teacher' ? 'selected' : '' }}>Teacher</option>
-                <option value="student" {{ request('role') === 'student' ? 'selected' : '' }}>Student</option>
+                <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Operational Admin</option>
+                <option value="teacher" {{ request('role') === 'teacher' ? 'selected' : '' }}>Teacher / Author</option>
+                <option value="repository-manager" {{ request('role') === 'repository-manager' ? 'selected' : '' }}>Repository Manager</option>
                 <option value="finance" {{ request('role') === 'finance' ? 'selected' : '' }}>Finance</option>
             </select>
 
@@ -60,28 +60,6 @@
             @endif
         </form>
     </div>
-
-    @if(request('filter') === 'paid-eligible' || request('filter') === 'eligible')
-    <div class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium flex items-center justify-between shadow-sm">
-        <span class="flex items-center gap-2">
-            <span>💳</span>
-            <span>Filtered: <strong>Paid &amp; Eligible Candidates</strong> (Candidates with confirmed paid transactions)</span>
-        </span>
-        <a href="{{ route('admin.users.index') }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition-colors">
-            Clear Filter ✕
-        </a>
-    </div>
-    @elseif(request('role') === 'student')
-    <div class="mb-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium flex items-center justify-between shadow-sm">
-        <span class="flex items-center gap-2">
-            <span>👥</span>
-            <span>Showing: <strong>Registered Candidates</strong> (Student role directory)</span>
-        </span>
-        <a href="{{ route('admin.users.index') }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition-colors">
-            Clear Filter ✕
-        </a>
-    </div>
-    @endif
 
     <!-- Users Table -->
     <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-6">
@@ -229,11 +207,11 @@
 
     <div>{{ $users->links() }}</div>
 
-    <!-- Create User Modal -->
+    <!-- Create Staff Modal -->
     <div id="create-user-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-base font-bold text-white">Create New Platform User</h2>
+                <h2 class="text-base font-bold text-white">Create Institutional Staff Account</h2>
                 <button type="button" onclick="document.getElementById('create-user-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
             </div>
             <form action="{{ route('admin.users.store') }}" method="POST" class="space-y-4">
@@ -255,19 +233,19 @@
                     <input type="text" name="phone_number" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="+1234567890">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Security Role *</label>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Institutional Role *</label>
                     <select name="role" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
-                        <option value="student">Student / Candidate (Immediate Active)</option>
                         <option value="teacher">Teacher / Author (Requires Super Admin Approval)</option>
-                        <option value="admin">Administrator (Requires Super Admin Approval)</option>
+                        <option value="admin">Operational Admin (Requires Super Admin Approval)</option>
                         <option value="finance">Finance Admin (Requires Super Admin Approval)</option>
                         @if (Auth::user()?->hasRole('super-admin'))
+                            <option value="repository-manager">Repository Manager (Direct Active)</option>
                             <option value="super-admin">Super Admin (Direct Active)</option>
                         @endif
                     </select>
                 </div>
                 <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[11px] text-indigo-300">
-                    💡 <strong>UAC Governance:</strong> Student accounts become active immediately upon creation. Internal staff accounts (Teacher, Admin, Finance) created by regular Admins enter <em>Pending Approval</em> status until reviewed by a Super Admin.
+                    💡 <strong>Staff Governance:</strong> Internal staff accounts (Teacher, Admin, Finance) created by regular Admins enter <em>Pending Approval</em> status until reviewed by a Super Admin.
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
                     <button type="button" onclick="document.getElementById('create-user-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>

@@ -106,10 +106,20 @@ class RegularAdminThemeConsistencyTest extends TestCase
         $studentUser = User::factory()->create(['name' => 'John Candidate']);
         $studentUser->assignRole('student');
 
-        $response = $this->actingAs($this->admin)->get(route('admin.users.index'));
-        $response->assertStatus(200);
-        $response->assertSee('role-badge');
-        $response->assertSee('role-badge--student');
+        $teacherUser = User::factory()->create(['name' => 'Jane Teacher']);
+        $teacherUser->assignRole('teacher');
+
+        // Candidate Management workspace renders student badge
+        $candidateResp = $this->actingAs($this->admin)->get(route('admin.candidates.index'));
+        $candidateResp->assertStatus(200);
+        $candidateResp->assertSee('role-badge');
+        $candidateResp->assertSee('role-badge--student');
+
+        // Staff & Access Control workspace renders staff badges
+        $staffResp = $this->actingAs($this->admin)->get(route('admin.users.index'));
+        $staffResp->assertStatus(200);
+        $staffResp->assertSee('role-badge');
+        $staffResp->assertSee('role-badge--teacher');
     }
 
     public function test_regular_admin_dashboard_renders_operational_kpis_and_links(): void
