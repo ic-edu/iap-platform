@@ -466,6 +466,9 @@ class CandidatePortalController extends Controller
             );
         });
 
+        // Issue digital certificate for authoritative final result if eligible
+        app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
+
         return redirect()->route('candidate.review', $attempt)
             ->with('status', 'Result finalized. Your score has been released as your final institutional result.');
     }

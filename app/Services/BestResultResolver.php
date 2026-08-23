@@ -85,6 +85,9 @@ class BestResultResolver
                 $winner
             );
 
+            // Issue authoritative certificate for final winning result if eligible
+            app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
+
             return $winner->fresh();
         });
     }

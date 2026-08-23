@@ -55,6 +55,8 @@ class ResultEngine
             ? 'Awaiting Examiner Evaluation'
             : $attempt->status->label();
 
+        $certificate = $attempt->certificate;
+
         return [
             'attempt_id' => $attempt->id,
             'test_id' => $attempt->test_id,
@@ -75,6 +77,8 @@ class ResultEngine
             'is_full_toeic' => $toeicData['is_full_toeic'] ?? false,
             'is_practice' => $toeicData['is_practice'] ?? false,
             'score_label' => $toeicData['score_label'] ?? null,
+            'certificate_id' => $certificate?->id,
+            'certificate_number' => $certificate?->certificate_number,
         ];
     }
 }
