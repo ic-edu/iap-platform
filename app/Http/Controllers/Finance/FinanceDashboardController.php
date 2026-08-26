@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Finance;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Commerce\Domain\Enums\PaymentStatus;
+use App\Modules\Commerce\Domain\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -25,6 +27,13 @@ class FinanceDashboardController extends Controller
             ['id' => 'TXN-882192', 'user' => 'finance.test@icedu.org', 'package' => 'IELTS Academic Prep Package', 'amount' => '$45.00', 'status' => 'PAID', 'date' => now()->subHours(14)->format('d M Y, H:i')],
         ];
 
+        $pendingPaymentsCount = Payment::where('status', PaymentStatus::Pending)->count();
+        $recentPendingPayments = Payment::with(['user', 'invoice.order.items.product'])
+            ->where('status', PaymentStatus::Pending)
+            ->latest()
+            ->take(5)
+            ->get();
+
         $grossRevenue = '$14,850.00';
         $completedTransactionsCount = 342;
         $invoicesIssuedCount = 289;
@@ -32,6 +41,8 @@ class FinanceDashboardController extends Controller
         return view('finance.dashboard', compact(
             'vouchers',
             'transactions',
+            'pendingPaymentsCount',
+            'recentPendingPayments',
             'grossRevenue',
             'completedTransactionsCount',
             'invoicesIssuedCount'

@@ -11,6 +11,7 @@ use App\Modules\Commerce\Events\PaymentCancelled;
 use App\Modules\Commerce\Events\PaymentConfirmed;
 use App\Modules\Commerce\Events\PaymentCreated;
 use App\Modules\Commerce\Events\PaymentRefunded;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class BillingEngine
@@ -49,47 +50,73 @@ class BillingEngine
      */
     public function confirmPayment(Payment $payment, ?string $transactionId = null): Payment
     {
-        $payment->update([
-            'status' => PaymentStatus::Success,
-            'transaction_id' => $transactionId ?? 'TXN-'.now()->timestamp,
-            'confirmed_at' => now(),
-        ]);
-
-        $invoice = $payment->invoice;
-        if ($invoice) {
-            $invoice->update([
-                'status' => InvoiceStatus::Paid,
-                'paid_at' => now(),
-            ]);
-
-            $order = $invoice->order;
-            if ($order) {
-                $order->update(['status' => OrderStatus::Completed]);
-            }
+        // Idempotency: If already confirmed, return current state without re-dispatching events
+        if ($payment->status === PaymentStatus::Success) {
+            return $payment;
         }
 
-        event(new PaymentConfirmed($payment));
+        if ($payment->status !== PaymentStatus::Pending) {
+            $statusVal = is_object($payment->status) ? $payment->status->value : $payment->status;
+            throw new \InvalidArgumentException("Cannot confirm payment. Only pending payments can be approved. Current status: {$statusVal}");
+        }
 
-        return $payment;
+        return DB::transaction(function () use ($payment, $transactionId) {
+            $payment->update([
+                'status' => PaymentStatus::Success,
+                'transaction_id' => $transactionId ?? 'TXN-'.now()->timestamp,
+                'confirmed_at' => now(),
+            ]);
+
+            $invoice = $payment->invoice;
+            if ($invoice) {
+                $invoice->update([
+                    'status' => InvoiceStatus::Paid,
+                    'paid_at' => now(),
+                ]);
+
+                $order = $invoice->order;
+                if ($order) {
+                    $order->update(['status' => OrderStatus::Completed]);
+                }
+            }
+
+            event(new PaymentConfirmed($payment));
+
+            return $payment;
+        });
     }
 
     /**
      * Cancel payment.
      */
-    public function cancelPayment(Payment $payment): Payment
+    public function cancelPayment(Payment $payment, ?string $reason = null): Payment
     {
-        $payment->update(['status' => PaymentStatus::Failed]);
-
-        if ($payment->invoice) {
-            $payment->invoice->update(['status' => InvoiceStatus::Cancelled]);
-            if ($payment->invoice->order) {
-                $payment->invoice->order->update(['status' => OrderStatus::Cancelled]);
-            }
+        if ($payment->status === PaymentStatus::Failed) {
+            return $payment;
         }
 
-        event(new PaymentCancelled($payment));
+        if ($payment->status !== PaymentStatus::Pending) {
+            $statusVal = is_object($payment->status) ? $payment->status->value : $payment->status;
+            throw new \InvalidArgumentException("Cannot cancel payment. Only pending payments can be cancelled. Current status: {$statusVal}");
+        }
 
-        return $payment;
+        return DB::transaction(function () use ($payment, $reason) {
+            $payment->update([
+                'status' => PaymentStatus::Failed,
+                'proof_notes' => $reason ? ($payment->proof_notes ? $payment->proof_notes." | Rejection reason: {$reason}" : "Rejection reason: {$reason}") : $payment->proof_notes,
+            ]);
+
+            if ($payment->invoice) {
+                $payment->invoice->update(['status' => InvoiceStatus::Cancelled]);
+                if ($payment->invoice->order) {
+                    $payment->invoice->order->update(['status' => OrderStatus::Cancelled]);
+                }
+            }
+
+            event(new PaymentCancelled($payment));
+
+            return $payment;
+        });
     }
 
     /**
@@ -97,17 +124,19 @@ class BillingEngine
      */
     public function refundPayment(Payment $payment): Payment
     {
-        $payment->update(['status' => PaymentStatus::Refunded]);
+        return DB::transaction(function () use ($payment) {
+            $payment->update(['status' => PaymentStatus::Refunded]);
 
-        if ($payment->invoice) {
-            $payment->invoice->update(['status' => InvoiceStatus::Cancelled]);
-            if ($payment->invoice->order) {
-                $payment->invoice->order->update(['status' => OrderStatus::Refunded]);
+            if ($payment->invoice) {
+                $payment->invoice->update(['status' => InvoiceStatus::Cancelled]);
+                if ($payment->invoice->order) {
+                    $payment->invoice->order->update(['status' => OrderStatus::Refunded]);
+                }
             }
-        }
 
-        event(new PaymentRefunded($payment));
+            event(new PaymentRefunded($payment));
 
-        return $payment;
+            return $payment;
+        });
     }
 }

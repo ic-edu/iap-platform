@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuperAdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Finance\FinanceDashboardController;
+use App\Http\Controllers\Finance\FinancePaymentController;
 use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Teacher\TeacherDashboardController;
@@ -144,9 +145,22 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
 });
 
 // Finance Dedicated Landing Workspace
-Route::middleware(['web', 'auth', 'role:finance'])->group(function () {
-    Route::get('/finance/dashboard', [FinanceDashboardController::class, 'index'])
-        ->name('finance.dashboard');
+Route::middleware(['web', 'auth', 'role:finance'])->prefix('finance')->name('finance.')->group(function () {
+    Route::get('/dashboard', [FinanceDashboardController::class, 'index'])
+        ->name('dashboard');
+
+    Route::get('/payments/pending', [FinancePaymentController::class, 'index'])
+        ->name('payments.pending');
+    Route::get('/payments', [FinancePaymentController::class, 'index'])
+        ->name('payments.index');
+    Route::get('/payments/{payment}', [FinancePaymentController::class, 'show'])
+        ->name('payments.show');
+    Route::get('/payments/{payment}/proof', [FinancePaymentController::class, 'viewProof'])
+        ->name('payments.proof');
+    Route::post('/payments/{payment}/approve', [FinancePaymentController::class, 'approve'])
+        ->name('payments.approve');
+    Route::post('/payments/{payment}/reject', [FinancePaymentController::class, 'reject'])
+        ->name('payments.reject');
 });
 
 // Super Admin Only Governance & Audit Workspaces (Baseline v1.1 Rules)

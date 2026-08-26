@@ -317,6 +317,15 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
+                    'section' => 'Payment Operations',
+                    'label' => 'Pending Payments',
+                    'route' => 'finance.payments.pending',
+                    'icon' => 'credit-card',
+                    'permission' => null,
+                    'active_pattern' => 'finance/payments*',
+                    'badge' => null,
+                ],
+                [
                     'section' => 'Finance Core',
                     'label' => 'Commerce & Billing',
                     'route' => 'admin.commerce.index',
