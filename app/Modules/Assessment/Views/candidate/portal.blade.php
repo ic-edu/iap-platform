@@ -69,27 +69,44 @@
     @endif
 
     <!-- Quick Action Banners -->
-    <div class="grid sm:grid-cols-2 gap-5">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between gap-4">
+    <div class="grid sm:grid-cols-3 gap-5">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col justify-between gap-4 shadow-sm">
             <div>
-                <h3 class="text-lg font-semibold text-white">Ready to take a new simulation test?</h3>
-                <p class="text-sm text-slate-400 mt-1">Browse through the available Computer-Based Testing catalog.</p>
+                <h3 class="text-base font-bold text-slate-900 dark:text-white">🛍️ Certification Store</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Purchase official TOEIC &amp; vocational certification assessment packages.</p>
+                @if(isset($pendingPaymentsCount) && $pendingPaymentsCount > 0)
+                <span class="inline-block mt-2 px-2.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
+                    {{ $pendingPaymentsCount }} Pending Payment(s)
+                </span>
+                @endif
             </div>
             <div>
-                <a href="{{ route('candidate.available-tests') }}" class="inline-flex items-center px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm transition-colors">
-                    Browse Test Catalog
+                <a href="{{ route('candidate.store') }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-md shadow-indigo-600/30">
+                    Browse Store Catalog &rarr;
                 </a>
             </div>
         </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between gap-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col justify-between gap-4 shadow-sm">
             <div>
-                <h3 class="text-lg font-semibold text-white">View &amp; Verify Digital Certificates</h3>
-                <p class="text-sm text-slate-400 mt-1">Access all your official achievement certificates and download PDFs.</p>
+                <h3 class="text-base font-bold text-slate-900 dark:text-white">Available Simulations</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Browse through the available Computer-Based Testing practice catalog.</p>
             </div>
             <div>
-                <a href="{{ route('candidate.my-certificates') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-colors shadow-md shadow-indigo-600/30">
-                    <span>🎓</span> Open My Certificates
+                <a href="{{ route('candidate.available-tests') }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-semibold text-xs transition-colors">
+                    Available Tests
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col justify-between gap-4 shadow-sm">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 dark:text-white">🎓 Digital Certificates</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Access all your official achievement certificates and download transcripts.</p>
+            </div>
+            <div>
+                <a href="{{ route('candidate.my-certificates') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-semibold text-xs transition-colors">
+                    Open Certificates
                 </a>
             </div>
         </div>

@@ -50,11 +50,14 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-6 text-sm font-medium">
+                <div class="flex items-center gap-5 text-sm font-medium">
                     <a href="{{ route('candidate.portal') }}" class="{{ request()->routeIs('candidate.portal') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">Portal Dashboard</a>
                     <a href="{{ route('candidate.available-tests') }}" class="{{ request()->routeIs('candidate.available-tests') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">Available Tests</a>
+                    <a href="{{ route('candidate.store') }}" class="{{ request()->routeIs('candidate.store*') || request()->routeIs('candidate.checkout*') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">🛍️ Store</a>
+                    <a href="{{ route('candidate.orders.index') }}" class="{{ request()->routeIs('candidate.orders*') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">Orders</a>
+                    <a href="{{ route('candidate.invoices.index') }}" class="{{ request()->routeIs('candidate.invoices*') || request()->routeIs('candidate.payments*') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">Invoices</a>
                     <a href="{{ route('candidate.my-attempts') }}" class="{{ request()->routeIs('candidate.my-attempts') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">My Attempts</a>
-                    <a href="{{ route('candidate.my-certificates') }}" class="{{ request()->routeIs('candidate.my-certificates') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">🎓 My Certificates</a>
+                    <a href="{{ route('candidate.my-certificates') }}" class="{{ request()->routeIs('candidate.my-certificates') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">🎓 Certificates</a>
                 </div>
 
                 <!-- User Profile Dropdown Container -->

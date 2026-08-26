@@ -55,6 +55,13 @@ class CandidatePortalController extends Controller
             })
             ->values();
 
+        $openOrdersCount = \App\Modules\Commerce\Domain\Models\Order::where('user_id', $userId)
+            ->where('status', \App\Modules\Commerce\Domain\Enums\OrderStatus::Pending)
+            ->count();
+        $pendingPaymentsCount = \App\Modules\Commerce\Domain\Models\Payment::where('user_id', $userId)
+            ->where('status', \App\Modules\Commerce\Domain\Enums\PaymentStatus::Pending)
+            ->count();
+
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.portal';
 
@@ -63,7 +70,9 @@ class CandidatePortalController extends Controller
             'myAttemptsCount',
             'completedAttemptsCount',
             'issuedCertificatesCount',
-            'ongoingAttempts'
+            'ongoingAttempts',
+            'openOrdersCount',
+            'pendingPaymentsCount'
         ));
     }
 

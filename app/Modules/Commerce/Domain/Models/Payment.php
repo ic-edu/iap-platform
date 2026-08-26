@@ -39,6 +39,10 @@ class Payment extends Model
         'transaction_id',
         'status',
         'amount',
+        'proof_path',
+        'proof_original_name',
+        'proof_uploaded_at',
+        'proof_notes',
         'confirmed_at',
     ];
 
@@ -47,6 +51,7 @@ class Payment extends Model
         return [
             'status' => PaymentStatus::class,
             'amount' => 'float',
+            'proof_uploaded_at' => 'datetime',
             'confirmed_at' => 'datetime',
         ];
     }

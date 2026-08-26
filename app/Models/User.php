@@ -45,6 +45,15 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Set user theme preference ('dark', 'light', 'system').
+     */
+    public function setThemePreference(string $preference): void
+    {
+        $this->theme_preference = $preference;
+        $this->save();
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

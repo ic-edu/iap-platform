@@ -20,6 +20,14 @@ class BillingEngine
      */
     public function createPayment(Invoice $invoice, string $gateway = 'manual_transfer'): Payment
     {
+        $existing = Payment::where('invoice_id', $invoice->id)
+            ->where('status', PaymentStatus::Pending)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
         $refNumber = 'PAY-'.now()->format('Ymd').'-'.strtoupper(Str::random(4));
 
         $payment = Payment::create([

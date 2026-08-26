@@ -1,7 +1,7 @@
 @props(['status' => 'pending'])
 
 @php
-    $rawStatus = (string)$status;
+    $rawStatus = is_object($status) ? ($status->value ?? (string)$status) : (string)$status;
     $statusSlug = strtolower(trim(str_replace(['_', ' '], '-', $rawStatus)));
 
     $badgeClass = match($statusSlug) {
