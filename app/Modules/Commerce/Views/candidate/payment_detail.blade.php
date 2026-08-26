@@ -48,7 +48,7 @@
                     <a href="{{ route('candidate.invoices.show', $payment->invoice->id) }}" class="font-bold font-mono text-slate-900 dark:text-white text-sm block mt-1 hover:underline">
                         {{ $payment->invoice->invoice_number }}
                     </a>
-                    <span class="text-slate-500 dark:text-slate-400">Status: {{ strtoupper($payment->invoice->status) }}</span>
+                    <span class="text-slate-500 dark:text-slate-400">Status: {{ strtoupper(is_object($payment->invoice->status) ? $payment->invoice->status->value : $payment->invoice->status) }}</span>
                     @endif
                 </div>
                 <div>

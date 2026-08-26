@@ -65,7 +65,19 @@
             $badgeTheme = 'indigo';
             $actionLabel = 'View Details →';
 
-            if (str_contains(strtolower($type), 'rejected') || str_contains(strtolower($title), 'rejected')) {
+            if (str_contains(strtolower($type), 'payment_pending') || str_contains(strtolower($type), 'payment_created')) {
+                $icon = '💳';
+                $badgeTheme = 'amber';
+                $actionLabel = 'Review Payment →';
+            } elseif (str_contains(strtolower($type), 'payment_confirmed')) {
+                $icon = '🎉';
+                $badgeTheme = 'emerald';
+                $actionLabel = 'View Payment →';
+            } elseif (str_contains(strtolower($type), 'payment_cancelled') || str_contains(strtolower($type), 'payment_rejected')) {
+                $icon = '⚠️';
+                $badgeTheme = 'rose';
+                $actionLabel = 'Inspect Payment →';
+            } elseif (str_contains(strtolower($type), 'rejected') || str_contains(strtolower($title), 'rejected')) {
                 $icon = '🚫';
                 $badgeTheme = 'rose';
                 $actionLabel = 'Inspect Repository →';

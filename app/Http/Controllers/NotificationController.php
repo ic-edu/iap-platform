@@ -54,7 +54,15 @@ class NotificationController extends Controller
             $entityId   = $data['entity_id'] ?? $data['question_bank_id'] ?? null;
 
             if ($user && ($entityType || $entityId || !empty($data['revision_request_id']))) {
-                if ($user->hasRole(['repository-manager', 'super-admin'])) {
+                if ($entityType === 'Payment' && $entityId) {
+                    if ($user->hasRole('finance')) {
+                        $resolved = route('finance.payments.show', $entityId);
+                    } elseif ($user->hasRole('admin')) {
+                        $resolved = route('admin.dashboard');
+                    } elseif ($user->hasRole('student')) {
+                        $resolved = route('candidate.payments.show', $entityId);
+                    }
+                } elseif ($user->hasRole(['repository-manager', 'super-admin'])) {
                     if ($entityId && (str_contains(strtolower((string)$entityType), 'repository') || $entityType === 'QuestionBank')) {
                         $resolved = route('admin.repository-manager.question-bank-validate', $entityId);
                     } else {

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Listeners\ActivateEnrollmentOnPayment;
 use App\Listeners\LogCommerceActivity;
 use App\Listeners\LogPlatformOperationsActivity;
+use App\Listeners\SendCommercePaymentNotifications;
 use App\Modules\Academic\Events\CourseCreated;
 use App\Modules\Academic\Events\EnrollmentCancelled;
 use App\Modules\Academic\Events\EnrollmentCreated;
@@ -143,6 +144,9 @@ class ModuleServiceProvider extends ServiceProvider
 
         // Commerce Listeners
         Event::listen(PaymentConfirmed::class, [ActivateEnrollmentOnPayment::class, 'handle']);
+        Event::listen(PaymentCreated::class, [SendCommercePaymentNotifications::class, 'handlePaymentCreated']);
+        Event::listen(PaymentConfirmed::class, [SendCommercePaymentNotifications::class, 'handlePaymentConfirmed']);
+        Event::listen(PaymentCancelled::class, [SendCommercePaymentNotifications::class, 'handlePaymentCancelled']);
         Event::listen(CheckoutCompleted::class, [LogCommerceActivity::class, 'handleCheckoutCompleted']);
         Event::listen(InvoiceGenerated::class, [LogCommerceActivity::class, 'handleInvoiceGenerated']);
         Event::listen(PaymentCreated::class, [LogCommerceActivity::class, 'handlePaymentCreated']);
