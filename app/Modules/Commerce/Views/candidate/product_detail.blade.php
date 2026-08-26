@@ -28,7 +28,7 @@
             <div class="space-y-3">
                 <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Package Description</h2>
                 <div class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed space-y-2">
-                    <p>{{ $product->description ?? 'Official institutional assessment package with verified scoring and instant certificate eligibility upon completion.' }}</p>
+                    <p>{{ $product->description ?? 'Institutional assessment package with verified scoring and certificate eligibility upon completion.' }}</p>
                 </div>
             </div>
 
@@ -36,7 +36,10 @@
             @if($product->test)
             <div class="p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 space-y-3">
                 <h3 class="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-2">
-                    <span>🎯</span> Included Assessment Structure
+                    <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <span>Included Assessment Structure</span>
                 </h3>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
                     <div>

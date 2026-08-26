@@ -10,7 +10,10 @@
         {{-- Flash message --}}
         @if(session('status'))
         <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium flex items-center gap-2">
-            <span>✅</span> {{ session('status') }}
+            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{{ session('status') }}</span>
         </div>
         @endif
 
@@ -18,7 +21,12 @@
         @if($errors->any())
         <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs space-y-1">
             @foreach($errors->all() as $error)
-                <p>⚠️ {{ $error }}</p>
+                <p class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>{{ $error }}</span>
+                </p>
             @endforeach
         </div>
         @endif
@@ -82,7 +90,9 @@
                 @if($payment->proof_path)
                 <div class="p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 space-y-2 text-xs">
                     <div class="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold">
-                        <span>✓</span>
+                        <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
                         <span>Evidence File Uploaded</span>
                     </div>
                     <p class="text-slate-600 dark:text-slate-300 font-mono text-[11px]">Filename: {{ $payment->proof_original_name ?? 'transfer_proof.jpg' }}</p>

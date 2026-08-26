@@ -28,7 +28,7 @@
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
             <div>
                 <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white">Order Checkout &amp; Confirmation</h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Review your order summary and confirm purchase to generate your official invoice.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Review your order summary and confirm purchase to generate your payment invoice.</p>
             </div>
 
             {{-- Candidate Details --}}
@@ -78,8 +78,11 @@
             <form action="{{ route('candidate.checkout.process', $product->id) }}" method="POST" class="space-y-4 pt-2">
                 @csrf
 
-                <div class="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    <p>💡 <strong>Note on Assessment Delivery:</strong> After order confirmation, an invoice will be generated. Once your payment is verified by the Finance Officer, you will become eligible for Mock Test assignment by the Operational Admin.</p>
+                <div class="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 text-xs text-slate-600 dark:text-slate-300 leading-relaxed flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p><strong>Note on Assessment Delivery:</strong> After order confirmation, an invoice will be generated. Once your payment is verified by the Finance Officer, you will become eligible for Mock Test assignment by the Operational Admin.</p>
                 </div>
 
                 <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -88,7 +91,10 @@
                     </a>
 
                     <button type="submit" class="px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/30 flex items-center gap-2 cursor-pointer">
-                        <span>🔒 Confirm &amp; Place Order</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <span>Confirm &amp; Place Order</span>
                         <span>&rarr;</span>
                     </button>
                 </div>

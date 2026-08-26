@@ -10,7 +10,10 @@
         {{-- Flash message --}}
         @if(session('status'))
         <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium flex items-center gap-2">
-            <span>✅</span> {{ session('status') }}
+            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{{ session('status') }}</span>
         </div>
         @endif
 
@@ -109,7 +112,9 @@
             @if($invoice->status !== 'paid')
             <div class="p-6 rounded-3xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 space-y-4">
                 <div class="flex items-center gap-2">
-                    <span class="text-lg">🏦</span>
+                    <svg class="w-5 h-5 text-amber-700 dark:text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                    </svg>
                     <h3 class="text-sm font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">Manual Bank Transfer Payment Instructions</h3>
                 </div>
 
@@ -131,7 +136,10 @@
                 <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <span class="text-xs text-slate-500 dark:text-slate-400">Payment Status: <x-status-badge :status="$payment->status" /></span>
                     <a href="{{ route('candidate.payments.show', $payment->id) }}" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-md shadow-amber-600/20 text-center flex items-center justify-center gap-2">
-                        <span>📤 Upload Transfer Evidence &rarr;</span>
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        <span>Upload Transfer Evidence &rarr;</span>
                     </a>
                 </div>
                 @endif

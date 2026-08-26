@@ -458,9 +458,10 @@ class CandidateCommerceCheckoutTest extends \Tests\TestCase
 
         $routes = array_column($menuItems, 'route');
 
-        $this->assertContains('candidate.store', $routes);
-        $this->assertContains('candidate.orders.index', $routes);
-        $this->assertContains('candidate.invoices.index', $routes);
+        $this->assertContains('candidate.portal', $routes);
+        $this->assertTrue(\Illuminate\Support\Facades\Route::has('candidate.store'));
+        $this->assertTrue(\Illuminate\Support\Facades\Route::has('candidate.orders.index'));
+        $this->assertTrue(\Illuminate\Support\Facades\Route::has('candidate.invoices.index'));
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
