@@ -8,23 +8,23 @@
     <div class="gov-hero-indigo rounded-2xl p-6 sm:p-7 flex justify-between items-center flex-wrap gap-5">
         <div>
             <div class="flex items-center gap-2 mb-1.5">
-                <span class="bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider">
+                <span class="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase tracking-wider">
                     {{ is_object($test->test_type) ? $test->test_type->value : strtoupper($test->test_type ?? 'TOEIC') }}
                 </span>
                 @if(in_array($test->status, ['needs_revision', 'revision_requested']))
-                    <span class="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
+                    <span class="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         ⚠️ Needs Revision
                     </span>
                 @elseif(in_array($test->status, ['pending', 'pending_approval']))
-                    <span class="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
+                    <span class="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         ⏳ Pending Approval
                     </span>
                 @elseif($test->status === 'approved' || $test->is_published)
-                    <span class="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
+                    <span class="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/50 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         🟢 Published & Live
                     </span>
                 @else
-                    <span class="bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
+                    <span class="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         📝 Draft
                     </span>
                 @endif
@@ -48,42 +48,42 @@
     </div>
 
     @if(session('status'))
-    <div style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+    <div class="p-4 rounded-xl text-sm font-bold bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">
         ✅ {{ session('status') }}
     </div>
     @endif
 
     @if(session('error'))
-    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+    <div class="p-4 rounded-xl text-sm font-bold bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300">
         ⚠️ {{ session('error') }}
     </div>
     @endif
 
     @if(session('info'))
-    <div style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);color:#818cf8;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+    <div class="p-4 rounded-xl text-sm font-bold bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-300 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300">
         ℹ️ {{ session('info') }}
     </div>
     @endif
 
     {{-- TASK 3: Validation Assistant Summary Box --}}
     @if(isset($validationResult))
-    <div style="background:{{ $validationResult['is_valid'] ? 'rgba(52,211,153,.08)' : 'rgba(239,68,68,.08)' }};border:1px solid {{ $validationResult['is_valid'] ? 'rgba(52,211,153,.25)' : 'rgba(239,68,68,.25)' }};border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <h4 style="font-size:.95rem;font-weight:800;color:{{ $validationResult['is_valid'] ? '#34d399' : '#f87171' }};margin:0;display:flex;align-items:center;gap:.5rem;">
+    <div class="p-5 rounded-2xl mb-6 {{ $validationResult['is_valid'] ? 'bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100' : 'bg-rose-50 dark:bg-rose-950/25 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-100' }}">
+        <div class="flex justify-between items-center flex-wrap gap-2">
+            <h4 class="text-sm sm:text-base font-extrabold flex items-center gap-2 {{ $validationResult['is_valid'] ? 'text-emerald-800 dark:text-emerald-300' : 'text-rose-800 dark:text-rose-300' }}">
                 {{ $validationResult['is_valid'] ? '✅ Validation Assistant Passed' : '⚠️ Assessment Validation Errors Detected' }}
             </h4>
-            <span style="font-size:.78rem;font-weight:700;color:#94a3b8;">
+            <span class="text-xs font-bold text-slate-600 dark:text-slate-400">
                 {{ count($validationResult['questions']) }} Total Linked Questions
             </span>
         </div>
         @if(!$validationResult['is_valid'])
-        <div style="margin-top:.75rem;font-size:.82rem;color:#cbd5e1;display:flex;flex-direction:column;gap:.35rem;">
+        <div class="mt-3 text-xs text-rose-800 dark:text-rose-200 flex flex-col gap-1.5 font-medium">
             @foreach($validationResult['errors'] as $err)
             <div>• {{ $err }}</div>
             @endforeach
         </div>
         @else
-        <div style="margin-top:.35rem;font-size:.8rem;color:#94a3b8;">
+        <div class="mt-1.5 text-xs text-emerald-800 dark:text-emerald-300/90 font-medium">
             All questions contain valid prompt stems, choice options, and correct answer selections. Ready for submission.
         </div>
         @endif
@@ -91,53 +91,53 @@
     @endif
 
     {{-- Main 2-Column Grid Layout --}}
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
 
         {{-- Left Primary Column: Metadata & Revision Summary --}}
         <div>
             {{-- Repository Manager Feedback Callout --}}
             @if(in_array($test->status, ['needs_revision', 'revision_requested']) || $latestFeedbackLog)
-            <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:1rem;padding:1.35rem;margin-bottom:1.5rem;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                    <div style="font-size:.78rem;font-weight:800;color:#fbbf24;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:.4rem;">
-                        💬 Repository Manager Reviewer Feedback
+            <div class="p-5 rounded-2xl mb-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/60 space-y-2.5">
+                <div class="flex justify-between items-center">
+                    <div class="text-xs font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>💬</span> Repository Manager Reviewer Feedback
                     </div>
-                    <div style="font-size:.75rem;color:#94a3b8;">
+                    <div class="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                         {{ $latestFeedbackLog?->created_at?->diffForHumans() ?? 'Recently' }}
                     </div>
                 </div>
-                <div style="font-size:.95rem;color:#f1f5f9;line-height:1.6;font-weight:500;">
+                <div class="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-relaxed">
                     "{{ $latestFeedbackLog?->approval_note ?? 'Revision requested by Repository Manager. Please review test duration, section structures, and question answer keys before resubmitting.' }}"
                 </div>
-                <div style="font-size:.78rem;color:#cbd5e1;margin-top:.75rem;display:flex;align-items:center;gap:.4rem;">
-                    👤 Reviewer: <strong>{{ $latestFeedbackLog?->reviewer?->name ?? 'Repository Manager' }}</strong>
+                <div class="text-xs text-slate-700 dark:text-slate-300 pt-1 flex items-center gap-1.5">
+                    <span>👤</span> Reviewer: <strong class="text-slate-900 dark:text-white">{{ $latestFeedbackLog?->reviewer?->name ?? 'Repository Manager' }}</strong>
                 </div>
             </div>
             @endif
 
             {{-- Candidate / Institutional Requirement Brief --}}
             @if($test->assessmentRequest)
-            <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.3);border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-                    <div style="font-size:.78rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:.4rem;">
-                        📋 Institutional Requirement Brief
+            <div class="p-5 rounded-2xl mb-6 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 space-y-2">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <div class="text-xs font-extrabold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>📋</span> Institutional Requirement Brief
                     </div>
                     @if($test->assessmentRequest->candidate)
-                    <span style="font-size:.75rem;font-weight:700;color:#38bdf8;background:rgba(56,189,248,.12);padding:.2rem .6rem;border-radius:99px;border:1px solid rgba(56,189,248,.3);">
+                    <span class="text-xs font-bold text-sky-800 dark:text-sky-300 bg-sky-100 dark:bg-sky-950/50 px-2.5 py-0.5 rounded-full border border-sky-300 dark:border-sky-800/60">
                         Candidate: {{ $test->assessmentRequest->candidate->name }}
                     </span>
                     @endif
                 </div>
-                <div style="font-size:.88rem;color:#0f172a;font-weight:700;margin-bottom:.25rem;">
+                <div class="text-sm font-bold text-slate-900 dark:text-white">
                     {{ $test->assessmentRequest->title }}
                 </div>
                 @if($test->assessmentRequest->program_context)
-                <div style="font-size:.78rem;color:#4f46e5;margin-bottom:.35rem;font-weight:600;">
+                <div class="text-xs text-indigo-700 dark:text-indigo-300 font-semibold">
                     🎯 Program / Context: {{ $test->assessmentRequest->program_context }}
                 </div>
                 @endif
                 @if($test->assessmentRequest->notes)
-                <div style="font-size:.78rem;color:#64748b;line-height:1.5;">
+                <div class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                     {{ $test->assessmentRequest->notes }}
                 </div>
                 @endif
@@ -145,24 +145,24 @@
             @endif
 
             {{-- Assessment Metadata Editor (TASK 1) --}}
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
-                <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;display:flex;align-items:center;gap:.5rem;">
-                    ✏️ Assessment Authoring Editor
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm mb-6">
+                <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 mb-5">
+                    <span>✏️</span> Assessment Authoring Editor
                 </h3>
 
-                <form id="assessment-settings-form" method="POST" action="{{ route('teacher.tests.update', $test->id) }}" style="display:flex;flex-direction:column;gap:1.25rem;">
+                <form id="assessment-settings-form" method="POST" action="{{ route('teacher.tests.update', $test->id) }}" class="space-y-4">
                     @csrf
                     @method('PUT')
 
                     <div>
-                        <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Assessment Title</label>
-                        <input type="text" name="title" value="{{ old('title', $test->title) }}" required style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Assessment Title</label>
+                        <input type="text" name="title" value="{{ old('title', $test->title) }}" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Assessment Type</label>
-                            <select name="test_type" style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Assessment Type</label>
+                            <select name="test_type" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                                 <option value="toeic" {{ $test->test_type === 'toeic' ? 'selected' : '' }}>TOEIC Simulation</option>
                                 <option value="toefl" {{ $test->test_type === 'toefl' ? 'selected' : '' }}>TOEFL iBT / ITP</option>
                                 <option value="ielts" {{ $test->test_type === 'ielts' ? 'selected' : '' }}>IELTS Academic</option>
@@ -170,19 +170,19 @@
                             </select>
                         </div>
                         <div>
-                            <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Duration (Minutes)</label>
-                            <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $test->duration_minutes) }}" required min="1" style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Duration (Minutes)</label>
+                            <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $test->duration_minutes) }}" required min="1" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Pass Score Threshold</label>
-                            <input type="number" name="pass_score" value="{{ old('pass_score', $test->pass_score) }}" required min="0" style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Pass Score Threshold</label>
+                            <input type="number" name="pass_score" value="{{ old('pass_score', $test->pass_score) }}" required min="0" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Scoring Method</label>
-                            <select name="scoring_method" style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;font-weight:600;">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Scoring Method</label>
+                            <select name="scoring_method" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                                 <option value="automatic" {{ ($test->scoring_method?->value ?? $test->scoring_method ?? 'automatic') === 'automatic' ? 'selected' : '' }}>Automatic (Automatically scored; no examiner required)</option>
                                 <option value="human" {{ ($test->scoring_method?->value ?? $test->scoring_method) === 'human' ? 'selected' : '' }}>Human (Requires examiner evaluation before final result)</option>
                                 <option value="hybrid" {{ ($test->scoring_method?->value ?? $test->scoring_method) === 'hybrid' ? 'selected' : '' }}>Hybrid (Automatic scoring plus examiner evaluation)</option>
@@ -191,32 +191,32 @@
                     </div>
 
                     <div>
-                        <label style="display:block;font-size:.82rem;font-weight:700;color:#334155;margin-bottom:.4rem;">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
                             General Assessment Introduction / Candidate Instructions
-                            <span style="font-size:.72rem;color:#64748b;font-weight:normal;margin-left:.4rem;">(Shown to candidates on pre-test instruction screen before timed session)</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400 font-normal lowercase ml-1">(shown to candidates on pre-test instruction screen before timed session)</span>
                         </label>
-                        <textarea name="instructions" rows="4" placeholder="e.g. Welcome to the TOEIC Listening & Reading Test. Please ensure your headphones are connected..." style="width:100%;padding:.75rem 1rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;line-height:1.5;">{{ old('instructions', $test->instructions) }}</textarea>
+                        <textarea name="instructions" rows="4" placeholder="e.g. Welcome to the TOEIC Listening & Reading Test. Please ensure your headphones are connected..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 leading-relaxed">{{ old('instructions', $test->instructions) }}</textarea>
                     </div>
 
-                    <div style="display:flex;gap:1rem;margin-top:.5rem;flex-wrap:wrap;align-items:center;">
+                    <div class="flex gap-3 pt-2 flex-wrap items-center">
                         {{-- Save Draft Button --}}
-                        <button type="submit" style="padding:.75rem 1.5rem;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;">
+                        <button type="submit" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors inline-flex items-center gap-2">
                             💾 Save Settings Draft
                         </button>
                     </form>
 
                     {{-- Resubmit Button --}}
                     @if(in_array($test->status, ['needs_revision', 'revision_requested', 'draft']))
-                    <form id="resubmit-assessment-form" method="POST" action="{{ route('teacher.tests.resubmit', $test->id) }}" style="display:inline;">
+                    <form id="resubmit-assessment-form" method="POST" action="{{ route('teacher.tests.resubmit', $test->id) }}" class="inline">
                         @csrf
-                        @if($validationResult['is_valid'])
-                        <button type="button" 
-                                onclick="openResubmitModal()" 
-                                style="padding:.75rem 1.5rem;background:#4f46e5;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 14px rgba(79,70,229,.25);">
+                        @if(isset($validationResult) && $validationResult['is_valid'])
+                        <button type="button"
+                                onclick="openResubmitModal()"
+                                class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20 transition-all inline-flex items-center gap-2">
                             🚀 {{ $test->status === 'draft' ? 'Submit for Review' : 'Resubmit for Review' }}
                         </button>
                         @else
-                        <button type="button" disabled style="padding:.75rem 1.5rem;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;border-radius:.65rem;font-size:.88rem;font-weight:700;cursor:not-allowed;" title="Resolve all validation issues to enable submission.">
+                        <button type="button" disabled class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl cursor-not-allowed" title="Resolve all validation issues to enable submission.">
                             🚫 Submission Disabled (Validation Required)
                         </button>
                         @endif
@@ -226,27 +226,27 @@
             </div>
 
             {{-- TASK 2 & TASK 4: Revision Summary & Lazy Question Loading Explorer --}}
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.5rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm">
+                <div class="flex justify-between items-center mb-5 flex-wrap gap-4">
                     <div>
-                        <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;margin:0;display:flex;align-items:center;gap:.5rem;">
-                            📋 Assessment Questions &amp; Sections — Progressive Revision Summary
+                        <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                            <span>📋</span> Assessment Questions &amp; Sections — Progressive Revision Summary
                         </h3>
-                        <p style="font-size:.78rem;color:#64748b;margin:.25rem 0 0;">
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">
                             Organize institutional master questions and authored items for this assessment.
                         </p>
                     </div>
 
                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-                        <button type="button" onclick="openAttachMasterModal()" style="padding:.5rem .9rem;background:#4f46e5;color:#fff;font-weight:800;font-size:.78rem;border:none;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(79,70,229,.2);">
-                            🏛️ + Add from Question Bank
+                    <div class="flex gap-2.5 flex-wrap">
+                        <button type="button" onclick="openAttachMasterModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20 transition-all inline-flex items-center gap-1.5">
+                            <span>🏛️</span> + Add from Question Bank
                         </button>
-                        <button type="button" onclick="openCreateAuthoredQuestionModal()" style="padding:.5rem .9rem;background:#059669;color:#fff;font-weight:800;font-size:.78rem;border:none;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(5,150,105,.2);">
-                            ✏️ + Add New Question
+                        <button type="button" onclick="openCreateAuthoredQuestionModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 transition-all inline-flex items-center gap-1.5">
+                            <span>✏️</span> + Add New Question
                         </button>
-                        <button type="button" onclick="openAddSectionModal()" style="padding:.5rem .9rem;background:#f1f5f9;color:#334155;font-weight:700;font-size:.78rem;border:1px solid #cbd5e1;border-radius:.55rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
-                            📑 + Add Section
+                        <button type="button" onclick="openAddSectionModal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold rounded-xl transition-colors inline-flex items-center gap-1.5">
+                            <span>📑</span> + Add Section
                         </button>
                     </div>
                     @endif
@@ -254,123 +254,125 @@
 
                 {{-- Assessment Sections & Directions Strip --}}
                 @if($test->sections->isNotEmpty())
-                <div style="background:#1e293b;border:1px solid #334155;border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;">
-                    <div style="font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem;">
+                <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 mb-6">
+                    <div class="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
                         <span>📑</span> Sections &amp; Directions Structure
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:.75rem;">
+                    <div class="flex flex-col gap-3">
                         @foreach($test->sections as $sec)
-                        <div style="background:#0f172a;border:1px solid #334155;border-radius:.75rem;padding:.9rem 1.1rem;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem;">
-                            <div style="flex:1;min-width:240px;">
-                                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;flex-wrap:wrap;">
-                                    <span style="font-size:.88rem;font-weight:800;color:#fff;">{{ $sec->title }}</span>
-                                    <span style="font-size:.72rem;font-weight:700;padding:.15rem .5rem;border-radius:.35rem;background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);text-transform:uppercase;">
-                                        {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'Reading') }}
-                                    </span>
-                                    <span style="font-size:.72rem;color:#94a3b8;">
-                                        • {{ $sec->testQuestions->count() }} question(s)
-                                    </span>
-                                </div>
-                                @if($sec->instructions)
-                                <div style="font-size:.78rem;color:#cbd5e1;line-height:1.45;background:#1e293b;padding:.5rem .75rem;border-radius:.5rem;border-left:3px solid #6366f1;margin-top:.4rem;">
-                                    {{ $sec->instructions }}
-                                </div>
-                                @else
-                                <div style="font-size:.75rem;color:#64748b;font-style:italic;margin-top:.2rem;">
-                                    No section directions configured (optional).
-                                </div>
-                                @endif
-
-                                {{-- Attached Section Media Assets --}}
-                                <div style="margin-top:.75rem;padding-top:.6rem;border-top:1px solid #1e293b;">
-                                    <div style="font-size:.72rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;display:flex;align-items:center;gap:.35rem;">
-                                        <span>📂</span> Section Media Assets ({{ $sec->mediaAssets->count() }})
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+                            <div class="flex justify-between items-start flex-wrap gap-3">
+                                <div class="flex-1 min-w-[240px]">
+                                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                        <span class="text-sm font-black text-slate-900 dark:text-white">{{ $sec->title }}</span>
+                                        <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
+                                            {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'Reading') }}
+                                        </span>
+                                        <span class="text-xs text-slate-600 dark:text-slate-400 font-semibold">
+                                            • {{ $sec->testQuestions->count() }} question(s)
+                                        </span>
                                     </div>
-                                    @if($sec->mediaAssets->isNotEmpty())
-                                    <div style="display:flex;flex-direction:column;gap:.5rem;">
-                                        @foreach($sec->mediaAssets as $media)
-                                        <div style="background:#1e293b;border:1px solid #334155;border-radius:.55rem;padding:.5rem .75rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
-                                            <div style="display:flex;align-items:center;gap:.5rem;flex:1;min-width:200px;">
-                                                <span style="font-size:1.1rem;">{{ $media->typeIcon() }}</span>
-                                                <div>
-                                                    <div style="font-size:.8rem;font-weight:700;color:#f8fafc;">
-                                                        {{ $media->title ?? $media->original_name }}
-                                                    </div>
-                                                    <div style="display:flex;align-items:center;gap:.4rem;margin-top:.15rem;font-size:.7rem;color:#94a3b8;flex-wrap:wrap;">
-                                                        <span style="text-transform:uppercase;font-weight:700;color:#818cf8;">{{ $media->type }}</span>
-                                                        <span>• Order: {{ $media->pivot->order }}</span>
-                                                        @if($media->pivot->caption)
-                                                        <span style="color:#cbd5e1;font-style:italic;">• Caption: "{{ $media->pivot->caption }}"</span>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div style="display:flex;align-items:center;gap:.4rem;">
-                                                <button type="button" 
-                                                        onclick="previewAssetModal('{{ $media->id }}', '{{ addslashes($media->title ?? $media->original_name) }}', '{{ $media->type }}', '{{ route('media.preview', $media->id) }}')" 
-                                                        style="padding:.3rem .6rem;background:#0f172a;color:#cbd5e1;border:1px solid #334155;border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;">
-                                                    👁️ Preview
-                                                </button>
-                                                @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                                                <form method="POST" action="{{ route('teacher.tests.sections.media.detach', ['test' => $test->id, 'section' => $sec->id, 'media' => $media->id]) }}" style="display:inline;" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Media Asset?', message: 'Remove this media asset from the section?', confirmText: 'Remove', variant: 'danger', form: this });">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" style="padding:.3rem .6rem;background:rgba(244,63,94,.1);color:#fb7185;border:1px solid rgba(244,63,94,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;">
-                                                        ✕ Remove
-                                                    </button>
-                                                </form>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        @endforeach
+                                    @if($sec->instructions)
+                                    <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border-l-4 border-indigo-600 text-xs text-slate-800 dark:text-slate-300 leading-relaxed font-medium mt-2">
+                                        {{ $sec->instructions }}
                                     </div>
                                     @else
-                                    <div style="font-size:.72rem;color:#64748b;font-style:italic;">
-                                        No media assets attached to this section.
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 italic mt-1">
+                                        No section directions configured (optional).
                                     </div>
                                     @endif
-                                </div>
-                            </div>
-                            @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                            @php
-                                $secQCount = $sec->testQuestions->count();
-                                $secMCount = $sec->mediaAssets->count();
-                                $secEscTitle = addslashes($sec->title);
 
-                                if ($secQCount === 0 && $secMCount === 0) {
-                                    $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? This section contains no questions.";
-                                } elseif ($secQCount > 0 && $secMCount === 0) {
-                                    $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact.";
-                                } elseif ($secQCount === 0 && $secMCount > 0) {
-                                    $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? Any media attached to this section will be detached but will remain available in the Media Library.";
-                                } else {
-                                    $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact. Any media attached to this section will be detached but will remain available in the Media Library.";
-                                }
-                            @endphp
-                            <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;">
-                                <button type="button" 
-                                        onclick="openAttachSectionMediaModal('{{ $sec->id }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
-                                        style="padding:.4rem .8rem;background:#4f46e5;color:#fff;border:none;border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
-                                    📎 + Attach Media
-                                </button>
-                                <button type="button" 
-                                        data-section-id="{{ $sec->id }}"
-                                        data-section-title="{{ $sec->title }}"
-                                        data-section-type="{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}"
-                                        data-section-instructions="{{ $sec->instructions ?? '' }}"
-                                        onclick="openEditSectionModal(this)"
-                                        style="padding:.4rem .8rem;background:#334155;color:#e2e8f0;border:1px solid #475569;border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;">
-                                    ✏️ Edit Section
-                                </button>
-                                <form method="POST" action="{{ route('teacher.tests.destroy-section', ['test' => $test->id, 'section' => $sec->id]) }}" style="display:inline;" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Section?', message: '{{ $secConfirmMsg }}', confirmText: 'Remove Section', variant: 'danger', form: this });">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" style="padding:.4rem .8rem;background:rgba(244,63,94,.1);color:#fb7185;border:1px solid rgba(244,63,94,.3);border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
-                                        🗑 Remove Section
+                                    {{-- Attached Section Media Assets --}}
+                                    <div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                                        <div class="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                            <span>📂</span> Section Media Assets ({{ $sec->mediaAssets->count() }})
+                                        </div>
+                                        @if($sec->mediaAssets->isNotEmpty())
+                                        <div class="flex flex-col gap-2">
+                                            @foreach($sec->mediaAssets as $media)
+                                            <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 flex justify-between items-center flex-wrap gap-2">
+                                                <div class="flex items-center gap-2.5 flex-1 min-w-[200px]">
+                                                    <span class="text-lg">{{ $media->typeIcon() }}</span>
+                                                    <div>
+                                                        <div class="text-xs font-bold text-slate-900 dark:text-white">
+                                                            {{ $media->title ?? $media->original_name }}
+                                                        </div>
+                                                        <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-600 dark:text-slate-400 font-medium flex-wrap">
+                                                            <span class="uppercase font-bold text-indigo-600 dark:text-indigo-400">{{ $media->type }}</span>
+                                                            <span>• Order: {{ $media->pivot->order }}</span>
+                                                            @if($media->pivot->caption)
+                                                            <span class="italic">• Caption: "{{ $media->pivot->caption }}"</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button"
+                                                            onclick="previewAssetModal('{{ $media->id }}', '{{ addslashes($media->title ?? $media->original_name) }}', '{{ $media->type }}', '{{ route('media.preview', $media->id) }}')"
+                                                            class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-[11px] font-bold hover:bg-slate-100 dark:hover:bg-slate-700">
+                                                        👁️ Preview
+                                                    </button>
+                                                    @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
+                                                    <form method="POST" action="{{ route('teacher.tests.sections.media.detach', ['test' => $test->id, 'section' => $sec->id, 'media' => $media->id]) }}" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Media Asset?', message: 'Remove this media asset from the section?', confirmText: 'Remove', variant: 'danger', form: this });">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-[11px] font-bold hover:bg-rose-100">
+                                                            ✕ Remove
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                        @else
+                                        <div class="text-xs text-slate-500 dark:text-slate-400 italic">
+                                            No media assets attached to this section.
+                                        </div>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
+                                @php
+                                    $secQCount = $sec->testQuestions->count();
+                                    $secMCount = $sec->mediaAssets->count();
+                                    $secEscTitle = addslashes($sec->title);
+
+                                    if ($secQCount === 0 && $secMCount === 0) {
+                                        $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? This section contains no questions.";
+                                    } elseif ($secQCount > 0 && $secMCount === 0) {
+                                        $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact.";
+                                    } elseif ($secQCount === 0 && $secMCount > 0) {
+                                        $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? Any media attached to this section will be detached but will remain available in the Media Library.";
+                                    } else {
+                                        $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact. Any media attached to this section will be detached but will remain available in the Media Library.";
+                                    }
+                                @endphp
+                                <div class="flex gap-2 flex-wrap items-center">
+                                    <button type="button"
+                                            onclick="openAttachSectionMediaModal('{{ $sec->id }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
+                                            class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 text-xs font-bold inline-flex items-center gap-1.5">
+                                        📎 + Attach Media
                                     </button>
-                                </form>
+                                    <button type="button"
+                                            data-section-id="{{ $sec->id }}"
+                                            data-section-title="{{ $sec->title }}"
+                                            data-section-type="{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}"
+                                            data-section-instructions="{{ $sec->instructions ?? '' }}"
+                                            onclick="openEditSectionModal(this)"
+                                            class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1.5">
+                                        ✏️ Edit Section
+                                    </button>
+                                    <form method="POST" action="{{ route('teacher.tests.destroy-section', ['test' => $test->id, 'section' => $sec->id]) }}" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Section?', message: '{{ $secConfirmMsg }}', confirmText: 'Remove Section', variant: 'danger', form: this });">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold inline-flex items-center gap-1.5">
+                                            🗑 Remove Section
+                                        </button>
+                                    </form>
+                                </div>
+                                @endif
                             </div>
-                            @endif
                         </div>
                         @endforeach
                     </div>
@@ -378,9 +380,9 @@
                 @endif
 
                 @if(isset($validationResult) && count($validationResult['questions']) > 0)
-                <div style="display:flex;flex-direction:column;gap:1rem;">
+                <div class="flex flex-col gap-3">
                     @php
-                        $revisionQuestions = in_array($test->status, ['needs_revision', 'revision_requested']) 
+                        $revisionQuestions = in_array($test->status, ['needs_revision', 'revision_requested'])
                             ? array_filter($validationResult['questions'], fn($item) => !empty($item['warnings']))
                             : $validationResult['questions'];
                         if (empty($revisionQuestions)) {
@@ -393,31 +395,31 @@
                         $hasWarning = !empty($qItem['warnings']);
                         $isMaster = !empty($q->question_bank_id);
                     @endphp
-                    <div style="background:#1e293b;border:1px solid {{ $hasWarning ? 'rgba(245,158,11,.45)' : '#334155' }};border-radius:.85rem;padding:1.1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
-                        <div style="flex:1;min-width:260px;">
-                            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap;">
-                                <span style="font-size:.78rem;font-weight:800;color:#818cf8;">Question #{{ $qItem['number'] }}</span>
-                                <span style="font-size:.72rem;color:#cbd5e1;background:#0f172a;padding:.15rem .45rem;border-radius:.3rem;">Section: {{ $qItem['section']->title }}</span>
+                    <div class="bg-slate-50 dark:bg-slate-900 border {{ $hasWarning ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-800' }} rounded-xl p-4 shadow-sm flex justify-between items-center flex-wrap gap-3">
+                        <div class="flex-1 min-w-[260px]">
+                            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">Question #{{ $qItem['number'] }}</span>
+                                <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">Section: {{ $qItem['section']->title }}</span>
                                 @if($isMaster)
-                                <span style="font-size:.72rem;font-weight:700;color:#a5b4fc;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);padding:.15rem .45rem;border-radius:.3rem;">
+                                <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded">
                                     🏛️ Governed Master Question
                                 </span>
                                 @else
-                                <span style="font-size:.72rem;font-weight:700;color:#38bdf8;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);padding:.15rem .45rem;border-radius:.3rem;">
+                                <span class="text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/40 px-2 py-0.5 rounded">
                                     ✍️ Assessment-Authored
                                 </span>
                                 @endif
                                 @if($hasWarning)
-                                <span style="font-size:.72rem;font-weight:800;color:#fbbf24;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);padding:.15rem .45rem;border-radius:.3rem;">
+                                <span class="text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/60 px-2 py-0.5 rounded">
                                     🟡 {{ implode(' | ', $qItem['warnings']) }}
                                 </span>
                                 @else
-                                <span style="font-size:.72rem;font-weight:700;color:#34d399;background:rgba(52,211,153,.15);padding:.15rem .45rem;border-radius:.3rem;">
+                                <span class="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded">
                                     🟢 Valid
                                 </span>
                                 @endif
                             </div>
-                            <div style="font-size:.88rem;font-weight:700;color:#f1f5f9;">
+                            <div class="text-sm font-bold text-slate-900 dark:text-white">
                                 {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
                             </div>
 
@@ -426,57 +428,57 @@
                                 $qHasImg = !empty($q->image_url);
                                 $qHasAudio = !empty($q->audio_url);
                             @endphp
-                            <div style="margin-top:.6rem;padding-top:.5rem;border-top:1px solid rgba(51,65,85,0.7);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
-                                <span style="font-size:.7rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">MEDIA:</span>
+                            <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 flex-wrap">
+                                <span class="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">MEDIA:</span>
                                 @if($qHasImg)
-                                    <div style="display:inline-flex;align-items:center;gap:.35rem;background:#0f172a;border:1px solid rgba(56,189,248,.35);padding:.2rem .5rem;border-radius:.4rem;">
-                                        <img src="{{ $q->image_url }}" alt="Thumbnail" style="width:22px;height:22px;object-fit:cover;border-radius:.25rem;border:1px solid #475569;">
-                                        <span style="font-size:.72rem;font-weight:700;color:#38bdf8;">🖼 Image ✓</span>
-                                        <button type="button" 
-                                                onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')" 
-                                                style="padding:.15rem .45rem;background:#1e293b;color:#38bdf8;border:1px solid rgba(56,189,248,.35);border-radius:.35rem;font-size:.68rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-left:.25rem;">
+                                    <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-sky-200 dark:border-sky-800/50 px-2 py-1 rounded-md">
+                                        <img src="{{ $q->image_url }}" alt="Thumbnail" class="w-5 h-5 object-cover rounded border border-slate-300 dark:border-slate-700">
+                                        <span class="text-xs font-bold text-sky-700 dark:text-sky-300">🖼 Image ✓</span>
+                                        <button type="button"
+                                                onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')"
+                                                class="px-1.5 py-0.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded text-[11px] font-bold">
                                             👁️ Preview
                                         </button>
                                     </div>
                                 @endif
 
                                 @if($qHasAudio)
-                                    <div style="display:inline-flex;align-items:center;gap:.35rem;background:#0f172a;border:1px solid rgba(129,140,248,.35);padding:.2rem .5rem;border-radius:.4rem;">
-                                        <span style="font-size:.72rem;font-weight:700;color:#818cf8;">🎧 Audio ✓</span>
-                                        <button type="button" 
-                                                onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')" 
-                                                style="padding:.15rem .45rem;background:#1e293b;color:#818cf8;border:1px solid rgba(129,140,248,.35);border-radius:.35rem;font-size:.68rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;margin-left:.25rem;">
+                                    <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
+                                        <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Audio ✓</span>
+                                        <button type="button"
+                                                onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')"
+                                                class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded text-[11px] font-bold">
                                             👁️ Preview
                                         </button>
                                     </div>
                                 @endif
 
                                 @if(!$qHasImg && !$qHasAudio)
-                                    <span style="font-size:.72rem;color:#64748b;font-style:italic;">
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 italic">
                                         No question-level media attached.
                                     </span>
                                 @endif
                             </div>
                         </div>
-                        <div style="display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;">
+                        <div class="flex items-center gap-2 flex-wrap">
                             @if($isMaster)
-                                <button type="button" onclick="openTeacherRequestRevisionModal('{{ $q->question_bank_id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" style="padding:.45rem .8rem;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.4);border-radius:.55rem;font-size:.75rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+                                <button type="button" onclick="openTeacherRequestRevisionModal('{{ $q->question_bank_id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50 text-xs font-bold inline-flex items-center gap-1">
                                     🛠 Request Master Revision
                                 </button>
-                                <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" style="padding:.45rem .8rem;background:#334155;color:#e2e8f0;border:1px solid #475569;border-radius:.55rem;font-size:.75rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
+                                <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1">
                                     🔒 Governed Master
                                 </a>
                             @else
-                                <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" style="padding:.45rem .85rem;background:{{ $hasWarning ? '#f59e0b' : '#6366f1' }};color:#fff;border-radius:.55rem;font-size:.75rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;box-shadow:0 2px 8px rgba(0,0,0,.25);">
+                                <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" class="px-3 py-1.5 rounded-xl {{ $hasWarning ? 'bg-amber-600 hover:bg-amber-500' : 'bg-indigo-600 hover:bg-indigo-500' }} text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
                                     {{ $hasWarning ? '✏️ Fix Issue' : '✏️ Edit Question' }}
                                 </a>
                             @endif
 
                             @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                            <form action="{{ route('teacher.tests.destroy-question', ['test' => $test->id, 'question' => $q->id]) }}" method="POST" style="display:inline;" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Question?', message: 'Remove this question from the assessment?', confirmText: 'Remove', variant: 'danger', form: this });">
+                            <form action="{{ route('teacher.tests.destroy-question', ['test' => $test->id, 'question' => $q->id]) }}" method="POST" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Question?', message: 'Remove this question from the assessment?', confirmText: 'Remove', variant: 'danger', form: this });">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" style="padding:.45rem .65rem;background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.55rem;font-size:.75rem;font-weight:700;cursor:pointer;">
+                                <button type="submit" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold">
                                     🗑 Remove
                                 </button>
                             </form>
@@ -486,18 +488,18 @@
                     @endforeach
                 </div>
                 @else
-                <div style="font-size:.85rem;color:#94a3b8;padding:2.5rem 1rem;text-align:center;background:#1e293b;border-radius:.85rem;border:1px dashed #334155;">
-                    <div style="font-size:2rem;margin-bottom:.5rem;">📝</div>
-                    <div style="font-weight:700;color:#cbd5e1;margin-bottom:.35rem;">No questions linked to this assessment yet</div>
-                    <p style="font-size:.78rem;color:#64748b;max-width:400px;margin:0 auto 1rem;">
+                <div class="py-10 px-4 text-center bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 space-y-2">
+                    <div class="text-3xl">📝</div>
+                    <div class="font-bold text-slate-800 dark:text-slate-200 text-sm">No questions linked to this assessment yet</div>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
                         Attach existing Master Questions from institutional Question Banks or author new custom questions for this test.
                     </p>
                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                    <div style="display:flex;justify-content:center;gap:.5rem;">
-                        <button type="button" onclick="openAttachMasterModal()" style="padding:.45rem .9rem;background:#4f46e5;color:#fff;font-weight:800;font-size:.78rem;border:none;border-radius:.5rem;cursor:pointer;">
+                    <div class="flex justify-center gap-2.5 pt-2">
+                        <button type="button" onclick="openAttachMasterModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20">
                             🏛️ + Add from Question Bank
                         </button>
-                        <button type="button" onclick="openCreateAuthoredQuestionModal()" style="padding:.45rem .9rem;background:#10b981;color:#fff;font-weight:800;font-size:.78rem;border:none;border-radius:.5rem;cursor:pointer;">
+                        <button type="button" onclick="openCreateAuthoredQuestionModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20">
                             ✏️ + Add New Question
                         </button>
                     </div>
@@ -510,54 +512,54 @@
         {{-- Right Sidebar: Metadata & Workflow History Timeline --}}
         <div>
             {{-- Assessment Summary Card --}}
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.35rem;margin-bottom:1.5rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
-                <h4 style="font-size:.9rem;font-weight:800;color:#0f172a;margin:0 0 1rem;text-transform:uppercase;letter-spacing:.05em;">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm mb-6">
+                <h4 class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mb-4">
                     📊 Assessment Metrics
                 </h4>
 
-                <div style="display:flex;flex-direction:column;gap:.85rem;font-size:.82rem;">
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
-                        <span style="color:#64748b;">Questions</span>
-                        <strong style="color:#4f46e5;">{{ $test->sections->sum(fn($s) => $s->testQuestions->count()) }}</strong>
+                <div class="flex flex-col gap-3 text-xs">
+                    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                        <span class="text-slate-600 dark:text-slate-400 font-medium">Questions</span>
+                        <strong class="text-indigo-600 dark:text-indigo-400 font-extrabold">{{ $test->sections->sum(fn($s) => $s->testQuestions->count()) }}</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
-                        <span style="color:#64748b;">Sections</span>
-                        <strong style="color:#334155;">{{ $test->sections->count() }}</strong>
+                    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                        <span class="text-slate-600 dark:text-slate-400 font-medium">Sections</span>
+                        <strong class="text-slate-800 dark:text-slate-200 font-bold">{{ $test->sections->count() }}</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
-                        <span style="color:#64748b;">Duration</span>
-                        <strong style="color:#334155;">{{ $test->duration_minutes }} Mins</strong>
+                    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                        <span class="text-slate-600 dark:text-slate-400 font-medium">Duration</span>
+                        <strong class="text-slate-800 dark:text-slate-200 font-bold">{{ $test->duration_minutes }} Mins</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
-                        <span style="color:#64748b;">Pass Threshold</span>
-                        <strong style="color:#334155;">{{ $test->pass_score }} Points</strong>
+                    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                        <span class="text-slate-600 dark:text-slate-400 font-medium">Pass Threshold</span>
+                        <strong class="text-slate-800 dark:text-slate-200 font-bold">{{ $test->pass_score }} Points</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding-bottom:.6rem;">
-                        <span style="color:#64748b;">Author</span>
-                        <strong style="color:#334155;">{{ $test->creator?->name ?? 'Teacher' }}</strong>
+                    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                        <span class="text-slate-600 dark:text-slate-400 font-medium">Author</span>
+                        <strong class="text-slate-800 dark:text-slate-200 font-bold">{{ $test->creator?->name ?? 'Teacher' }}</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;">
-                        <span style="color:#64748b;">Last Updated</span>
-                        <strong style="color:#334155;">{{ $test->updated_at?->diffForHumans() }}</strong>
+                    <div class="flex justify-between">
+                        <span class="text-slate-600 dark:text-slate-400 font-medium">Last Updated</span>
+                        <strong class="text-slate-800 dark:text-slate-200 font-bold">{{ $test->updated_at?->diffForHumans() }}</strong>
                     </div>
                 </div>
             </div>
 
             {{-- Workflow History Timeline --}}
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.35rem;box-shadow:0 2px 6px rgba(15,23,42,0.03);">
-                <h4 style="font-size:.9rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;text-transform:uppercase;letter-spacing:.05em;">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+                <h4 class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mb-5">
                     ⏱ Governance Timeline
                 </h4>
 
-                <div style="display:flex;flex-direction:column;gap:1.25rem;position:relative;padding-left:1.2rem;border-left:2px solid #e2e8f0;">
+                <div class="flex flex-col gap-4 relative pl-4 border-l-2 border-slate-200 dark:border-slate-700">
                     @foreach($workflowTimeline as $item)
-                    <div style="position:relative;">
-                        <div style="position:absolute;left:-1.65rem;top:.2rem;width:.8rem;height:.8rem;border-radius:50%;background:{{ $item['status'] === 'active' ? '#f59e0b' : ($item['status'] === 'completed' ? '#10b981' : '#cbd5e1') }};border:2px solid #ffffff;"></div>
-                        <div style="font-size:.85rem;font-weight:700;color:{{ $item['status'] === 'active' ? '#d97706' : ($item['status'] === 'completed' ? '#0f172a' : '#64748b') }};">
+                    <div class="relative">
+                        <div class="absolute -left-[1.35rem] top-1 w-2.5 h-2.5 rounded-full {{ $item['status'] === 'active' ? 'bg-amber-500 ring-4 ring-amber-100 dark:ring-amber-950/60' : ($item['status'] === 'completed' ? 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950/60' : 'bg-slate-300 dark:bg-slate-700') }}"></div>
+                        <div class="text-xs font-bold {{ $item['status'] === 'active' ? 'text-amber-700 dark:text-amber-400' : ($item['status'] === 'completed' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400') }}">
                             {{ $item['step'] }}
                         </div>
                         @if($item['date'])
-                        <div style="font-size:.72rem;color:#64748b;margin-top:.15rem;">
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                             {{ $item['date'] }}
                         </div>
                         @endif
@@ -570,44 +572,44 @@
 </div>
 
 {{-- Custom IAP Resubmission Confirmation Modal --}}
-<div id="resubmit-confirmation-modal" 
-     class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+<div id="resubmit-confirmation-modal"
+     class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4"
      role="dialog"
      aria-modal="true"
      aria-labelledby="resubmit-modal-title">
-    
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 text-left transform transition-all">
-        
+
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 text-left transform transition-all">
+
         {{-- Modal Header --}}
         <div class="flex justify-between items-start">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-extrabold text-lg shadow-inner flex-shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-extrabold text-lg shadow-inner flex-shrink-0">
                     🚀
                 </div>
                 <div>
-                    <h3 id="resubmit-modal-title" class="text-base font-bold text-white leading-tight">
+                    <h3 id="resubmit-modal-title" class="text-base font-bold text-slate-900 dark:text-white leading-tight">
                         Resubmit Assessment for Review?
                     </h3>
-                    <p class="text-xs text-indigo-400 font-semibold mt-0.5">
+                    <p class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">
                         {{ $test->title }}
                     </p>
                 </div>
             </div>
-            <button type="button" 
-                    onclick="closeResubmitModal()" 
-                    class="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-700" 
+            <button type="button"
+                    onclick="closeResubmitModal()"
+                    class="text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none"
                     aria-label="Close modal">
                 ✕
             </button>
         </div>
 
         {{-- Modal Body Messages --}}
-        <div class="space-y-3 text-xs text-slate-300">
+        <div class="space-y-3 text-xs text-slate-700 dark:text-slate-300">
             <p class="leading-relaxed">
                 Your assessment has passed the Validation Assistant checks and is ready to be resubmitted to the Repository Manager for governance review.
             </p>
-            <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-slate-400 flex items-start gap-2.5">
-                <span class="text-indigo-400 text-sm flex-shrink-0">ℹ️</span>
+            <div class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-400 flex items-start gap-2.5">
+                <span class="text-indigo-600 dark:text-indigo-400 text-sm flex-shrink-0">ℹ️</span>
                 <span class="leading-normal text-[11px]">
                     After resubmission, the Repository Manager will review the assessment and its linked repository requirements.
                 </span>
@@ -615,16 +617,16 @@
         </div>
 
         {{-- Modal Footer Actions --}}
-        <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-800/80">
-            <button type="button" 
-                    onclick="closeResubmitModal()" 
-                    class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-600">
+        <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button type="button"
+                    onclick="closeResubmitModal()"
+                    class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
                 Cancel
             </button>
-            <button type="button" 
+            <button type="button"
                     id="confirm-resubmit-btn"
-                    onclick="confirmAndSubmitResubmit()" 
-                    class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900 inline-flex items-center gap-1.5">
+                    onclick="confirmAndSubmitResubmit()"
+                    class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/30 transition-all inline-flex items-center gap-1.5">
                 🚀 {{ $test->status === 'draft' ? 'Submit for Review' : 'Resubmit for Review' }}
             </button>
         </div>
@@ -632,29 +634,29 @@
 </div>
 
 {{-- Modal 1: Attach Master Question from Question Bank --}}
-<div id="attach-master-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:1rem;" onclick="closeAttachMasterModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:600px;width:100%;padding:1.75rem;box-shadow:0 20px 50px rgba(0,0,0,.5);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-            <div style="font-size:1.15rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
+<div id="attach-master-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeAttachMasterModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-xl w-full p-6 sm:p-7 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>🏛️</span> Attach Master Question from Question Bank
             </div>
-            <button type="button" onclick="closeAttachMasterModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeAttachMasterModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
         </div>
 
-        <form method="POST" action="{{ route('teacher.tests.attach-master-question', $test->id) }}">
+        <form method="POST" action="{{ route('teacher.tests.attach-master-question', $test->id) }}" class="space-y-4">
             @csrf
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Target Section <span style="color:#f43f5e;">*</span></label>
-                <select name="test_section_id" required style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Target Section <span class="text-rose-500">*</span></label>
+                <select name="test_section_id" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     @foreach($test->sections as $sec)
                     <option value="{{ $sec->id }}">{{ $sec->title }} ({{ $sec->testQuestions->count() }} items)</option>
                     @endforeach
                 </select>
             </div>
 
-            <div style="margin-bottom:1.5rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Select Master Question <span style="color:#f43f5e;">*</span></label>
-                <select name="question_id" required style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Select Master Question <span class="text-rose-500">*</span></label>
+                <select name="question_id" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     <option value="">-- Choose from Published Question Banks --</option>
                     @if(isset($publishedQuestionBanks))
                     @foreach($publishedQuestionBanks as $bank)
@@ -669,32 +671,35 @@
                 </select>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:.75rem;">
-                <button type="button" onclick="closeAttachMasterModal()" style="padding:.6rem 1.1rem;background:#334155;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:700;cursor:pointer;">Cancel</button>
-                <button type="submit" style="padding:.6rem 1.25rem;background:#4f46e5;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,.3);">Attach Master Question</button>
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeAttachMasterModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20">Attach Master Question</button>
             </div>
         </form>
     </div>
 </div>
 
 {{-- Modal 2: Create Assessment-Authored Question --}}
-<div id="create-authored-question-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:1rem;" onclick="closeCreateAuthoredQuestionModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:650px;width:100%;padding:1.75rem;box-shadow:0 20px 50px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-            <div style="font-size:1.15rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
+<div id="create-authored-question-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeCreateAuthoredQuestionModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>✏️</span> Create Assessment-Authored Question
             </div>
-            <button type="button" onclick="closeCreateAuthoredQuestionModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeCreateAuthoredQuestionModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
         </div>
+
+        <form id="create-authored-question-form" method="POST" action="{{ route('teacher.tests.create-question', $test->id) }}" onsubmit="return validateCreateQuestionForm(this)" class="space-y-4">
+            @csrf
 
             @php
                 $isToeicTest = (is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic';
             @endphp
 
             @if($isToeicTest)
-            <div style="margin-bottom:1rem;background:#1e1b4b;border:1px solid #4f46e5;padding:.85rem;border-radius:.6rem;">
-                <label style="display:block;font-size:.75rem;font-weight:800;color:#c7d2fe;margin-bottom:.3rem;">🎯 TOEIC Part Selection <span style="color:#f43f5e;">*</span></label>
-                <select name="part_number" id="create-q-part-number" onchange="onCreateModalToeicPartChange(this.value)" style="width:100%;padding:.6rem;background:#0f172a;border:1px solid #6366f1;border-radius:.5rem;color:#fff;font-size:.82rem;font-weight:700;">
+            <div class="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 p-4 rounded-xl space-y-1.5">
+                <label class="block text-xs font-extrabold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">🎯 TOEIC Part Selection <span class="text-rose-500">*</span></label>
+                <select name="part_number" id="create-q-part-number" onchange="onCreateModalToeicPartChange(this.value)" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-xl text-slate-900 dark:text-white text-xs font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     <option value="1">Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
                     <option value="2">Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
                     <option value="3">Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
@@ -706,24 +711,24 @@
                 <input type="hidden" name="section" id="create-q-section" value="listening">
             </div>
 
-            <div id="create-q-passage-container" style="display:none;margin-bottom:1rem;background:#1e293b;padding:.85rem;border-radius:.6rem;border:1px solid #334155;">
-                <label style="display:block;font-size:.75rem;font-weight:800;color:#cbd5e1;margin-bottom:.3rem;">📖 Reading Passage Text <span style="color:#f43f5e;">*</span></label>
-                <textarea name="passage_text" id="create-q-passage-text" rows="3" placeholder="Enter reading passage text for Part 6 / 7..." style="width:100%;padding:.6rem;background:#0f172a;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;"></textarea>
+            <div id="create-q-passage-container" class="hidden bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-1.5">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">📖 Reading Passage Text <span class="text-rose-500">*</span></label>
+                <textarea name="passage_text" id="create-q-passage-text" rows="3" placeholder="Enter reading passage text for Part 6 / 7..." class="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs"></textarea>
             </div>
             @endif
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Target Section <span style="color:#f43f5e;">*</span></label>
-                    <select name="test_section_id" required style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Target Section <span class="text-rose-500">*</span></label>
+                    <select name="test_section_id" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                         @foreach($test->sections as $sec)
                         <option value="{{ $sec->id }}">{{ $sec->title }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Question Type <span style="color:#f43f5e;">*</span></label>
-                    <select name="question_type" required style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Question Type <span class="text-rose-500">*</span></label>
+                    <select name="question_type" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="single_choice">Single Choice</option>
                         @if(!$isToeicTest)
@@ -734,14 +739,14 @@
                 </div>
             </div>
 
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Question Prompt / Stem <span style="color:#f43f5e;">*</span></label>
-                <textarea name="prompt" required rows="3" placeholder="Enter the complete question prompt..." style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;"></textarea>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Question Prompt / Stem <span class="text-rose-500">*</span></label>
+                <textarea name="prompt" required rows="3" placeholder="Enter the complete question prompt..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
             </div>
 
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Difficulty <span style="color:#f43f5e;">*</span></label>
-                <select name="difficulty" required style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Difficulty <span class="text-rose-500">*</span></label>
+                <select name="difficulty" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     <option value="easy">Easy</option>
                     <option value="medium" selected>Medium</option>
                     <option value="hard">Hard</option>
@@ -750,12 +755,10 @@
             </div>
 
             {{-- Question Media Section --}}
-            <div style="margin-bottom:1rem;background:#1e293b;padding:1rem;border-radius:.75rem;border:1px solid #334155;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                    <div>
-                        <span style="font-size:.78rem;font-weight:800;color:#e2e8f0;display:block;">🖼️ / 🎧 Question Media (Optional)</span>
-                        <span style="font-size:.7rem;color:#94a3b8;">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
-                    </div>
+            <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
+                <div>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 block">🖼️ / 🎧 Question Media (Optional)</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
                 </div>
 
                 <input type="hidden" id="q-media-asset-id" name="media_asset_id" value="">
@@ -763,76 +766,76 @@
                 <input type="hidden" id="q-audio-url" name="audio_url" value="">
 
                 {{-- Attached Media Previews --}}
-                <div id="q-attached-media-container" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.6rem;">
+                <div id="q-attached-media-container" class="flex flex-col gap-2.5 mt-2">
                     {{-- Image preview card --}}
-                    <div id="q-preview-image-card" style="display:none;background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
-                        <div style="display:flex;align-items:center;gap:.75rem;">
-                            <img id="q-preview-image-thumb" src="" alt="Thumbnail" style="width:48px;height:48px;object-fit:cover;border-radius:.35rem;border:1px solid #475569;">
+                    <div id="q-preview-image-card" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <img id="q-preview-image-thumb" src="" alt="Thumbnail" class="w-12 h-12 object-cover rounded-lg border border-slate-200 dark:border-slate-700">
                             <div>
-                                <span style="font-size:.75rem;font-weight:700;color:#38bdf8;display:block;">🖼️ Attached Image (Photograph)</span>
-                                <span id="q-preview-image-title" style="font-size:.7rem;color:#cbd5e1;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;"></span>
+                                <span class="text-xs font-bold text-sky-700 dark:text-sky-300 block">🖼️ Attached Image (Photograph)</span>
+                                <span id="q-preview-image-title" class="text-[11px] text-slate-600 dark:text-slate-400 max-w-xs truncate block"></span>
                             </div>
                         </div>
-                        <div style="display:flex;align-items:center;gap:.4rem;">
-                            <button type="button" onclick="previewQuestionModalMedia('create', 'image')" style="background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="previewQuestionModalMedia('create', 'image')" class="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded-lg text-xs font-bold">
                                 👁️ Preview
                             </button>
-                            <button type="button" onclick="openQuestionMediaPicker('create', 'image')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="openQuestionMediaPicker('create', 'image')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
                                 Change
                             </button>
-                            <button type="button" onclick="removeQuestionAttachedMedia('create', 'image')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="removeQuestionAttachedMedia('create', 'image')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-lg text-xs font-bold">
                                 ✕ Remove
                             </button>
                         </div>
                     </div>
 
                     {{-- Image empty placeholder --}}
-                    <div id="q-empty-image-card" style="display:flex;align-items:center;justify-content:space-between;background:#0f172a;border:1px dashed #334155;border-radius:.5rem;padding:.55rem .75rem;">
-                        <div style="display:flex;align-items:center;gap:.5rem;">
-                            <span style="font-size:1.1rem;">🖼️</span>
+                    <div id="q-empty-image-card" class="flex items-center justify-between bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">🖼️</span>
                             <div>
-                                <span style="font-size:.75rem;font-weight:700;color:#cbd5e1;display:block;">Question Photograph / Image</span>
-                                <span style="font-size:.68rem;color:#64748b;">No image attached</span>
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Question Photograph / Image</span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400">No image attached</span>
                             </div>
                         </div>
-                        <button type="button" onclick="openQuestionMediaPicker('create', 'image')" style="padding:.3rem .65rem;background:rgba(56,189,248,.12);color:#38bdf8;border:1px solid rgba(56,189,248,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
+                        <button type="button" onclick="openQuestionMediaPicker('create', 'image')" class="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded-xl text-xs font-bold">
                             + Attach Image
                         </button>
                     </div>
 
                     {{-- Audio preview card --}}
-                    <div id="q-preview-audio-card" style="display:none;background:#0f172a;border:1px solid #334155;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
-                        <div style="display:flex;align-items:center;gap:.75rem;flex:1;">
-                            <span style="font-size:1.4rem;">🎧</span>
-                            <div style="flex:1;">
-                                <span style="font-size:.75rem;font-weight:700;color:#818cf8;display:block;">🎵 Attached Audio Prompt</span>
-                                <span id="q-preview-audio-title" style="font-size:.7rem;color:#cbd5e1;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-bottom:.25rem;"></span>
-                                <audio id="q-preview-audio-player" controls style="height:26px;width:100%;max-width:260px;" src=""></audio>
+                    <div id="q-preview-audio-card" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="text-xl">🎧</span>
+                            <div class="flex-1">
+                                <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 block">🎵 Attached Audio Prompt</span>
+                                <span id="q-preview-audio-title" class="text-[11px] text-slate-600 dark:text-slate-400 max-w-xs truncate block mb-1"></span>
+                                <audio id="q-preview-audio-player" controls class="h-7 w-full max-w-xs" src=""></audio>
                             </div>
                         </div>
-                        <div style="display:flex;align-items:center;gap:.4rem;">
-                            <button type="button" onclick="previewQuestionModalMedia('create', 'audio')" style="background:rgba(129,140,248,.15);color:#818cf8;border:1px solid rgba(129,140,248,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="previewQuestionModalMedia('create', 'audio')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
                                 👁️ Preview
                             </button>
-                            <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
                                 Change
                             </button>
-                            <button type="button" onclick="removeQuestionAttachedMedia('create', 'audio')" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);border-radius:.4rem;padding:.3rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                            <button type="button" onclick="removeQuestionAttachedMedia('create', 'audio')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-lg text-xs font-bold">
                                 ✕ Remove
                             </button>
                         </div>
                     </div>
 
                     {{-- Audio empty placeholder --}}
-                    <div id="q-empty-audio-card" style="display:flex;align-items:center;justify-content:space-between;background:#0f172a;border:1px dashed #334155;border-radius:.5rem;padding:.55rem .75rem;">
-                        <div style="display:flex;align-items:center;gap:.5rem;">
-                            <span style="font-size:1.1rem;">🎧</span>
+                    <div id="q-empty-audio-card" class="flex items-center justify-between bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">🎧</span>
                             <div>
-                                <span style="font-size:.75rem;font-weight:700;color:#cbd5e1;display:block;">Question Audio Prompt</span>
-                                <span style="font-size:.68rem;color:#64748b;">No audio attached</span>
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Question Audio Prompt</span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400">No audio attached</span>
                             </div>
                         </div>
-                        <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" style="padding:.3rem .65rem;background:rgba(129,140,248,.12);color:#818cf8;border:1px solid rgba(129,140,248,.3);border-radius:.4rem;font-size:.72rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.25rem;">
+                        <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-xs font-bold">
                             + Attach Audio
                         </button>
                     </div>
@@ -840,133 +843,112 @@
             </div>
 
             {{-- Choices Section with Explicit Visual Correct Answer Indicator --}}
-            <div style="margin-bottom:1rem;background:#1e293b;padding:1rem;border-radius:.75rem;border:1px solid #334155;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                    <label style="font-size:.78rem;font-weight:800;color:#e2e8f0;margin:0;">Multiple Choice Options &amp; Correct Answer</label>
-                    <span style="font-size:.7rem;color:#94a3b8;">Select exactly one radio button as the correct answer.</span>
+            <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <label class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 m-0">Multiple Choice Options &amp; Correct Answer</label>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Select exactly one radio button as the correct answer.</span>
                 </div>
 
-                <div id="create-q-validation-error" style="display:none;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;padding:.5rem .75rem;border-radius:.5rem;font-size:.75rem;font-weight:700;margin-bottom:.65rem;">
+                <div id="create-q-validation-error" class="hidden bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 p-2.5 rounded-xl text-xs font-bold">
                     ⚠️ Please select the correct answer.
                 </div>
 
-                <div style="display:flex;flex-direction:column;gap:.5rem;">
-                    <div class="create-choice-row" id="create-choice-row-0" style="display:flex;align-items:center;gap:.6rem;background:#0f172a;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #334155;transition:all .15s ease;">
-                        <input type="radio" name="correct_choice" value="0" id="create-correct-0" onchange="updateCreateModalCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
-                        <label for="create-correct-0" style="font-weight:800;color:#818cf8;font-size:.82rem;width:1.5rem;cursor:pointer;margin:0;">A.</label>
-                        <input type="text" name="choices[]" placeholder="Option A text" required style="flex:1;padding:.45rem .65rem;background:#1e293b;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
-                        <span class="create-correct-badge" id="create-correct-badge-0" style="display:none;align-items:center;gap:.25rem;padding:.25rem .55rem;border-radius:.35rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.7rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;">
+                <div class="flex flex-col gap-2.5">
+                    @for($i = 0; $i < 4; $i++)
+                    @php $label = chr(65 + $i); @endphp
+                    <div class="create-choice-row flex items-center gap-2.5 bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 transition-all" id="create-choice-row-{{ $i }}">
+                        <input type="radio" name="correct_choice" value="{{ $i }}" id="create-correct-{{ $i }}" onchange="updateCreateModalCorrectChoice()" class="accent-emerald-600 w-4 h-4 cursor-pointer">
+                        <label for="create-correct-{{ $i }}" class="font-extrabold text-indigo-600 dark:text-indigo-400 text-xs w-5 cursor-pointer">{{ $label }}.</label>
+                        <input type="text" name="choices[]" placeholder="Option {{ $label }} text" {{ $i < 2 ? 'required' : '' }} class="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <span class="create-correct-badge hidden items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold uppercase whitespace-nowrap" id="create-correct-badge-{{ $i }}">
                             ✓ CORRECT ANSWER
                         </span>
                     </div>
-                    <div class="create-choice-row" id="create-choice-row-1" style="display:flex;align-items:center;gap:.6rem;background:#0f172a;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #334155;transition:all .15s ease;">
-                        <input type="radio" name="correct_choice" value="1" id="create-correct-1" onchange="updateCreateModalCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
-                        <label for="create-correct-1" style="font-weight:800;color:#818cf8;font-size:.82rem;width:1.5rem;cursor:pointer;margin:0;">B.</label>
-                        <input type="text" name="choices[]" placeholder="Option B text" required style="flex:1;padding:.45rem .65rem;background:#1e293b;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
-                        <span class="create-correct-badge" id="create-correct-badge-1" style="display:none;align-items:center;gap:.25rem;padding:.25rem .55rem;border-radius:.35rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.7rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;">
-                            ✓ CORRECT ANSWER
-                        </span>
-                    </div>
-                    <div class="create-choice-row" id="create-choice-row-2" style="display:flex;align-items:center;gap:.6rem;background:#0f172a;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #334155;transition:all .15s ease;">
-                        <input type="radio" name="correct_choice" value="2" id="create-correct-2" onchange="updateCreateModalCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
-                        <label for="create-correct-2" style="font-weight:800;color:#818cf8;font-size:.82rem;width:1.5rem;cursor:pointer;margin:0;">C.</label>
-                        <input type="text" name="choices[]" placeholder="Option C text" style="flex:1;padding:.45rem .65rem;background:#1e293b;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
-                        <span class="create-correct-badge" id="create-correct-badge-2" style="display:none;align-items:center;gap:.25rem;padding:.25rem .55rem;border-radius:.35rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.7rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;">
-                            ✓ CORRECT ANSWER
-                        </span>
-                    </div>
-                    <div class="create-choice-row" id="create-choice-row-3" style="display:flex;align-items:center;gap:.6rem;background:#0f172a;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #334155;transition:all .15s ease;">
-                        <input type="radio" name="correct_choice" value="3" id="create-correct-3" onchange="updateCreateModalCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
-                        <label for="create-correct-3" style="font-weight:800;color:#818cf8;font-size:.82rem;width:1.5rem;cursor:pointer;margin:0;">D.</label>
-                        <input type="text" name="choices[]" placeholder="Option D text" style="flex:1;padding:.45rem .65rem;background:#1e293b;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
-                        <span class="create-correct-badge" id="create-correct-badge-3" style="display:none;align-items:center;gap:.25rem;padding:.25rem .55rem;border-radius:.35rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.7rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;">
-                            ✓ CORRECT ANSWER
-                        </span>
-                    </div>
+                    @endfor
                 </div>
             </div>
 
-            <div style="margin-bottom:1.5rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Answer Explanation / Rationale</label>
-                <textarea name="explanation" rows="2" placeholder="Optional explanation..." style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;"></textarea>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Answer Explanation / Rationale</label>
+                <textarea name="explanation" rows="2" placeholder="Optional explanation..." class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs"></textarea>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:.75rem;">
-                <button type="button" onclick="closeCreateAuthoredQuestionModal()" style="padding:.6rem 1.1rem;background:#334155;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:700;cursor:pointer;">Cancel</button>
-                <button type="submit" style="padding:.6rem 1.25rem;background:#10b981;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.3);">Save Question</button>
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeCreateAuthoredQuestionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20">Save Question</button>
             </div>
         </form>
     </div>
 </div>
 
 {{-- Modal 3: Add Section --}}
-<div id="add-section-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:1rem;" onclick="closeAddSectionModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:480px;width:100%;padding:1.75rem;box-shadow:0 20px 50px rgba(0,0,0,.5);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-            <div style="font-size:1.15rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
+<div id="add-section-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeAddSectionModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>📑</span> Add Assessment Section
             </div>
-            <button type="button" onclick="closeAddSectionModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeAddSectionModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
         </div>
 
-        <form method="POST" action="{{ route('teacher.tests.add-section', $test->id) }}">
+        <form method="POST" action="{{ route('teacher.tests.add-section', $test->id) }}" class="space-y-4">
             @csrf
-            <div style="margin-bottom:1.15rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Section Title <span style="color:#f43f5e;">*</span></label>
-                <input type="text" name="title" required placeholder="e.g. Part 1: Photographs" style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Section Title <span class="text-rose-500">*</span></label>
+                <input type="text" name="title" required placeholder="e.g. Part 1: Photographs" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
             </div>
 
-            <div style="margin-bottom:1.5rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Section Type</label>
-                <select name="section_type" style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Section Type</label>
+                <select name="section_type" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     <option value="">⚡ Auto-detect from Section Title (Recommended)</option>
                     <option value="listening">🎧 Listening Section</option>
                     <option value="reading">📖 Reading Section</option>
                     <option value="speaking">🎙 Speaking Section</option>
                     <option value="writing">✍️ Writing Section</option>
                 </select>
-                <span style="font-size:.7rem;color:#64748b;display:block;margin-top:.3rem;">
-                    If left on auto-detect, the system will infer the section type from standard exam terminology (e.g. Part 1-4 &rarr; Listening, Part 5-7 &rarr; Reading).
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
+                    If left on auto-detect, the system will infer the section type from standard exam terminology.
                 </span>
             </div>
 
-            <div style="margin-bottom:1.25rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Section Instructions / Directions (Optional)</label>
-                <textarea name="instructions" rows="3" placeholder="e.g. Directions: For each question in this part, you will hear four statements about a picture. Select the statement that best describes what you see." style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;line-height:1.45;"></textarea>
-                <span style="font-size:.7rem;color:#64748b;display:block;margin-top:.3rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Section Instructions / Directions (Optional)</label>
+                <textarea name="instructions" rows="3" placeholder="e.g. Directions: For each question in this part, you will hear four statements..." class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs leading-relaxed"></textarea>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
                     Directions shown to candidates upon entering this section.
                 </span>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:.75rem;">
-                <button type="button" onclick="closeAddSectionModal()" style="padding:.6rem 1.1rem;background:#334155;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:700;cursor:pointer;">Cancel</button>
-                <button type="submit" style="padding:.6rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:800;cursor:pointer;">Add Section</button>
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeAddSectionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20">Add Section</button>
             </div>
         </form>
     </div>
 </div>
 
 {{-- Modal 3b: Edit Section --}}
-<div id="edit-section-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:1rem;" onclick="closeEditSectionModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:480px;width:100%;padding:1.75rem;box-shadow:0 20px 50px rgba(0,0,0,.5);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-            <div style="font-size:1.15rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
-                <span>✏️</span> Edit Assessment Section &amp; Directions
+<div id="edit-section-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeEditSectionModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span>✏️</span> Edit Assessment Section
             </div>
-            <button type="button" onclick="closeEditSectionModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeEditSectionModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
         </div>
 
-        <form id="edit-section-form" method="POST" action="">
+        <form id="edit-section-form" method="POST" action="" class="space-y-4">
             @csrf
             @method('PUT')
-            <div style="margin-bottom:1.15rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Section Title <span style="color:#f43f5e;">*</span></label>
-                <input type="text" id="edit-section-title" name="title" required placeholder="e.g. Part 1: Photographs" style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Section Title <span class="text-rose-500">*</span></label>
+                <input type="text" id="edit-section-title" name="title" required class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
             </div>
 
-            <div style="margin-bottom:1.15rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Section Type</label>
-                <select id="edit-section-type" name="section_type" style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Section Type</label>
+                <select id="edit-section-type" name="section_type" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     <option value="">⚡ Auto-detect from Section Title (Recommended)</option>
                     <option value="listening">🎧 Listening Section</option>
                     <option value="reading">📖 Reading Section</option>
@@ -975,226 +957,226 @@
                 </select>
             </div>
 
-            <div style="margin-bottom:1.25rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Section Instructions / Directions (Optional)</label>
-                <textarea id="edit-section-instructions" name="instructions" rows="3" placeholder="e.g. Directions: For each question in this part, you will hear four statements..." style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;line-height:1.45;"></textarea>
-                <span style="font-size:.7rem;color:#64748b;display:block;margin-top:.3rem;">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Section Instructions / Directions (Optional)</label>
+                <textarea id="edit-section-instructions" name="instructions" rows="3" placeholder="e.g. Directions: For each question in this part, you will hear four statements..." class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs leading-relaxed"></textarea>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
                     Directions displayed to candidates upon entering this section.
                 </span>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:.75rem;">
-                <button type="button" onclick="closeEditSectionModal()" style="padding:.6rem 1.1rem;background:#334155;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:700;cursor:pointer;">Cancel</button>
-                <button type="submit" style="padding:.6rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:800;cursor:pointer;">Update Section</button>
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeEditSectionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20">Update Section</button>
             </div>
         </form>
     </div>
 </div>
 
 {{-- Modal 4: Teacher Request Repository Revision on Master Question --}}
-<div id="teacher-request-revision-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:1rem;" onclick="closeTeacherRequestRevisionModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:520px;width:100%;padding:1.75rem;box-shadow:0 20px 50px rgba(0,0,0,.5);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-            <div style="font-size:1.15rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
+<div id="teacher-request-revision-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeTeacherRequestRevisionModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>🛠</span> Request Repository Revision
             </div>
-            <button type="button" onclick="closeTeacherRequestRevisionModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeTeacherRequestRevisionModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
         </div>
 
-        <form method="POST" action="{{ route('teacher.repository-revisions.request') }}">
+        <form method="POST" action="{{ route('teacher.repository-revisions.request') }}" class="space-y-4">
             @csrf
             <input type="hidden" id="tr-modal-bank-id" name="question_bank_id" value="">
             <input type="hidden" id="tr-modal-question-id" name="question_id" value="">
 
-            <div style="margin-bottom:1rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Target Question Item</label>
-                <div id="tr-modal-target-title" style="padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#818cf8;font-size:.8rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Target Question Item</label>
+                <div id="tr-modal-target-title" class="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-indigo-700 dark:text-indigo-300 text-xs font-bold truncate"></div>
             </div>
 
-            <div style="margin-bottom:1.5rem;">
-                <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.3rem;">Revision Rationale / Specific Feedback <span style="color:#f43f5e;">*</span></label>
-                <textarea name="notes" required rows="4" placeholder="Explain the specific issue with this Master Question (typo, wrong key, flawed passage)..." style="width:100%;padding:.6rem;background:#1e293b;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.82rem;"></textarea>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Revision Rationale / Specific Feedback <span class="text-rose-500">*</span></label>
+                <textarea name="notes" required rows="4" placeholder="Explain the specific issue with this Master Question (typo, wrong key, flawed passage)..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs"></textarea>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:.75rem;">
-                <button type="button" onclick="closeTeacherRequestRevisionModal()" style="padding:.6rem 1.1rem;background:#334155;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:700;cursor:pointer;">Cancel</button>
-                <button type="submit" style="padding:.6rem 1.25rem;background:#f59e0b;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:800;cursor:pointer;">Submit Revision Request</button>
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeTeacherRequestRevisionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-md shadow-amber-600/20">Submit Revision Request</button>
             </div>
         </form>
     </div>
 </div>
 
 {{-- Modal 5: Attach Section Media from Library or Direct Upload --}}
-<div id="attach-section-media-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:1rem;" onclick="closeAttachSectionMediaModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:720px;width:100%;max-height:92vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 20px 50px rgba(0,0,0,.5);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;border-bottom:1px solid #1e293b;padding-bottom:.75rem;">
+<div id="attach-section-media-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeAttachSectionMediaModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col p-6 sm:p-7 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
-                <div style="font-size:1.1rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
+                <div class="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                     <span>📎</span> Attach Media Asset to Section
                 </div>
-                <div id="asm-target-section-title" style="font-size:.75rem;color:#818cf8;margin-top:.2rem;font-weight:600;"></div>
+                <div id="asm-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 font-bold"></div>
             </div>
-            <button type="button" onclick="closeAttachSectionMediaModal()" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeAttachSectionMediaModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
         </div>
 
         {{-- Top Navigation: Choose from Library vs Upload New Media --}}
-        <div style="display:flex;gap:.5rem;margin-bottom:1rem;background:#090d16;padding:.35rem;border-radius:.6rem;border:1px solid #1e293b;">
-            <button type="button" id="asm-tab-library" onclick="switchAsmMode('library')" style="flex:1;padding:.45rem .85rem;background:#6366f1;color:#fff;border:none;border-radius:.45rem;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.35rem;transition:all .15s ease;">
+        <div class="flex gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+            <button type="button" id="asm-tab-library" onclick="switchAsmMode('library')" class="flex-1 py-2 px-3 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5">
                 <span>📚</span> Choose from Media Library
             </button>
-            <button type="button" id="asm-tab-upload" onclick="switchAsmMode('upload')" style="flex:1;padding:.45rem .85rem;background:transparent;color:#94a3b8;border:none;border-radius:.45rem;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.35rem;transition:all .15s ease;">
+            <button type="button" id="asm-tab-upload" onclick="switchAsmMode('upload')" class="flex-1 py-2 px-3 bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5">
                 <span>⬆️</span> + Upload New Media
             </button>
         </div>
 
         {{-- Mode A: Direct Media Upload Panel --}}
-        <div id="asm-upload-panel" style="display:none;background:#090d16;border:1px solid #1e293b;border-radius:.75rem;padding:1.15rem;margin-bottom:1rem;">
-            <div style="font-size:.82rem;font-weight:800;color:#f8fafc;margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem;">
+        <div id="asm-upload-panel" class="hidden bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+            <div class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <span>🚀</span> Upload Media to Institutional Library
             </div>
 
-            <div id="asm-upload-feedback" style="display:none;padding:.6rem .8rem;border-radius:.5rem;font-size:.75rem;font-weight:700;margin-bottom:.75rem;"></div>
+            <div id="asm-upload-feedback" class="hidden p-2.5 rounded-lg text-xs font-bold"></div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.85rem;">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">
-                        Select Local File <span style="color:#f43f5e;">*</span>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Select Local File <span class="text-rose-500">*</span>
                     </label>
-                    <input type="file" id="asm-upload-file" accept=".jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.pdf,image/*,audio/*,application/pdf" style="width:100%;padding:.45rem .6rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#cbd5e1;font-size:.75rem;">
+                    <input type="file" id="asm-upload-file" accept=".jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.pdf,image/*,audio/*,application/pdf" class="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 text-xs">
                 </div>
                 <div>
-                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Media Title (Optional)
                     </label>
-                    <input type="text" id="asm-upload-title" placeholder="e.g. Part 1 Listening Directions Audio" style="width:100%;padding:.5rem .75rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.78rem;">
+                    <input type="text" id="asm-upload-title" placeholder="e.g. Part 1 Listening Directions Audio" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium">
                 </div>
             </div>
 
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
-                <div style="font-size:.68rem;color:#64748b;">
+            <div class="flex justify-between items-center flex-wrap gap-2 pt-1">
+                <div class="text-[11px] text-slate-500 dark:text-slate-400">
                     Supported: JPG, PNG, WebP, MP3, WAV, M4A, PDF (Max: 10 MB)
                 </div>
-                <button type="button" id="asm-upload-btn" onclick="uploadSectionMediaFile()" style="padding:.5rem 1.1rem;background:#10b981;color:#fff;border:none;border-radius:.45rem;font-size:.78rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(16,185,129,.3);">
+                <button type="button" id="asm-upload-btn" onclick="uploadSectionMediaFile()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5">
                     <span>⬆️</span> Upload &amp; Select Asset
                 </button>
             </div>
         </div>
 
-        <form id="attach-section-media-form" method="POST" action="" style="display:flex;flex-direction:column;flex:1;min-height:0;gap:1rem;">
+        <form id="attach-section-media-form" method="POST" action="" class="flex flex-col flex-1 min-h-0 space-y-3">
             @csrf
             <input type="hidden" id="asm-media-asset-id" name="media_asset_id" value="" required>
 
             {{-- Selected Media Badge --}}
-            <div id="asm-selected-preview" style="display:none;padding:.6rem .8rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);border-radius:.55rem;align-items:center;justify-content:space-between;">
-                <div style="display:flex;align-items:center;gap:.5rem;">
-                    <span id="asm-selected-icon" style="font-size:1.2rem;">📎</span>
+            <div id="asm-selected-preview" class="hidden p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 rounded-xl items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span id="asm-selected-icon" class="text-xl">📎</span>
                     <div>
-                        <div id="asm-selected-title" style="font-size:.82rem;font-weight:800;color:#fff;"></div>
-                        <div id="asm-selected-meta" style="font-size:.7rem;color:#a5b4fc;"></div>
+                        <div id="asm-selected-title" class="text-xs font-bold text-indigo-950 dark:text-indigo-100"></div>
+                        <div id="asm-selected-meta" class="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium"></div>
                     </div>
                 </div>
-                <button type="button" onclick="clearSelectedSectionMedia()" style="padding:.25rem .6rem;background:#ef4444;color:#fff;border:none;border-radius:.35rem;font-size:.7rem;font-weight:700;cursor:pointer;">Clear</button>
+                <button type="button" onclick="clearSelectedSectionMedia()" class="px-2.5 py-1 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold">Clear</button>
             </div>
 
             {{-- Section-Specific Caption and Order Inputs --}}
-            <div style="display:grid;grid-template-columns:2fr 1fr;gap:.75rem;">
+            <div class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
                 <div>
-                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Section Media Caption / Directions Label (Optional)
                     </label>
-                    <input type="text" id="asm-caption" name="caption" placeholder="e.g. Listening Directions Audio, Reference Photograph" style="width:100%;padding:.5rem .75rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.8rem;">
+                    <input type="text" id="asm-caption" name="caption" placeholder="e.g. Listening Directions Audio, Reference Photograph" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium">
                 </div>
                 <div>
-                    <label style="display:block;font-size:.72rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">Display Order</label>
-                    <input type="number" id="asm-order" name="order" min="1" placeholder="Auto (Next)" style="width:100%;padding:.5rem .75rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.8rem;">
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Display Order</label>
+                    <input type="number" id="asm-order" name="order" min="1" placeholder="Auto (Next)" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium">
                 </div>
             </div>
 
             {{-- Mode B: Library Browser Panel --}}
-            <div id="asm-library-panel" style="display:flex;flex-direction:column;flex:1;min-height:0;gap:.75rem;">
+            <div id="asm-library-panel" class="flex flex-col flex-1 min-h-0 space-y-2.5">
                 {{-- Media Filter Tabs & Search --}}
-                <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;">
-                    <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
-                        <button type="button" onclick="filterSectionMediaModal('all')" class="asm-filter-btn active" style="padding:.35rem .7rem;background:#6366f1;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
-                        <button type="button" onclick="filterSectionMediaModal('audio')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🎵 Audio Tracks</button>
-                        <button type="button" onclick="filterSectionMediaModal('image')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🖼️ Images</button>
-                        <button type="button" onclick="filterSectionMediaModal('passage')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📖 Passages</button>
-                        <button type="button" onclick="filterSectionMediaModal('pdf')" class="asm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📄 PDFs</button>
+                <div class="flex gap-2 flex-wrap items-center justify-between">
+                    <div class="flex gap-1.5 flex-wrap">
+                        <button type="button" onclick="filterSectionMediaModal('all')" class="asm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm">All Media</button>
+                        <button type="button" onclick="filterSectionMediaModal('audio')" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">🎵 Audio Tracks</button>
+                        <button type="button" onclick="filterSectionMediaModal('image')" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">🖼️ Images</button>
+                        <button type="button" onclick="filterSectionMediaModal('passage')" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">📖 Passages</button>
+                        <button type="button" onclick="filterSectionMediaModal('pdf')" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">📄 PDFs</button>
                     </div>
-                    <input type="text" id="asm-search-input" onkeyup="searchSectionMediaModal(this.value)" placeholder="Search media by title..." style="padding:.35rem .7rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.75rem;min-width:180px;">
+                    <input type="text" id="asm-search-input" onkeyup="searchSectionMediaModal(this.value)" placeholder="Search media by title..." class="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs min-w-[180px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                 </div>
 
                 {{-- Media Grid Container --}}
-                <div id="asm-media-list-container" style="flex:1;min-height:200px;max-height:260px;overflow-y:auto;background:#090d16;border:1px solid #1e293b;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:.6rem;">
-                    <div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>
+                <div id="asm-media-list-container" class="flex-1 min-h-[200px] max-h-[260px] overflow-y-auto bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>
                 </div>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:.75rem;border-top:1px solid #1e293b;padding-top:.75rem;">
-                <button type="button" onclick="closeAttachSectionMediaModal()" style="padding:.6rem 1.1rem;background:#334155;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:700;cursor:pointer;">Cancel</button>
-                <button type="submit" id="asm-submit-btn" disabled style="padding:.6rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.5rem;font-size:.82rem;font-weight:800;cursor:not-allowed;opacity:.5;">Attach Selected Media</button>
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeAttachSectionMediaModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
+                <button type="submit" id="asm-submit-btn" disabled class="px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all">Attach Selected Media</button>
             </div>
         </form>
     </div>
 </div>
 
 {{-- Modal 6: General Asset Preview Modal --}}
-<div id="asset-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;padding:1.5rem;" onclick="closeAssetPreviewModal(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1rem;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.6);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #1e293b;padding-bottom:.6rem;">
-            <div id="apm-title" style="font-size:1rem;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Preview Asset</div>
-            <button type="button" onclick="closeAssetPreviewModal()" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;">×</button>
+<div id="asset-preview-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeAssetPreviewModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div id="apm-title" class="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">Preview Asset</div>
+            <button type="button" onclick="closeAssetPreviewModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
         </div>
-        <div id="apm-content" style="display:flex;justify-content:center;align-items:center;min-height:180px;">
+        <div id="apm-content" class="flex justify-center items-center min-h-[180px]">
         </div>
     </div>
 </div>
 
 {{-- Modal 7: Question Media Picker Modal --}}
-<div id="question-media-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10001;align-items:center;justify-content:center;padding:1rem;" onclick="closeQuestionMediaPicker(event)">
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:1.25rem;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.7);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #1e293b;padding-bottom:.75rem;">
+<div id="question-media-picker-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeQuestionMediaPicker(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col p-6 sm:p-7 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
-                <div style="font-size:1.1rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:.5rem;">
+                <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                     <span>📎</span> Attach Question Media
                 </div>
-                <div style="font-size:.72rem;color:#94a3b8;margin-top:.2rem;">
+                <div class="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
                     Select an Image (photograph) or Audio prompt from the Institutional Media Library, or upload directly.
                 </div>
             </div>
-            <button type="button" onclick="closeQuestionMediaPicker()" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeQuestionMediaPicker()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
         </div>
 
         {{-- Direct Upload Toggle Bar --}}
-        <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:.75rem 1rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
-            <div style="display:flex;align-items:center;gap:.5rem;">
-                <span style="font-size:1.1rem;">⬆️</span>
-                <input type="file" id="qm-direct-file-input" accept="image/*,audio/*,application/pdf" style="font-size:.75rem;color:#cbd5e1;">
+        <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex justify-between items-center flex-wrap gap-2.5">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">⬆️</span>
+                <input type="file" id="qm-direct-file-input" accept="image/*,audio/*,application/pdf" class="text-xs text-slate-700 dark:text-slate-300">
             </div>
-            <button type="button" id="qm-upload-btn" onclick="uploadQuestionMediaFile()" style="padding:.4rem 1rem;background:#10b981;color:#fff;border:none;border-radius:.45rem;font-size:.75rem;font-weight:800;cursor:pointer;">
+            <button type="button" id="qm-upload-btn" onclick="uploadQuestionMediaFile()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-sm">
                 Upload &amp; Attach
             </button>
         </div>
 
         {{-- Library Filters & Search --}}
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
-            <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
-                <button type="button" onclick="filterQuestionMediaModal('all')" class="qm-filter-btn active" style="padding:.35rem .7rem;background:#6366f1;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
-                <button type="button" onclick="filterQuestionMediaModal('image')" class="qm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🖼️ Images</button>
-                <button type="button" onclick="filterQuestionMediaModal('audio')" class="qm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🎵 Audio Tracks</button>
-                <button type="button" onclick="filterQuestionMediaModal('passage')" class="qm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📖 Passages</button>
-                <button type="button" onclick="filterQuestionMediaModal('pdf')" class="qm-filter-btn" style="padding:.35rem .7rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📄 PDFs</button>
+        <div class="flex gap-2 flex-wrap items-center justify-between">
+            <div class="flex gap-1.5 flex-wrap">
+                <button type="button" onclick="filterQuestionMediaModal('all')" class="qm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm">All Media</button>
+                <button type="button" onclick="filterQuestionMediaModal('image')" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">🖼️ Images</button>
+                <button type="button" onclick="filterQuestionMediaModal('audio')" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">🎵 Audio Tracks</button>
+                <button type="button" onclick="filterQuestionMediaModal('passage')" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">📖 Passages</button>
+                <button type="button" onclick="filterQuestionMediaModal('pdf')" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">📄 PDFs</button>
             </div>
-            <input type="text" id="qm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." style="padding:.35rem .7rem;background:#1e293b;border:1px solid #334155;border-radius:.45rem;color:#fff;font-size:.75rem;min-width:180px;">
+            <input type="text" id="qm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." class="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs min-w-[180px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
         </div>
 
         {{-- Media Grid Container --}}
-        <div id="qm-media-list-container" style="flex:1;min-height:220px;max-height:300px;overflow-y:auto;background:#090d16;border:1px solid #1e293b;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:.6rem;">
-            <div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>
+        <div id="qm-media-list-container" class="flex-1 min-h-[220px] max-h-[300px] overflow-y-auto bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;gap:.75rem;border-top:1px solid #1e293b;padding-top:.75rem;margin-top:.75rem;">
-            <button type="button" onclick="closeQuestionMediaPicker()" style="padding:.5rem 1rem;background:#334155;color:#fff;border:none;border-radius:.45rem;font-size:.8rem;font-weight:700;cursor:pointer;">Close</button>
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button type="button" onclick="closeQuestionMediaPicker()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Close</button>
         </div>
     </div>
 </div>
@@ -1208,14 +1190,20 @@
     function openQuestionMediaPicker(mode = 'create', defaultType = 'all') {
         currentQuestionMediaTargetMode = mode;
         const modal = document.getElementById('question-media-picker-modal');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
         fetchQuestionMediaLibrary(defaultType);
     }
 
     function closeQuestionMediaPicker(e) {
         if (!e || e.target === document.getElementById('question-media-picker-modal')) {
             const modal = document.getElementById('question-media-picker-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
         }
     }
 
@@ -1226,7 +1214,7 @@
             return;
         }
 
-        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>';
+        container.innerHTML = '<div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>';
         fetch('/admin/media/list')
             .then(res => res.json())
             .then(data => {
@@ -1234,26 +1222,22 @@
                     questionMediaLibrary = data.data;
                     filterQuestionMediaModal(defaultType);
                 } else {
-                    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#f43f5e;font-size:.75rem;padding:2rem;">Failed to load media library.</div>';
+                    container.innerHTML = '<div class="col-span-full text-center text-rose-600 dark:text-rose-400 text-xs py-8">Failed to load media library.</div>';
                 }
             })
             .catch(() => {
-                container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#f43f5e;font-size:.75rem;padding:2rem;">Error communicating with media server.</div>';
+                container.innerHTML = '<div class="col-span-full text-center text-rose-600 dark:text-rose-400 text-xs py-8">Error communicating with media server.</div>';
             });
     }
 
     function filterQuestionMediaModal(type) {
         const buttons = document.querySelectorAll('.qm-filter-btn');
         buttons.forEach(btn => {
-            btn.style.background = '#1e293b';
-            btn.style.color = '#cbd5e1';
-            btn.style.border = '1px solid #334155';
-            if (btn.getAttribute('data-type') === type || (type === 'all' && (!btn.getAttribute('data-type') || btn.getAttribute('data-type') === 'all'))) {
-                btn.style.background = '#6366f1';
-                btn.style.color = '#fff';
-                btn.style.border = 'none';
-            }
+            btn.className = 'qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold';
         });
+        if (event && event.target && event.target.classList.contains('qm-filter-btn')) {
+            event.target.className = 'qm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm';
+        }
 
         const query = (document.getElementById('qm-search-input')?.value || '').toLowerCase();
         let filtered = questionMediaLibrary;
@@ -1268,7 +1252,6 @@
 
     function searchQuestionMediaModal(query) {
         query = query.toLowerCase();
-        const activeBtn = Array.from(document.querySelectorAll('.qm-filter-btn')).find(b => b.style.background === 'rgb(99, 102, 241)' || b.style.background === '#6366f1');
         let filtered = questionMediaLibrary;
         if (query) {
             filtered = filtered.filter(item => (item.title || item.name || '').toLowerCase().includes(query));
@@ -1279,63 +1262,117 @@
     function renderQuestionMediaGrid(items) {
         const container = document.getElementById('qm-media-list-container');
         if (!items || items.length === 0) {
-            container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">No media assets found.</div>';
+            container.innerHTML = '<div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">No media assets found in library.</div>';
             return;
         }
 
         container.innerHTML = '';
-        items.forEach(item => {
+        items.forEach(media => {
             const card = document.createElement('div');
-            card.style.cssText = 'background:#131d31;border:1px solid #334155;border-radius:.55rem;padding:.65rem;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;';
+            card.className = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col justify-between gap-2.5';
 
-            let icon = '📎';
-            if (item.type === 'audio') icon = '🎵';
-            else if (item.type === 'image') icon = '🖼️';
-            else if (item.type === 'passage') icon = '📖';
-            else if (item.type === 'pdf') icon = '📄';
-
-            let previewHtml = '';
-            if (item.type === 'image') {
-                previewHtml = `<img src="${item.url}" style="width:100%;height:60px;object-fit:cover;border-radius:.35rem;border:1px solid #334155;margin-bottom:.3rem;">`;
-            }
+            const icon = media.type === 'audio' ? '🎵' : (media.type === 'image' ? '🖼️' : (media.type === 'pdf' ? '📄' : (media.type === 'passage' ? '📖' : '📎')));
 
             card.innerHTML = `
                 <div>
-                    ${previewHtml}
-                    <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.25rem;">
-                        <span style="font-size:.65rem;font-weight:800;color:#818cf8;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);padding:.1rem .35rem;border-radius:.25rem;text-transform:uppercase;">
-                            ${icon} ${item.type}
-                        </span>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">${icon} ${media.type}</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">${media.size || ''}</span>
                     </div>
-                    <div style="font-size:.75rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.title || item.name}">
-                        ${item.title || item.name}
+                    <div class="text-xs font-bold text-slate-900 dark:text-white truncate" title="${media.title || media.name}">
+                        ${media.title || media.name}
                     </div>
                 </div>
-                <button type="button" onclick='applySelectedQuestionMedia(${JSON.stringify(item)})' style="margin-top:.4rem;padding:.35rem .6rem;background:#4f46e5;color:#fff;border:none;border-radius:.35rem;font-size:.72rem;font-weight:700;cursor:pointer;width:100%;text-align:center;">
-                    Use This Media
-                </button>
+                <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="previewAssetModal('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-[11px] font-bold">👁️ Preview</button>
+                    <button type="button" onclick="selectQuestionMediaItem('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-sm">Attach</button>
+                </div>
             `;
             container.appendChild(card);
         });
     }
 
+    function selectQuestionMediaItem(id, title, type, url) {
+        const prefix = (currentQuestionMediaTargetMode === 'edit') ? 'eq-' : 'q-';
+        const mediaIdInput = document.getElementById(prefix + 'media-asset-id');
+        const imgInput = document.getElementById(prefix + 'image-url');
+        const audioInput = document.getElementById('q-audio-url');
+
+        if (mediaIdInput) mediaIdInput.value = id;
+
+        if (type === 'image') {
+            if (imgInput) imgInput.value = url;
+            const prevCard = document.getElementById(prefix + 'preview-image-card');
+            const emptyCard = document.getElementById(prefix + 'empty-image-card');
+            const thumb = document.getElementById(prefix + 'preview-image-thumb');
+            const titleEl = document.getElementById(prefix + 'preview-image-title');
+
+            if (thumb) thumb.src = url;
+            if (titleEl) titleEl.textContent = title;
+            if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+            if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+        } else if (type === 'audio') {
+            if (audioInput) audioInput.value = url;
+            const prevCard = document.getElementById(prefix + 'preview-audio-card');
+            const emptyCard = document.getElementById(prefix + 'empty-audio-card');
+            const titleEl = document.getElementById(prefix + 'preview-audio-title');
+            const player = document.getElementById(prefix + 'preview-audio-player');
+
+            if (titleEl) titleEl.textContent = title;
+            if (player) player.src = url;
+            if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+            if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+        }
+
+        closeQuestionMediaPicker();
+    }
+
+    function removeQuestionAttachedMedia(mode, type) {
+        const prefix = (mode === 'edit') ? 'eq-' : 'q-';
+        const imgInput = document.getElementById(prefix + 'image-url');
+        const audioInput = document.getElementById(prefix + 'audio-url');
+        const mediaIdInput = document.getElementById(prefix + 'media-asset-id');
+
+        if (type === 'image') {
+            if (imgInput) imgInput.value = '';
+            const prevCard = document.getElementById(prefix + 'preview-image-card');
+            const emptyCard = document.getElementById(prefix + 'empty-image-card');
+            const thumb = document.getElementById(prefix + 'preview-image-thumb');
+            if (thumb) thumb.src = '';
+            if (prevCard) { prevCard.classList.add('hidden'); prevCard.style.display = 'none'; }
+            if (emptyCard) { emptyCard.classList.remove('hidden'); emptyCard.style.display = 'flex'; }
+        } else if (type === 'audio') {
+            if (audioInput) audioInput.value = '';
+            const prevCard = document.getElementById(prefix + 'preview-audio-card');
+            const emptyCard = document.getElementById(prefix + 'empty-audio-card');
+            const player = document.getElementById(prefix + 'preview-audio-player');
+            if (player) player.src = '';
+            if (prevCard) { prevCard.classList.add('hidden'); prevCard.style.display = 'none'; }
+            if (emptyCard) { emptyCard.classList.remove('hidden'); emptyCard.style.display = 'flex'; }
+        }
+
+        if (imgInput && audioInput && !imgInput.value && !audioInput.value && mediaIdInput) {
+            mediaIdInput.value = '';
+        }
+    }
+
     function uploadQuestionMediaFile() {
         const fileInput = document.getElementById('qm-direct-file-input');
-        const file = fileInput?.files?.[0];
-        if (!file) {
-            iapAlert({ title: 'Select File', message: 'Please select a file to upload first.', variant: 'warning' });
+        const uploadBtn = document.getElementById('qm-upload-btn');
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            alert('Please select a file to upload.');
             return;
         }
 
-        const btn = document.getElementById('qm-upload-btn');
-        btn.disabled = true;
-        btn.innerHTML = 'Uploading...';
-
+        const file = fileInput.files[0];
         const formData = new FormData();
         formData.append('file', file);
         formData.append('_token', '{{ csrf_token() }}');
 
-        fetch('/admin/media', {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '⏳ Uploading...';
+
+        fetch('{{ route('admin.media.store') }}', {
             method: 'POST',
             body: formData,
             headers: {
@@ -1343,124 +1380,49 @@
                 'Accept': 'application/json'
             }
         })
-        .then(async (res) => {
+        .then(async res => {
             const data = await res.json();
             if (!res.ok || !data.success) {
-                const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Upload failed.');
+                const msg = data.message || 'Upload failed.';
                 throw new Error(msg);
             }
             return data;
         })
         .then(data => {
-            btn.disabled = false;
-            btn.innerHTML = 'Upload &amp; Attach';
-            const assetData = data.asset || data;
-            const assetId = assetData.id || data.id;
-            if (data.success && assetId) {
-                const item = {
-                    id: assetId,
-                    title: assetData.title || assetData.filename || assetData.original_name,
-                    name: assetData.filename || assetData.original_name,
-                    url: assetData.url || (assetId ? `/media/${assetId}/preview` : ''),
-                    type: assetData.type
-                };
-                questionMediaLibrary.unshift(item);
-                applySelectedQuestionMedia(item);
-                fileInput.value = '';
-            } else {
-                iapAlert({ title: 'Upload Failed', message: data.message || 'Error uploading media asset.', variant: 'danger' });
-            }
+            questionMediaLibrary.unshift({
+                id: data.id,
+                title: data.title || data.filename,
+                name: data.filename,
+                type: data.type,
+                size: data.size,
+                url: data.url
+            });
+            selectQuestionMediaItem(data.id, data.title || data.filename, data.type, data.url);
+            fileInput.value = '';
         })
-        .catch((err) => {
-            btn.disabled = false;
-            btn.innerHTML = 'Upload &amp; Attach';
-            iapAlert({ title: 'Upload Failed', message: err.message || 'Communication error while uploading media asset.', variant: 'danger' });
+        .catch(err => {
+            alert('Upload error: ' + err.message);
+        })
+        .finally(() => {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = 'Upload &amp; Attach';
         });
-    }
-
-    function applySelectedQuestionMedia(item) {
-        const prefix = (currentQuestionMediaTargetMode === 'edit') ? 'eq-' : 'q-';
-        const mediaIdInput = document.getElementById(prefix + 'media-asset-id');
-        const imgInput = document.getElementById(prefix + 'image-url');
-        const audioInput = document.getElementById(prefix + 'audio-url');
-        const noMediaMsg = document.getElementById(prefix + 'no-media-msg');
-        const emptyImg = document.getElementById(prefix + 'empty-image-card');
-        const emptyAudio = document.getElementById(prefix + 'empty-audio-card');
-
-        if (!mediaIdInput.value) {
-            mediaIdInput.value = item.id;
-        }
-
-        if (item.type === 'image') {
-            imgInput.value = item.url;
-            const card = document.getElementById(prefix + 'preview-image-card');
-            const thumb = document.getElementById(prefix + 'preview-image-thumb');
-            const title = document.getElementById(prefix + 'preview-image-title');
-            if (card) card.style.display = 'flex';
-            if (emptyImg) emptyImg.style.display = 'none';
-            if (thumb) thumb.src = item.url;
-            if (title) title.innerText = item.title || item.name || 'Photograph';
-        } else if (item.type === 'audio') {
-            audioInput.value = item.url;
-            const card = document.getElementById(prefix + 'preview-audio-card');
-            const player = document.getElementById(prefix + 'preview-audio-player');
-            const title = document.getElementById(prefix + 'preview-audio-title');
-            if (card) card.style.display = 'flex';
-            if (emptyAudio) emptyAudio.style.display = 'none';
-            if (player) player.src = item.url;
-            if (title) title.innerText = item.title || item.name || 'Audio Statement';
-        } else {
-            // PDF or Passage: can be stored as primary media asset or image/audio URL
-            if (item.url) imgInput.value = item.url;
-            mediaIdInput.value = item.id;
-            const card = document.getElementById(prefix + 'preview-image-card');
-            const title = document.getElementById(prefix + 'preview-image-title');
-            if (card) card.style.display = 'flex';
-            if (emptyImg) emptyImg.style.display = 'none';
-            if (title) title.innerText = `[${item.type.toUpperCase()}] ` + (item.title || item.name);
-        }
-
-        if (noMediaMsg) noMediaMsg.style.display = 'none';
-        closeQuestionMediaPicker();
-    }
-
-    function removeQuestionAttachedMedia(mode, type) {
-        const prefix = (mode === 'edit') ? 'eq-' : 'q-';
-        const mediaIdInput = document.getElementById(prefix + 'media-asset-id');
-        const imgInput = document.getElementById(prefix + 'image-url');
-        const audioInput = document.getElementById(prefix + 'audio-url');
-        const noMediaMsg = document.getElementById(prefix + 'no-media-msg');
-        const emptyImg = document.getElementById(prefix + 'empty-image-card');
-        const emptyAudio = document.getElementById(prefix + 'empty-audio-card');
-
-        if (type === 'image') {
-            imgInput.value = '';
-            const card = document.getElementById(prefix + 'preview-image-card');
-            if (card) card.style.display = 'none';
-            if (emptyImg) emptyImg.style.display = 'flex';
-        } else if (type === 'audio') {
-            audioInput.value = '';
-            const card = document.getElementById(prefix + 'preview-audio-card');
-            const player = document.getElementById(prefix + 'preview-audio-player');
-            if (card) card.style.display = 'none';
-            if (player) player.src = '';
-            if (emptyAudio) emptyAudio.style.display = 'flex';
-        }
-
-        if (!imgInput.value && !audioInput.value) {
-            mediaIdInput.value = '';
-            if (noMediaMsg) noMediaMsg.style.display = 'block';
-        }
     }
 
     function openAttachMasterModal() {
         const modal = document.getElementById('attach-master-modal');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
     }
     function closeAttachMasterModal(e) {
         if (!e || e.target === document.getElementById('attach-master-modal')) {
             const modal = document.getElementById('attach-master-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
         }
     }
 
@@ -1473,7 +1435,13 @@
 
         const passageBox = document.getElementById('create-q-passage-container');
         if (passageBox) {
-            passageBox.style.display = (part === 6 || part === 7) ? 'block' : 'none';
+            if (part === 6 || part === 7) {
+                passageBox.classList.remove('hidden');
+                passageBox.style.display = 'block';
+            } else {
+                passageBox.classList.add('hidden');
+                passageBox.style.display = 'none';
+            }
         }
 
         const choiceRow3 = document.getElementById('create-choice-row-3');
@@ -1495,7 +1463,10 @@
         if (!form) return;
         const selected = form.querySelector('input[name="correct_choice"]:checked');
         const errBox = document.getElementById('create-q-validation-error');
-        if (errBox && selected) errBox.style.display = 'none';
+        if (errBox && selected) {
+            errBox.classList.add('hidden');
+            errBox.style.display = 'none';
+        }
 
         for (let i = 0; i < 4; i++) {
             const badge = document.getElementById(`create-correct-badge-${i}`);
@@ -1503,11 +1474,20 @@
             const isSelected = selected && selected.value === String(i);
 
             if (badge) {
-                badge.style.display = isSelected ? 'inline-flex' : 'none';
+                if (isSelected) {
+                    badge.classList.remove('hidden');
+                    badge.style.display = 'inline-flex';
+                } else {
+                    badge.classList.add('hidden');
+                    badge.style.display = 'none';
+                }
             }
             if (row) {
-                row.style.borderColor = isSelected ? 'rgba(16,185,129,0.6)' : '#334155';
-                row.style.background = isSelected ? 'rgba(16,185,129,0.06)' : '#0f172a';
+                if (isSelected) {
+                    row.className = 'create-choice-row flex items-center gap-2.5 bg-emerald-50/60 dark:bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-400 dark:border-emerald-700 transition-all';
+                } else {
+                    row.className = 'create-choice-row flex items-center gap-2.5 bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 transition-all';
+                }
             }
         }
     }
@@ -1519,7 +1499,8 @@
             if (!selected) {
                 const errBox = document.getElementById('create-q-validation-error');
                 if (errBox) {
-                    errBox.textContent = 'Please select the correct answer.';
+                    errBox.textContent = '⚠️ Please select the correct answer.';
+                    errBox.classList.remove('hidden');
                     errBox.style.display = 'block';
                     errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
@@ -1532,12 +1513,16 @@
     function openCreateAuthoredQuestionModal() {
         const modal = document.getElementById('create-authored-question-modal');
         if (modal) {
+            modal.classList.remove('hidden');
             modal.style.display = 'flex';
-            // Explicitly ensure new MCQ starts with no correct answer selected
+            // Reset correct radio selection
             const checkedRadios = modal.querySelectorAll('input[name="correct_choice"]:checked');
             checkedRadios.forEach(r => r.checked = false);
             const errBox = document.getElementById('create-q-validation-error');
-            if (errBox) errBox.style.display = 'none';
+            if (errBox) {
+                errBox.classList.add('hidden');
+                errBox.style.display = 'none';
+            }
 
             // Reset media inputs
             const imgInput = document.getElementById('q-image-url');
@@ -1553,10 +1538,10 @@
             const emptyAudio = document.getElementById('q-empty-audio-card');
             const audioPlayer = document.getElementById('q-preview-audio-player');
 
-            if (prevImg) prevImg.style.display = 'none';
-            if (emptyImg) emptyImg.style.display = 'flex';
-            if (prevAudio) prevAudio.style.display = 'none';
-            if (emptyAudio) emptyAudio.style.display = 'flex';
+            if (prevImg) { prevImg.classList.add('hidden'); prevImg.style.display = 'none'; }
+            if (emptyImg) { emptyImg.classList.remove('hidden'); emptyImg.style.display = 'flex'; }
+            if (prevAudio) { prevAudio.classList.add('hidden'); prevAudio.style.display = 'none'; }
+            if (emptyAudio) { emptyAudio.classList.remove('hidden'); emptyAudio.style.display = 'flex'; }
             if (audioPlayer) audioPlayer.src = '';
 
             const partSelect = document.getElementById('create-q-part-number');
@@ -1570,18 +1555,27 @@
     function closeCreateAuthoredQuestionModal(e) {
         if (!e || e.target === document.getElementById('create-authored-question-modal')) {
             const modal = document.getElementById('create-authored-question-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
         }
     }
 
     function openAddSectionModal() {
         const modal = document.getElementById('add-section-modal');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
     }
     function closeAddSectionModal(e) {
         if (!e || e.target === document.getElementById('add-section-modal')) {
             const modal = document.getElementById('add-section-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
         }
     }
 
@@ -1604,12 +1598,18 @@
         if (instructionsInput) instructionsInput.value = instructions;
 
         const modal = document.getElementById('edit-section-modal');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
     }
     function closeEditSectionModal(e) {
         if (!e || e.target === document.getElementById('edit-section-modal')) {
             const modal = document.getElementById('edit-section-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
         }
     }
 
@@ -1632,7 +1632,10 @@
         switchAsmMode('library');
 
         const modal = document.getElementById('attach-section-media-modal');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
 
         fetchSectionMediaLibrary(sectionType);
     }
@@ -1640,7 +1643,10 @@
     function closeAttachSectionMediaModal(e) {
         if (!e || e.target === document.getElementById('attach-section-media-modal')) {
             const modal = document.getElementById('attach-section-media-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
         }
     }
 
@@ -1650,27 +1656,30 @@
         const uploadPanel = document.getElementById('asm-upload-panel');
 
         if (mode === 'upload') {
-            tabUpload.style.background = '#10b981';
-            tabUpload.style.color = '#fff';
-            tabLib.style.background = 'transparent';
-            tabLib.style.color = '#94a3b8';
-            uploadPanel.style.display = 'block';
+            tabUpload.className = 'flex-1 py-2 px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5';
+            tabLib.className = 'flex-1 py-2 px-3 bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5';
+            if (uploadPanel) {
+                uploadPanel.classList.remove('hidden');
+                uploadPanel.style.display = 'block';
+            }
         } else {
-            tabLib.style.background = '#6366f1';
-            tabLib.style.color = '#fff';
-            tabUpload.style.background = 'transparent';
-            tabUpload.style.color = '#94a3b8';
-            uploadPanel.style.display = 'none';
+            tabLib.className = 'flex-1 py-2 px-3 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5';
+            tabUpload.className = 'flex-1 py-2 px-3 bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5';
+            if (uploadPanel) {
+                uploadPanel.classList.add('hidden');
+                uploadPanel.style.display = 'none';
+            }
         }
     }
 
     function showAsmUploadFeedback(message, isSuccess = false) {
         const el = document.getElementById('asm-upload-feedback');
         if (el) {
+            el.classList.remove('hidden');
             el.style.display = 'block';
-            el.style.background = isSuccess ? 'rgba(16,185,129,.15)' : 'rgba(244,63,94,.15)';
-            el.style.border = isSuccess ? '1px solid rgba(16,185,129,.4)' : '1px solid rgba(244,63,94,.4)';
-            el.style.color = isSuccess ? '#34d399' : '#fb7185';
+            el.className = isSuccess
+                ? 'p-2.5 rounded-lg text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                : 'p-2.5 rounded-lg text-xs font-bold bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300';
             el.textContent = message;
         }
     }
@@ -1678,6 +1687,7 @@
     function hideAsmUploadFeedback() {
         const el = document.getElementById('asm-upload-feedback');
         if (el) {
+            el.classList.add('hidden');
             el.style.display = 'none';
             el.textContent = '';
         }
@@ -1707,7 +1717,7 @@
         formData.append('_token', '{{ csrf_token() }}');
 
         uploadBtn.disabled = true;
-        uploadBtn.style.opacity = '.6';
+        uploadBtn.classList.add('opacity-75', 'cursor-not-allowed');
         uploadBtn.innerHTML = '⏳ Uploading...';
         hideAsmUploadFeedback();
 
@@ -1729,8 +1739,7 @@
         })
         .then(data => {
             const icon = data.type === 'audio' ? '🎵' : (data.type === 'image' ? '🖼️' : (data.type === 'pdf' ? '📄' : (data.type === 'passage' ? '📖' : '📎')));
-            
-            // Add new asset to the beginning of library array
+
             const newAsset = {
                 id: data.id,
                 title: data.title || data.filename,
@@ -1741,13 +1750,9 @@
             };
             sectionMediaLibrary.unshift(newAsset);
 
-            // Re-render library grid
             renderSectionMediaGrid(sectionMediaLibrary);
-
-            // Select this newly uploaded asset
             selectSectionMediaItem(data.id, data.title || data.filename, data.type, icon);
 
-            // Reset inputs & switch to library view with success confirmation
             fileInput.value = '';
             titleInput.value = '';
             switchAsmMode('library');
@@ -1758,7 +1763,7 @@
         })
         .finally(() => {
             uploadBtn.disabled = false;
-            uploadBtn.style.opacity = '1';
+            uploadBtn.classList.remove('opacity-75', 'cursor-not-allowed');
             uploadBtn.innerHTML = '<span>⬆️</span> Upload &amp; Select Asset';
         });
     }
@@ -1770,7 +1775,7 @@
             return;
         }
 
-        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>';
+        container.innerHTML = '<div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>';
         fetch('/admin/media/list')
             .then(res => res.json())
             .then(data => {
@@ -1778,25 +1783,21 @@
                     sectionMediaLibrary = data.data;
                     renderSectionMediaGrid(sectionMediaLibrary, preferredType);
                 } else {
-                    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#f43f5e;font-size:.75rem;padding:2rem;">Failed to load media library.</div>';
+                    container.innerHTML = '<div class="col-span-full text-center text-rose-600 dark:text-rose-400 text-xs py-8">Failed to load media library.</div>';
                 }
             })
             .catch(() => {
-                container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#f43f5e;font-size:.75rem;padding:2rem;">Error communicating with media server.</div>';
+                container.innerHTML = '<div class="col-span-full text-center text-rose-600 dark:text-rose-400 text-xs py-8">Error communicating with media server.</div>';
             });
     }
 
     function filterSectionMediaModal(type) {
         const buttons = document.querySelectorAll('.asm-filter-btn');
         buttons.forEach(btn => {
-            btn.style.background = '#1e293b';
-            btn.style.color = '#cbd5e1';
-            btn.style.border = '1px solid #334155';
+            btn.className = 'asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold';
         });
-        if (event && event.target) {
-            event.target.style.background = '#6366f1';
-            event.target.style.color = '#fff';
-            event.target.style.border = 'none';
+        if (event && event.target && event.target.classList.contains('asm-filter-btn')) {
+            event.target.className = 'asm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm';
         }
 
         const query = (document.getElementById('asm-search-input')?.value || '').toLowerCase();
@@ -1812,7 +1813,6 @@
 
     function searchSectionMediaModal(query) {
         query = query.toLowerCase();
-        const activeBtn = Array.from(document.querySelectorAll('.asm-filter-btn')).find(b => b.style.background === 'rgb(99, 102, 241)' || b.style.background === '#6366f1');
         let filtered = sectionMediaLibrary;
         if (query) {
             filtered = filtered.filter(item => (item.title || item.name || '').toLowerCase().includes(query));
@@ -1823,37 +1823,30 @@
     function renderSectionMediaGrid(items, preferredType) {
         const container = document.getElementById('asm-media-list-container');
         if (!items || items.length === 0) {
-            container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">No media assets found in library.</div>';
+            container.innerHTML = '<div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">No media assets found in library.</div>';
             return;
         }
 
         container.innerHTML = '';
         items.forEach(media => {
             const card = document.createElement('div');
-            card.style.background = '#0f172a';
-            card.style.border = '1px solid #1e293b';
-            card.style.borderRadius = '.55rem';
-            card.style.padding = '.65rem';
-            card.style.display = 'flex';
-            card.style.flexDirection = 'column';
-            card.style.justifyContent = 'space-between';
-            card.style.gap = '.45rem';
+            card.className = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col justify-between gap-2.5';
 
             const icon = media.type === 'audio' ? '🎵' : (media.type === 'image' ? '🖼️' : (media.type === 'pdf' ? '📄' : (media.type === 'passage' ? '📖' : '📎')));
 
             card.innerHTML = `
                 <div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
-                        <span style="font-size:.68rem;font-weight:800;color:#818cf8;background:rgba(99,102,241,.15);padding:.15rem .4rem;border-radius:.3rem;text-transform:uppercase;">${icon} ${media.type}</span>
-                        <span style="font-size:.65rem;color:#64748b;">${media.size || ''}</span>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">${icon} ${media.type}</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">${media.size || ''}</span>
                     </div>
-                    <div style="font-size:.78rem;font-weight:700;color:#f8fafc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${media.title || media.name}">
+                    <div class="text-xs font-bold text-slate-900 dark:text-white truncate" title="${media.title || media.name}">
                         ${media.title || media.name}
                     </div>
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.35rem;border-top:1px solid #1e293b;padding-top:.4rem;">
-                    <button type="button" onclick="previewAssetModal('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" style="padding:.25rem .5rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:.35rem;font-size:.68rem;cursor:pointer;">👁️ Preview</button>
-                    <button type="button" onclick="selectSectionMediaItem('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${icon}')" style="padding:.25rem .6rem;background:#4f46e5;color:#fff;border:none;border-radius:.35rem;font-size:.68rem;font-weight:700;cursor:pointer;">Select</button>
+                <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="previewAssetModal('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-[11px] font-bold">👁️ Preview</button>
+                    <button type="button" onclick="selectSectionMediaItem('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${icon}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-sm">Select</button>
                 </div>
             `;
             container.appendChild(card);
@@ -1865,21 +1858,27 @@
         document.getElementById('asm-selected-title').textContent = title;
         document.getElementById('asm-selected-meta').textContent = `Type: ${type.toUpperCase()}`;
         document.getElementById('asm-selected-icon').textContent = icon;
-        document.getElementById('asm-selected-preview').style.display = 'flex';
+        const prev = document.getElementById('asm-selected-preview');
+        if (prev) {
+            prev.classList.remove('hidden');
+            prev.style.display = 'flex';
+        }
 
         const submitBtn = document.getElementById('asm-submit-btn');
         submitBtn.disabled = false;
-        submitBtn.style.cursor = 'pointer';
-        submitBtn.style.opacity = '1';
+        submitBtn.className = 'px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20 cursor-pointer transition-all';
     }
 
     function clearSelectedSectionMedia() {
         document.getElementById('asm-media-asset-id').value = '';
-        document.getElementById('asm-selected-preview').style.display = 'none';
+        const prev = document.getElementById('asm-selected-preview');
+        if (prev) {
+            prev.classList.add('hidden');
+            prev.style.display = 'none';
+        }
         const submitBtn = document.getElementById('asm-submit-btn');
         submitBtn.disabled = true;
-        submitBtn.style.cursor = 'not-allowed';
-        submitBtn.style.opacity = '.5';
+        submitBtn.className = 'px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all';
     }
 
     function previewAssetModal(id, title, type, url) {
@@ -1887,27 +1886,31 @@
         const contentEl = document.getElementById('apm-content');
 
         if (type === 'image') {
-            contentEl.innerHTML = `<img src="${url}" alt="${title}" style="max-width:100%;max-height:450px;border-radius:.6rem;object-fit:contain;">`;
+            contentEl.innerHTML = `<img src="${url}" alt="${title}" class="max-w-full max-h-[450px] rounded-xl object-contain border border-slate-200 dark:border-slate-700">`;
         } else if (type === 'audio') {
             contentEl.innerHTML = `
-                <div style="width:100%;text-align:center;padding:1.5rem;background:#090d16;border-radius:.75rem;">
-                    <div style="font-size:3rem;margin-bottom:.5rem;">🎵</div>
-                    <audio controls controlsList="nodownload noplaybackrate" src="${url}" preload="metadata" style="width:100%;max-width:480px;accent-color:#6366f1;"></audio>
+                <div class="w-full text-center p-6 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                    <div class="text-4xl">🎵</div>
+                    <audio controls controlsList="nodownload noplaybackrate" src="${url}" preload="metadata" class="w-full max-w-md mx-auto accent-indigo-600"></audio>
                 </div>`;
         } else if (type === 'pdf') {
-            contentEl.innerHTML = `<iframe src="${url}#toolbar=0" style="width:100%;height:450px;border:none;border-radius:.6rem;background:#fff;"></iframe>`;
+            contentEl.innerHTML = `<iframe src="${url}#toolbar=0" class="w-full h-[450px] border border-slate-200 dark:border-slate-700 rounded-xl bg-white"></iframe>`;
         } else {
-            contentEl.innerHTML = `<div style="padding:1.5rem;color:#cbd5e1;font-size:.85rem;line-height:1.6;white-space:pre-wrap;background:#090d16;border-radius:.6rem;width:100%;">Reading / text passage preview...</div>`;
+            contentEl.innerHTML = `<div class="p-6 text-slate-800 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-wrap bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl w-full">Reading / text passage preview...</div>`;
         }
 
         const modal = document.getElementById('asset-preview-modal');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
     }
 
     function closeAssetPreviewModal(e) {
         if (!e || e.target === document.getElementById('asset-preview-modal')) {
             const modal = document.getElementById('asset-preview-modal');
             if (modal) {
+                modal.classList.add('hidden');
                 modal.style.display = 'none';
                 document.getElementById('apm-content').innerHTML = '';
             }
@@ -1928,12 +1931,18 @@
         document.getElementById('tr-modal-question-id').value = questionId || '';
         document.getElementById('tr-modal-target-title').innerText = targetTitle || 'Master Question Item';
         const modal = document.getElementById('teacher-request-revision-modal');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
     }
     function closeTeacherRequestRevisionModal(e) {
         if (!e || e.target === document.getElementById('teacher-request-revision-modal')) {
             const modal = document.getElementById('teacher-request-revision-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
         }
     }
 
@@ -1978,6 +1987,7 @@
             closeAttachSectionMediaModal();
             closeAssetPreviewModal();
             closeTeacherRequestRevisionModal();
+            closeQuestionMediaPicker();
         }
     });
 </script>
