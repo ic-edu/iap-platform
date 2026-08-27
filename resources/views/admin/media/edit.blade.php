@@ -7,8 +7,8 @@
 .tme-page { display:flex; flex-direction:column; gap:1.5rem; }
 
 .tme-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-    border: 1px solid #1e293b;
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%);
+    border: 1px solid #dbe0fc;
     border-radius: 1.25rem;
     padding: 1.5rem 2rem;
     display: flex;
@@ -16,6 +16,13 @@
     align-items: center;
     gap: 1rem;
     flex-wrap: wrap;
+    box-shadow: 0 4px 16px -2px rgba(99,102,241,0.06);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .tme-header, html[data-theme="dark"] .tme-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    border-color: #1e293b;
+    box-shadow: 0 4px 16px -2px rgba(0,0,0,0.4);
 }
 
 .tme-grid {
@@ -26,25 +33,36 @@
 @media (max-width: 1024px) { .tme-grid { grid-template-columns: 1fr; } }
 
 .tme-card {
-    background: #0f172a;
-    border: 1px solid #1e293b;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 1.1rem;
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .tme-card, html[data-theme="dark"] .tme-card {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
 }
 
 .tme-section-title {
     font-size: .95rem;
     font-weight: 800;
-    color: #f8fafc;
+    color: #0f172a;
     display: flex;
     align-items: center;
     gap: .5rem;
     margin: 0;
     padding-bottom: .65rem;
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+}
+html.dark .tme-section-title, html[data-theme="dark"] .tme-section-title {
+    color: #f8fafc;
+    border-bottom-color: #1e293b;
 }
 
 .tme-form-group {
@@ -56,20 +74,29 @@
 .tme-label {
     font-size: .75rem;
     font-weight: 700;
-    color: #94a3b8;
+    color: #475569;
     text-transform: uppercase;
     letter-spacing: .05em;
 }
+html.dark .tme-label, html[data-theme="dark"] .tme-label {
+    color: #94a3b8;
+}
 
 .tme-input, .tme-select, .tme-textarea {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
     border-radius: .6rem;
-    color: #fff;
+    color: #0f172a;
     padding: .6rem .85rem;
     font-size: .85rem;
     width: 100%;
-    transition: border-color .15s;
+    transition: border-color .15s, background .15s, color .15s;
+}
+html.dark .tme-input, html.dark .tme-select, html.dark .tme-textarea,
+html[data-theme="dark"] .tme-input, html[data-theme="dark"] .tme-select, html[data-theme="dark"] .tme-textarea {
+    background: #1e293b;
+    border-color: #334155;
+    color: #fff;
 }
 .tme-input:focus, .tme-select:focus, .tme-textarea:focus {
     border-color: #6366f1;
@@ -86,24 +113,38 @@
     font-weight: 800;
     text-transform: uppercase;
 }
-.tme-badge--approved { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
-.tme-badge--pending  { background: rgba(245,158,11,.15); color: #fbbf24; border: 1px solid rgba(245,158,11,.3); }
-.tme-badge--draft    { background: rgba(148,163,184,.15); color: #cbd5e1; border: 1px solid rgba(148,163,184,.3); }
-.tme-badge--revision { background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+.tme-badge--approved { background: rgba(16,185,129,.15); color: #059669; border: 1px solid rgba(16,185,129,.3); }
+html.dark .tme-badge--approved, html[data-theme="dark"] .tme-badge--approved { color: #34d399; }
+.tme-badge--pending  { background: rgba(245,158,11,.15); color: #d97706; border: 1px solid rgba(245,158,11,.3); }
+html.dark .tme-badge--pending, html[data-theme="dark"] .tme-badge--pending { color: #fbbf24; }
+.tme-badge--draft    { background: rgba(148,163,184,.15); color: #475569; border: 1px solid rgba(148,163,184,.3); }
+html.dark .tme-badge--draft, html[data-theme="dark"] .tme-badge--draft { color: #cbd5e1; }
+.tme-badge--revision { background: rgba(239,68,68,.15); color: #e11d48; border: 1px solid rgba(239,68,68,.3); }
+html.dark .tme-badge--revision, html[data-theme="dark"] .tme-badge--revision { color: #f87171; }
 
 .tme-passage-pill {
     padding: .5rem 1rem;
     border-radius: .6rem;
-    background: #1e293b;
-    border: 1px solid #334155;
-    color: #cbd5e1;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
     font-size: .8rem;
     font-weight: 700;
     cursor: pointer;
     transition: all .15s;
 }
+html.dark .tme-passage-pill, html[data-theme="dark"] .tme-passage-pill {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}
 .tme-passage-pill--active {
-    background: #4338ca;
+    background: #4f46e5;
+    color: #fff;
+    border-color: #4f46e5;
+}
+html.dark .tme-passage-pill--active, html[data-theme="dark"] .tme-passage-pill--active {
+    background: #6366f1;
     color: #fff;
     border-color: #6366f1;
 }
@@ -116,24 +157,24 @@
     {{-- Top Header & Navigation --}}
     <div class="tme-header">
         <div>
-            <div style="font-size:.78rem;color:#818cf8;font-weight:700;margin-bottom:.2rem;">
-                <a href="{{ route('admin.media.index') }}" style="color:#818cf8;text-decoration:none;">← Institutional Media Repository</a>
+            <div style="font-size:.78rem;font-weight:700;margin-bottom:.2rem;">
+                <a href="{{ route('admin.media.index') }}" style="color:#4f46e5;text-decoration:none;">← Institutional Media Repository</a>
             </div>
-            <h1 style="font-size:1.4rem;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:.5rem;">
-                ✏ Edit Media Asset: {{ $media->title ?? $media->original_name }}
+            <h1 style="font-size:1.4rem;font-weight:800;margin:0;display:flex;align-items:center;gap:.5rem;" class="text-slate-900 dark:text-white">
+                ✏️ Edit Media Asset: {{ $media->title ?? $media->original_name }}
             </h1>
         </div>
 
         <div style="display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;">
-            <a href="{{ route('admin.media.versions', $media->id) }}" style="padding:.55rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fbbf24;border-radius:.6rem;font-size:.8rem;font-weight:700;text-decoration:none;">
+            <a href="{{ route('admin.media.versions', $media->id) }}" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700" style="padding:.55rem 1.1rem;border-radius:.6rem;font-size:.8rem;font-weight:700;text-decoration:none;">
                 📄 Version History (v{{ $media->version ?? '1.0' }})
             </a>
-            <button type="submit" form="editMediaForm" style="padding:.55rem 1.1rem;background:#312e81;border:1px solid #4338ca;color:#a5b4fc;border-radius:.6rem;font-size:.8rem;font-weight:800;cursor:pointer;">
+            <button type="submit" form="editMediaForm" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700" style="padding:.55rem 1.1rem;border-radius:.6rem;font-size:.8rem;font-weight:800;cursor:pointer;">
                 💾 Save Draft (Working Copy)
             </button>
             <form action="{{ route('admin.media.submit-review', $media->id) }}" method="POST" style="display:inline;" onsubmit="event.preventDefault(); iapConfirm({ title: 'Submit for Review?', message: 'Submit this working copy candidate to Repository Manager for Quality Assurance Review?', confirmText: 'Submit for Review', variant: 'primary', form: this });">
                 @csrf
-                <button type="submit" style="padding:.55rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.8rem;font-weight:800;cursor:pointer;">
+                <button type="submit" style="padding:.55rem 1.25rem;background:#4f46e5;color:#fff;border:none;border-radius:.6rem;font-size:.8rem;font-weight:800;cursor:pointer;">
                     🚀 Submit for Review
                 </button>
             </form>
@@ -204,8 +245,8 @@
 
                 {{-- TASK 3: Passage Format Editor (Text / Image / Hybrid) --}}
                 @if($media->type === 'passage' || request('type') === 'passage')
-                <div class="tme-card" style="border-color:#6366f1;">
-                    <h3 class="tme-section-title" style="color:#818cf8;">📖 Passage Editor (Format Selector)</h3>
+                <div class="tme-card" style="border-color:#4f46e5;">
+                    <h3 class="tme-section-title" style="color:#4f46e5;">📖 Passage Editor (Format Selector)</h3>
 
                     <div style="display:flex;gap:.75rem;align-items:center;">
                         <span class="tme-label" style="margin:0;">Passage Format:</span>
@@ -224,7 +265,7 @@
                         <label class="tme-label">Passage Visual Diagram / Scan Image</label>
                         <input type="file" name="passage_image" accept="image/*" class="tme-input">
                         @if($media->type === 'image' || ($media->path && str_contains($media->mime_type, 'image')))
-                        <div style="margin-top:.5rem;padding:.5rem;background:#080f1d;border-radius:.5rem;display:inline-block;">
+                        <div style="margin-top:.5rem;padding:.5rem;border-radius:.5rem;display:inline-block;" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                             <img src="{{ $media->publicUrl() }}" style="max-height:150px;border-radius:.4rem;" alt="Passage Image">
                         </div>
                         @endif
@@ -243,7 +284,7 @@
                 {{-- Live Interactive Preview Section --}}
                 <div class="tme-card">
                     <h3 class="tme-section-title">👁 Asset Live Preview</h3>
-                    <div style="background:#080f1d;border:1px solid #1e293b;border-radius:.85rem;padding:1.5rem;display:flex;align-items:center;justify-content:center;min-height:200px;">
+                    <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800" style="border-radius:.85rem;padding:1.5rem;display:flex;align-items:center;justify-content:center;min-height:200px;">
                         @if($media->type === 'image')
                             <img src="{{ $media->publicUrl() }}" style="max-width:100%;max-height:350px;border-radius:.5rem;" alt="{{ $media->title }}">
                         @elseif($media->type === 'audio')
@@ -262,7 +303,7 @@
                                 <iframe src="{{ $media->publicUrl() }}" style="width:100%;height:100%;border:none;border-radius:.5rem;"></iframe>
                             </div>
                         @else
-                            <div style="font-size:.85rem;color:#cbd5e1;line-height:1.6;white-space:pre-wrap;">
+                            <div style="font-size:.85rem;line-height:1.6;white-space:pre-wrap;" class="text-slate-800 dark:text-slate-200">
                                 {{ $media->content_text ?? $media->description ?? 'Reading passage content text preview.' }}
                             </div>
                         @endif
@@ -286,10 +327,10 @@
                         </span>
                     </div>
 
-                    <div style="font-size:.8rem;color:#94a3b8;line-height:1.5;margin-top:.5rem;">
-                        <div>Author: <strong style="color:#fff;">{{ $media->uploader?->name ?? 'Institutional System' }}</strong></div>
-                        <div>Asset Type: <strong style="color:#fff;">{{ strtoupper($media->type) }}</strong></div>
-                        <div>Original File: <strong style="color:#818cf8;">{{ $media->original_name }}</strong></div>
+                    <div style="font-size:.8rem;line-height:1.5;margin-top:.5rem;" class="text-slate-600 dark:text-slate-400 space-y-1">
+                        <div>Author: <strong class="text-slate-900 dark:text-white">{{ $media->uploader?->name ?? 'Institutional System' }}</strong></div>
+                        <div>Asset Type: <strong class="text-slate-900 dark:text-white">{{ strtoupper($media->type) }}</strong></div>
+                        <div>Original File: <strong class="text-indigo-600 dark:text-indigo-400">{{ $media->original_name }}</strong></div>
                     </div>
                 </div>
 
@@ -299,15 +340,15 @@
 
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <span class="tme-label">Published Version</span>
-                        <span style="font-size:1.1rem;font-weight:900;color:#38bdf8;">v{{ $media->version ?? '1.0' }}</span>
+                        <span style="font-size:1.1rem;font-weight:900;color:#0284c7;">v{{ $media->version ?? '1.0' }}</span>
                     </div>
 
-                    <div style="font-size:.78rem;color:#94a3b8;line-height:1.4;">
+                    <div style="font-size:.78rem;line-height:1.4;" class="text-slate-600 dark:text-slate-400">
                         Working copy updates create version candidate <strong>v{{ ((float)($media->version ?? 1.0) + 0.1) }}-candidate</strong>. Published version is never modified directly.
                     </div>
 
-                    <a href="{{ route('admin.media.versions', $media->id) }}" style="padding:.5rem;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:.5rem;font-size:.78rem;font-weight:700;text-align:center;text-decoration:none;">
-                        View All {{ $versions->count() }} Versions & Log
+                    <a href="{{ route('admin.media.versions', $media->id) }}" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700" style="padding:.5rem;border-radius:.5rem;font-size:.78rem;font-weight:700;text-align:center;text-decoration:none;">
+                        View All {{ $versions->count() }} Versions &amp; Log
                     </a>
                 </div>
 
@@ -315,21 +356,21 @@
                 <div class="tme-card">
                     <h3 class="tme-section-title">🔗 Reusable Slot Mapping</h3>
 
-                    <div style="font-size:.78rem;color:#94a3b8;">
-                        Used in <strong style="color:#fff;">{{ $linkedQuestions->count() }}</strong> Question Slot(s):
+                    <div style="font-size:.78rem;" class="text-slate-600 dark:text-slate-400">
+                        Used in <strong class="text-slate-900 dark:text-white">{{ $linkedQuestions->count() }}</strong> Question Slot(s):
                     </div>
 
                     @if($linkedQuestions->isNotEmpty())
                         <div style="display:flex;flex-direction:column;gap:.5rem;max-height:200px;overflow-y:auto;">
                             @foreach($linkedQuestions as $q)
-                            <div style="background:#1e293b;border-radius:.5rem;padding:.5rem .75rem;font-size:.75rem;">
-                                <div style="color:#38bdf8;font-weight:700;">{{ $q->questionBank?->title ?? 'Question Bank' }}</div>
-                                <div style="color:#cbd5e1;">Q: {{ Str::limit($q->prompt, 50) }}</div>
+                            <div class="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" style="border-radius:.5rem;padding:.5rem .75rem;font-size:.75rem;">
+                                <div style="color:#0284c7;font-weight:700;">{{ $q->questionBank?->title ?? 'Question Bank' }}</div>
+                                <div class="text-slate-600 dark:text-slate-300">Q: {{ Str::limit($q->prompt, 50) }}</div>
                             </div>
                             @endforeach
                         </div>
                     @else
-                        <div style="font-size:.75rem;color:#64748b;font-style:italic;">
+                        <div style="font-size:.75rem;font-style:italic;" class="text-slate-500 dark:text-slate-400">
                             Not linked to any active Question Slot yet.
                         </div>
                     @endif

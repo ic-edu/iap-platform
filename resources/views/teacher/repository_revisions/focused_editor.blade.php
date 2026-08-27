@@ -6,33 +6,54 @@
 <style>
 .fre-container { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
 .fre-banner {
-    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
-    border: 2px solid #6366f1;
+    background: linear-gradient(135deg, #ffffff 0%, #f5f7ff 50%, #eef2ff 100%);
+    border: 2px solid #818cf8;
     border-radius: 1.25rem;
     padding: 1.75rem;
+    box-shadow: 0 12px 30px -8px rgba(99,102,241,0.12);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .fre-banner, html[data-theme="dark"] .fre-banner {
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+    border: 2px solid #6366f1;
     box-shadow: 0 16px 36px -10px rgba(99,102,241,0.3);
 }
 .fre-panel {
-    background: #0f172a;
-    border: 1px solid #1e293b;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 1.25rem;
     padding: 1.75rem;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .fre-panel, html[data-theme="dark"] .fre-panel {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: none;
 }
 .fre-section {
-    background: #080f1d;
-    border: 1px solid #1e293b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 1rem;
     padding: 1.25rem;
     margin-bottom: 1.25rem;
     transition: all .2s ease;
 }
+html.dark .fre-section, html[data-theme="dark"] .fre-section {
+    background: #080f1d;
+    border-color: #1e293b;
+}
 .fre-highlight {
-    border: 2px solid #fb7185 !important;
-    box-shadow: 0 0 20px rgba(251,113,133,0.35) !important;
+    border: 2px solid #e11d48 !important;
+    box-shadow: 0 0 20px rgba(225,29,72,0.2) !important;
     animation: pulseHighlight 2s infinite ease-in-out;
 }
+html.dark .fre-highlight, html[data-theme="dark"] .fre-highlight {
+    border-color: #fb7185 !important;
+    box-shadow: 0 0 20px rgba(251,113,133,0.35) !important;
+}
 @keyframes pulseHighlight {
-    0%, 100% { border-color: #fb7185; }
+    0%, 100% { border-color: #e11d48; }
     50% { border-color: #f43f5e; }
 }
 .fre-val-badge {
@@ -44,20 +65,29 @@
     align-items: center;
     gap: .35rem;
 }
-.fre-val-badge--pass { background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
-.fre-val-badge--fail { background: rgba(244,63,94,.15); color: #fb7185; border: 1px solid rgba(244,63,94,.3); }
+.fre-val-badge--pass { background: rgba(5,150,105,.12); color: #059669; border: 1px solid rgba(5,150,105,.25); }
+html.dark .fre-val-badge--pass, html[data-theme="dark"] .fre-val-badge--pass { background: rgba(52,211,153,.15); color: #34d399; border-color: rgba(52,211,153,.3); }
+.fre-val-badge--fail { background: rgba(225,29,72,.12); color: #e11d48; border: 1px solid rgba(225,29,72,.25); }
+html.dark .fre-val-badge--fail, html[data-theme="dark"] .fre-val-badge--fail { background: rgba(244,63,94,.15); color: #fb7185; border-color: rgba(244,63,94,.3); }
 
 .fre-progress-bar {
     height: 8px;
-    background: #1e293b;
+    background: #e2e8f0;
     border-radius: 99px;
     overflow: hidden;
     margin-top: .5rem;
 }
+html.dark .fre-progress-bar, html[data-theme="dark"] .fre-progress-bar {
+    background: #1e293b;
+}
 .fre-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #6366f1, #34d399);
+    background: linear-gradient(90deg, #4f46e5, #059669);
+    border-radius: 99px;
     transition: width .3s ease;
+}
+html.dark .fre-progress-fill, html[data-theme="dark"] .fre-progress-fill {
+    background: linear-gradient(90deg, #6366f1, #34d399);
 }
 </style>
 @endpush
@@ -66,49 +96,49 @@
 <div class="fre-container">
 
     {{-- Navigation Breadcrumbs --}}
-    <div style="display:flex;gap:1.25rem;align-items:center;margin-bottom:1rem;">
+    <div class="flex items-center gap-4 mb-2">
         @if(request('from') === 'notifications')
-        <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('notifications.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-bold transition-colors">
             ← Back to Notifications
         </a>
         @elseif(request('from_url') && str_starts_with(request('from_url'), '/') && !str_starts_with(request('from_url'), '//') && !str_contains(request('from_url'), '://'))
-        <a href="{{ request('from_url') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ request('from_url') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-bold transition-colors">
             ← Back
         </a>
         @else
-        <a href="{{ route('teacher.repository-revisions.show', $revisionRequest->id) }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('teacher.repository-revisions.show', $revisionRequest->id) }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-bold transition-colors">
             ← Back to Revision Task
         </a>
         @endif
-        <a href="{{ route('teacher.dashboard') }}" style="color:#cbd5e1;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('teacher.dashboard') }}" class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-semibold transition-colors">
             Dashboard
         </a>
     </div>
 
     {{-- REPOSITORY REVISION OVERLAY GOVERNANCE BANNER --}}
     <div class="fre-banner">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <div class="flex justify-between items-start gap-4 flex-wrap mb-4">
             <div>
-                <span style="font-size:.72rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.08em;">🛠 Focused Repository Revision Mode</span>
-                <h1 style="font-size:1.5rem;font-weight:900;color:#fff;margin:.25rem 0 .2rem;">
+                <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">🛠 Focused Repository Revision Mode</span>
+                <h1 class="text-2xl font-black text-slate-900 dark:text-white mt-1 mb-1">
                     {{ $bank?->title ?? 'Repository Asset' }}
                 </h1>
-                <div style="font-size:.82rem;color:#94a3b8;">
-                    Requested By: <strong style="color:#e2e8f0;">{{ $revisionRequest->requestedBy?->name ?? 'Repository Manager' }}</strong> • Status: <strong style="color:#fbbf24;text-transform:uppercase;">Needs Revision</strong>
+                <div class="text-xs text-slate-600 dark:text-slate-400">
+                    Requested By: <strong class="text-slate-800 dark:text-slate-200 font-bold">{{ $revisionRequest->requestedBy?->name ?? 'Repository Manager' }}</strong> • Status: <strong class="text-amber-700 dark:text-amber-400 uppercase font-bold">Needs Revision</strong>
                 </div>
             </div>
 
-            <span style="padding:.35rem .8rem;background:rgba(244,63,94,.15);border:1px solid rgba(244,63,94,.4);color:#fb7185;border-radius:.6rem;font-size:.75rem;font-weight:800;">
+            <span class="px-3 py-1.5 bg-rose-50 dark:bg-rose-500/15 border border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-extrabold">
                 Finding Status: {{ $item->status }}
             </span>
         </div>
 
-        <div style="background:#080f1d;border-left:4px solid #fb7185;padding:1rem 1.25rem;border-radius:0 .75rem .75rem 0;">
-            <div style="font-size:.7rem;font-weight:800;color:#fb7185;text-transform:uppercase;margin-bottom:.25rem;">Actionable Finding Feedback:</div>
-            <div style="font-size:.9rem;font-weight:700;color:#fff;margin-bottom:.4rem;">
+        <div class="bg-slate-50 dark:bg-slate-950/80 border-l-4 border-rose-500 p-4 rounded-r-xl border border-slate-200 dark:border-slate-800">
+            <div class="text-xs font-extrabold text-rose-700 dark:text-rose-400 uppercase mb-1">Actionable Finding Feedback:</div>
+            <div class="text-sm font-bold text-slate-900 dark:text-white mb-1.5">
                 ⚠️ {{ $item->feedback }}
             </div>
-            <div style="font-size:.8rem;color:#cbd5e1;">
+            <div class="text-xs text-slate-600 dark:text-slate-300">
                 <strong>Reviewer Notes:</strong> "{{ $revisionRequest->notes }}"
             </div>
         </div>
@@ -121,16 +151,16 @@
         $vTotal  = $validationData['total_count'] ?? 8;
     @endphp
     <div class="fre-panel" style="padding:1.25rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
-            <div style="font-size:.88rem;font-weight:900;color:#fff;">
+        <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+            <div class="text-sm font-black text-slate-900 dark:text-white">
                 📊 Live Validation Checklist ({{ $vPassed }} / {{ $vTotal }} Passed)
             </div>
-            <span style="font-size:.75rem;font-weight:800;color:{{ $vPassed === $vTotal ? '#34d399' : '#fbbf24' }};">
+            <span class="text-xs font-extrabold {{ $vPassed === $vTotal ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400' }}">
                 {{ $vPassed === $vTotal ? '✔ 100% Quality Standards Satisfied' : '⚠️ Outstanding Quality Requirements' }}
             </span>
         </div>
 
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <div class="flex gap-2 flex-wrap">
             @foreach($vChecks as $key => $check)
             <span id="val-badge-{{ $key }}" class="fre-val-badge {{ $check['passed'] ? 'fre-val-badge--pass' : 'fre-val-badge--fail' }}">
                 {{ $check['passed'] ? '✓' : '✖' }} {{ $check['label'] }}
@@ -140,19 +170,19 @@
     </div>
 
     @if(session('success'))
-    <div style="background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:800;">
+    <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-xl text-xs font-extrabold">
         {{ session('success') }}
     </div>
     @endif
 
     @if(session('info'))
-    <div style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.4);color:#38bdf8;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:800;">
+    <div class="bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 p-4 rounded-xl text-xs font-extrabold">
         ℹ️ {{ session('info') }}
     </div>
     @endif
 
     @if(session('error'))
-    <div style="background:rgba(244,63,94,.15);border:1px solid rgba(244,63,94,.4);color:#fb7185;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:800;">
+    <div class="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-xs font-extrabold">
         ⚠️ {{ session('error') }}
     </div>
     @endif
@@ -192,15 +222,15 @@
 
             {{-- 1. Category Assignment Section --}}
             <div id="category-section" class="fre-section {{ $highlightCategory ? 'fre-highlight' : '' }}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">🏷 Academic Subject Category</label>
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-extrabold text-slate-900 dark:text-white m-0">🏷 Academic Subject Category</label>
                     @if($highlightCategory)
-                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                    <span class="text-[11px] font-extrabold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30">
                         ⚠️ Action Required: Assign Category Below
                     </span>
                     @endif
                 </div>
-                <select name="category_id" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
+                <select name="category_id" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500">
                     <option value="">-- Select Category --</option>
                     @foreach($categories as $cat)
                     <option value="{{ $cat->id }}" {{ ($bank->acl_category_id ?? '') == $cat->id ? 'selected' : '' }}>
@@ -212,23 +242,23 @@
 
             {{-- 2. Question Prompt Section --}}
             <div id="prompt-section" class="fre-section {{ $highlightPrompt ? 'fre-highlight' : '' }}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">📝 Question Prompt Text</label>
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-extrabold text-slate-900 dark:text-white m-0">📝 Question Prompt Text</label>
                     @if($highlightPrompt)
-                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                    <span class="text-[11px] font-extrabold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30">
                         ⚠️ Action Required: Update Question Prompt
                     </span>
                     @endif
                 </div>
-                <textarea name="prompt" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" required>{{ old('prompt', $question->prompt ?? '') }}</textarea>
+                <textarea name="prompt" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" required>{{ old('prompt', $question->prompt ?? '') }}</textarea>
             </div>
 
             {{-- 3. Question Type & Difficulty & Points Section --}}
             <div id="difficulty-section" class="fre-section {{ $highlightDifficulty ? 'fre-highlight' : '' }}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">⚙️ Question Type, Difficulty & Points</label>
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-extrabold text-slate-900 dark:text-white m-0">⚙️ Question Type, Difficulty &amp; Points</label>
                     @if($highlightDifficulty)
-                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                    <span class="text-[11px] font-extrabold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30">
                         ⚠️ Action Required: Adjust Difficulty / Parameters
                     </span>
                     @endif
@@ -239,9 +269,9 @@
                 @endphp
                 <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;">
                     @if($isToeic)
-                    <div style="grid-column: 1 / -1;background:#1e1b4b;border:1px solid #4f46e5;padding:.85rem;border-radius:.6rem;">
-                        <label style="font-size:.78rem;font-weight:800;color:#c7d2fe;display:block;margin-bottom:.3rem;">🎯 TOEIC Part Selection *</label>
-                        <select name="part_number" id="fre_part_number" class="w-full bg-slate-950 border border-indigo-500/50 text-white rounded-xl p-2.5 text-sm font-bold">
+                    <div style="grid-column: 1 / -1;" class="bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/40 p-3.5 rounded-xl">
+                        <label class="text-xs font-extrabold text-indigo-800 dark:text-indigo-300 block mb-1.5">🎯 TOEIC Part Selection *</label>
+                        <select name="part_number" id="fre_part_number" class="w-full bg-white dark:bg-slate-950 border border-indigo-300 dark:border-indigo-500/50 text-slate-900 dark:text-white rounded-xl p-2.5 text-sm font-bold">
                             <option value="1" {{ $curPart == 1 ? 'selected' : '' }}>Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
                             <option value="2" {{ $curPart == 2 ? 'selected' : '' }}>Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
                             <option value="3" {{ $curPart == 3 ? 'selected' : '' }}>Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
@@ -254,8 +284,8 @@
                     </div>
                     @endif
                     <div>
-                        <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Question Type</label>
-                        <select id="fre_question_type" name="question_type" onchange="updateRevisionAnswerOptionsUI()" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Question Type</label>
+                        <select id="fre_question_type" name="question_type" onchange="updateRevisionAnswerOptionsUI()" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-indigo-500">
                             <option value="multiple_choice" {{ $qTypeVal === 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
                             <option value="single_choice" {{ $qTypeVal === 'single_choice' ? 'selected' : '' }}>Single Choice</option>
                             @if(!$isToeic)
@@ -271,8 +301,8 @@
                         </select>
                     </div>
                     <div>
-                        <label style="font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:.3rem;">Difficulty *</label>
-                        <select name="difficulty" required class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                        <label class="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Difficulty *</label>
+                        <select name="difficulty" required class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-2.5 text-sm">
                             <option value="easy" {{ $qDiffVal === 'easy' ? 'selected' : '' }}>Easy</option>
                             <option value="medium" {{ $qDiffVal === 'medium' || empty($qDiffVal) ? 'selected' : '' }}>Medium</option>
                             <option value="hard" {{ $qDiffVal === 'hard' ? 'selected' : '' }}>Hard</option>
@@ -284,10 +314,10 @@
 
             {{-- 4. Media Asset Manager Section --}}
             <div id="media-section" class="fre-section {{ $highlightMedia ? 'fre-highlight' : '' }}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">📎 Media Asset Manager</label>
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-extrabold text-slate-900 dark:text-white m-0">📎 Media Asset Manager</label>
                     @if($highlightMedia)
-                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                    <span class="text-[11px] font-extrabold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30">
                         ⚠️ Action Required: Attach / Replace Media Asset
                     </span>
                     @endif
@@ -295,15 +325,15 @@
 
                 @if($question->mediaAsset ?? $question->media)
                 @php $m = $question->mediaAsset ?? $question->media; @endphp
-                <div style="background:#0f172a;border:1px solid #334155;padding:.85rem 1rem;border-radius:.75rem;margin-bottom:.85rem;display:flex;align-items:center;justify-content:space-between;">
-                    <div style="display:flex;align-items:center;gap:.75rem;">
-                        <span style="font-size:1.5rem;">🎧</span>
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl mb-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🎧</span>
                         <div>
-                            <div style="font-size:.82rem;font-weight:800;color:#fff;">{{ $m->title ?? $m->original_name }}</div>
-                            <div style="font-size:.72rem;color:#64748b;">Type: {{ strtoupper($m->type ?? 'FILE') }} • ID: {{ substr($m->id, 0, 8) }}</div>
+                            <div class="text-xs font-extrabold text-slate-900 dark:text-white">{{ $m->title ?? $m->original_name }}</div>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400">Type: {{ strtoupper($m->type ?? 'FILE') }} • ID: {{ substr($m->id, 0, 8) }}</div>
                         </div>
                     </div>
-                    <label style="font-size:.75rem;color:#fb7185;font-weight:700;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                    <label class="text-xs text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1.5 cursor-pointer">
                         <input type="checkbox" name="remove_media" value="1" style="accent-color:#f43f5e;">
                         Remove Media
                     </label>
@@ -311,8 +341,8 @@
                 @endif
 
                 <div>
-                    <label style="font-size:.75rem;color:#cbd5e1;font-weight:700;display:block;margin-bottom:.3rem;">Select / Replace Attached Media:</label>
-                    <select name="media_asset_id" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                    <label class="text-xs text-slate-700 dark:text-slate-300 font-bold block mb-1">Select / Replace Attached Media:</label>
+                    <select name="media_asset_id" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-2.5 text-sm">
                         <option value="">-- No Media Asset Attached --</option>
                         @foreach($mediaAssets as $ma)
                         <option value="{{ $ma->id }}" {{ ($question->media_asset_id ?? '') == $ma->id ? 'selected' : '' }}>
@@ -323,15 +353,15 @@
                 </div>
             </div>
 
-            {{-- 5. DYNAMIC QUESTION TYPE CONTROL CONTAINER (REUSED SHARED CONTROL LOGIC) --}}
+            {{-- 5. DYNAMIC QUESTION TYPE CONTROL CONTAINER --}}
             @php
                 $isChoiceBased = in_array($qTypeVal, ['multiple_choice', 'single_choice', 'listening', 'reading']);
             @endphp
             <div id="answer-choices-section" class="fre-section {{ ($highlightChoices && $isChoiceBased) ? 'fre-highlight' : '' }}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem;">
-                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">🎯 Dynamic Answer Controls</label>
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-extrabold text-slate-900 dark:text-white m-0">🎯 Dynamic Answer Controls</label>
                     @if($highlightChoices && $isChoiceBased)
-                    <span style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;">
+                    <span class="text-[11px] font-extrabold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30">
                         ⚠️ Action Required: Fix Option Choices / Answer Fields Below
                     </span>
                     @endif
@@ -340,93 +370,93 @@
                 {{-- Dynamic Target Container --}}
                 <div id="fre_dynamic_answer_container">
                     @if($qTypeVal === 'essay')
-                        <div id="essay-notice-box" style="padding:1rem 1.25rem;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:.75rem;">
-                            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;">
-                                <span style="font-size:1.1rem;">📝</span>
-                                <strong style="color:#818cf8;font-size:.88rem;">Essay / Open-Ended Question</strong>
+                        <div id="essay-notice-box" class="p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 rounded-xl">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="text-lg">📝</span>
+                                <strong class="text-indigo-800 dark:text-indigo-300 text-xs font-bold">Essay / Open-Ended Question</strong>
                             </div>
-                            <p style="font-size:.82rem;color:#cbd5e1;margin:0 0 .75rem;line-height:1.5;">
+                            <p class="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
                                 Essay questions do not require answer choices or a correct answer.
                             </p>
-                            <label style="font-size:.78rem;font-weight:800;color:#cbd5e1;display:block;margin-bottom:.3rem;">Sample Model Answer &amp; Scoring Guidelines (Optional)</label>
-                            <textarea name="reference_answer_text" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter optional model reference answer or grading rubric guidelines...">{{ old('reference_answer_text', $question->reference_answer ?? '') }}</textarea>
+                            <label class="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Sample Model Answer &amp; Scoring Guidelines (Optional)</label>
+                            <textarea name="reference_answer_text" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter optional model reference answer or grading rubric guidelines...">{{ old('reference_answer_text', $question->reference_answer ?? '') }}</textarea>
                         </div>
                     @elseif($isChoiceBased)
                         @if($question->choices->count() > 0)
                             @foreach($question->choices as $cIdx => $choice)
-                            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem;">
+                            <div class="flex items-center gap-3 mb-2.5">
                                 <input type="radio" name="correct_choice_id" value="{{ $choice->id }}" {{ $choice->is_correct ? 'checked' : '' }} style="accent-color:#10b981;width:1.2rem;height:1.2rem;" title="Mark as Correct Choice">
-                                <span style="font-weight:800;color:#818cf8;width:1.5rem;">{{ $choice->label ?? chr(65 + $cIdx) }}.</span>
-                                <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm" required>
+                                <span class="font-extrabold text-indigo-600 dark:text-indigo-400 w-6">{{ $choice->label ?? chr(65 + $cIdx) }}.</span>
+                                <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-sm" required>
                                 <input type="hidden" name="choices[{{ $choice->id }}][label]" value="{{ $choice->label ?? chr(65 + $cIdx) }}">
                             </div>
                             @endforeach
                         @else
-                            <div style="font-size:.8rem;color:#fb7185;padding:.75rem;background:rgba(244,63,94,.1);border-radius:.5rem;margin-bottom:.75rem;">
+                            <div class="text-xs text-rose-700 dark:text-rose-400 p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-lg mb-3 font-semibold">
                                 ⚠️ No answer choices currently attached to this question. Add choices below.
                             </div>
                         @endif
 
                         {{-- Add New Choice Input --}}
-                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #334155;">
-                            <div style="font-size:.78rem;font-weight:700;color:#818cf8;margin-bottom:.4rem;">+ Add Additional Choice:</div>
-                            <div style="display:flex;gap:.75rem;align-items:center;">
-                                <input type="text" name="new_choice_label" placeholder="Choice Label (e.g. C)" style="width:70px;" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                                <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                                <label style="font-size:.75rem;color:#34d399;font-weight:700;display:flex;align-items:center;gap:.3rem;">
+                        <div class="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-800">
+                            <div class="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1.5">+ Add Additional Choice:</div>
+                            <div class="flex gap-3 items-center">
+                                <input type="text" name="new_choice_label" placeholder="Label (e.g. C)" style="width:90px;" class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm">
+                                <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm">
+                                <label class="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5 cursor-pointer">
                                     <input type="checkbox" name="new_choice_is_correct" value="1" style="accent-color:#10b981;">
                                     Correct
                                 </label>
                             </div>
                         </div>
                     @elseif($qTypeVal === 'true_false')
-                        <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.5rem;">True / False Correct Answer Designation</label>
-                        <div style="display:flex;gap:1.5rem;align-items:center;">
-                            <label style="font-size:.85rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                        <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-2">True / False Correct Answer Designation</label>
+                        <div class="flex gap-6 items-center">
+                            <label class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 cursor-pointer">
                                 <input type="radio" name="tf_correct_choice" value="true" checked style="accent-color:#10b981;width:1.2rem;height:1.2rem;"> True
                             </label>
-                            <label style="font-size:.85rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                            <label class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 cursor-pointer">
                                 <input type="radio" name="tf_correct_choice" value="false" style="accent-color:#10b981;width:1.2rem;height:1.2rem;"> False
                             </label>
                         </div>
                     @elseif($qTypeVal === 'short_answer')
-                        <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Accepted Exact Correct Answer String *</label>
-                        <input type="text" name="short_answer_text" value="{{ old('short_answer_text') }}" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter expected exact string answer...">
+                        <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-1">Accepted Exact Correct Answer String *</label>
+                        <input type="text" name="short_answer_text" value="{{ old('short_answer_text') }}" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter expected exact string answer...">
                     @elseif($qTypeVal === 'speaking')
-                        <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Speaking Audio Prompt &amp; Evaluation Rubric</label>
-                        <textarea name="speaking_rubric" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter speaking response instructions, target vocabulary, and scoring rubric...">{{ old('speaking_rubric') }}</textarea>
+                        <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-1">Speaking Audio Prompt &amp; Evaluation Rubric</label>
+                        <textarea name="speaking_rubric" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter speaking response instructions, target vocabulary, and scoring rubric...">{{ old('speaking_rubric') }}</textarea>
                     @endif
                 </div>
             </div>
 
             {{-- 6. Pedagogical Explanation Section --}}
             <div id="explanation-section" class="fre-section {{ $highlightExplanation ? 'fre-highlight' : '' }}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-                    <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;margin:0;">💡 Pedagogical Explanation &amp; Rationale</label>
-                    <span id="explanation-action-required" style="font-size:.7rem;font-weight:800;color:#fb7185;background:rgba(244,63,94,.2);padding:.2rem .6rem;border-radius:.4rem;{{ $highlightExplanation ? '' : 'display:none;' }}">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-extrabold text-slate-900 dark:text-white m-0">💡 Pedagogical Explanation &amp; Rationale</label>
+                    <span id="explanation-action-required" class="text-[11px] font-extrabold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/20 px-2.5 py-0.5 rounded border border-rose-300 dark:border-rose-500/30" style="{{ $highlightExplanation ? '' : 'display:none;' }}">
                         ⚠️ Action Required: Provide Explanation
                     </span>
                 </div>
-                <textarea name="explanation" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Provide detailed academic rationale for the correct choice...">{{ old('explanation', $question->explanation ?? '') }}</textarea>
+                <textarea name="explanation" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Provide detailed academic rationale for the correct choice...">{{ old('explanation', $question->explanation ?? '') }}</textarea>
             </div>
 
             {{-- 7. Tags & Metadata Section --}}
             <div id="metadata-section" class="fre-section">
-                <label style="font-size:.85rem;font-weight:800;color:#f1f5f9;display:block;margin-bottom:.5rem;">🏷 Tags &amp; Metadata</label>
+                <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-2">🏷 Tags &amp; Metadata</label>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;">
                     <div>
-                        <label style="font-size:.75rem;color:#cbd5e1;display:block;margin-bottom:.2rem;">Tags (comma separated)</label>
-                        <input type="text" name="tags" value="{{ old('tags', 'toeic, grammar, reading') }}" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-sm">
+                        <label class="text-xs text-slate-600 dark:text-slate-300 font-medium block mb-1">Tags (comma separated)</label>
+                        <input type="text" name="tags" value="{{ old('tags', 'toeic, grammar, reading') }}" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-2.5 text-sm">
                     </div>
                     <div>
-                        <label style="font-size:.75rem;color:#cbd5e1;display:block;margin-bottom:.2rem;">Repository Version</label>
-                        <input type="text" value="v{{ $bank->current_version ?? '1.0' }}" readonly class="w-full bg-slate-950 border border-slate-800 text-slate-400 rounded-xl p-2.5 text-sm">
+                        <label class="text-xs text-slate-600 dark:text-slate-300 font-medium block mb-1">Repository Version</label>
+                        <input type="text" value="v{{ $bank->current_version ?? '1.0' }}" readonly class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400 rounded-xl p-2.5 text-sm font-mono">
                     </div>
                 </div>
             </div>
 
             {{-- SAVE QUESTION SUBMIT BUTTON --}}
-            <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
+            <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all cursor-pointer">
                 💾 Save Question Revision &amp; Validate Quality Standards
             </button>
         </form>
@@ -440,11 +470,11 @@
         $allResolved = $closedItems >= $totalItems && $totalItems > 0 && $vPassed === $vTotal;
     @endphp
 
-    <div class="fre-panel" style="border-color:#3730a3;background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);">
-        <div style="margin-bottom:1rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:.82rem;font-weight:800;color:#fff;">Revision Completion Progress</span>
-                <span style="font-size:.82rem;font-weight:900;color:{{ $allResolved ? '#34d399' : '#fbbf24' }};">
+    <div class="fre-panel border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/50 to-slate-50 dark:from-slate-900 dark:to-indigo-950/40">
+        <div class="mb-4">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-slate-900 dark:text-white">Revision Completion Progress</span>
+                <span class="text-xs font-extrabold {{ $allResolved ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400' }}">
                     ✔ {{ $closedItems }} / {{ $totalItems }} Findings Fixed ({{ $percentComplete }}%)
                 </span>
             </div>
@@ -453,24 +483,24 @@
             </div>
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div class="flex justify-between items-center flex-wrap gap-4">
             <div>
                 @if($allResolved)
-                <div style="font-size:.9rem;font-weight:800;color:#34d399;">
+                <div class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mb-0.5">
                     ✔ All Findings Resolved — Ready For Resubmission
                 </div>
-                <div style="font-size:.78rem;color:#94a3b8;">All actionable items and live validation checklist items pass 100%.</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">All actionable items and live validation checklist items pass 100%.</div>
                 @else
-                <div style="font-size:.9rem;font-weight:800;color:#fb7185;">
+                <div class="text-sm font-extrabold text-rose-600 dark:text-rose-400 mb-0.5">
                     ⚠️ Remaining Findings: Unresolved Issue(s) Exist
                 </div>
-                <div style="font-size:.78rem;color:#94a3b8;">Complete all remaining findings and live validation checklist before resubmitting repository.</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Complete all remaining findings and live validation checklist before resubmitting repository.</div>
                 @endif
             </div>
 
             <form method="POST" action="{{ route('teacher.repository-revisions.resubmit', $revisionRequest->id) }}">
                 @csrf
-                <button type="submit" {{ !$allResolved ? 'disabled' : '' }} class="px-6 py-3.5 {{ $allResolved ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg' : 'bg-slate-800 text-slate-500 cursor-not-allowed' }} font-extrabold text-xs rounded-xl transition-all inline-flex items-center gap-2">
+                <button type="submit" {{ !$allResolved ? 'disabled' : '' }} class="px-6 py-3.5 {{ $allResolved ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg cursor-pointer' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700' }} font-extrabold text-xs rounded-xl transition-all inline-flex items-center gap-2">
                     🚀 Resubmit Repository &amp; Trigger IRQA Re-Scan
                 </button>
             </form>
@@ -527,22 +557,22 @@ function updateRevisionAnswerOptionsUI() {
         // Render Multiple Choice / Single Choice Options
         container.innerHTML = `
             <div style="display:flex;flex-direction:column;gap:.65rem;margin-bottom:.85rem;">
-                <label style="font-size:.78rem;font-weight:800;color:#fff;display:block;margin-bottom:.3rem;">Option Answer Choices (Select 1 Correct Answer)</label>
+                <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-1">Option Answer Choices (Select 1 Correct Answer)</label>
                 ${['A', 'B', 'C', 'D'].map((lbl, i) => `
-                    <div style="display:flex;align-items:center;gap:.75rem;">
+                    <div class="flex items-center gap-3">
                         <input type="radio" name="correct_choice_id" value="${i}" ${i === 0 ? 'checked' : ''} style="accent-color:#10b981;width:1.2rem;height:1.2rem;">
-                        <span style="font-weight:800;color:#818cf8;width:1.5rem;">${lbl}.</span>
+                        <span class="font-extrabold text-indigo-600 dark:text-indigo-400 w-6">${lbl}.</span>
                         <input type="hidden" name="choices[${i}][label]" value="${lbl}">
-                        <input type="text" name="choices[${i}][content]" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2.5 text-sm" placeholder="Option ${lbl} content..." required>
+                        <input type="text" name="choices[${i}][content]" class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-sm" placeholder="Option ${lbl} content..." required>
                     </div>
                 `).join('')}
             </div>
-            <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #334155;">
-                <div style="font-size:.78rem;font-weight:700;color:#818cf8;margin-bottom:.4rem;">+ Add Additional Choice:</div>
-                <div style="display:flex;gap:.75rem;align-items:center;">
-                    <input type="text" name="new_choice_label" placeholder="Choice Label (e.g. E)" style="width:70px;" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                    <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                    <label style="font-size:.75rem;color:#34d399;font-weight:700;display:flex;align-items:center;gap:.3rem;">
+            <div class="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-800">
+                <div class="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1.5">+ Add Additional Choice:</div>
+                <div class="flex gap-3 items-center">
+                    <input type="text" name="new_choice_label" placeholder="Label (e.g. E)" style="width:90px;" class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm">
+                    <input type="text" name="new_choice_content" placeholder="Choice Content text..." class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm">
+                    <label class="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5 cursor-pointer">
                         <input type="checkbox" name="new_choice_is_correct" value="1" style="accent-color:#10b981;">
                         Correct
                     </label>
@@ -552,12 +582,12 @@ function updateRevisionAnswerOptionsUI() {
     } else if (type === 'true_false') {
         // Render True / False Radio Selector
         container.innerHTML = `
-            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.5rem;">True / False Correct Answer Designation</label>
-            <div style="display:flex;gap:1.5rem;align-items:center;">
-                <label style="font-size:.85rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+            <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-2">True / False Correct Answer Designation</label>
+            <div class="flex gap-6 items-center">
+                <label class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 cursor-pointer">
                     <input type="radio" name="tf_correct_choice" value="true" checked style="accent-color:#10b981;width:1.2rem;height:1.2rem;"> True
                 </label>
-                <label style="font-size:.85rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                <label class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 cursor-pointer">
                     <input type="radio" name="tf_correct_choice" value="false" style="accent-color:#10b981;width:1.2rem;height:1.2rem;"> False
                 </label>
             </div>
@@ -565,52 +595,53 @@ function updateRevisionAnswerOptionsUI() {
     } else if (type === 'short_answer') {
         // Render Short Answer Accepted Strings
         container.innerHTML = `
-            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Accepted Exact Correct Answer String *</label>
-            <input type="text" name="short_answer_text" required class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter expected exact string answer...">
+            <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-1">Accepted Exact Correct Answer String *</label>
+            <input type="text" name="short_answer_text" required class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter expected exact string answer...">
         `;
     } else if (type === 'essay') {
         // Render Essay Reference Answer & Rubric
         container.innerHTML = `
-            <div id="essay-notice-box" style="padding:1rem 1.25rem;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:.75rem;">
-                <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;">
-                    <span style="font-size:1.1rem;">📝</span>
-                    <strong style="color:#818cf8;font-size:.88rem;">Essay / Open-Ended Question</strong>
+            <div id="essay-notice-box" class="p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 rounded-xl">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <span class="text-lg">📝</span>
+                    <strong class="text-indigo-800 dark:text-indigo-300 text-xs font-bold">Essay / Open-Ended Question</strong>
                 </div>
-                <p style="font-size:.82rem;color:#cbd5e1;margin:0 0 .75rem;line-height:1.5;">
+                <p class="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
                     Essay questions do not require answer choices or a correct answer.
                 </p>
-                <label style="font-size:.78rem;font-weight:800;color:#cbd5e1;display:block;margin-bottom:.3rem;">Sample Model Answer &amp; Scoring Guidelines (Optional)</label>
-                <textarea name="reference_answer_text" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter optional model reference answer or grading rubric guidelines..."></textarea>
+                <label class="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Sample Model Answer &amp; Scoring Guidelines (Optional)</label>
+                <textarea name="reference_answer_text" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter optional model reference answer or grading rubric guidelines..."></textarea>
             </div>
         `;
     } else if (type === 'speaking') {
         // Render Speaking Prompt & Rubric
         container.innerHTML = `
-            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.4rem;">Speaking Audio Prompt &amp; Evaluation Rubric</label>
-            <textarea name="speaking_rubric" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter speaking response instructions, target vocabulary, and scoring rubric..."></textarea>
+            <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-1">Speaking Audio Prompt &amp; Evaluation Rubric</label>
+            <textarea name="speaking_rubric" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter speaking response instructions, target vocabulary, and scoring rubric..."></textarea>
         `;
     } else if (type === 'matching') {
         // Render Matching Pair Editor
         container.innerHTML = `
-            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.5rem;">Matching Pair Elements</label>
-            <div style="display:flex;flex-direction:column;gap:.5rem;">
-                <div style="display:flex;gap:.5rem;">
-                    <input type="text" placeholder="Premise (Left Column)" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                    <span style="color:#818cf8;font-weight:800;align-self:center;">➔</span>
-                    <input type="text" placeholder="Target Match (Right Column)" class="flex-1 bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+            <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-2">Matching Pair Elements</label>
+            <div class="flex flex-col gap-2">
+                <div class="flex gap-2">
+                    <input type="text" placeholder="Premise (Left Column)" class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm">
+                    <span class="text-indigo-600 dark:text-indigo-400 font-extrabold self-center">➔</span>
+                    <input type="text" placeholder="Target Match (Right Column)" class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm">
                 </div>
             </div>
         `;
     } else if (type === 'ordering') {
         // Render Ordering Sequence Editor
         container.innerHTML = `
-            <label style="font-size:.82rem;font-weight:800;color:#fff;display:block;margin-bottom:.5rem;">Correct Ordering Sequence Items (In Proper Order)</label>
-            <div style="display:flex;flex-direction:column;gap:.5rem;">
-                <input type="text" placeholder="Step 1 Item..." class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
-                <input type="text" placeholder="Step 2 Item..." class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-sm">
+            <label class="text-xs font-extrabold text-slate-900 dark:text-white block mb-2">Correct Ordering Sequence Items (In Proper Order)</label>
+            <div class="flex flex-col gap-2">
+                <input type="text" placeholder="Step 1 Item..." class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm">
+                <input type="text" placeholder="Step 2 Item..." class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm">
             </div>
         `;
     }
 }
 </script>
 @endsection
+

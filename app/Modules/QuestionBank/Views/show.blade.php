@@ -47,33 +47,33 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <div class="flex items-center gap-3 mb-1">
-                <a href="{{ $backUrl }}" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">{{ $backLabel }}</a>
+                <a href="{{ $backUrl }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold transition-colors">{{ $backLabel }}</a>
                 @if(Auth::user()?->hasRole('teacher'))
-                    <a href="{{ route('teacher.dashboard') }}" class="text-xs text-slate-400 hover:text-white font-semibold transition-colors">Dashboard</a>
+                    <a href="{{ route('teacher.dashboard') }}" class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-semibold transition-colors">Dashboard</a>
                 @endif
             </div>
             <div class="flex items-center gap-3 mt-1">
-                <h1 class="text-2xl font-bold text-white">{{ $questionBank->title }}</h1>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{{ $questionBank->title }}</h1>
                 @php
                     $statusBadge = match($questionBank->status) {
-                        'published' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                        'approved' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-                        'pending_approval' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                        'rejected' => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-                        default => 'bg-slate-800 text-slate-400 border-slate-700',
+                        'published' => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                        'approved' => 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+                        'pending_approval' => 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                        'rejected' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                        default => 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-700',
                     };
                 @endphp
                 <span class="px-2.5 py-0.5 text-xs font-bold rounded border uppercase {{ $statusBadge }}">
                     {{ $questionBank->status ?? 'draft' }}
                 </span>
             </div>
-            <p class="text-xs text-slate-400 mt-0.5">Test Type: <span class="uppercase font-bold text-indigo-400">{{ $questionBank->test_type }}</span> | Total Questions: <span class="font-bold text-white">{{ $questionBank->questions->count() }}</span></p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Test Type: <span class="uppercase font-bold text-indigo-600 dark:text-indigo-400">{{ $questionBank->test_type }}</span> | Total Questions: <span class="font-bold text-slate-900 dark:text-white">{{ $questionBank->questions->count() }}</span></p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
             @if (Auth::user()?->hasRole('teacher'))
                 <!-- Teacher Content Creator Actions -->
                 @if (in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null]))
-                    <button onclick="document.getElementById('edit-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                    <button onclick="document.getElementById('edit-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">
                         ✏ Edit Bank Details
                     </button>
 
@@ -92,11 +92,11 @@
                             🚀 Submit for Approval
                         </button>
 
-                        <div id="inline-submit-panel" class="hidden inline-flex items-center gap-2.5 p-2 bg-slate-900 border border-amber-500/50 rounded-xl shadow-lg">
-                            <span class="text-xs text-slate-200 font-medium">
+                        <div id="inline-submit-panel" class="hidden inline-flex items-center gap-2.5 p-2 bg-white dark:bg-slate-900 border border-amber-500/50 rounded-xl shadow-lg">
+                            <span class="text-xs text-slate-800 dark:text-slate-200 font-medium">
                                 Submit '{{ $questionBank->title }}' for Super Admin approval?
                             </span>
-                            <button type="button" onclick="document.getElementById('inline-submit-panel').classList.add('hidden'); document.getElementById('submit-trigger-btn').classList.remove('hidden');" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                            <button type="button" onclick="document.getElementById('inline-submit-panel').classList.add('hidden'); document.getElementById('submit-trigger-btn').classList.remove('hidden');" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">
                                 Cancel
                             </button>
                             <button type="submit" id="confirm-submit-btn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow transition-colors">
@@ -105,7 +105,7 @@
                         </div>
                     </form>
 
-                    <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors">
+                    <button onclick="document.getElementById('import-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">
                         📥 Bulk Import
                     </button>
                     <button onclick="openCreateQuestionModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
@@ -113,12 +113,12 @@
                     </button>
                 @else
                     @if($questionBank->getLockMessage())
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-lg">
                         {{ $questionBank->getLockMessage() }}
                     </span>
                     @endif
                     @if(in_array($questionBank->status, ['approved', 'published']))
-                        <button type="button" onclick="openTeacherRequestRevisionModal('{{ $questionBank->id }}', '', '{{ addslashes($questionBank->title) }}')" class="px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 text-xs font-semibold rounded-lg border border-amber-500/30 transition-colors">
+                        <button type="button" onclick="openTeacherRequestRevisionModal('{{ $questionBank->id }}', '', '{{ addslashes($questionBank->title) }}')" class="px-3 py-1.5 bg-amber-600/10 hover:bg-amber-600/20 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-lg border border-amber-500/30 transition-colors">
                             🛠 Request Repository Revision
                         </button>
                     @endif
@@ -137,14 +137,14 @@
                 @elseif ($questionBank->status === 'published')
                     <form action="{{ route('admin.question-banks.unpublish', $questionBank->id) }}" method="POST" class="inline">
                         @csrf
-                        <button type="submit" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 text-xs font-semibold rounded-lg border border-rose-500/30 transition-colors">
+                        <button type="submit" class="px-3 py-1.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-lg border border-rose-500/30 transition-colors">
                             🔒 Unpublish
                         </button>
                     </form>
                 @endif
 
                 @if (!in_array($questionBank->status, ['archived', 'pending_archive_approval']))
-                    <button onclick="document.getElementById('archive-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 text-xs font-semibold rounded-lg border border-amber-500/30 transition-colors">
+                    <button onclick="document.getElementById('archive-bank-modal').classList.remove('hidden')" class="px-3 py-1.5 bg-amber-600/10 hover:bg-amber-600/20 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-lg border border-amber-500/30 transition-colors">
                         📦 Request Archive
                     </button>
                 @endif
@@ -154,18 +154,18 @@
 
     <!-- Status Alert -->
     @if (session('status'))
-        <div class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+        <div class="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
             ✅ {{ session('status') }}
         </div>
     @endif
 
     @if ($questionBank->status === 'pending_approval')
-        <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between gap-3 flex-wrap">
+        <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-3 flex-wrap">
             <div class="flex items-center gap-2.5">
                 <span class="text-base">🔒</span>
                 <div>
-                    <strong class="text-amber-200">Repository Locked Under Governance Review</strong>
-                    <p class="text-slate-400 text-xs mt-0.5 mb-0">This repository has been submitted for approval and is locked while awaiting governance review from a Repository Manager. Authoring actions are disabled.</p>
+                    <strong class="text-amber-800 dark:text-amber-200">Repository Locked Under Governance Review</strong>
+                    <p class="text-slate-600 dark:text-slate-400 text-xs mt-0.5 mb-0">This repository has been submitted for approval and is locked while awaiting governance review from a Repository Manager. Authoring actions are disabled.</p>
                 </div>
             </div>
             @if(request('from') === 'revision_task' && request('revision_request_id'))
@@ -177,9 +177,9 @@
     @endif
 
     <!-- Questions Table / Cards -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
-        <table class="w-full text-left text-sm text-slate-300">
-            <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
+        <table class="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+            <thead class="bg-slate-50 dark:bg-slate-950 text-xs uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                 <tr>
                     <th class="p-4">#</th>
                     <th class="p-4">Question Prompt &amp; Media</th>
@@ -189,61 +189,61 @@
                     <th class="p-4 text-right">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-800/60">
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
                 @forelse ($questionBank->questions as $idx => $q)
                     @php
                         $qTypeRaw = is_object($q->question_type) ? $q->question_type->value : (string)$q->question_type;
                         $qTypeLabel = $typeLabels[$qTypeRaw] ?? ucwords(str_replace('_', ' ', $qTypeRaw));
                     @endphp
                     <tr>
-                        <td class="p-4 font-bold text-slate-500">{{ $idx + 1 }}</td>
-                        <td class="p-4 font-semibold text-white max-w-md">
+                        <td class="p-4 font-bold text-slate-400 dark:text-slate-500">{{ $idx + 1 }}</td>
+                        <td class="p-4 font-semibold text-slate-900 dark:text-white max-w-md">
                             {{ $q->prompt }}
                             @if($q->audio_url)
-                                <div class="text-[11px] text-indigo-400 mt-1.5 flex items-center gap-1.5 font-mono bg-indigo-500/10 border border-indigo-500/20 px-2 py-1 rounded">
+                                <div class="text-[11px] text-indigo-600 dark:text-indigo-400 mt-1.5 flex items-center gap-1.5 font-mono bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 px-2 py-1 rounded">
                                     <span>🎵 Audio Attached:</span> {{ basename($q->audio_url) }}
                                 </div>
                             @endif
                             @if($q->passage_text)
-                                <div class="text-[11px] text-slate-300 italic mt-1.5 line-clamp-2 bg-slate-950 p-2 rounded border border-slate-800">
+                                <div class="text-[11px] text-slate-700 dark:text-slate-300 italic mt-1.5 line-clamp-2 bg-slate-50 dark:bg-slate-950 p-2 rounded border border-slate-200 dark:border-slate-800">
                                     📖 Reading Passage: {{ $q->passage_text }}
                                 </div>
                             @endif
                             @if($q->choices->isNotEmpty())
-                                <div class="text-xs font-normal text-slate-400 mt-2 space-x-2">
+                                <div class="text-xs font-normal text-slate-500 dark:text-slate-400 mt-2 space-x-2">
                                     @foreach($q->choices as $c)
-                                        <span class="{{ $c->is_correct ? 'text-emerald-400 font-bold' : 'text-slate-500' }}">
+                                        <span class="{{ $c->is_correct ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400' }}">
                                             ({{ $c->label }}) {{ $c->content }}
                                         </span>
                                     @endforeach
                                 </div>
                             @endif
                         </td>
-                        <td class="p-4 text-xs font-semibold text-indigo-400">
-                            <span class="px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/20">
+                        <td class="p-4 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                            <span class="px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20">
                                 {{ $qTypeLabel }}
                             </span>
                         </td>
                         <td class="p-4">
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-slate-950 text-slate-300 border border-slate-800 uppercase">
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 uppercase">
                                 {{ is_object($q->difficulty) ? $q->difficulty->value : $q->difficulty }}
                             </span>
                         </td>
-                        <td class="p-4 font-bold text-white">{{ $q->points }} pts</td>
+                        <td class="p-4 font-bold text-slate-900 dark:text-white">{{ $q->points }} pts</td>
                         <td class="p-4 text-right space-x-2">
-                            <button type="button" onclick='openViewQuestionModal({{ json_encode($q) }})' class="text-xs text-slate-300 hover:text-white font-semibold">
+                            <button type="button" onclick='openViewQuestionModal({{ json_encode($q) }})' class="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-semibold">
                                 👁 View
                             </button>
                             @if (Auth::user()?->hasRole('teacher') && in_array($questionBank->status, ['draft', 'rejected', 'needs_revision', null]))
-                                <button type="button" onclick='openEditQuestionModal({{ json_encode($q) }})' class="text-xs text-indigo-400 hover:underline font-semibold">
-                                    ✏ Edit
+                                <button type="button" onclick='openEditQuestionModal({{ json_encode($q) }})' class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">
+                                    ✏️ Edit
                                 </button>
                                 <form action="{{ route('admin.question-banks.duplicate-question', $q->id) }}" method="POST" class="inline">
                                     @csrf
-                                    <button type="submit" class="text-xs text-amber-400 hover:underline font-semibold">📄 Duplicate</button>
+                                    <button type="submit" class="text-xs text-amber-600 dark:text-amber-400 hover:underline font-semibold">📄 Duplicate</button>
                                 </form>
                             @elseif (Auth::user()?->hasRole('teacher') && in_array($questionBank->status, ['approved', 'published']))
-                                <button type="button" onclick="openTeacherRequestRevisionModal('{{ $questionBank->id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="text-xs text-amber-400 hover:underline font-semibold">
+                                <button type="button" onclick="openTeacherRequestRevisionModal('{{ $questionBank->id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="text-xs text-amber-600 dark:text-amber-400 hover:underline font-semibold">
                                     🛠 Request Revision
                                 </button>
                             @endif
@@ -251,7 +251,7 @@
                                 <form action="{{ route('admin.question-banks.destroy-question', $q->id) }}" method="POST" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Delete Question?', message: 'Are you sure you want to delete this question? This action cannot be undone.', confirmText: 'Delete Question', variant: 'danger', form: this });">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="text-xs text-rose-400 hover:underline font-semibold">🗑 Delete</button>
+                                    <button type="submit" class="text-xs text-rose-600 dark:text-rose-400 hover:underline font-semibold">🗑 Delete</button>
                                 </form>
                             @endif
                         </td>
@@ -273,24 +273,24 @@
 
     <!-- View Question Read-Only Preview Modal -->
     <div id="view-question-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-xl w-full shadow-2xl my-8">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                <h2 class="text-base font-bold text-white flex items-center gap-2">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-xl w-full shadow-2xl my-8">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
+                <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <span>👁 Question Preview</span>
-                    <span id="v_type_badge" class="px-2 py-0.5 text-xs font-semibold rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"></span>
+                    <span id="v_type_badge" class="px-2 py-0.5 text-xs font-semibold rounded bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30"></span>
                 </h2>
-                <button type="button" onclick="closeViewQuestionModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+                <button type="button" onclick="closeViewQuestionModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg">&times;</button>
             </div>
 
-            <div class="space-y-4 text-xs text-slate-300">
+            <div class="space-y-4 text-xs text-slate-700 dark:text-slate-300">
                 <div>
                     <span class="text-[10px] uppercase font-bold text-slate-500 block">Question Prompt</span>
-                    <div id="v_prompt" class="text-sm font-semibold text-white mt-1 bg-slate-950 p-3 rounded-lg border border-slate-800"></div>
+                    <div id="v_prompt" class="text-sm font-semibold text-slate-900 dark:text-white mt-1 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800"></div>
                 </div>
 
                 <div id="v_media_section" class="hidden">
                     <span class="text-[10px] uppercase font-bold text-slate-500 block">Media Attachment</span>
-                    <div id="v_media_content" class="mt-1 bg-slate-950 p-3 rounded-lg border border-slate-800 text-indigo-300"></div>
+                    <div id="v_media_content" class="mt-1 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-indigo-600 dark:text-indigo-300"></div>
                 </div>
 
                 <div>
@@ -300,33 +300,33 @@
 
                 <div id="v_explanation_section" class="hidden">
                     <span class="text-[10px] uppercase font-bold text-slate-500 block">Explanation / Rationale</span>
-                    <div id="v_explanation" class="mt-1 text-slate-300 bg-slate-950 p-3 rounded-lg border border-slate-800"></div>
+                    <div id="v_explanation" class="mt-1 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800"></div>
                 </div>
 
-                <div class="flex items-center justify-between pt-2 text-[11px] text-slate-400 border-t border-slate-800">
-                    <div>Difficulty: <span id="v_difficulty" class="font-bold text-white uppercase"></span></div>
-                    <div>Points: <span id="v_points" class="font-bold text-white"></span> pts</div>
+                <div class="flex items-center justify-between pt-2 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
+                    <div>Difficulty: <span id="v_difficulty" class="font-bold text-slate-900 dark:text-white uppercase"></span></div>
+                    <div>Points: <span id="v_points" class="font-bold text-slate-900 dark:text-white"></span> pts</div>
                 </div>
             </div>
 
-            <div class="flex justify-end pt-4 border-t border-slate-800 mt-4">
-                <button type="button" onclick="closeViewQuestionModal()" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Close Preview</button>
+            <div class="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800 mt-4">
+                <button type="button" onclick="closeViewQuestionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg font-semibold transition-colors">Close Preview</button>
             </div>
         </div>
     </div>
 
     <!-- Create Question Modal -->
     <div id="create-question-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-2xl w-full shadow-2xl my-8">
-            <h2 class="text-lg font-bold text-white mb-4">Author New Question</h2>
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-2xl w-full shadow-2xl my-8">
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Author New Question</h2>
             <form action="{{ route('admin.question-banks.store-question', $questionBank->id) }}" method="POST" class="space-y-4">
                 @csrf
                 <input type="hidden" id="q_audio_url" name="audio_url" value="">
                 <input type="hidden" id="q_passage_text" name="passage_text" value="">
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Question Prompt *</label>
-                    <textarea name="prompt" rows="3" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm focus:border-indigo-500 focus:outline-none" required placeholder="Enter question text..."></textarea>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Question Prompt *</label>
+                    <textarea name="prompt" rows="3" class="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-sm focus:border-indigo-500 focus:outline-none" required placeholder="Enter question text..."></textarea>
                 </div>
 
                 @php
@@ -334,9 +334,9 @@
                 @endphp
 
                 @if($isToeicBank)
-                <div class="p-3 bg-indigo-950/60 border border-indigo-500/30 rounded-xl space-y-2">
-                    <label class="block text-xs font-bold text-indigo-300">🎯 TOEIC Part Selection *</label>
-                    <select id="q_part_number" name="part_number" onchange="onQbToeicPartChange('create', this.value)" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-bold focus:border-indigo-500 focus:outline-none">
+                <div class="p-3 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/30 rounded-xl space-y-2">
+                    <label class="block text-xs font-bold text-indigo-800 dark:text-indigo-300">🎯 TOEIC Part Selection *</label>
+                    <select id="q_part_number" name="part_number" onchange="onQbToeicPartChange('create', this.value)" class="w-full p-2.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs font-bold focus:border-indigo-500 focus:outline-none">
                         <option value="1">Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
                         <option value="2">Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
                         <option value="3">Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
@@ -348,16 +348,16 @@
                     <input type="hidden" id="q_section" name="section" value="listening">
                 </div>
 
-                <div id="q_passage_box" class="hidden p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
-                    <label class="block text-xs font-bold text-slate-300">📖 Reading Passage Text *</label>
-                    <textarea name="passage_text" rows="3" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs" placeholder="Enter reading passage text..."></textarea>
+                <div id="q_passage_box" class="hidden p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">📖 Reading Passage Text *</label>
+                    <textarea name="passage_text" rows="3" class="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs" placeholder="Enter reading passage text..."></textarea>
                 </div>
                 @endif
 
                 <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Question Type *</label>
-                        <select id="q_question_type" name="question_type" onchange="updateAnswerOptionsUI('create')" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Question Type *</label>
+                        <select id="q_question_type" name="question_type" onchange="updateAnswerOptionsUI('create')" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="single_choice" selected>Single Choice</option>
                             <option value="multiple_choice">Multiple Choice</option>
                             @if(!$isToeicBank)
@@ -370,8 +370,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty *</label>
-                        <select name="difficulty" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Difficulty *</label>
+                        <select name="difficulty" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="easy">Easy</option>
                             <option value="medium" selected>Medium</option>
                             <option value="hard">Hard</option>
@@ -381,41 +381,41 @@
                 </div>
 
                 <!-- Media Attachment Section -->
-                <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+                <div class="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-bold text-white flex items-center gap-2">
+                        <label class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                             <span>📎</span> Media Attachment (Audio / Image / Passage / PDF)
                         </label>
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="openMediaSelectorModal('create')" class="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold rounded-lg transition-colors">
+                            <button type="button" onclick="openMediaSelectorModal('create')" class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-xs font-semibold rounded-lg transition-colors">
                                 Choose Existing Media
                             </button>
-                            <label class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer">
+                            <label class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer">
                                 Upload New File
                                 <input type="file" class="hidden" accept="audio/*,image/*,.pdf" onchange="handleDirectFileUpload(event, 'create')">
                             </label>
                         </div>
                     </div>
 
-                    <div id="media_attached_preview" class="hidden p-3 bg-indigo-950/60 border border-indigo-500/30 rounded-lg flex items-center justify-between text-xs">
-                        <div class="flex items-center gap-2 text-indigo-200">
+                    <div id="media_attached_preview" class="hidden p-3 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/30 rounded-lg flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 text-indigo-800 dark:text-indigo-200">
                             <span id="attached_icon">🎵</span>
                             <span id="attached_label_text" class="font-semibold truncate"></span>
                         </div>
-                        <button type="button" onclick="removeAttachedMedia('create')" class="text-rose-400 hover:underline text-xs">Remove</button>
+                        <button type="button" onclick="removeAttachedMedia('create')" class="text-rose-600 dark:text-rose-400 hover:underline text-xs font-semibold">Remove</button>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Explanation / Rationale</label>
-                    <input type="text" name="explanation" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Provide answer rationale...">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Explanation / Rationale</label>
+                    <input type="text" name="explanation" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Provide answer rationale...">
                 </div>
 
-                <div id="dynamic_answer_container" class="space-y-3 border-t border-slate-800 pt-4"></div>
+                <div id="dynamic_answer_container" class="space-y-3 border-t border-slate-200 dark:border-slate-800 pt-4"></div>
 
-                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                    <button type="button" onclick="closeCreateQuestionModal()" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold text-xs rounded-lg shadow">Save Question</button>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <button type="button" onclick="closeCreateQuestionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg font-semibold transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Save Question</button>
                 </div>
             </form>
         </div>
@@ -423,8 +423,8 @@
 
     <!-- Edit Question Modal -->
     <div id="edit-question-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-2xl w-full shadow-2xl my-8">
-            <h2 class="text-lg font-bold text-white mb-4">Edit Question</h2>
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-2xl w-full shadow-2xl my-8">
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Edit Question</h2>
             <form id="edit-question-form" method="POST" class="space-y-4">
                 @csrf
                 @method('PUT')
@@ -432,14 +432,14 @@
                 <input type="hidden" id="eq_passage_text" name="passage_text" value="">
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Question Prompt *</label>
-                    <textarea id="eq_prompt" name="prompt" rows="3" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-sm focus:border-indigo-500 focus:outline-none" required></textarea>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Question Prompt *</label>
+                    <textarea id="eq_prompt" name="prompt" rows="3" class="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-sm focus:border-indigo-500 focus:outline-none" required></textarea>
                 </div>
 
                 @if($isToeicBank)
-                <div class="p-3 bg-indigo-950/60 border border-indigo-500/30 rounded-xl space-y-2">
-                    <label class="block text-xs font-bold text-indigo-300">🎯 TOEIC Part Selection *</label>
-                    <select id="eq_part_number" name="part_number" onchange="onQbToeicPartChange('edit', this.value)" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-bold focus:border-indigo-500 focus:outline-none">
+                <div class="p-3 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/30 rounded-xl space-y-2">
+                    <label class="block text-xs font-bold text-indigo-800 dark:text-indigo-300">🎯 TOEIC Part Selection *</label>
+                    <select id="eq_part_number" name="part_number" onchange="onQbToeicPartChange('edit', this.value)" class="w-full p-2.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs font-bold focus:border-indigo-500 focus:outline-none">
                         <option value="1">Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
                         <option value="2">Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
                         <option value="3">Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
@@ -451,16 +451,16 @@
                     <input type="hidden" id="eq_section" name="section" value="listening">
                 </div>
 
-                <div id="eq_passage_box" class="hidden p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
-                    <label class="block text-xs font-bold text-slate-300">📖 Reading Passage Text *</label>
-                    <textarea id="eq_passage_text_input" name="passage_text" rows="3" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs" placeholder="Enter reading passage text..."></textarea>
+                <div id="eq_passage_box" class="hidden p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">📖 Reading Passage Text *</label>
+                    <textarea id="eq_passage_text_input" name="passage_text" rows="3" class="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs" placeholder="Enter reading passage text..."></textarea>
                 </div>
                 @endif
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Question Type *</label>
-                        <select id="eq_question_type" name="question_type" onchange="updateAnswerOptionsUI('edit')" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Question Type *</label>
+                        <select id="eq_question_type" name="question_type" onchange="updateAnswerOptionsUI('edit')" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="single_choice">Single Choice</option>
                             <option value="multiple_choice">Multiple Choice</option>
                             @if(!$isToeicBank)
@@ -473,8 +473,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty *</label>
-                        <select id="eq_difficulty" name="difficulty" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Difficulty *</label>
+                        <select id="eq_difficulty" name="difficulty" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                             <option value="easy">Easy</option>
                             <option value="medium">Medium</option>
                             <option value="hard">Hard</option>
@@ -484,37 +484,37 @@
                 </div>
 
                 <!-- Media Attachment Section for Edit -->
-                <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+                <div class="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-bold text-white flex items-center gap-2">
+                        <label class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                             <span>📎</span> Attached Media
                         </label>
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="openMediaSelectorModal('edit')" class="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold rounded-lg transition-colors">
+                            <button type="button" onclick="openMediaSelectorModal('edit')" class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-xs font-semibold rounded-lg transition-colors">
                                 Replace / Select Media
                             </button>
                         </div>
                     </div>
 
-                    <div id="eq_media_attached_preview" class="p-3 bg-indigo-950/60 border border-indigo-500/30 rounded-lg flex items-center justify-between text-xs">
-                        <div class="flex items-center gap-2 text-indigo-200">
+                    <div id="eq_media_attached_preview" class="p-3 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/30 rounded-lg flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 text-indigo-800 dark:text-indigo-200">
                             <span id="eq_attached_icon">🎵</span>
                             <span id="eq_attached_label_text" class="font-semibold truncate">No media attached</span>
                         </div>
-                        <button type="button" onclick="removeAttachedMedia('edit')" class="text-rose-400 hover:underline text-xs">Remove</button>
+                        <button type="button" onclick="removeAttachedMedia('edit')" class="text-rose-600 dark:text-rose-400 hover:underline text-xs font-semibold">Remove</button>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Explanation / Rationale</label>
-                    <input type="text" id="eq_explanation" name="explanation" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Explanation / Rationale</label>
+                    <input type="text" id="eq_explanation" name="explanation" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                 </div>
 
-                <div id="eq_dynamic_answer_container" class="space-y-3 border-t border-slate-800 pt-4"></div>
+                <div id="eq_dynamic_answer_container" class="space-y-3 border-t border-slate-200 dark:border-slate-800 pt-4"></div>
 
-                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                    <button type="button" onclick="closeEditQuestionModal()" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold text-xs rounded-lg shadow">Update Question</button>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <button type="button" onclick="closeEditQuestionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg font-semibold transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Update Question</button>
                 </div>
             </form>
         </div>
@@ -522,46 +522,46 @@
 
     <!-- Reusable Question Media Selector Modal -->
     <div id="media-selector-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-3xl w-full shadow-2xl my-8">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-3xl w-full shadow-2xl my-8">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <div>
-                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span>📁</span> Media Library Selector
                     </h2>
-                    <p class="text-xs text-slate-400">Select an existing audio, image, reading passage, or PDF attachment to attach to this question.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Select an existing audio, image, reading passage, or PDF attachment to attach to this question.</p>
                 </div>
-                <button type="button" onclick="closeMediaSelectorModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+                <button type="button" onclick="closeMediaSelectorModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg">&times;</button>
             </div>
 
             <!-- Filter Tabs -->
             <div class="flex gap-2 mb-4">
                 <button type="button" onclick="filterMediaItems('all')" class="media-tab-btn active px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg">All Media</button>
-                <button type="button" onclick="filterMediaItems('audio')" class="media-tab-btn px-3 py-1.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-lg">🎵 Audio Tracks</button>
-                <button type="button" onclick="filterMediaItems('image')" class="media-tab-btn px-3 py-1.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-lg">🖼️ Images</button>
-                <button type="button" onclick="filterMediaItems('passage')" class="media-tab-btn px-3 py-1.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-lg">📖 Passages</button>
-                <button type="button" onclick="filterMediaItems('pdf')" class="media-tab-btn px-3 py-1.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-lg">📄 PDFs</button>
+                <button type="button" onclick="filterMediaItems('audio')" class="media-tab-btn px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">🎵 Audio Tracks</button>
+                <button type="button" onclick="filterMediaItems('image')" class="media-tab-btn px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">🖼️ Images</button>
+                <button type="button" onclick="filterMediaItems('passage')" class="media-tab-btn px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">📖 Passages</button>
+                <button type="button" onclick="filterMediaItems('pdf')" class="media-tab-btn px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg">📄 PDFs</button>
             </div>
 
             <!-- Media Grid -->
             <div id="media-items-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto p-1"></div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-slate-800 mt-4">
-                <button type="button" onclick="closeMediaSelectorModal()" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Close</button>
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800 mt-4">
+                <button type="button" onclick="closeMediaSelectorModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg font-semibold transition-colors">Close</button>
             </div>
         </div>
     </div>
 
     <!-- Import Modal -->
     <div id="import-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-lg w-full shadow-2xl">
-            <h2 class="text-lg font-bold text-white mb-2">Bulk CSV Question Import</h2>
-            <p class="text-xs text-slate-400 mb-4">Paste CSV lines in format: <code class="bg-slate-950 text-indigo-300 p-1 rounded">Prompt, Choice A, Choice B, Choice C, Choice D, Correct Index (0-3)</code></p>
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-lg w-full shadow-2xl">
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Bulk CSV Question Import</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Paste CSV lines in format: <code class="bg-slate-100 dark:bg-slate-950 text-indigo-700 dark:text-indigo-300 p-1 rounded">Prompt, Choice A, Choice B, Choice C, Choice D, Correct Index (0-3)</code></p>
             <form action="{{ route('admin.question-banks.import', $questionBank->id) }}" method="POST" class="space-y-4">
                 @csrf
-                <textarea name="csv_content" rows="6" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-mono" placeholder="What is 2+2?, 1, 2, 4, 5, 2"></textarea>
+                <textarea name="csv_content" rows="6" class="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs font-mono" placeholder="What is 2+2?, 1, 2, 4, 5, 2"></textarea>
                 <div class="flex justify-end gap-3">
-                    <button type="button" onclick="document.getElementById('import-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold text-xs rounded-lg">Import Batch</button>
+                    <button type="button" onclick="document.getElementById('import-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg font-semibold transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Import Batch</button>
                 </div>
             </form>
         </div>
@@ -650,20 +650,20 @@
 
                 container.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <label class="block text-xs font-bold text-white">${titleText}</label>
+                        <label class="block text-xs font-bold text-slate-900 dark:text-white">${titleText}</label>
                         ${hideAddBtn ? '' : `
-                        <button type="button" onclick="addDynamicChoice('${prefix}', '${type}')" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-950/60 border border-indigo-500/30 px-2.5 py-1 rounded cursor-pointer transition-colors">
+                        <button type="button" onclick="addDynamicChoice('${prefix}', '${type}')" class="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/30 px-2.5 py-1 rounded cursor-pointer transition-colors">
                             + Add Option
                         </button>`}
                     </div>
                     <div id="${prefix}choices_list" class="space-y-2.5">
                         ${choicesData.map((c, i) => `
-                            <div class="choice-item-row flex items-center gap-3 bg-slate-950/40 p-2 rounded-lg border border-slate-900">
+                            <div class="choice-item-row flex items-center gap-3 bg-slate-50 dark:bg-slate-950/40 p-2 rounded-lg border border-slate-200 dark:border-slate-900">
                                 <input type="${inputType}" name="${inputName}" value="${i}" ${c.is_correct ? 'checked' : ''} title="${isMultiple ? 'Check if correct' : 'Select as correct answer'}">
-                                <span class="choice-item-label font-bold text-xs text-indigo-400 w-4">${c.label}</span>
+                                <span class="choice-item-label font-bold text-xs text-indigo-600 dark:text-indigo-400 w-4">${c.label}</span>
                                 <input type="hidden" class="choice-input-label" name="choices[${i}][label]" value="${c.label}">
-                                <input type="text" id="${prefix}choice_${i}" name="choices[${i}][content]" value="${c.content.replace(/"/g, '&quot;')}" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${c.label} content" required>
-                                <button type="button" onclick="removeDynamicChoice(this, '${prefix}')" class="choice-remove-btn text-rose-400 hover:text-rose-300 text-xs px-2 py-1 cursor-pointer" title="Remove choice" style="${choicesData.length <= 2 ? 'display:none;' : ''}">✕</button>
+                                <input type="text" id="${prefix}choice_${i}" name="choices[${i}][content]" value="${c.content.replace(/"/g, '&quot;')}" class="flex-1 p-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${c.label} content" required>
+                                <button type="button" onclick="removeDynamicChoice(this, '${prefix}')" class="choice-remove-btn text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 text-xs px-2 py-1 cursor-pointer" title="Remove choice" style="${choicesData.length <= 2 ? 'display:none;' : ''}">✕</button>
                             </div>
                         `).join('')}
                     </div>
@@ -675,12 +675,12 @@
                     if (falseChoice) tfCorrect = 'false';
                 }
                 container.innerHTML = `
-                    <label class="block text-xs font-bold text-white mb-2">True / False Correct Answer</label>
+                    <label class="block text-xs font-bold text-slate-900 dark:text-white mb-2">True / False Correct Answer</label>
                     <div class="flex items-center gap-6">
-                        <label class="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                        <label class="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-white cursor-pointer">
                             <input type="radio" name="tf_correct_choice" value="true" ${tfCorrect === 'true' ? 'checked' : ''} class="text-indigo-600 focus:ring-0"> True
                         </label>
-                        <label class="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer">
+                        <label class="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-white cursor-pointer">
                             <input type="radio" name="tf_correct_choice" value="false" ${tfCorrect === 'false' ? 'checked' : ''} class="text-indigo-600 focus:ring-0"> False
                         </label>
                     </div>
@@ -691,13 +691,13 @@
                     initialText = existingChoices[0].content || '';
                 }
                 container.innerHTML = `
-                    <label class="block text-xs font-bold text-white mb-1">Exact Correct Answer String *</label>
-                    <input type="text" id="${prefix}short_answer_text" name="short_answer_text" value="${initialText.replace(/"/g, '&quot;')}" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter expected exact string answer...">
+                    <label class="block text-xs font-bold text-slate-900 dark:text-white mb-1">Exact Correct Answer String *</label>
+                    <input type="text" id="${prefix}short_answer_text" name="short_answer_text" value="${initialText.replace(/"/g, '&quot;')}" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter expected exact string answer...">
                 `;
             } else if (type === 'essay') {
                 container.innerHTML = `
-                    <label class="block text-xs font-bold text-white mb-1">Reference Answer &amp; Grading Guidelines (Optional)</label>
-                    <textarea id="${prefix}reference_answer_text" name="reference_answer_text" rows="3" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter model reference answer or grading rubric..."></textarea>
+                    <label class="block text-xs font-bold text-slate-900 dark:text-white mb-1">Reference Answer &amp; Grading Guidelines (Optional)</label>
+                    <textarea id="${prefix}reference_answer_text" name="reference_answer_text" rows="3" class="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Enter model reference answer or grading rubric..."></textarea>
                 `;
             }
         }
@@ -713,13 +713,13 @@
             const inputName = isMultiple ? 'correct_choices[]' : 'correct_choice';
 
             const div = document.createElement('div');
-            div.className = 'choice-item-row flex items-center gap-3 bg-slate-950/40 p-2 rounded-lg border border-slate-900';
+            div.className = 'choice-item-row flex items-center gap-3 bg-slate-50 dark:bg-slate-950/40 p-2 rounded-lg border border-slate-200 dark:border-slate-900';
             div.innerHTML = `
                 <input type="${inputType}" name="${inputName}" value="${idx}" title="${isMultiple ? 'Check if correct' : 'Select as correct answer'}">
-                <span class="choice-item-label font-bold text-xs text-indigo-400 w-4">${label}</span>
+                <span class="choice-item-label font-bold text-xs text-indigo-600 dark:text-indigo-400 w-4">${label}</span>
                 <input type="hidden" class="choice-input-label" name="choices[${idx}][label]" value="${label}">
-                <input type="text" id="${prefix}choice_${idx}" name="choices[${idx}][content]" class="flex-1 p-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${label} content" required>
-                <button type="button" onclick="removeDynamicChoice(this, '${prefix}')" class="choice-remove-btn text-rose-400 hover:text-rose-300 text-xs px-2 py-1 cursor-pointer" title="Remove choice">✕</button>
+                <input type="text" id="${prefix}choice_${idx}" name="choices[${idx}][content]" class="flex-1 p-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none" placeholder="Option ${label} content" required>
+                <button type="button" onclick="removeDynamicChoice(this, '${prefix}')" class="choice-remove-btn text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 text-xs px-2 py-1 cursor-pointer" title="Remove choice">✕</button>
             `;
             list.appendChild(div);
             reindexDynamicChoices(prefix);
@@ -792,10 +792,10 @@
             if (q.choices && q.choices.length > 0) {
                 q.choices.forEach(c => {
                     const div = document.createElement('div');
-                    div.className = `p-2.5 rounded-lg border flex items-center justify-between ${c.is_correct ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200' : 'bg-slate-950 border-slate-800 text-slate-300'}`;
+                    div.className = `p-2.5 rounded-lg border flex items-center justify-between ${c.is_correct ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200' : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'}`;
                     div.innerHTML = `
                         <span><strong>(${c.label})</strong> ${c.content}</span>
-                        ${c.is_correct ? '<span class="text-[10px] font-bold px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded">CORRECT ANSWER</span>' : ''}
+                        ${c.is_correct ? '<span class="text-[10px] font-bold px-2 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded border border-emerald-500/30">CORRECT ANSWER</span>' : ''}
                     `;
                     container.appendChild(div);
                 });
@@ -891,9 +891,9 @@
             const tabs = document.querySelectorAll('.media-tab-btn');
             tabs.forEach(t => {
                 t.classList.remove('bg-indigo-600', 'text-white');
-                t.classList.add('bg-slate-800', 'text-slate-300');
+                t.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
             });
-            event.target.classList.remove('bg-slate-800', 'text-slate-300');
+            event.target.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
             event.target.classList.add('bg-indigo-600', 'text-white');
 
             if (type === 'all') {
@@ -913,21 +913,21 @@
 
             items.forEach(item => {
                 const card = document.createElement('div');
-                card.className = 'p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-col justify-between';
+                card.className = 'p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col justify-between';
                 let icon = item.type === 'audio' ? '🎵' : (item.type === 'passage' ? '📖' : '📁');
                 
                 card.innerHTML = `
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">${icon} ${item.type}</span>
+                            <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30">${icon} ${item.type}</span>
                             <span class="text-[10px] font-mono text-slate-500">${item.size || ''}</span>
                         </div>
-                        <div class="font-semibold text-white text-xs truncate">${item.name}</div>
+                        <div class="font-semibold text-slate-900 dark:text-white text-xs truncate">${item.name}</div>
                     </div>
-                    <div class="mt-3 pt-2 border-t border-slate-800 flex justify-between items-center">
+                    <div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
                         <span class="text-[10px] text-slate-500 font-mono">${item.id}</span>
                         <button type="button" onclick="selectMediaItem(${JSON.stringify(item).replace(/"/g, '&quot;')})" 
-                                class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow">
+                                class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
                             Use This Media
                         </button>
                     </div>
@@ -1003,10 +1003,10 @@
     </script>
     <!-- Edit Question Bank Modal (QB-001 Issue 1 Fix) -->
     <div id="edit-bank-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-lg w-full shadow-2xl">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-lg w-full shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-base font-bold text-white">Edit Question Bank Details</h2>
-                <button type="button" onclick="document.getElementById('edit-bank-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
+                <h2 class="text-base font-bold text-slate-900 dark:text-white">Edit Question Bank Details</h2>
+                <button type="button" onclick="document.getElementById('edit-bank-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
             </div>
             <form action="{{ route('admin.question-banks.update', $questionBank->id) }}" method="POST" class="space-y-4">
                 @csrf
@@ -1019,13 +1019,13 @@
                 @endif
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Bank Title *</label>
-                    <input type="text" name="title" value="{{ old('title', $questionBank->title) }}" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Bank Title *</label>
+                    <input type="text" name="title" value="{{ old('title', $questionBank->title) }}" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Test Type *</label>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Test Type *</label>
                     @php $typeVal = is_object($questionBank->test_type) ? $questionBank->test_type->value : (string)$questionBank->test_type; @endphp
-                    <select name="test_type" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                    <select name="test_type" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                         <option value="toeic" {{ $typeVal === 'toeic' ? 'selected' : '' }}>TOEIC</option>
                         <option value="toefl" {{ $typeVal === 'toefl' ? 'selected' : '' }}>TOEFL iBT</option>
                         <option value="ielts" {{ $typeVal === 'ielts' ? 'selected' : '' }}>IELTS</option>
@@ -1033,8 +1033,8 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Academic Category (ACL)</label>
-                    <select name="acl_category_id" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Academic Category (ACL)</label>
+                    <select name="acl_category_id" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                         <option value="">-- Select Category --</option>
                         @foreach($aclCategories ?? [] as $cat)
                             <option value="{{ $cat->id }}" {{ (string)$questionBank->acl_category_id === (string)$cat->id ? 'selected' : '' }}>
@@ -1044,16 +1044,16 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Version</label>
-                    <input type="text" name="current_version" value="{{ old('current_version', $questionBank->current_version ?? '1.0') }}" placeholder="1.0" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Version</label>
+                    <input type="text" name="current_version" value="{{ old('current_version', $questionBank->current_version ?? '1.0') }}" placeholder="1.0" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
-                    <textarea name="description" rows="3" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-indigo-500 focus:outline-none">{{ old('description', $questionBank->description) }}</textarea>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                    <textarea name="description" rows="3" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-indigo-500 focus:outline-none">{{ old('description', $questionBank->description) }}</textarea>
                 </div>
-                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                    <button type="button" onclick="document.getElementById('edit-bank-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow">Save Changes</button>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <button type="button" onclick="document.getElementById('edit-bank-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg font-semibold transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -1061,23 +1061,23 @@
 
     <!-- Request Archive Modal (QB-002) -->
     <div id="archive-bank-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-base font-bold text-white flex items-center gap-2"><span>📦</span> Request Question Bank Archival</h2>
-                <button type="button" onclick="document.getElementById('archive-bank-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
+                <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2"><span>📦</span> Request Question Bank Archival</h2>
+                <button type="button" onclick="document.getElementById('archive-bank-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
             </div>
             <form action="{{ route('admin.question-banks.request-archive', $questionBank->id) }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Reason / Justification for Archiving *</label>
-                    <textarea name="reason" required rows="4" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:border-amber-500 focus:outline-none" placeholder="Provide justification for archiving this item pool..."></textarea>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Reason / Justification for Archiving *</label>
+                    <textarea name="reason" required rows="4" class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white text-xs focus:border-amber-500 focus:outline-none" placeholder="Provide justification for archiving this item pool..."></textarea>
                 </div>
-                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-300">
+                <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-700 dark:text-amber-300">
                     💡 <strong>Governance Notice:</strong> Operational Admins cannot archive directly. Submitting this request sends it to the Super Admin Approval Center.
                 </div>
-                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                    <button type="button" onclick="document.getElementById('archive-bank-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg shadow">Submit Archive Request</button>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <button type="button" onclick="document.getElementById('archive-bank-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg font-semibold transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Submit Archive Request</button>
                 </div>
             </form>
         </div>
@@ -1085,12 +1085,12 @@
 
     {{-- Teacher Request Repository Revision Modal --}}
     <div id="teacher-request-revision-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" onclick="closeTeacherRequestRevisionModal(event)">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <span>🛠</span> Request Repository Revision
                 </h3>
-                <button type="button" onclick="closeTeacherRequestRevisionModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+                <button type="button" onclick="closeTeacherRequestRevisionModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg">&times;</button>
             </div>
             <form method="POST" action="{{ route('teacher.repository-revisions.request') }}">
                 @csrf
@@ -1098,17 +1098,17 @@
                 <input type="hidden" id="tr-modal-question-id" name="question_id" value="">
 
                 <div class="mb-3">
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Target Repository / Question Item</label>
-                    <div id="tr-modal-target-title" class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-indigo-300 font-semibold truncate"></div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Target Repository / Question Item</label>
+                    <div id="tr-modal-target-title" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-indigo-700 dark:text-indigo-300 font-semibold truncate"></div>
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Revision Rationale / Specific Feedback <span class="text-rose-400">*</span></label>
-                    <textarea name="notes" required rows="4" placeholder="Explain the specific corrections required (e.g., prompt clarification, key correction, answer explanation update)..." class="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Revision Rationale / Specific Feedback <span class="text-rose-600 dark:text-rose-400">*</span></label>
+                    <textarea name="notes" required rows="4" placeholder="Explain the specific corrections required (e.g., prompt clarification, key correction, answer explanation update)..." class="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
                 </div>
 
                 <div class="flex justify-end gap-2">
-                    <button type="button" onclick="closeTeacherRequestRevisionModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition-colors">Cancel</button>
+                    <button type="button" onclick="closeTeacherRequestRevisionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition-colors">Cancel</button>
                     <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg shadow transition-colors">Submit Revision Request</button>
                 </div>
             </form>
@@ -1143,3 +1143,4 @@
         });
     </script>
 @endsection
+

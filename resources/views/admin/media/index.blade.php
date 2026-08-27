@@ -7,8 +7,8 @@
 .imr-page { display:flex; flex-direction:column; gap:1.75rem; }
 
 .imr-hero {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-    border: 1px solid #1e293b;
+    background: linear-gradient(135deg, #ffffff 0%, #f8faff 50%, #eef2ff 100%);
+    border: 1px solid #dbe0fc;
     border-radius: 1.25rem;
     padding: 1.75rem 2rem;
     display: flex;
@@ -16,9 +16,18 @@
     justify-content: space-between;
     gap: 1.5rem;
     flex-wrap: wrap;
+    box-shadow: 0 4px 16px -2px rgba(99,102,241,0.06);
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
-.imr-hero__title { font-size: 1.5rem; font-weight: 800; color: #fff; margin: 0 0 .3rem; }
-.imr-hero__sub   { font-size: .85rem; color: #94a3b8; margin: 0; }
+html.dark .imr-hero, html[data-theme="dark"] .imr-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    border-color: #1e293b;
+    box-shadow: 0 4px 16px -2px rgba(0,0,0,0.4);
+}
+.imr-hero__title { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0 0 .3rem; }
+html.dark .imr-hero__title, html[data-theme="dark"] .imr-hero__title { color: #fff; }
+.imr-hero__sub   { font-size: .85rem; color: #475569; margin: 0; }
+html.dark .imr-hero__sub, html[data-theme="dark"] .imr-hero__sub { color: #94a3b8; }
 
 /* PART 1: CLICKABLE SUMMARY CARDS */
 .imr-kpi-grid {
@@ -30,37 +39,54 @@
 @media (max-width: 768px)  { .imr-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .imr-kpi {
-    background: #0f172a;
-    border: 1px solid #1e293b;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 1rem;
     padding: 1.1rem 1.25rem;
     display: flex;
     flex-direction: column;
     gap: .25rem;
     text-decoration: none;
-    transition: transform .15s, border-color .15s, box-shadow .15s;
+    transition: transform .15s, border-color .15s, box-shadow .15s, background .15s;
     cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+}
+html.dark .imr-kpi, html[data-theme="dark"] .imr-kpi {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: none;
 }
 .imr-kpi:hover {
     transform: translateY(-2px);
-    border-color: #6366f1;
-    box-shadow: 0 8px 24px rgba(99,102,241,.15);
+    border-color: #4f46e5;
+    box-shadow: 0 8px 24px rgba(99,102,241,.12);
 }
 .imr-kpi--active {
+    border-color: #4f46e5;
+    background: #f8faff;
+}
+html.dark .imr-kpi--active, html[data-theme="dark"] .imr-kpi--active {
     border-color: #6366f1;
     background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
 }
 .imr-kpi__count { font-size: 1.85rem; font-weight: 900; line-height: 1; }
-.imr-kpi__label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; }
+.imr-kpi__label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #475569; }
+html.dark .imr-kpi__label, html[data-theme="dark"] .imr-kpi__label { color: #94a3b8; }
 
 .imr-filter-bar {
-    background: #0f172a;
-    border: 1px solid #1e293b;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 1rem;
     padding: 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+}
+html.dark .imr-filter-bar, html[data-theme="dark"] .imr-filter-bar {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: none;
 }
 .imr-exam-pills { display: flex; gap: .5rem; flex-wrap: wrap; }
 .imr-exam-btn {
@@ -69,12 +95,18 @@
     font-size: .78rem;
     font-weight: 700;
     text-decoration: none;
-    background: #1e293b;
-    color: #94a3b8;
-    border: 1px solid #334155;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
     transition: all .15s;
 }
-.imr-exam-btn--active { background: #6366f1; color: #fff; border-color: #6366f1; }
+html.dark .imr-exam-btn, html[data-theme="dark"] .imr-exam-btn {
+    background: #1e293b;
+    color: #94a3b8;
+    border-color: #334155;
+}
+.imr-exam-btn--active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+html.dark .imr-exam-btn--active, html[data-theme="dark"] .imr-exam-btn--active { background: #6366f1; color: #fff; border-color: #6366f1; }
 
 .imr-grid {
     display: grid;
@@ -83,51 +115,79 @@
 }
 
 .imr-card {
-    background: #0f172a;
-    border: 1px solid #1e293b;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 1.1rem;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    transition: border-color .2s, transform .15s;
+    transition: border-color .2s, transform .15s, box-shadow .2s;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
 }
-.imr-card:hover { border-color: #6366f1; transform: translateY(-2px); }
+html.dark .imr-card, html[data-theme="dark"] .imr-card {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: none;
+}
+.imr-card:hover { border-color: #4f46e5; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+html.dark .imr-card:hover, html[data-theme="dark"] .imr-card:hover { border-color: #6366f1; }
 
 .imr-card__preview {
     height: 160px;
-    background: #080f1d;
+    background: #f8fafc;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 1px solid #e2e8f0;
     position: relative;
     overflow: hidden;
+}
+html.dark .imr-card__preview, html[data-theme="dark"] .imr-card__preview {
+    background: #080f1d;
+    border-bottom-color: #1e293b;
 }
 .imr-card__preview img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: transform .2s; }
 .imr-card__preview img:hover { transform: scale(1.04); }
 
 .imr-card__body { padding: 1.1rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
-.imr-card__title { font-size: .92rem; font-weight: 800; color: #f1f5f9; line-height: 1.35; text-decoration: none; }
-.imr-card__title:hover { color: #818cf8; }
-.imr-card__sub { font-size: .72rem; color: #64748b; }
+.imr-card__title { font-size: .92rem; font-weight: 800; color: #0f172a; line-height: 1.35; text-decoration: none; }
+html.dark .imr-card__title, html[data-theme="dark"] .imr-card__title { color: #f1f5f9; }
+.imr-card__title:hover { color: #4f46e5; }
+html.dark .imr-card__title:hover, html[data-theme="dark"] .imr-card__title:hover { color: #818cf8; }
+.imr-card__sub { font-size: .72rem; color: #475569; }
+html.dark .imr-card__sub, html[data-theme="dark"] .imr-card__sub { color: #94a3b8; }
 
 .imr-tag { padding: .2rem .55rem; border-radius: 99px; font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; display: inline-block; white-space: nowrap; }
-.imr-tag--toefl   { background: rgba(129,140,248,.15); color: #818cf8; border: 1px solid rgba(129,140,248,.3); }
-.imr-tag--toeic   { background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
-.imr-tag--ielts   { background: rgba(251,113,133,.15); color: #fb7185; border: 1px solid rgba(251,113,133,.3); }
-.imr-tag--general { background: rgba(148,163,184,.15); color: #94a3b8; border: 1px solid rgba(148,163,184,.3); }
+.imr-tag--toefl   { background: rgba(99,102,241,.12); color: #4f46e5; border: 1px solid rgba(99,102,241,.25); }
+html.dark .imr-tag--toefl, html[data-theme="dark"] .imr-tag--toefl { background: rgba(129,140,248,.15); color: #818cf8; border-color: rgba(129,140,248,.3); }
+.imr-tag--toeic   { background: rgba(16,185,129,.12); color: #059669; border: 1px solid rgba(16,185,129,.25); }
+html.dark .imr-tag--toeic, html[data-theme="dark"] .imr-tag--toeic { background: rgba(52,211,153,.15); color: #34d399; border-color: rgba(52,211,153,.3); }
+.imr-tag--ielts   { background: rgba(244,63,94,.12); color: #e11d48; border: 1px solid rgba(244,63,94,.25); }
+html.dark .imr-tag--ielts, html[data-theme="dark"] .imr-tag--ielts { background: rgba(251,113,133,.15); color: #fb7185; border-color: rgba(251,113,133,.3); }
+.imr-tag--general { background: rgba(100,116,139,.12); color: #475569; border: 1px solid rgba(100,116,139,.25); }
+html.dark .imr-tag--general, html[data-theme="dark"] .imr-tag--general { background: rgba(148,163,184,.15); color: #94a3b8; border-color: rgba(148,163,184,.3); }
 
-.imr-foot { padding: .75rem 1rem; background: #0b1329; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; gap: .35rem; flex-wrap: wrap; }
-.imr-btn-neutral { padding: .3rem .55rem; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; border-radius: .4rem; font-size: .7rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
-.imr-btn-neutral:hover { background: #334155; color: #fff; }
-.imr-btn-edit { padding: .3rem .55rem; background: #1e1b4b; border: 1px solid #4338ca; color: #a5b4fc; border-radius: .4rem; font-size: .7rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
-.imr-btn-edit:hover { background: #312e81; color: #fff; }
-.imr-btn-tracker { background: none; border: none; color: #818cf8; font-size: .7rem; font-weight: 700; cursor: pointer; padding: .2rem .4rem; border-radius: .35rem; transition: color .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
-.imr-btn-tracker:hover { color: #6366f1; text-decoration: underline; }
+.imr-foot { padding: .75rem 1rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: .35rem; flex-wrap: wrap; }
+html.dark .imr-foot, html[data-theme="dark"] .imr-foot { background: #0b1329; border-top-color: #1e293b; }
+.imr-btn-neutral { padding: .3rem .55rem; background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; border-radius: .4rem; font-size: .7rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
+html.dark .imr-btn-neutral, html[data-theme="dark"] .imr-btn-neutral { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+.imr-btn-neutral:hover { background: #e2e8f0; color: #0f172a; }
+html.dark .imr-btn-neutral:hover, html[data-theme="dark"] .imr-btn-neutral:hover { background: #334155; color: #fff; }
 
-.imr-modal-bg { position: fixed; inset: 0; background: rgba(2,6,23,.82); backdrop-filter: blur(8px); z-index: 990; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-.imr-modal { background: #0f172a; border: 1px solid #1e293b; border-radius: 1.25rem; max-width: 650px; max-height: 85vh; overflow-y: auto; width: 100%; padding: 2rem; box-shadow: 0 24px 64px rgba(0,0,0,.7); }
+.imr-btn-edit { padding: .3rem .55rem; background: #eef2ff; border: 1px solid #c7d2fe; color: #4338ca; border-radius: .4rem; font-size: .7rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
+html.dark .imr-btn-edit, html[data-theme="dark"] .imr-btn-edit { background: #1e1b4b; border-color: #4338ca; color: #a5b4fc; }
+.imr-btn-edit:hover { background: #e0e7ff; color: #3730a3; }
+html.dark .imr-btn-edit:hover, html[data-theme="dark"] .imr-btn-edit:hover { background: #312e81; color: #fff; }
+
+.imr-btn-tracker { background: none; border: none; color: #4f46e5; font-size: .7rem; font-weight: 700; cursor: pointer; padding: .2rem .4rem; border-radius: .35rem; transition: color .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
+html.dark .imr-btn-tracker, html[data-theme="dark"] .imr-btn-tracker { color: #818cf8; }
+.imr-btn-tracker:hover { color: #3730a3; text-decoration: underline; }
+html.dark .imr-btn-tracker:hover, html[data-theme="dark"] .imr-btn-tracker:hover { color: #6366f1; }
+
+.imr-modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,.75); backdrop-filter: blur(6px); z-index: 990; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+.imr-modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.25rem; max-width: 650px; max-height: 85vh; overflow-y: auto; width: 100%; padding: 2rem; box-shadow: 0 24px 64px rgba(0,0,0,.15); }
+html.dark .imr-modal, html[data-theme="dark"] .imr-modal { background: #0f172a; border-color: #1e293b; box-shadow: 0 24px 64px rgba(0,0,0,.7); }
 </style>
 @endpush
 
@@ -222,9 +282,9 @@
                 <input type="hidden" name="filter" value="{{ request('filter') }}">
                 @endif
 
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title, ID, tag, transcript..." style="background:#1e293b;border:1px solid #334155;color:#fff;padding:.45rem .85rem;border-radius:.5rem;font-size:.8rem;min-width:200px;">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title, ID, tag, transcript..." class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-xs min-w-[200px]">
 
-                <select name="type" onchange="this.form.submit()" style="background:#1e293b;border:1px solid #334155;color:#fff;padding:.45rem .85rem;border-radius:.5rem;font-size:.8rem;">
+                <select name="type" onchange="this.form.submit()" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-xs">
                     <option value="">All Asset Types</option>
                     <option value="image" {{ request('type') === 'image' ? 'selected' : '' }}>Images</option>
                     <option value="audio" {{ request('type') === 'audio' ? 'selected' : '' }}>Audio</option>
@@ -233,22 +293,22 @@
                     <option value="passage" {{ request('type') === 'passage' ? 'selected' : '' }}>Passages</option>
                 </select>
 
-                <button type="submit" style="background:#6366f1;color:#fff;border:none;padding:.45rem .9rem;border-radius:.5rem;font-size:.8rem;font-weight:700;cursor:pointer;">Filter</button>
+                <button type="submit" style="padding:.45rem .9rem;background:#4f46e5;color:#fff;border:none;border-radius:.5rem;font-size:.8rem;font-weight:700;cursor:pointer;">Filter</button>
             </form>
         </div>
     </div>
 
     {{-- PART 9: INFORMATIVE EMPTY STATES --}}
     @if($mediaAssets->isEmpty())
-    <div style="background:#0f172a;border:1px dashed #334155;border-radius:1.25rem;padding:4rem 2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1rem;">
+    <div class="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-12 text-center flex flex-col items-center gap-3">
         <div style="font-size:3.5rem;">🔍</div>
-        <h3 style="font-size:1.15rem;font-weight:800;color:#f1f5f9;margin:0;">
+        <h3 style="font-size:1.15rem;font-weight:800;margin:0;" class="text-slate-900 dark:text-white">
             No {{ strtoupper(request('exam_type', '')) }} {{ ucfirst(request('type', '')) }} Assets Found
         </h3>
-        <p style="font-size:.85rem;color:#94a3b8;max-width:420px;line-height:1.5;margin:0;">
+        <p style="font-size:.85rem;max-width:420px;line-height:1.5;margin:0;" class="text-slate-600 dark:text-slate-400">
             No matching institutional assets exist for the selected filter combination. Upload a new asset or clear your search filters to explore the full repository.
         </p>
-        <a href="{{ route('admin.media.index') }}" style="padding:.6rem 1.25rem;background:#6366f1;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('admin.media.index') }}" style="padding:.6rem 1.25rem;background:#4f46e5;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;">
             Clear All Filters
         </a>
     </div>
@@ -271,10 +331,10 @@
                             <source src="{{ $asset->publicUrl() }}" type="{{ $asset->mime_type }}">
                         </audio>
                         @if($asset->content_text)
-                        <button type="button" onclick="toggleTranscript('trans-{{ $asset->id }}')" style="font-size:.65rem;color:#34d399;font-weight:700;background:none;border:none;cursor:pointer;margin-top:.3rem;">
+                        <button type="button" onclick="toggleTranscript('trans-{{ $asset->id }}')" style="font-size:.65rem;color:#059669;font-weight:700;background:none;border:none;cursor:pointer;margin-top:.3rem;">
                             📝 Toggle Transcript
                         </button>
-                        <div id="trans-{{ $asset->id }}" style="display:none;font-size:.68rem;color:#94a3b8;text-align:left;background:#0f172a;padding:.5rem;border-radius:.4rem;margin-top:.3rem;max-height:60px;overflow-y:auto;">
+                        <div id="trans-{{ $asset->id }}" class="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300" style="display:none;font-size:.68rem;text-align:left;padding:.5rem;border-radius:.4rem;margin-top:.3rem;max-height:60px;overflow-y:auto;">
                             {{ $asset->content_text }}
                         </div>
                         @endif
@@ -290,13 +350,13 @@
                 @elseif($asset->type === 'pdf')
                     <div style="text-align:center;padding:1rem;width:100%;">
                         <div style="font-size:2.2rem;margin-bottom:.2rem;">📄</div>
-                        <button type="button" onclick="openPdfModal('{{ $asset->publicUrl() }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" style="font-size:.72rem;color:#fbbf24;font-weight:700;background:none;border:none;cursor:pointer;">
+                        <button type="button" onclick="openPdfModal('{{ $asset->publicUrl() }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" style="font-size:.72rem;color:#d97706;font-weight:700;background:none;border:none;cursor:pointer;">
                             🔍 Embedded PDF Preview ↗
                         </button>
                     </div>
 
                 @elseif($asset->type === 'passage')
-                    <div style="padding:.75rem 1rem;font-size:.7rem;color:#cbd5e1;line-height:1.35;overflow:hidden;max-height:100%;">
+                    <div style="padding:.75rem 1rem;font-size:.7rem;line-height:1.35;overflow:hidden;max-height:100%;" class="text-slate-700 dark:text-slate-300">
                         📝 {{ Str::limit($asset->content_text ?? $asset->description, 130) }}
                     </div>
                 @else
@@ -311,15 +371,15 @@
                     <span class="imr-tag imr-tag--{{ in_array($exType, ['toefl','toeic','ielts']) ? $exType : 'general' }}">
                         {{ strtoupper($exType) }}
                     </span>
-                    <span style="font-size:.68rem;color:#64748b;font-weight:700;">v{{ $asset->version ?? '1.0' }}</span>
+                    <span style="font-size:.68rem;font-weight:700;" class="text-slate-500 dark:text-slate-400">v{{ $asset->version ?? '1.0' }}</span>
                 </div>
 
                 {{-- TASK 1: Media Title Plain Text Only (Hyperlink Removed) --}}
-                <div class="imr-card__title" style="color:#f8fafc;font-weight:700;margin-top:.35rem;margin-bottom:.15rem;font-size:.9rem;line-height:1.3;">
+                <div class="imr-card__title" style="margin-top:.35rem;margin-bottom:.15rem;font-size:.9rem;line-height:1.3;">
                     {{ $asset->title ?? $asset->original_name }}
                 </div>
                 <div class="imr-card__sub">Folder: {{ $asset->category ?? 'General Assets' }}</div>
-                <div style="font-size:.68rem;color:#475569;margin-top:2px;">Size: {{ $asset->humanSize() }} • {{ $asset->created_at?->format('d M Y') }}</div>
+                <div style="font-size:.68rem;margin-top:2px;" class="text-slate-500 dark:text-slate-400">Size: {{ $asset->humanSize() }} • {{ $asset->created_at?->format('d M Y') }}</div>
             </div>
 
             {{-- TASK 1: Action Column / Action Buttons (Preview, Edit, Version History, Tracker) --}}
@@ -328,7 +388,7 @@
                     👁 Preview
                 </a>
                 <a href="{{ route('admin.media.edit', $asset->id) }}" class="imr-btn-edit">
-                    ✏ Edit
+                    ✏️ Edit
                 </a>
                 <a href="{{ route('admin.media.versions', $asset->id) }}" class="imr-btn-neutral">
                     📄 Version History
@@ -349,18 +409,18 @@
     {{-- PART 2: Image Preview Modal --}}
     <div id="imageModal" class="imr-modal-bg" style="display:none;">
         <div class="imr-modal" style="max-width:800px;text-align:center;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                <h3 id="imageModalTitle" style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">🖼 Image Preview</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #e2e8f0;padding-bottom:.5rem;">
+                <h3 id="imageModalTitle" style="font-size:1.05rem;font-weight:800;margin:0;" class="text-slate-900 dark:text-white">🖼 Image Preview</h3>
                 <span onclick="closeImageModal()" style="color:#64748b;font-size:1.4rem;cursor:pointer;">&times;</span>
             </div>
-            <div style="background:#080f1d;border:1px solid #1e293b;border-radius:.85rem;padding:1rem;overflow:hidden;margin-bottom:1rem;">
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:.85rem;padding:1rem;overflow:hidden;margin-bottom:1rem;" class="dark:bg-slate-950 dark:border-slate-800">
                 <img id="imageModalSrc" src="" style="max-width:100%;max-height:500px;object-fit:contain;transition:transform .3s;cursor:zoom-in;" onclick="toggleModalZoom()">
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <button type="button" onclick="toggleModalZoom()" style="padding:.4rem 1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.5rem;font-size:.78rem;font-weight:700;cursor:pointer;">
+                <button type="button" onclick="toggleModalZoom()" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700" style="padding:.4rem 1rem;border-radius:.5rem;font-size:.78rem;font-weight:700;cursor:pointer;">
                     🔍 Toggle Zoom
                 </button>
-                <button type="button" onclick="closeImageModal()" style="padding:.4rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.5rem;font-size:.78rem;font-weight:700;cursor:pointer;">
+                <button type="button" onclick="closeImageModal()" style="padding:.4rem 1.25rem;background:#4f46e5;color:#fff;border:none;border-radius:.5rem;font-size:.78rem;font-weight:700;cursor:pointer;">
                     Close
                 </button>
             </div>
@@ -370,15 +430,15 @@
     {{-- PART 2: Embedded PDF Viewer Modal --}}
     <div id="pdfModal" class="imr-modal-bg" style="display:none;">
         <div class="imr-modal" style="max-width:850px;height:85vh;display:flex;flex-direction:column;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                <h3 id="pdfModalTitle" style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">📄 Embedded PDF Viewer</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #e2e8f0;padding-bottom:.5rem;">
+                <h3 id="pdfModalTitle" style="font-size:1.05rem;font-weight:800;margin:0;" class="text-slate-900 dark:text-white">📄 Embedded PDF Viewer</h3>
                 <span onclick="closePdfModal()" style="color:#64748b;font-size:1.4rem;cursor:pointer;">&times;</span>
             </div>
-            <div style="flex:1;background:#fff;border-radius:.75rem;overflow:hidden;margin-bottom:1rem;">
+            <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:.75rem;overflow:hidden;margin-bottom:1rem;">
                 <iframe id="pdfModalSrc" src="" style="width:100%;height:100%;border:none;"></iframe>
             </div>
             <div style="text-align:right;">
-                <button type="button" onclick="closePdfModal()" style="padding:.4rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.5rem;font-size:.78rem;font-weight:700;cursor:pointer;">
+                <button type="button" onclick="closePdfModal()" style="padding:.4rem 1.25rem;background:#4f46e5;color:#fff;border:none;border-radius:.5rem;font-size:.78rem;font-weight:700;cursor:pointer;">
                     Close Viewer
                 </button>
             </div>
@@ -388,11 +448,11 @@
     {{-- PART 5: Usage Tracker Modal --}}
     <div id="usageModal" class="imr-modal-bg" style="display:none;">
         <div class="imr-modal">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-                <h3 id="usageTitle" style="font-size:1.05rem;font-weight:800;color:#fff;margin:0;">🔗 Usage Explorer</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;border-bottom:1px solid #e2e8f0;padding-bottom:.5rem;">
+                <h3 id="usageTitle" style="font-size:1.05rem;font-weight:800;margin:0;" class="text-slate-900 dark:text-white">🔗 Usage Explorer</h3>
                 <span onclick="closeUsageModal()" style="color:#64748b;font-size:1.4rem;cursor:pointer;">&times;</span>
             </div>
-            <div id="usageBody" style="font-size:.85rem;color:#cbd5e1;line-height:1.5;">
+            <div id="usageBody" style="font-size:.85rem;line-height:1.5;" class="text-slate-700 dark:text-slate-300">
                 Loading usage details...
             </div>
         </div>
@@ -401,8 +461,8 @@
     {{-- Upload Wizard Modal (TASK 3 & TASK 6) --}}
     <div id="uploadModal" class="imr-modal-bg" style="display:none;">
         <div class="imr-modal" style="max-width:700px;width:100%;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-                <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;border-bottom:1px solid #e2e8f0;padding-bottom:.5rem;">
+                <h3 style="font-size:1.1rem;font-weight:800;margin:0;display:flex;align-items:center;gap:.5rem;" class="text-slate-900 dark:text-white">
                     🚀 Multi-Step Asset Upload Wizard
                 </h3>
                 <span onclick="closeUploadModal()" style="color:#64748b;font-size:1.4rem;cursor:pointer;">&times;</span>
@@ -414,23 +474,23 @@
 
                 {{-- STEP 1: Select Asset Type --}}
                 <div id="wizardStep1">
-                    <label style="font-size:.78rem;font-weight:800;color:#94a3b8;display:block;margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em;">
+                    <label style="font-size:.78rem;font-weight:800;display:block;margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em;" class="text-slate-600 dark:text-slate-400">
                         Step 1: Choose Institutional Asset Type *
                     </label>
                     <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:.65rem;margin-bottom:1.5rem;">
-                        <button type="button" onclick="selectWizardType('image')" id="typeBtn_image" style="padding:.85rem .5rem;background:#1e293b;border:2px solid #6366f1;color:#fff;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                        <button type="button" onclick="selectWizardType('image')" id="typeBtn_image" class="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border-2 border-indigo-600" style="padding:.85rem .5rem;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
                             <span style="font-size:1.5rem;">🖼</span> Image
                         </button>
-                        <button type="button" onclick="selectWizardType('audio')" id="typeBtn_audio" style="padding:.85rem .5rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                        <button type="button" onclick="selectWizardType('audio')" id="typeBtn_audio" class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700" style="padding:.85rem .5rem;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
                             <span style="font-size:1.5rem;">🎵</span> Audio
                         </button>
-                        <button type="button" onclick="selectWizardType('video')" id="typeBtn_video" style="padding:.85rem .5rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                        <button type="button" onclick="selectWizardType('video')" id="typeBtn_video" class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700" style="padding:.85rem .5rem;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
                             <span style="font-size:1.5rem;">🎬</span> Video
                         </button>
-                        <button type="button" onclick="selectWizardType('pdf')" id="typeBtn_pdf" style="padding:.85rem .5rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                        <button type="button" onclick="selectWizardType('pdf')" id="typeBtn_pdf" class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700" style="padding:.85rem .5rem;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
                             <span style="font-size:1.5rem;">📄</span> PDF
                         </button>
-                        <button type="button" onclick="selectWizardType('passage')" id="typeBtn_passage" style="padding:.85rem .5rem;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
+                        <button type="button" onclick="selectWizardType('passage')" id="typeBtn_passage" class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700" style="padding:.85rem .5rem;border-radius:.75rem;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.35rem;">
                             <span style="font-size:1.5rem;">📝</span> Passage
                         </button>
                     </div>
@@ -441,14 +501,14 @@
 
                     {{-- Title & Exam Fields (Common) --}}
                     <div>
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Asset Title *</label>
-                        <input type="text" name="title" required placeholder="e.g. TOEFL Reading Passage Vol 1 / Part 1 Photograph" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Asset Title *</label>
+                        <input type="text" name="title" required placeholder="e.g. TOEFL Reading Passage Vol 1 / Part 1 Photograph" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;">
                         <div>
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Exam Type *</label>
-                            <select name="exam_type" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                            <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Exam Type *</label>
+                            <select name="exam_type" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                                 <option value="toefl">TOEFL iBT</option>
                                 <option value="toeic">TOEIC Official</option>
                                 <option value="ielts">IELTS Academic</option>
@@ -459,68 +519,68 @@
                             </select>
                         </div>
                         <div>
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Category / Folder</label>
-                            <input type="text" name="category" placeholder="e.g. Reading Passages" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                            <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Category / Folder</label>
+                            <input type="text" name="category" placeholder="e.g. Reading Passages" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                         </div>
                         <div>
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Sub Category</label>
-                            <input type="text" name="sub_category" placeholder="e.g. Academic Lecture" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                            <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Sub Category</label>
+                            <input type="text" name="sub_category" placeholder="e.g. Academic Lecture" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                         </div>
                     </div>
 
                     {{-- Dynamic Section for IMAGE --}}
                     <div id="fields_image">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Upload Image File (JPG, PNG, WebP) *</label>
-                        <input type="file" name="file" accept="image/*" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Upload Image File (JPG, PNG, WebP) *</label>
+                        <input type="file" name="file" accept="image/*" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                     </div>
 
                     {{-- Dynamic Section for AUDIO --}}
                     <div id="fields_audio" style="display:none;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Upload Audio Track (MP3, WAV, M4A) *</label>
-                        <input type="file" name="audio_file" accept="audio/*" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Audio Transcript Content</label>
-                        <textarea name="content_text" rows="3" placeholder="Associated transcript text..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;"></textarea>
+                        <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Upload Audio Track (MP3, WAV, M4A) *</label>
+                        <input type="file" name="audio_file" accept="audio/*" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full mb-3">
+                        <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Audio Transcript Content</label>
+                        <textarea name="content_text" rows="3" placeholder="Associated transcript text..." class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full"></textarea>
                     </div>
 
                     {{-- Dynamic Section for VIDEO --}}
                     <div id="fields_video" style="display:none;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Upload Video File (MP4, WEBM) *</label>
-                        <input type="file" name="video_file" accept="video/*" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Duration / Description</label>
-                        <input type="text" name="description" placeholder="e.g. 05:30 min - Listening Section Explanation" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Upload Video File (MP4, WEBM) *</label>
+                        <input type="file" name="video_file" accept="video/*" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full mb-3">
+                        <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Duration / Description</label>
+                        <input type="text" name="description" placeholder="e.g. 05:30 min - Listening Section Explanation" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                     </div>
 
                     {{-- Dynamic Section for PDF --}}
                     <div id="fields_pdf" style="display:none;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Upload PDF Document *</label>
-                        <input type="file" name="pdf_file" accept="application/pdf" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Upload PDF Document *</label>
+                        <input type="file" name="pdf_file" accept="application/pdf" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                     </div>
 
                     {{-- Dynamic Section for PASSAGE (Text Only, Image Only, Hybrid) --}}
-                    <div id="fields_passage" style="display:none;background:#080f1d;border:1px solid #334155;border-radius:.75rem;padding:1rem;">
-                        <label style="font-size:.75rem;font-weight:800;color:#818cf8;display:block;margin-bottom:.5rem;">
+                    <div id="fields_passage" style="display:none;border-radius:.75rem;padding:1rem;" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <label style="font-size:.75rem;font-weight:800;color:#4f46e5;display:block;margin-bottom:.5rem;">
                             Passage Format Selector *
                         </label>
                         <div style="display:flex;gap:.5rem;margin-bottom:.85rem;">
                             <input type="hidden" name="passage_type" id="wizardPassageFormat" value="HYBRID">
-                            <button type="button" onclick="setWizardPassageMode('TEXT')" id="wPillTEXT" style="padding:.4rem .75rem;border-radius:.5rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;font-size:.75rem;font-weight:700;cursor:pointer;">Text Only</button>
-                            <button type="button" onclick="setWizardPassageMode('IMAGE')" id="wPillIMAGE" style="padding:.4rem .75rem;border-radius:.5rem;background:#1e293b;color:#cbd5e1;border:1px solid #334155;font-size:.75rem;font-weight:700;cursor:pointer;">Image Only</button>
-                            <button type="button" onclick="setWizardPassageMode('HYBRID')" id="wPillHYBRID" style="padding:.4rem .75rem;border-radius:.5rem;background:#4338ca;color:#fff;border:1px solid #6366f1;font-size:.75rem;font-weight:700;cursor:pointer;">Hybrid (Text + Image)</button>
+                            <button type="button" onclick="setWizardPassageMode('TEXT')" id="wPillTEXT" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700" style="padding:.4rem .75rem;border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;">Text Only</button>
+                            <button type="button" onclick="setWizardPassageMode('IMAGE')" id="wPillIMAGE" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700" style="padding:.4rem .75rem;border-radius:.5rem;font-size:.75rem;font-weight:700;cursor:pointer;">Image Only</button>
+                            <button type="button" onclick="setWizardPassageMode('HYBRID')" id="wPillHYBRID" style="padding:.4rem .75rem;border-radius:.5rem;background:#4f46e5;color:#fff;border:1px solid #4f46e5;font-size:.75rem;font-weight:700;cursor:pointer;">Hybrid (Text + Image)</button>
                         </div>
 
                         <div id="wPassageTextDiv">
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Rich Text Passage Content</label>
-                            <textarea name="passage_content_text" rows="4" placeholder="Enter passage paragraphs..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;font-family:monospace;"></textarea>
+                            <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Rich Text Passage Content</label>
+                            <textarea name="passage_content_text" rows="4" placeholder="Enter passage paragraphs..." class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full font-mono"></textarea>
                         </div>
 
                         <div id="wPassageImgDiv" style="margin-top:.75rem;">
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Passage Diagram / Image Scan</label>
-                            <input type="file" name="passage_image_file" accept="image/*" style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                            <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Passage Diagram / Image Scan</label>
+                            <input type="file" name="passage_image_file" accept="image/*" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                         </div>
                     </div>
 
                     {{-- TASK 6: Button Changes -> "Submit for Repository Review" --}}
-                    <button type="submit" style="width:100%;padding:.75rem;background:#6366f1;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;margin-top:.5rem;font-size:.88rem;">
+                    <button type="submit" style="width:100%;padding:.75rem;background:#4f46e5;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;margin-top:.5rem;font-size:.88rem;">
                         🚀 Submit for Repository Review
                     </button>
                 </div>

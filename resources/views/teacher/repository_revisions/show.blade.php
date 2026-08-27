@@ -6,19 +6,35 @@
 <style>
 .trr-workspace { display: flex; flex-direction: column; gap: 1.75rem; width: 100%; }
 .trr-panel {
-    background: #0f172a;
-    border: 1px solid #1e293b;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 1.25rem;
     padding: 1.75rem;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .trr-panel, html[data-theme="dark"] .trr-panel {
+    background: #0f172a;
+    border-color: #1e293b;
+    box-shadow: none;
 }
 .trr-item-card {
-    background: #080f1d;
-    border: 1px solid #1e293b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 1rem;
     padding: 1.25rem;
     margin-bottom: 1rem;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+html.dark .trr-item-card, html[data-theme="dark"] .trr-item-card {
+    background: #080f1d;
+    border-color: #1e293b;
 }
 .trr-item-card--closed {
+    border-color: rgba(5,150,105,.3);
+    background: rgba(5,150,105,.05);
+}
+html.dark .trr-item-card--closed, html[data-theme="dark"] .trr-item-card--closed {
     border-color: rgba(52,211,153,.3);
     background: rgba(52,211,153,.05);
 }
@@ -29,21 +45,21 @@
 <div class="trr-workspace">
 
     {{-- Breadcrumbs / Back Navigation --}}
-    <div style="display:flex;gap:1.25rem;align-items:center;margin-bottom:1rem;">
+    <div class="flex items-center gap-4 mb-2">
         @if(request('from') === 'notifications')
-        <a href="{{ route('notifications.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('notifications.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-bold transition-colors">
             ← Back to Notifications
         </a>
         @elseif(request('from_url') && str_starts_with(request('from_url'), '/') && !str_starts_with(request('from_url'), '//') && !str_contains(request('from_url'), '://'))
-        <a href="{{ request('from_url') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ request('from_url') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-bold transition-colors">
             ← Back
         </a>
         @else
-        <a href="{{ route('teacher.repository-revisions.index') }}" style="color:#818cf8;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('teacher.repository-revisions.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-bold transition-colors">
             ← Back to Revision Tasks
         </a>
         @endif
-        <a href="{{ route('teacher.dashboard') }}" style="color:#cbd5e1;font-size:.82rem;font-weight:700;text-decoration:none;">
+        <a href="{{ route('teacher.dashboard') }}" class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-semibold transition-colors">
             Dashboard
         </a>
     </div>
@@ -58,46 +74,46 @@
 
         if ($revisionRequest->status === 'RESUBMITTED' || $isBankLocked) {
             $topStatusLabel = 'RESUBMITTED — AWAITING REVIEW';
-            $topBadgeStyle = 'background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;';
+            $topBadgeClass = 'bg-amber-50 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-400';
         } elseif ($totCount > 0 && $openCount === 0) {
             $topStatusLabel = 'READY FOR RESUBMISSION';
-            $topBadgeStyle = 'background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;';
+            $topBadgeClass = 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300';
         } else {
             $topStatusLabel = 'OPEN';
-            $topBadgeStyle = 'background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:#fbbf24;';
+            $topBadgeClass = 'bg-amber-50 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-400';
         }
     @endphp
 
     {{-- Repository Header Card --}}
     <div class="trr-panel">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+        <div class="flex justify-between items-start gap-4 flex-wrap">
             <div>
-                <span style="font-size:.72rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;">Repository Revision Task</span>
-                <h1 style="font-size:1.5rem;font-weight:900;color:#fff;margin:.2rem 0 .25rem;">
+                <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Repository Revision Task</span>
+                <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1 mb-1">
                     {{ $revisionRequest->questionBank?->title }}
                 </h1>
-                <p style="font-size:.82rem;color:#94a3b8;margin:0;">
-                    Exam Type: <strong style="color:#34d399;text-transform:uppercase;">{{ $revisionRequest->questionBank?->test_type }}</strong> • Requested By Reviewer: <strong style="color:#e2e8f0;">{{ $revisionRequest->requestedBy?->name ?? 'Repository Manager' }}</strong>
+                <p class="text-xs text-slate-500 dark:text-slate-400 m-0">
+                    Exam Type: <strong class="text-emerald-600 dark:text-emerald-400 uppercase font-bold">{{ $revisionRequest->questionBank?->test_type }}</strong> • Requested By Reviewer: <strong class="text-slate-800 dark:text-slate-200 font-bold">{{ $revisionRequest->requestedBy?->name ?? 'Repository Manager' }}</strong>
                 </p>
             </div>
 
-            <div style="display:flex;gap:.65rem;align-items:center;">
-                <span style="padding:.4rem .9rem;border-radius:.6rem;font-size:.78rem;font-weight:800;text-transform:uppercase;{{ $topBadgeStyle }}">
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1.5 rounded-lg text-xs font-extrabold uppercase {{ $topBadgeClass }}">
                     Status: {{ $topStatusLabel }}
                 </span>
             </div>
         </div>
 
         @if($isBankLocked)
-        <div style="margin-top:1rem;padding:.75rem 1rem;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:.6rem;display:flex;align-items:center;gap:.6rem;font-size:.82rem;color:#fbbf24;">
-            <span>🔒</span>
+        <div class="mt-4 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+            <span class="text-base">🔒</span>
             <span><strong>Repository locked while awaiting governance review.</strong> Editing actions are disabled.</span>
         </div>
         @endif
 
-        <div style="margin-top:1.25rem;padding:1rem 1.25rem;background:#1e293b;border-left:4px solid #6366f1;border-radius:.65rem;">
-            <div style="font-size:.72rem;font-weight:800;color:#818cf8;text-transform:uppercase;margin-bottom:.25rem;">Reviewer Feedback Notes:</div>
-            <div style="font-size:.88rem;color:#f1f5f9;line-height:1.5;">
+        <div class="mt-4 p-4 bg-slate-50 dark:bg-slate-800/80 border-l-4 border-indigo-600 dark:border-indigo-500 rounded-lg">
+            <div class="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase mb-1">Reviewer Feedback Notes:</div>
+            <div class="text-sm text-slate-800 dark:text-slate-200 leading-relaxed italic">
                 "{{ $revisionRequest->notes }}"
             </div>
         </div>
@@ -105,22 +121,22 @@
 
     {{-- Actionable Issues & Findings List (PART 3) --}}
     <div class="trr-panel">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
             @if($isBankLocked)
-            <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;">
+            <h3 class="text-base font-extrabold text-slate-900 dark:text-white m-0">
                 📋 Repository Findings ({{ $totCount }})
             </h3>
-            <span style="font-size:.78rem;color:#fbbf24;">Repository has been resubmitted and is awaiting governance review.</span>
+            <span class="text-xs text-amber-700 dark:text-amber-400 font-medium">Repository has been resubmitted and is awaiting governance review.</span>
             @elseif($openCount === 0)
-            <h3 style="font-size:1.1rem;font-weight:800;color:#34d399;margin:0;">
+            <h3 class="text-base font-extrabold text-emerald-600 dark:text-emerald-400 m-0">
                 ✔ All Findings Resolved ({{ $totCount }})
             </h3>
-            <span style="font-size:.78rem;color:#34d399;">All issues fixed. You can now resubmit the repository below.</span>
+            <span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">All issues fixed. You can now resubmit the repository below.</span>
             @else
-            <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;">
+            <h3 class="text-base font-extrabold text-slate-900 dark:text-white m-0">
                 ⚠️ Actionable Quality Findings ({{ $openCount }} remaining)
             </h3>
-            <span style="font-size:.78rem;color:#94a3b8;">Fix remaining issues below and resubmit for automatic IRQA verification.</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Fix remaining issues below and resubmit for automatic IRQA verification.</span>
             @endif
         </div>
 
@@ -130,29 +146,29 @@
             $fbLower = strtolower($item->feedback ?? '');
         @endphp
         <div class="trr-item-card {{ $item->status === 'CLOSED' ? 'trr-item-card--closed' : '' }}">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:.5rem;">
-                <div style="display:flex;align-items:center;gap:.6rem;">
-                    <span style="font-size:.85rem;font-weight:900;color:#818cf8;">#{{ $index + 1 }}</span>
-                    <span style="font-size:.88rem;font-weight:800;color:#fff;">{{ $item->feedback }}</span>
+            <div class="flex justify-between items-start gap-4 mb-2">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-sm font-black text-indigo-600 dark:text-indigo-400">#{{ $index + 1 }}</span>
+                    <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $item->feedback }}</span>
                 </div>
                 @if($item->status === 'CLOSED')
-                <span style="padding:.2rem .55rem;border-radius:.4rem;font-size:.68rem;font-weight:800;text-transform:uppercase;background:rgba(52,211,153,.2);color:#34d399;">
+                <span class="px-2.5 py-0.5 rounded text-[11px] font-extrabold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                     CLOSED
                 </span>
                 @elseif($isBankLocked)
-                <span style="padding:.2rem .55rem;border-radius:.4rem;font-size:.68rem;font-weight:800;text-transform:uppercase;background:rgba(251,191,36,.2);color:#fbbf24;border:1px solid rgba(251,191,36,.4);">
+                <span class="px-2.5 py-0.5 rounded text-[11px] font-extrabold uppercase bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
                     SUBMITTED — AWAITING REVIEW
                 </span>
                 @else
-                <span style="padding:.2rem .55rem;border-radius:.4rem;font-size:.68rem;font-weight:800;text-transform:uppercase;background:rgba(244,63,94,.2);color:#fb7185;">
+                <span class="px-2.5 py-0.5 rounded text-[11px] font-extrabold uppercase bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30">
                     OPEN
                 </span>
                 @endif
             </div>
 
             @if($item->suggested_fix)
-            <p style="font-size:.82rem;color:#cbd5e1;margin:0 0 .5rem;">
-                <strong style="color:#818cf8;">Suggested Fix:</strong> {{ $item->suggested_fix }}
+            <p class="text-xs text-slate-600 dark:text-slate-300 mb-2">
+                <strong class="text-indigo-600 dark:text-indigo-400">Suggested Fix:</strong> {{ $item->suggested_fix }}
             </p>
             @endif
 
@@ -177,8 +193,8 @@
                 }
             @endphp
 
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem;">
-                <a href="{{ $actionUrl }}" class="px-3.5 py-2 {{ $isBankLocked ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 text-white' }} rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-sm">
+            <div class="flex gap-2 flex-wrap mt-3">
+                <a href="{{ $actionUrl }}" class="px-3.5 py-2 {{ $isBankLocked ? 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 text-white' }} rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors">
                     {{ $actionLabel }}
                 </a>
             </div>
@@ -188,40 +204,40 @@
 
     {{-- Bottom Resubmit Section (PART 3 & PART 6) --}}
     @if($isBankLocked)
-    <div class="trr-panel" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.05);">
-        <div style="display:flex;align-items:center;gap:.85rem;">
-            <span style="font-size:1.4rem;">🔒</span>
+    <div class="trr-panel bg-amber-50/50 dark:bg-amber-500/5 border-amber-200 dark:border-amber-500/30">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🔒</span>
             <div>
-                <h4 style="font-size:.95rem;font-weight:800;color:#fbbf24;margin:0 0 .2rem;">Repository Locked For Governance Approval</h4>
-                <p style="font-size:.8rem;color:#94a3b8;margin:0;">This repository is currently awaiting governance review. Editing is disabled until a Repository Manager acts on the submission.</p>
+                <h4 class="text-sm font-bold text-amber-800 dark:text-amber-400 mb-0.5">Repository Locked For Governance Approval</h4>
+                <p class="text-xs text-slate-600 dark:text-slate-400 m-0">This repository is currently awaiting governance review. Editing is disabled until a Repository Manager acts on the submission.</p>
             </div>
         </div>
     </div>
     @elseif($openCount === 0)
-    <div class="trr-panel" style="border-color:#059669;background:linear-gradient(135deg, #0f172a 0%, #064e3b 100%);">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <div class="trr-panel border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30">
+        <div class="flex justify-between items-center flex-wrap gap-4">
             <div>
-                <h3 style="font-size:1.15rem;font-weight:900;color:#fff;margin:0 0 .25rem;">✔ All Findings Resolved — Ready to Resubmit</h3>
-                <p style="font-size:.82rem;color:#a7f3d0;margin:0;">Submitting will automatically execute an IRQA re-scan, lock the repository, and notify the Repository Manager.</p>
+                <h3 class="text-base font-black text-emerald-800 dark:text-white mb-1">✔ All Findings Resolved — Ready to Resubmit</h3>
+                <p class="text-xs text-emerald-700 dark:text-emerald-300 m-0">Submitting will automatically execute an IRQA re-scan, lock the repository, and notify the Repository Manager.</p>
             </div>
 
             <form method="POST" action="{{ route('teacher.repository-revisions.resubmit', $revisionRequest->id) }}">
                 @csrf
-                <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-950/50 transition-all inline-flex items-center gap-2 cursor-pointer">
+                <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-950/20 transition-all inline-flex items-center gap-2 cursor-pointer">
                     🚀 Resubmit Repository &amp; Trigger IRQA Re-Scan
                 </button>
             </form>
         </div>
     </div>
     @else
-    <div class="trr-panel" style="border-color:#334155;background:#0f172a;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <div class="trr-panel border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+        <div class="flex justify-between items-center flex-wrap gap-4">
             <div>
-                <h3 style="font-size:1.05rem;font-weight:800;color:#cbd5e1;margin:0 0 .25rem;">Resolve All Findings to Resubmit</h3>
-                <p style="font-size:.82rem;color:#64748b;margin:0;">There are <strong>{{ $openCount }}</strong> outstanding finding(s) remaining. Fix all findings to enable resubmission.</p>
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">Resolve All Findings to Resubmit</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 m-0">There are <strong>{{ $openCount }}</strong> outstanding finding(s) remaining. Fix all findings to enable resubmission.</p>
             </div>
 
-            <button type="button" disabled class="px-6 py-3 bg-slate-800 text-slate-500 font-extrabold text-xs rounded-xl border border-slate-700 cursor-not-allowed inline-flex items-center gap-2" title="All findings must be resolved before resubmitting">
+            <button type="button" disabled class="px-6 py-3 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-extrabold text-xs rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed inline-flex items-center gap-2" title="All findings must be resolved before resubmitting">
                 🔒 Resubmit Disabled ({{ $openCount }} Remaining)
             </button>
         </div>
@@ -230,3 +246,4 @@
 
 </div>
 @endsection
+
