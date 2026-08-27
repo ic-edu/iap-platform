@@ -47,24 +47,24 @@
     <!-- Commercial Metrics Hub -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-bold uppercase text-slate-400 block">Gross Revenue</span>
-            <span class="text-2xl font-extrabold text-emerald-400 mt-1 block">IDR {{ number_format($grossRevenue) }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Confirmed paid transactions</span>
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Total Packages</span>
+            <span class="text-2xl font-extrabold text-white mt-1 block">{{ number_format($totalProductsCount) }}</span>
+            <span class="text-xs text-slate-500 mt-1 block">Commercial catalog products</span>
         </div>
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-bold uppercase text-slate-400 block">Payment Transactions</span>
-            <span class="text-2xl font-extrabold text-white mt-1 block">{{ number_format($paymentTransactionsCount) }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Total transactions recorded</span>
-        </div>
-        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-bold uppercase text-slate-400 block">Invoices Issued</span>
-            <span class="text-2xl font-extrabold text-indigo-400 mt-1 block">{{ number_format($invoicesCount) }}</span>
-            <span class="text-xs text-slate-500 mt-1 block">Billing invoices generated</span>
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Active Packages</span>
+            <span class="text-2xl font-extrabold text-emerald-400 mt-1 block">{{ number_format($activePackagesCount) }}</span>
+            <span class="text-xs text-slate-500 mt-1 block">Live in Candidate Store</span>
         </div>
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
             <span class="text-[10px] font-bold uppercase text-slate-400 block">Active Vouchers</span>
             <span class="text-2xl font-extrabold text-amber-400 mt-1 block">{{ number_format($couponsCount) }}</span>
             <span class="text-xs text-slate-500 mt-1 block">Promotional codes available</span>
+        </div>
+        <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Pending Price Proposals</span>
+            <span class="text-2xl font-extrabold text-indigo-400 mt-1 block">{{ number_format($pendingPriceChangeCount) }}</span>
+            <span class="text-xs text-slate-500 mt-1 block">Awaiting SA review</span>
         </div>
     </div>
 
@@ -188,50 +188,6 @@
             @endforeach
         </div>
         @endif
-    </div>
-
-    <!-- Payment Reports & Transactions Table -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h2 class="text-sm font-bold text-white">Payment &amp; Invoice Transaction Reports</h2>
-            <span class="text-xs text-slate-400 font-mono">Gateway: Live Records</span>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-300">
-                <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
-                    <tr>
-                        <th class="p-4">Txn Ref</th>
-                        <th class="p-4">Customer Email</th>
-                        <th class="p-4">Package</th>
-                        <th class="p-4">Amount</th>
-                        <th class="p-4">Payment Status</th>
-                        <th class="p-4 text-right">Date</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-800/60 font-mono text-xs">
-                    @forelse($transactions as $txn)
-                        @php
-                            $userEmail = $txn->user?->email ?? $txn->invoice?->order?->user?->email ?? 'N/A';
-                            $productTitle = $txn->invoice?->order?->items?->first()?->product?->title ?? 'Assessment Order';
-                        @endphp
-                        <tr>
-                            <td class="p-4 font-bold text-slate-400">{{ $txn->reference_number ?? $txn->id }}</td>
-                            <td class="p-4 font-semibold text-white font-sans text-xs">{{ $userEmail }}</td>
-                            <td class="p-4 text-xs text-indigo-400 font-medium font-sans">{{ $productTitle }}</td>
-                            <td class="p-4 font-bold text-emerald-400">IDR {{ number_format($txn->amount) }}</td>
-                            <td class="p-4">
-                                <x-status-badge :status="$txn->status" />
-                            </td>
-                            <td class="p-4 text-right text-xs text-slate-400 font-sans">{{ $txn->created_at?->format('d M Y, H:i') }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="p-8 text-center text-slate-500 font-sans">No live payment transactions on record.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
     </div>
 
     <!-- Create Assessment Package Modal -->

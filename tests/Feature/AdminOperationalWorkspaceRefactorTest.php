@@ -448,12 +448,18 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $payment = $billing->createPayment($orderRes['invoice'], 'manual_transfer');
         $billing->confirmPayment($payment, 'TXN-TEST-12345');
 
-        // Verify /admin/commerce renders 200 without ValueError
+        // Verify /admin/commerce renders 200 without ValueError for RA
         $response = $this->actingAs($this->admin)->get(route('admin.commerce.index'));
         $response->assertStatus(200);
         $response->assertSee('Assessment Package &amp; Commercial Catalog', false);
-        $response->assertSee($payment->reference_number);
-        $response->assertSee('SUCCESS');
+        $response->assertSee('TOEIC Exam Voucher');
+
+        // Verify Finance transaction report renders payment
+        $finance = User::factory()->create();
+        $finance->assignRole('finance');
+        $finResponse = $this->actingAs($finance)->get(route('finance.payments.index', ['status' => 'all']));
+        $finResponse->assertStatus(200);
+        $finResponse->assertSee($payment->reference_number);
     }
 
     /**

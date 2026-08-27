@@ -1,6 +1,14 @@
 @extends('layouts.admin')
 
 @section('content')
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>💳</span> Finance Overview &amp; Payment Operations Hub
+            </h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Live financial metric performance, pending bank transfer verifications, and transaction reports.</p>
+        </div>
+    </div>
 
     <!-- Financial KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
@@ -75,7 +83,7 @@
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
         <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <h2 class="text-sm font-bold text-slate-900 dark:text-white">Recent Payment Transactions &amp; Invoices</h2>
-            <a href="{{ route('admin.commerce.index') }}" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">View All Transactions →</a>
+            <a href="{{ route('finance.payments.index', ['status' => 'all']) }}" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">View All Transactions →</a>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">

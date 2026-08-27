@@ -35,17 +35,11 @@ class CommerceController extends Controller
         $tests = Test::where('is_published', true)->orderBy('title')->get();
         $assessmentFamilies = AssessmentFamily::cases();
 
-        $grossRevenue = Payment::whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])->sum('amount');
-        $paymentTransactionsCount = Payment::count();
-        $invoicesCount = Invoice::count();
+        $totalProductsCount = Product::count();
+        $activePackagesCount = Product::where('is_active', true)->count();
+        $pendingPriceChangeCount = PriceChangeRequest::where('status', 'pending')->count();
         $couponsCount = Coupon::count();
-
         $coupons = Coupon::latest()->take(10)->get();
-
-        $transactions = Payment::with(['invoice.order.user', 'invoice.order.items.product', 'user'])
-            ->latest()
-            ->take(15)
-            ->get();
 
         /** @var view-string $viewName */
         $viewName = 'commerce::index';
@@ -55,12 +49,11 @@ class CommerceController extends Controller
             'categories',
             'tests',
             'assessmentFamilies',
-            'grossRevenue',
-            'paymentTransactionsCount',
-            'invoicesCount',
+            'totalProductsCount',
+            'activePackagesCount',
+            'pendingPriceChangeCount',
             'couponsCount',
-            'coupons',
-            'transactions'
+            'coupons'
         ));
     }
 

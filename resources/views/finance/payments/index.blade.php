@@ -5,8 +5,8 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">💳 Payment Review &amp; Approval Queue</h1>
-            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">Review candidate bank transfer receipts and confirm payment transactions to unlock assessment eligibility.</p>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">💳 Payment &amp; Invoice Reports</h1>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">Review candidate bank transfer receipts, monitor invoice transaction history, and confirm payment records.</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('finance.dashboard') }}" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors">
