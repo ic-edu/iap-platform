@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['web', 'auth', 'role:admin|super-admin|finance'])->prefix('admin/commerce')->group(function () {
     Route::get('/', [CommerceController::class, 'index'])->name('admin.commerce.index');
     Route::post('/vouchers', [CommerceController::class, 'storeVoucher'])->name('admin.commerce.vouchers.store');
+
+    // Product & Package Management
+    Route::post('/products', [CommerceController::class, 'storeProduct'])->name('admin.commerce.products.store');
+    Route::put('/products/{product}', [CommerceController::class, 'updateProduct'])->name('admin.commerce.products.update');
+    Route::post('/products/{product}/toggle', [CommerceController::class, 'toggleProductStatus'])->name('admin.commerce.products.toggle');
 });
 
 Route::middleware(['web', 'auth'])->prefix('candidate')->name('candidate.')->group(function () {
