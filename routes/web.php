@@ -187,6 +187,8 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
         Route::post('/users/creation/{creationRequest}/reject', [ApprovalController::class, 'rejectUserCreation'])->name('admin.approvals.users.creation.reject');
         Route::post('/users/{deletionRequest}/approve', [ApprovalController::class, 'approveUserDeletion'])->name('admin.approvals.users.approve');
         Route::post('/users/{deletionRequest}/reject', [ApprovalController::class, 'rejectUserDeletion'])->name('admin.approvals.users.reject');
+        Route::post('/price-changes/{priceChangeRequest}/approve', [ApprovalController::class, 'approvePriceChange'])->name('admin.approvals.price-changes.approve');
+        Route::post('/price-changes/{priceChangeRequest}/reject', [ApprovalController::class, 'rejectPriceChange'])->name('admin.approvals.price-changes.reject');
     });
 
     Route::prefix('admin/audit-logs')->group(function () {

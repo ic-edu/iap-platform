@@ -451,7 +451,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         // Verify /admin/commerce renders 200 without ValueError
         $response = $this->actingAs($this->admin)->get(route('admin.commerce.index'));
         $response->assertStatus(200);
-        $response->assertSee('Commerce &amp; Finance Management', false);
+        $response->assertSee('Assessment Package &amp; Commercial Catalog', false);
         $response->assertSee($payment->reference_number);
         $response->assertSee('SUCCESS');
     }

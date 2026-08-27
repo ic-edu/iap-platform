@@ -325,15 +325,6 @@ class NavigationService
                     'active_pattern' => 'finance/payments*',
                     'badge' => null,
                 ],
-                [
-                    'section' => 'Finance Core',
-                    'label' => 'Commerce & Billing',
-                    'route' => 'admin.commerce.index',
-                    'icon' => 'shopping-bag',
-                    'permission' => null,
-                    'active_pattern' => 'admin/commerce*',
-                    'badge' => null,
-                ],
             ];
         }
 

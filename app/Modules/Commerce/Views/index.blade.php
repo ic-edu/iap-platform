@@ -3,17 +3,17 @@
 @section('content')
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-white">Commerce &amp; Finance Management</h1>
-            <p class="text-xs text-slate-400">Manage assessment packages, product catalog, vouchers, payment transactions, and financial analytics.</p>
+            <h1 class="text-2xl font-bold text-white">Assessment Package &amp; Commercial Catalog</h1>
+            <p class="text-xs text-slate-400">Operational Admin management for institutional assessment packages, initial pricing, promotional vouchers, and SA price proposals.</p>
         </div>
         <div class="flex items-center gap-3">
-            <button onclick="document.getElementById('create-product-modal').classList.remove('hidden')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5">
+            <button onclick="document.getElementById('create-product-modal').classList.remove('hidden')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
                 <span>+ Create Assessment Package</span>
             </button>
-            <button onclick="document.getElementById('create-voucher-modal').classList.remove('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5">
+            <button onclick="document.getElementById('create-voucher-modal').classList.remove('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
@@ -44,11 +44,11 @@
         </div>
     @endif
 
-    <!-- Financial Reports & Key Metrics Hub -->
+    <!-- Commercial Metrics Hub -->
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
-            <span class="text-[10px] font-bold uppercase text-slate-400 block">Gross Revenue Report</span>
-            <span class="text-2xl font-extrabold text-emerald-400 mt-1 block">Rp {{ number_format($grossRevenue, 0, ',', '.') }}</span>
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Gross Revenue</span>
+            <span class="text-2xl font-extrabold text-emerald-400 mt-1 block">IDR {{ number_format($grossRevenue) }}</span>
             <span class="text-xs text-slate-500 mt-1 block">Confirmed paid transactions</span>
         </div>
         <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl">
@@ -73,7 +73,7 @@
         <div class="p-4 border-b border-slate-800 flex items-center justify-between">
             <div>
                 <h2 class="text-sm font-bold text-white">Assessment Package &amp; Product Catalog</h2>
-                <p class="text-xs text-slate-400 mt-0.5">Manage purchasable assessment packages, pricing tiers, and optional test instance bindings.</p>
+                <p class="text-xs text-slate-400 mt-0.5">Manage purchasable assessment packages, active states, and propose price changes for Super Admin approval.</p>
             </div>
             <span class="text-xs text-slate-400 font-mono">Total Products: {{ $products->total() }}</span>
         </div>
@@ -84,7 +84,7 @@
                         <th class="p-4">Package / Product Name</th>
                         <th class="p-4">Product Type</th>
                         <th class="p-4">Assessment Family</th>
-                        <th class="p-4">Base Price</th>
+                        <th class="p-4">Current Price</th>
                         <th class="p-4">Linked Test</th>
                         <th class="p-4">Status</th>
                         <th class="p-4 text-right">Actions</th>
@@ -96,6 +96,13 @@
                             <td class="p-4">
                                 <span class="font-bold text-white block text-sm">{{ $product->title }}</span>
                                 <span class="text-[11px] text-slate-500 font-mono">{{ $product->slug }}</span>
+                                @if($product->pendingPriceChangeRequest)
+                                    <div class="mt-1">
+                                        <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
+                                            <span>⏳</span> Price Change Pending SA Approval (Proposed: IDR {{ number_format($product->pendingPriceChangeRequest->proposed_price) }})
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
                             <td class="p-4">
                                 <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
@@ -112,7 +119,7 @@
                                 @endif
                             </td>
                             <td class="p-4 font-mono font-bold text-emerald-400 text-sm">
-                                Rp {{ number_format($product->price, 0, ',', '.') }}
+                                IDR {{ number_format($product->price) }}
                             </td>
                             <td class="p-4">
                                 @if($product->test)
@@ -128,10 +135,16 @@
                                 </span>
                             </td>
                             <td class="p-4 text-right">
-                                <div class="inline-flex items-center gap-2">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <button type="button" onclick="openProposePriceModal('{{ $product->id }}', '{{ addslashes($product->title) }}', '{{ $product->price }}')" class="px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-colors cursor-pointer" title="Propose Price Change to Super Admin">
+                                        Propose Price
+                                    </button>
+                                    <button type="button" onclick="openEditMetadataModal('{{ $product->id }}', '{{ addslashes($product->title) }}', '{{ $product->assessment_family }}', '{{ addslashes($product->description ?? '') }}', '{{ $product->test_id }}')" class="px-2.5 py-1 text-xs font-semibold rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors cursor-pointer" title="Edit Metadata">
+                                        Edit
+                                    </button>
                                     <form action="{{ route('admin.commerce.products.toggle', $product->id) }}" method="POST">
                                         @csrf
-                                        <button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded {{ $product->is_active ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' }} transition-colors">
+                                        <button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded {{ $product->is_active ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' }} transition-colors cursor-pointer">
                                             {{ $product->is_active ? 'Deactivate' : 'Activate' }}
                                         </button>
                                     </form>
@@ -181,7 +194,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
         <div class="p-4 border-b border-slate-800 flex items-center justify-between">
             <h2 class="text-sm font-bold text-white">Payment &amp; Invoice Transaction Reports</h2>
-            <span class="text-xs text-slate-400 font-mono">Gateway: Live Webhooks</span>
+            <span class="text-xs text-slate-400 font-mono">Gateway: Live Records</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-300">
@@ -200,19 +213,16 @@
                         @php
                             $userEmail = $txn->user?->email ?? $txn->invoice?->order?->user?->email ?? 'N/A';
                             $productTitle = $txn->invoice?->order?->items?->first()?->product?->title ?? 'Assessment Order';
-                            $statusValue = $txn->status instanceof \BackedEnum ? $txn->status->value : (string) $txn->status;
                         @endphp
                         <tr>
                             <td class="p-4 font-bold text-slate-400">{{ $txn->reference_number ?? $txn->id }}</td>
                             <td class="p-4 font-semibold text-white font-sans text-xs">{{ $userEmail }}</td>
                             <td class="p-4 text-xs text-indigo-400 font-medium font-sans">{{ $productTitle }}</td>
-                            <td class="p-4 font-bold text-emerald-400">Rp {{ number_format($txn->amount, 0, ',', '.') }}</td>
+                            <td class="p-4 font-bold text-emerald-400">IDR {{ number_format($txn->amount) }}</td>
                             <td class="p-4">
-                                <span class="px-2.5 py-0.5 text-xs font-bold rounded {{ in_array(strtolower($statusValue), ['success', 'paid']) ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20' }}">
-                                    {{ strtoupper($statusValue) }}
-                                </span>
+                                <x-status-badge :status="$txn->status" />
                             </td>
-                            <td class="p-4 text-right text-xs text-slate-400 font-sans">{{ $txn->confirmed_at ? \Carbon\Carbon::parse($txn->confirmed_at)->format('d M Y, H:i') : $txn->created_at?->format('d M Y, H:i') }}</td>
+                            <td class="p-4 text-right text-xs text-slate-400 font-sans">{{ $txn->created_at?->format('d M Y, H:i') }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -264,7 +274,7 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Base Price (IDR) *</label>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Initial Base Price (IDR) *</label>
                         <input type="number" name="price" min="0" step="1000" required placeholder="e.g. 750000" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-mono">
                     </div>
                     <div>
@@ -299,6 +309,76 @@
         </div>
     </div>
 
+    <!-- Propose Price Change Modal -->
+    <div id="propose-price-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <h2 class="text-lg font-bold text-white mb-1">Propose Price Change</h2>
+            <p id="propose-price-modal-title" class="text-xs text-slate-400 mb-4"></p>
+            <form id="propose-price-form" method="POST" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Current Price (Snapshot)</label>
+                    <input type="text" id="propose-price-current-display" readonly class="w-full p-2.5 bg-slate-950/50 border border-slate-800 rounded-lg text-slate-400 text-xs font-mono font-bold cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">New Proposed Price (IDR) *</label>
+                    <input type="number" name="proposed_price" min="0" step="1000" required placeholder="e.g. 800000" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Reason / Justification *</label>
+                    <textarea name="reason" rows="3" required placeholder="Explain why this price change is requested for Super Admin review..." class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="document.getElementById('propose-price-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg shadow">Submit Proposal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Product Metadata Modal -->
+    <div id="edit-metadata-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-lg w-full shadow-2xl my-8">
+            <h2 class="text-lg font-bold text-white mb-4">Edit Package Metadata</h2>
+            <form id="edit-metadata-form" method="POST" class="space-y-4">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Package Title *</label>
+                    <input type="text" name="title" id="edit-metadata-title" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Assessment Family</label>
+                        <select name="assessment_family" id="edit-metadata-family" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                            <option value="">Select Family...</option>
+                            @foreach($assessmentFamilies as $family)
+                                <option value="{{ $family->value }}">{{ $family->label() }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Optional Linked Test</label>
+                        <select name="test_id" id="edit-metadata-test-id" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                            <option value="">-- None (Abstract Package) --</option>
+                            @foreach($tests as $test)
+                                <option value="{{ $test->id }}">{{ $test->title }} ({{ strtoupper(is_object($test->test_type) ? $test->test_type->value : $test->test_type) }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
+                    <textarea name="description" id="edit-metadata-desc" rows="3" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="document.getElementById('edit-metadata-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Create Voucher Modal -->
     <div id="create-voucher-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
@@ -320,4 +400,36 @@
             </form>
         </div>
     </div>
+
+    <script>
+        function openProposePriceModal(productId, title, currentPrice) {
+            const modal = document.getElementById('propose-price-modal');
+            const form = document.getElementById('propose-price-form');
+            const titleEl = document.getElementById('propose-price-modal-title');
+            const currentDisplay = document.getElementById('propose-price-current-display');
+            if (modal && form) {
+                form.action = '/admin/commerce/products/' + productId + '/propose-price';
+                if (titleEl) titleEl.textContent = 'Package: ' + title;
+                if (currentDisplay) currentDisplay.value = 'IDR ' + Number(currentPrice).toLocaleString();
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function openEditMetadataModal(productId, title, family, desc, testId) {
+            const modal = document.getElementById('edit-metadata-modal');
+            const form = document.getElementById('edit-metadata-form');
+            const titleInput = document.getElementById('edit-metadata-title');
+            const familySelect = document.getElementById('edit-metadata-family');
+            const descInput = document.getElementById('edit-metadata-desc');
+            const testSelect = document.getElementById('edit-metadata-test-id');
+            if (modal && form) {
+                form.action = '/admin/commerce/products/' + productId;
+                if (titleInput) titleInput.value = title;
+                if (familySelect) familySelect.value = family || '';
+                if (descInput) descInput.value = desc || '';
+                if (testSelect) testSelect.value = testId || '';
+                modal.classList.remove('hidden');
+            }
+        }
+    </script>
 @endsection

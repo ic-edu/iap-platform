@@ -4,7 +4,8 @@ use App\Modules\Commerce\Controllers\CandidateCommerceController;
 use App\Modules\Commerce\Controllers\CommerceController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['web', 'auth', 'role:admin|super-admin|finance'])->prefix('admin/commerce')->group(function () {
+// Governance Separation: Only Regular Admin (RA) and Super Admin (SA) manage Product Catalog and Vouchers
+Route::middleware(['web', 'auth', 'role:admin|super-admin'])->prefix('admin/commerce')->group(function () {
     Route::get('/', [CommerceController::class, 'index'])->name('admin.commerce.index');
     Route::post('/vouchers', [CommerceController::class, 'storeVoucher'])->name('admin.commerce.vouchers.store');
 
@@ -12,6 +13,7 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|finance'])->prefix('ad
     Route::post('/products', [CommerceController::class, 'storeProduct'])->name('admin.commerce.products.store');
     Route::put('/products/{product}', [CommerceController::class, 'updateProduct'])->name('admin.commerce.products.update');
     Route::post('/products/{product}/toggle', [CommerceController::class, 'toggleProductStatus'])->name('admin.commerce.products.toggle');
+    Route::post('/products/{product}/propose-price', [CommerceController::class, 'proposePriceChange'])->name('admin.commerce.products.propose-price');
 });
 
 Route::middleware(['web', 'auth'])->prefix('candidate')->name('candidate.')->group(function () {
@@ -37,4 +39,3 @@ Route::middleware(['web', 'auth'])->prefix('candidate')->name('candidate.')->gro
     Route::get('/payments/{payment}', [CandidateCommerceController::class, 'showPayment'])->name('payments.show');
     Route::post('/payments/{payment}/proof', [CandidateCommerceController::class, 'uploadProof'])->name('payments.proof');
 });
-

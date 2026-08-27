@@ -144,10 +144,13 @@ class GranularPermissionsAndFinanceAccessTest extends TestCase
         $finance = User::factory()->create();
         $finance->assignRole('finance');
 
-        // Finance CAN access Commerce & Billing
+        // Finance CANNOT access Commerce & Billing (G1 Governance Separation)
         $commResponse = $this->actingAs($finance)->get(route('admin.commerce.index'));
-        $commResponse->assertOk();
-        $commResponse->assertSee('Commerce &amp; Finance Management', false);
+        $commResponse->assertStatus(403);
+
+        // Finance CAN access Finance Dashboard
+        $finDashResponse = $this->actingAs($finance)->get(route('finance.dashboard'));
+        $finDashResponse->assertOk();
 
         // Finance CANNOT access Academic Reporting
         $repResponse = $this->actingAs($finance)->get(route('admin.reporting.index'));

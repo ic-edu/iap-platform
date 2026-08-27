@@ -3,14 +3,17 @@
 namespace App\Modules\Commerce\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Commerce\Domain\Enums\AssessmentFamily;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Modules\Commerce\Domain\Models\Coupon;
 use App\Modules\Commerce\Domain\Models\Invoice;
 use App\Modules\Commerce\Domain\Models\Payment;
+use App\Modules\Commerce\Domain\Models\PriceChangeRequest;
 use App\Modules\Commerce\Domain\Models\Product;
 use App\Modules\Commerce\Domain\Models\ProductCategory;
+use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,11 +23,11 @@ use Illuminate\View\View;
 class CommerceController extends Controller
 {
     /**
-     * Display Commerce packages, vouchers, products, and transactions.
+     * Display Commerce packages, vouchers, products, and transactions for Admin & Super Admin.
      */
     public function index(): View
     {
-        $products = Product::with(['test', 'category'])
+        $products = Product::with(['test', 'category', 'pendingPriceChangeRequest'])
             ->latest()
             ->paginate(10, ['*'], 'products_page');
 
@@ -62,7 +65,7 @@ class CommerceController extends Controller
     }
 
     /**
-     * Store a new product or assessment package.
+     * Store a new product or assessment package with initial price.
      */
     public function storeProduct(Request $request): RedirectResponse
     {
@@ -96,42 +99,117 @@ class CommerceController extends Controller
 
         ActivityLogger::log(
             'PRODUCT_CREATED',
-            "Created assessment package product '{$product->title}'",
+            "Created assessment package product '{$product->title}' (Initial Price: IDR " . number_format($product->price) . ")",
             $product,
             ['product_type' => $product->product_type, 'assessment_family' => $product->assessment_family, 'price' => $product->price]
         );
 
         return redirect()->route('admin.commerce.index')
-            ->with('status', "Product '{$product->title}' created successfully.");
+            ->with('status', "Assessment Package '{$product->title}' created successfully.");
     }
 
     /**
-     * Update an existing product or assessment package.
+     * Update an existing product or assessment package (Non-price metadata only).
+     * Price changes must go through the Super Admin proposal workflow.
      */
     public function updateProduct(Request $request, Product $product): RedirectResponse
     {
-        $validated = $request->validate(Product::validationRules($product->id));
+        $allowedFamilies = implode(',', AssessmentFamily::values());
 
+        $validated = $request->validate([
+            'title'             => ['required', 'string', 'max:255'],
+            'assessment_family' => ['nullable', 'string', "in:{$allowedFamilies}"],
+            'description'       => ['nullable', 'string'],
+            'is_active'         => ['boolean'],
+            'is_featured'       => ['boolean'],
+            'test_id'           => ['nullable', 'exists:tests,id'],
+            'category_id'       => ['nullable', 'exists:product_categories,id'],
+        ]);
+
+        // Update metadata without mutating existing price
         $product->update([
             'title'             => $validated['title'],
             'assessment_family' => $validated['assessment_family'] ?? null,
             'description'       => $validated['description'] ?? null,
-            'price'             => (float) $validated['price'],
-            'is_active'         => $request->boolean('is_active', true),
-            'is_featured'       => $request->boolean('is_featured', false),
+            'is_active'         => $request->boolean('is_active', $product->is_active),
+            'is_featured'       => $request->boolean('is_featured', $product->is_featured),
             'test_id'           => !empty($validated['test_id']) ? $validated['test_id'] : null,
             'category_id'       => !empty($validated['category_id']) ? $validated['category_id'] : null,
         ]);
 
         ActivityLogger::log(
             'PRODUCT_UPDATED',
-            "Updated assessment package product '{$product->title}'",
+            "Updated assessment package product metadata for '{$product->title}'",
             $product,
-            ['price' => $product->price, 'is_active' => $product->is_active]
+            ['is_active' => $product->is_active]
         );
 
         return redirect()->route('admin.commerce.index')
-            ->with('status', "Product '{$product->title}' updated successfully.");
+            ->with('status', "Product '{$product->title}' metadata updated successfully.");
+    }
+
+    /**
+     * Propose a price change for an existing product (Requires Super Admin approval).
+     */
+    public function proposePriceChange(Request $request, Product $product): RedirectResponse
+    {
+        $validated = $request->validate([
+            'proposed_price' => ['required', 'numeric', 'min:0'],
+            'reason'         => ['required', 'string', 'max:1000'],
+        ]);
+
+        // Check if pending proposal already exists
+        if ($product->pendingPriceChangeRequest()->exists()) {
+            return back()->withErrors(['error' => "A price change proposal for '{$product->title}' is already pending Super Admin approval."]);
+        }
+
+        $proposedPrice = (float) $validated['proposed_price'];
+        if ($proposedPrice === (float) $product->price) {
+            return back()->withErrors(['error' => "Proposed price (IDR " . number_format($proposedPrice) . ") is identical to the current price."]);
+        }
+
+        $changeRequest = PriceChangeRequest::create([
+            'product_id'             => $product->id,
+            'requested_by'           => $request->user()->id,
+            'current_price_snapshot' => $product->price,
+            'proposed_price'         => $proposedPrice,
+            'reason'                 => $validated['reason'],
+            'status'                 => 'pending',
+        ]);
+
+        ActivityLogger::log(
+            'PRICE_CHANGE_PROPOSED',
+            "Proposed price change for '{$product->title}' from IDR " . number_format($product->price) . " to IDR " . number_format($changeRequest->proposed_price) . ". Reason: {$changeRequest->reason}",
+            $product,
+            [
+                'request_id'             => $changeRequest->id,
+                'product_id'             => $product->id,
+                'current_price_snapshot' => $changeRequest->current_price_snapshot,
+                'proposed_price'         => $changeRequest->proposed_price,
+                'reason'                 => $changeRequest->reason,
+            ]
+        );
+
+        // Notify Super Admins
+        $superAdmins = User::role('super-admin')->get();
+        foreach ($superAdmins as $sa) {
+            try {
+                $sa->notify(new EnterpriseSystemNotification(
+                    title: 'Price Change Proposal Requires Approval',
+                    message: "Operational Admin {$request->user()->name} proposed price change for '{$product->title}' (IDR " . number_format($product->price) . " → IDR " . number_format($changeRequest->proposed_price) . ").",
+                    type: 'PRICE_CHANGE_APPROVAL_REQUIRED',
+                    priority: 'HIGH',
+                    entityType: 'price_change_request',
+                    entityId: (string) $changeRequest->id,
+                    targetUrl: route('admin.approvals.index')
+                ));
+            } catch (\Throwable $e) {
+                // Silently continue
+            }
+        }
+
+        return redirect()->route('admin.commerce.index')
+            ->with('status', "Price change proposal for '{$product->title}' (IDR " . number_format($proposedPrice) . ") submitted for Super Admin approval.");
     }
 
     /**
@@ -156,7 +234,7 @@ class CommerceController extends Controller
     }
 
     /**
-     * Store coupon/voucher code.
+     * Store coupon/voucher code (RA and SA only).
      */
     public function storeVoucher(Request $request): RedirectResponse
     {

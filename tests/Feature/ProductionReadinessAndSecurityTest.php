@@ -201,14 +201,13 @@ test('authorized admin can access reporting analytics and export csv', function 
         ->assertHeaderContains('Content-Type', 'text/csv');
 });
 
-test('authorized finance user can access commerce workspace', function () {
+test('finance user cannot access commerce catalog management and receives 403', function () {
     $finance = User::factory()->create();
     $finance->assignRole('finance');
 
     $response = $this->actingAs($finance)->get('/admin/commerce');
 
-    $response->assertStatus(200)
-        ->assertSee('Commerce &amp; Finance Management', false);
+    $response->assertStatus(403);
 });
 
 test('unauthenticated root route redirects guests to login screen', function () {

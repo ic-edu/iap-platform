@@ -92,6 +92,22 @@ class Product extends Model
     }
 
     /**
+     * Get all price change requests for this product.
+     */
+    public function priceChangeRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PriceChangeRequest::class, 'product_id');
+    }
+
+    /**
+     * Get latest pending price change request for this product.
+     */
+    public function pendingPriceChangeRequest(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PriceChangeRequest::class, 'product_id')->where('status', 'pending')->latestOfMany();
+    }
+
+    /**
      * Determine if this product is an assessment type.
      */
     public function isAssessment(): bool

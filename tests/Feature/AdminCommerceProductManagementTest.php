@@ -118,14 +118,13 @@ class AdminCommerceProductManagementTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Assessment Package &amp; Product Catalog', false);
         $response->assertSee('TOEIC Mock Test Package');
-        $response->assertSee('Rp 750.000');
+        $response->assertSee('750,000');
     }
 
-    public function test_02_finance_can_view_product_catalog_according_to_existing_permission(): void
+    public function test_02_finance_cannot_access_product_catalog_and_receives_403(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('admin.commerce.index'));
-        $response->assertStatus(200);
-        $response->assertSee('Assessment Package &amp; Product Catalog', false);
+        $response->assertStatus(403);
     }
 
     public function test_03_super_admin_access_remains_according_to_existing_permission(): void
@@ -513,14 +512,16 @@ class AdminCommerceProductManagementTest extends TestCase
         $orderItem = $result['order']->items->first();
         $this->assertEquals(500000, $orderItem->price);
 
-        // Update product price
-        $this->actingAs($this->adminUser)->put(route('admin.commerce.products.update', $product->id), [
-            'title'             => 'Original Price Package (Updated)',
-            'product_type'      => 'assessment',
-            'assessment_family' => 'toeic',
-            'price'             => 990000,
-            'is_active'         => 1,
+        // Update product price via Super Admin price change approval workflow
+        $priceChange = \App\Modules\Commerce\Domain\Models\PriceChangeRequest::create([
+            'product_id'             => $product->id,
+            'requested_by'           => $this->adminUser->id,
+            'current_price_snapshot' => 500000,
+            'proposed_price'         => 990000,
+            'reason'                 => 'Price increase',
+            'status'                 => 'pending',
         ]);
+        $this->actingAs($this->superAdminUser)->post(route('admin.approvals.price-changes.approve', $priceChange->id));
 
         $this->assertEquals(990000, $product->fresh()->price);
         $this->assertEquals(500000, $orderItem->fresh()->price);

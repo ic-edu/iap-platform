@@ -8,11 +8,13 @@ use App\Models\User;
 use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Commerce\Domain\Models\PriceChangeRequest;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ApprovalController extends Controller
@@ -52,6 +54,11 @@ class ApprovalController extends Controller
             ->latest()
             ->get();
 
+        $pendingPriceChangeRequests = PriceChangeRequest::with(['product', 'requester'])
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
+
         $publishedCount = Test::where('is_published', true)->count();
         $pendingCount = Test::where('status', 'pending_approval')->count();
         $pendingQuestionBankCount = $pendingQuestionBanks->count();
@@ -59,6 +66,7 @@ class ApprovalController extends Controller
         $pendingRestorationCount = $pendingRestorationRequests->count();
         $pendingUserCreationCount = $userCreationRequests->count();
         $pendingUserDeletionCount = $userDeletionRequests->count();
+        $pendingPriceChangeCount = $pendingPriceChangeRequests->count();
 
         return view('admin.approvals.index', compact(
             'pendingTests',
@@ -73,7 +81,9 @@ class ApprovalController extends Controller
             'userCreationRequests',
             'pendingUserCreationCount',
             'userDeletionRequests',
-            'pendingUserDeletionCount'
+            'pendingUserDeletionCount',
+            'pendingPriceChangeRequests',
+            'pendingPriceChangeCount'
         ));
     }
 
@@ -647,5 +657,136 @@ class ApprovalController extends Controller
         }
 
         return redirect()->route('admin.approvals.index')->with('status', "User deletion request for '{$targetUser?->name}' rejected. Status reverted to Active.");
+    }
+
+    /**
+     * Approve a Price Change Proposal (Super Admin Only).
+     */
+    public function approvePriceChange(Request $request, PriceChangeRequest $priceChangeRequest): RedirectResponse
+    {
+        $actor = $request->user();
+        if (! $actor || ! $actor->hasRole('super-admin')) {
+            abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
+        }
+
+        if ($priceChangeRequest->status !== 'pending') {
+            return back()->withErrors(['error' => "Cannot approve request. Status is already {$priceChangeRequest->status}."]);
+        }
+
+        $product = $priceChangeRequest->product;
+        if (! $product) {
+            return back()->withErrors(['error' => 'Associated product no longer exists.']);
+        }
+
+        if ((float) $product->price !== (float) $priceChangeRequest->current_price_snapshot) {
+            return back()->withErrors(['error' => "Current product price (IDR " . number_format($product->price) . ") does not match proposal snapshot (IDR " . number_format($priceChangeRequest->current_price_snapshot) . "). Approval blocked for safety."]);
+        }
+
+        DB::transaction(function () use ($product, $priceChangeRequest, $actor) {
+            $oldPrice = $product->price;
+            $product->update([
+                'price' => $priceChangeRequest->proposed_price,
+            ]);
+
+            $priceChangeRequest->update([
+                'status'      => 'approved',
+                'reviewed_by' => $actor->id,
+                'reviewed_at' => now(),
+            ]);
+
+            ActivityLogger::log(
+                'PRICE_CHANGE_APPROVED',
+                "Super Admin approved price change for '{$product->title}' from IDR " . number_format($oldPrice) . " to IDR " . number_format($priceChangeRequest->proposed_price),
+                $product,
+                [
+                    'request_id'     => $priceChangeRequest->id,
+                    'product_id'     => $product->id,
+                    'old_price'      => $oldPrice,
+                    'new_price'      => $priceChangeRequest->proposed_price,
+                    'approved_by'    => $actor->id,
+                    'reason'         => $priceChangeRequest->reason,
+                ]
+            );
+
+            // Notify requester (RA)
+            if ($priceChangeRequest->requester) {
+                try {
+                    $priceChangeRequest->requester->notify(new EnterpriseSystemNotification(
+                        title: 'Price Change Proposal Approved',
+                        message: "Your price change proposal for '{$product->title}' (IDR " . number_format($priceChangeRequest->proposed_price) . ") was approved by Super Admin {$actor->name}.",
+                        type: 'PRICE_CHANGE_APPROVED',
+                        priority: 'NORMAL',
+                        entityType: 'product',
+                        entityId: (string) $product->id,
+                        targetUrl: route('admin.commerce.index')
+                    ));
+                } catch (\Throwable $e) {
+                    // Silently handle in dev
+                }
+            }
+        });
+
+        return redirect()->route('admin.approvals.index')
+            ->with('status', "Price change for '{$product->title}' approved. New price: IDR " . number_format($priceChangeRequest->proposed_price));
+    }
+
+    /**
+     * Reject a Price Change Proposal (Super Admin Only).
+     */
+    public function rejectPriceChange(Request $request, PriceChangeRequest $priceChangeRequest): RedirectResponse
+    {
+        $actor = $request->user();
+        if (! $actor || ! $actor->hasRole('super-admin')) {
+            abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
+        }
+
+        if ($priceChangeRequest->status !== 'pending') {
+            return back()->withErrors(['error' => "Cannot reject request. Status is already {$priceChangeRequest->status}."]);
+        }
+
+        $validated = $request->validate([
+            'rejection_reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $product = $priceChangeRequest->product;
+
+        $priceChangeRequest->update([
+            'status'           => 'rejected',
+            'rejection_reason' => $validated['rejection_reason'],
+            'reviewed_by'      => $actor->id,
+            'reviewed_at'      => now(),
+        ]);
+
+        ActivityLogger::log(
+            'PRICE_CHANGE_REJECTED',
+            "Super Admin rejected price change for '{$product?->title}'. Reason: {$validated['rejection_reason']}",
+            $product ?? $priceChangeRequest,
+            [
+                'request_id'       => $priceChangeRequest->id,
+                'product_id'       => $product?->id,
+                'rejected_by'      => $actor->id,
+                'rejection_reason' => $validated['rejection_reason'],
+            ]
+        );
+
+        // Notify requester (RA)
+        if ($priceChangeRequest->requester) {
+            try {
+                $priceChangeRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'Price Change Proposal Rejected',
+                    message: "Your price change proposal for '{$product?->title}' was rejected by Super Admin {$actor->name}. Reason: {$validated['rejection_reason']}",
+                    type: 'PRICE_CHANGE_REJECTED',
+                    priority: 'NORMAL',
+                    entityType: 'product',
+                    entityId: (string) ($product?->id ?? ''),
+                    targetUrl: route('admin.commerce.index')
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
+        return redirect()->route('admin.approvals.index')
+            ->with('status', "Price change proposal for '{$product?->title}' has been rejected.");
     }
 }
