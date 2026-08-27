@@ -56,6 +56,29 @@
                     </div>
                 </div>
             </div>
+            @elseif($product->getEffectiveFamily())
+            <div class="p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 space-y-3">
+                <h3 class="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+                    <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <span>Assessment Package Details</span>
+                </h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                    <div>
+                        <span class="text-slate-500 dark:text-slate-400 block">Assessment Family:</span>
+                        <span class="font-bold text-slate-900 dark:text-white uppercase">{{ strtoupper($product->getEffectiveFamily()) }}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 dark:text-slate-400 block">Delivery:</span>
+                        <span class="font-bold text-slate-900 dark:text-white">Institutional Mock Assessment</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 dark:text-slate-400 block">Attempts:</span>
+                        <span class="font-bold text-slate-900 dark:text-white">2 Exam Attempts</span>
+                    </div>
+                </div>
+            </div>
             @endif
 
             {{-- Price Breakdown --}}

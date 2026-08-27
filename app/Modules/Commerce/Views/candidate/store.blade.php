@@ -82,6 +82,17 @@
                             <span class="font-semibold text-slate-800 dark:text-slate-200">{{ $product->test->duration_minutes }} Mins</span>
                         </div>
                     </div>
+                    @elseif($product->getEffectiveFamily())
+                    <div class="mt-3.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800/80 space-y-1">
+                        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                            <span>Assessment Family:</span>
+                            <span class="font-semibold text-slate-800 dark:text-slate-200 uppercase">{{ strtoupper($product->getEffectiveFamily()) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                            <span>Delivery Mode:</span>
+                            <span class="font-semibold text-slate-800 dark:text-slate-200">Real Test Mock Session</span>
+                        </div>
+                    </div>
                     @endif
                 </div>
 

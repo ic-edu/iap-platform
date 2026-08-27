@@ -4,6 +4,7 @@ namespace App\Modules\Commerce\Domain\Models;
 
 use App\Modules\Academic\Models\Course;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Commerce\Domain\Enums\AssessmentFamily;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property bool $is_featured
  * @property string|null $course_id
  * @property string|null $test_id
+ * @property string|null $assessment_family
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Course|null $course
@@ -47,6 +49,7 @@ class Product extends Model
         'is_featured',
         'course_id',
         'test_id',
+        'assessment_family',
     ];
 
     protected function casts(): array
@@ -86,5 +89,87 @@ class Product extends Model
     public function test(): BelongsTo
     {
         return $this->belongsTo(Test::class, 'test_id');
+    }
+
+    /**
+     * Determine if this product is an assessment type.
+     */
+    public function isAssessment(): bool
+    {
+        return $this->product_type === 'assessment';
+    }
+
+    /**
+     * Determine if this product is an abstract assessment package (without specific test_id).
+     */
+    public function isAssessmentPackage(): bool
+    {
+        return $this->isAssessment() && empty($this->test_id);
+    }
+
+    /**
+     * Determine if this product is tied to a specific Test instance.
+     */
+    public function hasSpecificTest(): bool
+    {
+        return $this->isAssessment() && !empty($this->test_id);
+    }
+
+    /**
+     * Determine if this product has a declared assessment family.
+     */
+    public function hasAssessmentFamily(): bool
+    {
+        return !empty($this->getEffectiveFamily());
+    }
+
+    /**
+     * Get the effective assessment family (either explicitly declared or derived from linked Test).
+     */
+    public function getEffectiveFamily(): ?string
+    {
+        if (!empty($this->assessment_family)) {
+            return strtolower($this->assessment_family);
+        }
+
+        if ($this->test_id && $this->test) {
+            $testType = $this->test->test_type;
+            if (is_object($testType)) {
+                return strtolower($testType->value);
+            }
+            if (is_string($testType)) {
+                return strtolower($testType);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Canonical validation rules for Product creation/updating.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public static function validationRules(?string $productId = null): array
+    {
+        $allowedFamilies = implode(',', AssessmentFamily::values());
+
+        return [
+            'title'             => ['required', 'string', 'max:255'],
+            'slug'              => ['nullable', 'string', 'max:255', 'unique:products,slug' . ($productId ? ",{$productId}" : '')],
+            'product_type'      => ['required', 'string', 'in:assessment,course,membership,placement_test,corporate_training'],
+            'assessment_family' => [
+                'nullable',
+                'required_if:product_type,assessment',
+                'string',
+                "in:{$allowedFamilies}",
+            ],
+            'test_id'           => ['nullable', 'exists:tests,id'],
+            'course_id'         => ['nullable', 'exists:courses,id'],
+            'price'             => ['required', 'numeric', 'min:0'],
+            'is_active'         => ['boolean'],
+            'is_featured'       => ['boolean'],
+            'description'       => ['nullable', 'string'],
+        ];
     }
 }
