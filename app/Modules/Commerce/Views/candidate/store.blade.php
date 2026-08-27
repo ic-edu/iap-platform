@@ -41,7 +41,7 @@
                 </svg>
             </div>
             <h2 class="text-base font-bold text-slate-900 dark:text-white">No assessment packages currently available</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">New assessment packages and mock tests will appear here once published by the academic repository.</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">Assessment packages offered by iC.edu will appear here when available.</p>
         </div>
         @else
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
