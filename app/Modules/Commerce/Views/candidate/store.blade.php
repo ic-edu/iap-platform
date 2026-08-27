@@ -1,24 +1,35 @@
 <x-candidate-layout>
     <div class="space-y-8">
         {{-- Header --}}
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Assessment & Learning Store</h1>
-                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">Browse institutional mock tests, assessment packages, and preparatory courses.</p>
+        <div class="space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Assessment & Learning Store</h1>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">Browse institutional mock tests, assessment packages, and preparatory courses.</p>
+                    <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1">Choose the test type according to your needs.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('candidate.orders.index') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors">
+                        <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                        <span>My Orders</span>
+                    </a>
+                    <a href="{{ route('candidate.invoices.index') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 text-xs font-semibold transition-colors">
+                        <svg class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        <span>Billing &amp; Invoices</span>
+                    </a>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('candidate.orders.index') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors">
-                    <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                    <span>My Orders</span>
-                </a>
-                <a href="{{ route('candidate.invoices.index') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 text-xs font-semibold transition-colors">
-                    <svg class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    <span>Billing &amp; Invoices</span>
-                </a>
+
+            {{-- Candidate Warning / Alert --}}
+            <div role="alert" class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-medium flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>If there is any change or an incorrect test selection, please immediately contact the administrator!</span>
             </div>
         </div>
 
@@ -89,8 +100,8 @@
                             <span class="font-semibold text-slate-800 dark:text-slate-200 uppercase">{{ strtoupper($product->getEffectiveFamily()) }}</span>
                         </div>
                         <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                            <span>Delivery Mode:</span>
-                            <span class="font-semibold text-slate-800 dark:text-slate-200">Real Test Mock Session</span>
+                            <span>Package Type:</span>
+                            <span class="font-semibold text-slate-800 dark:text-slate-200">Mock Test Package</span>
                         </div>
                     </div>
                     @endif
@@ -103,7 +114,7 @@
                         <span class="text-lg font-extrabold text-slate-900 dark:text-white">IDR {{ number_format($product->price) }}</span>
                     </div>
                     <a href="{{ route('candidate.checkout.show', $product->id) }}" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5 cursor-pointer">
-                        <span>Buy Now</span>
+                        <span>Choose</span>
                         <span class="ml-0.5">&rarr;</span>
                     </a>
                 </div>

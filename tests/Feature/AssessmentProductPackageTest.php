@@ -335,7 +335,7 @@ class AssessmentProductPackageTest extends TestCase
         $response->assertSee('TOEIC Assessment Voucher Package');
         $response->assertSee('Assessment Family:');
         $response->assertSee('TOEIC');
-        $response->assertSee('Real Test Mock Session');
+        $response->assertSee('Mock Test Package');
     }
 
     public function test_16_product_detail_can_render_package_metadata_without_fake_test_fields(): void
