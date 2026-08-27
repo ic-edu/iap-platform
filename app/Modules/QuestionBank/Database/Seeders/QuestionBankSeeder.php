@@ -19,8 +19,7 @@ class QuestionBankSeeder extends Seeder
 {
     public function run(): void
     {
-        $teacher = User::where('email', 'teacher@icedu.org')->first()
-            ?? User::role('teacher')->first();
+        $teacher = User::where('email', 'teacher@icedu.org')->first();
 
         if (!$teacher) {
             $teacher = User::create([
@@ -36,123 +35,7 @@ class QuestionBankSeeder extends Seeder
             throw new \RuntimeException('QuestionBank creator must possess the teacher role.');
         }
 
-        $category = CourseCategory::first();
-
-        $bank = QuestionBank::firstOrCreate([
-            'slug' => 'toeic-official-bank-vol-1',
-        ], [
-            'title' => 'TOEIC Official Question Bank Vol. 1',
-            'category_id' => $category?->id,
-            'created_by' => $teacher->id,
-            'test_type' => TestType::Toeic,
-            'description' => 'Official TOEIC listening and reading question pool.',
-        ]);
-
-        // Remediation: Ensure created_by belongs to Teacher
-        if ($bank->created_by !== $teacher->id) {
-            $bank->created_by = $teacher->id;
-            $bank->save();
-        }
-
-        // Remediation: Reconcile RepositoryRevisionRequests - ensure only ONE active request (OPEN/IN_PROGRESS) exists
-        $activeRequests = RepositoryRevisionRequest::where('question_bank_id', $bank->id)
-            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        if ($activeRequests->count() > 1) {
-            $newest = $activeRequests->first();
-            $newest->update(['teacher_id' => $teacher->id]);
-
-            foreach ($activeRequests->slice(1) as $older) {
-                $older->update(['status' => 'COMPLETED', 'teacher_id' => $teacher->id]);
-            }
-        } else if ($activeRequests->count() === 1) {
-            $activeRequests->first()->update(['teacher_id' => $teacher->id]);
-        }
-
-        // Create sample listening question (Easy difficulty for balanced distribution)
-        $q1 = Question::firstOrCreate([
-            'question_bank_id' => $bank->id,
-            'prompt' => 'Listen to the audio and select the statement that best describes the picture.',
-        ], [
-            'section' => SectionType::Listening,
-            'part_number' => 1,
-            'question_type' => QuestionType::MultipleChoice,
-            'difficulty' => DifficultyLevel::Easy,
-            'points' => 5,
-            'explanation' => 'Option (A) accurately depicts the person operating the equipment.',
-        ]);
-
-        $q1->difficulty = DifficultyLevel::Easy;
-        $q1->save();
-
-        $choices1 = [
-            ['label' => 'A', 'content' => 'He is operating heavy machinery in a warehouse.', 'is_correct' => true],
-            ['label' => 'B', 'content' => 'He is writing notes on a chalkboard.', 'is_correct' => false],
-            ['label' => 'C', 'content' => 'He is boarding an airplane.', 'is_correct' => false],
-            ['label' => 'D', 'content' => 'He is serving coffee to customers.', 'is_correct' => false],
-        ];
-
-        foreach ($choices1 as $choice) {
-            QuestionChoice::firstOrCreate([
-                'question_id' => $q1->id,
-                'label' => $choice['label'],
-            ], [
-                'content' => $choice['content'],
-                'is_correct' => $choice['is_correct'],
-            ]);
-        }
-
-        // Create sample reading question (Medium difficulty)
-        $q2 = Question::firstOrCreate([
-            'question_bank_id' => $bank->id,
-            'prompt' => 'Choose the word that best completes the sentence: "The quarterly financial report must be ______ by Friday."',
-        ], [
-            'section' => SectionType::Reading,
-            'part_number' => 5,
-            'question_type' => QuestionType::MultipleChoice,
-            'difficulty' => DifficultyLevel::Medium,
-            'points' => 5,
-            'explanation' => '"Submitted" is the grammatically correct past participle adjective needed.',
-        ]);
-
-        $q2->difficulty = DifficultyLevel::Medium;
-        $q2->save();
-
-        $choices2 = [
-            ['label' => 'A', 'content' => 'submitting', 'is_correct' => false],
-            ['label' => 'B', 'content' => 'submitted', 'is_correct' => true],
-            ['label' => 'C', 'content' => 'submits', 'is_correct' => false],
-            ['label' => 'D', 'content' => 'submission', 'is_correct' => false],
-        ];
-
-        foreach ($choices2 as $choice) {
-            QuestionChoice::firstOrCreate([
-                'question_id' => $q2->id,
-                'label' => $choice['label'],
-            ], [
-                'content' => $choice['content'],
-                'is_correct' => $choice['is_correct'],
-            ]);
-        }
-
-        // Perform IRQA Re-Scan & Reconcile Revision Items
-        $qualityService = app(\App\Services\RepositoryQualityService::class);
-        $qualityService->syncRepositoryFindings($bank);
-
-        $activeReq = RepositoryRevisionRequest::where('question_bank_id', $bank->id)
-            ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
-            ->latest()
-            ->first();
-
-        if ($activeReq) {
-            foreach ($activeReq->items as $item) {
-                if (str_contains(strtolower($item->feedback), 'difficulty')) {
-                    $item->status = 'CLOSED';
-                    $item->save();
-                }
-            }
-        }
+        // Note: Standard institutional question libraries are seeded via AclStarterLibrarySeeder.
+        // Legacy 'toeic-official-bank-vol-1' seed definition has been removed.
     }
 }

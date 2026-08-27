@@ -293,13 +293,10 @@ class RepositoryCreationRoleBoundaryTest extends TestCase
     {
         $this->seed(\App\Modules\QuestionBank\Database\Seeders\QuestionBankSeeder::class);
 
-        $toeicBank = QuestionBank::where('slug', 'toeic-official-bank-vol-1')->first();
-        $this->assertNotNull($toeicBank);
-
-        $creator = User::find($toeicBank->created_by);
-        $this->assertNotNull($creator);
-        $this->assertTrue($creator->hasRole('teacher'));
-        $this->assertFalse($creator->hasRole('repository-manager'));
+        $teacher = User::where('email', 'teacher@icedu.org')->first();
+        $this->assertNotNull($teacher);
+        $this->assertTrue($teacher->hasRole('teacher'));
+        $this->assertFalse($teacher->hasRole('repository-manager'));
     }
 
     /**
