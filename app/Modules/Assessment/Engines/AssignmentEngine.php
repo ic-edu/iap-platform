@@ -25,19 +25,81 @@ class AssignmentEngine
             return true;
         }
 
-        if ($payment && ($payment->status === PaymentStatus::Success || $payment->status === PaymentStatus::Paid)) {
-            return true;
+        $testFamily = is_object($test->test_type) ? strtolower($test->test_type->value) : strtolower((string) $test->test_type);
+
+        // 1. If explicit $payment is provided, validate it strictly
+        if ($payment) {
+            $isCandidatePayment = ((int) $payment->user_id === (int) $user->id)
+                || ($payment->invoice && (int) $payment->invoice->user_id === (int) $user->id);
+            $isPaid = in_array($payment->status, [PaymentStatus::Success, PaymentStatus::Paid], true)
+                || in_array(is_object($payment->status) ? $payment->status->value : $payment->status, ['success', 'paid'], true);
+
+            if ($isCandidatePayment && $isPaid) {
+                $orderToCheck = $payment->invoice?->order ?? $order;
+                if ($orderToCheck) {
+                    foreach ($orderToCheck->items as $item) {
+                        $product = $item->product;
+                        if ($product && $product->is_active) {
+                            if ($product->test_id && (string) $product->test_id === (string) $test->id) {
+                                return true;
+                            }
+                            if ($testFamily && $product->getEffectiveFamily() === $testFamily) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
-        if ($order && $order->status === OrderStatus::Completed) {
-            return true;
+        // 2. If explicit $order is provided, validate it strictly
+        if ($order) {
+            $isCandidateOrder = (int) $order->user_id === (int) $user->id;
+            $hasConfirmedPayment = $order->invoice && $order->invoice->payments()
+                ->where(function ($q) {
+                    $q->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
+                      ->orWhereIn('status', ['success', 'paid']);
+                })
+                ->exists();
+
+            if ($isCandidateOrder && ($hasConfirmedPayment || $order->status === OrderStatus::Completed || $order->status === 'completed')) {
+                foreach ($order->items as $item) {
+                    $product = $item->product;
+                    if ($product && $product->is_active) {
+                        if ($product->test_id && (string) $product->test_id === (string) $test->id) {
+                            return true;
+                        }
+                        if ($testFamily && $product->getEffectiveFamily() === $testFamily) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
-        return Payment::whereHas('invoice.order.items', function ($q) use ($test) {
-            $q->whereHas('product', fn($p) => $p->where('test_id', $test->id));
+        // 3. Fallback: Query database for confirmed payments matching specific test OR assessment family
+        return Payment::where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhereHas('invoice', fn($inv) => $inv->where('user_id', $user->id));
         })
-        ->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
-        ->whereHas('invoice.order', fn($o) => $o->where('user_id', $user->id))
+        ->where(function ($q) {
+            $q->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
+              ->orWhereIn('status', ['success', 'paid']);
+        })
+        ->whereHas('invoice.order.items.product', function ($p) use ($test, $testFamily) {
+            $p->where('is_active', true)
+              ->where(function ($match) use ($test, $testFamily) {
+                  $match->where('test_id', $test->id);
+                  if ($testFamily) {
+                      $match->orWhere(function ($pkg) use ($testFamily) {
+                          $pkg->where('assessment_family', $testFamily)
+                              ->orWhereHas('test', fn($t) => $t->where('test_type', $testFamily));
+                      });
+                  }
+              });
+        })
         ->exists();
     }
 
@@ -52,10 +114,28 @@ class AssignmentEngine
             return User::role('student')->get();
         }
 
-        return User::whereHas('orders', function ($q) use ($test) {
-            $q->whereHas('items.product', fn($p) => $p->where('test_id', $test->id))
-              ->whereHas('invoice.payments', fn($pm) => $pm->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]));
-        })->get();
+        $testFamily = is_object($test->test_type) ? strtolower($test->test_type->value) : strtolower((string) $test->test_type);
+
+        return User::role('student')
+            ->whereHas('orders', function ($q) use ($test, $testFamily) {
+                $q->whereHas('invoice.payments', function ($pm) {
+                    $pm->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
+                       ->orWhereIn('status', ['success', 'paid']);
+                })
+                ->whereHas('items.product', function ($p) use ($test, $testFamily) {
+                    $p->where('is_active', true)
+                      ->where(function ($match) use ($test, $testFamily) {
+                          $match->where('test_id', $test->id);
+                          if ($testFamily) {
+                              $match->orWhere(function ($pkg) use ($testFamily) {
+                                  $pkg->where('assessment_family', $testFamily)
+                                      ->orWhereHas('test', fn($t) => $t->where('test_type', $testFamily));
+                              });
+                          }
+                      });
+                });
+            })
+            ->get();
     }
 
     /**
@@ -75,8 +155,8 @@ class AssignmentEngine
 
         // For Real Test / Mock Test: Validate published state
         if ($test->isRealTest()) {
-            $isPublished = $test->is_published || in_array($test->status, ['published', 'approved']);
-            if (!$isPublished || in_array($test->status, ['draft', 'pending', 'pending_approval', 'needs_revision'])) {
+            $isPublished = $test->is_published || in_array($test->status, ['published', 'approved'], true);
+            if (!$isPublished || in_array($test->status, ['draft', 'pending', 'pending_approval', 'needs_revision'], true)) {
                 throw new InvalidArgumentException("Cannot assign unpublished Mock Test '{$test->title}'. Assessment must be approved and published first.");
             }
         }
