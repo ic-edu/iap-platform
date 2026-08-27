@@ -21,27 +21,29 @@ class FinancePaymentController extends Controller
     ) {}
 
     /**
-     * Display Finance Pending Payments Queue.
+     * Display Finance Pending Payments Queue and Payment Reports.
      */
     public function index(Request $request): View
     {
         $statusFilter = $request->query('status', 'pending');
 
-        $query = Payment::with(['user', 'invoice.order.items.product.test'])->latest();
+        $baseQuery = Payment::validCommerce()
+            ->with(['user', 'invoice.order.items.product.test'])
+            ->latest();
 
         if ($statusFilter === 'all') {
-            // No status filter
+            $query = clone $baseQuery;
         } elseif (in_array($statusFilter, ['pending', 'success', 'failed', 'refunded'], true)) {
-            $query->where('status', $statusFilter);
+            $query = (clone $baseQuery)->where('status', $statusFilter);
         } else {
-            $query->where('status', PaymentStatus::Pending);
+            $query = (clone $baseQuery)->where('status', PaymentStatus::Pending);
         }
 
         $payments = $query->paginate(15)->withQueryString();
 
-        $pendingCount = Payment::where('status', PaymentStatus::Pending)->count();
-        $successCount = Payment::where('status', PaymentStatus::Success)->count();
-        $failedCount = Payment::where('status', PaymentStatus::Failed)->count();
+        $pendingCount = Payment::validCommerce()->where('status', PaymentStatus::Pending)->count();
+        $successCount = Payment::validCommerce()->where('status', PaymentStatus::Success)->count();
+        $failedCount = Payment::validCommerce()->where('status', PaymentStatus::Failed)->count();
 
         return view('finance.payments.index', compact(
             'payments',

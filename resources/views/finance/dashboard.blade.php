@@ -89,10 +89,11 @@
             <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
                 <thead class="bg-slate-50 dark:bg-slate-950 text-xs uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                     <tr>
-                        <th class="p-4">Txn Ref</th>
+                        <th class="p-4">Payment Ref</th>
                         <th class="p-4">Customer Email</th>
                         <th class="p-4">Package</th>
                         <th class="p-4">Amount</th>
+                        <th class="p-4">Invoice Ref</th>
                         <th class="p-4">Payment Status</th>
                         <th class="p-4 text-right">Date</th>
                     </tr>
@@ -104,10 +105,11 @@
                             $productTitle = $txn->invoice?->order?->items?->first()?->product?->title ?? 'Assessment Order';
                         @endphp
                         <tr>
-                            <td class="p-4 font-bold text-slate-500 dark:text-slate-400">{{ $txn->reference_number ?? $txn->id }}</td>
+                            <td class="p-4 font-bold text-slate-900 dark:text-white font-mono">{{ $txn->reference_number ?? $txn->id }}</td>
                             <td class="p-4 font-semibold text-slate-900 dark:text-white font-sans text-xs">{{ $userEmail }}</td>
                             <td class="p-4 text-xs text-indigo-600 dark:text-indigo-400 font-medium font-sans">{{ $productTitle }}</td>
                             <td class="p-4 font-bold text-emerald-600 dark:text-emerald-400">IDR {{ number_format($txn->amount) }}</td>
+                            <td class="p-4 font-mono text-slate-600 dark:text-slate-400">{{ $txn->invoice?->invoice_number ?? '—' }}</td>
                             <td class="p-4">
                                 <x-status-badge :status="$txn->status" />
                             </td>
@@ -115,7 +117,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="p-8 text-center text-slate-500 font-sans">No recent payment transactions recorded.</td>
+                            <td colspan="7" class="p-8 text-center text-slate-500 font-sans">No recent payment transactions recorded.</td>
                         </tr>
                     @endforelse
                 </tbody>

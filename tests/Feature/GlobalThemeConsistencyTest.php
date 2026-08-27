@@ -149,13 +149,21 @@ class GlobalThemeConsistencyTest extends TestCase
 
     public function test_finance_dashboard_renders_responsive_kpis_and_status_badges(): void
     {
-        \App\Modules\Commerce\Domain\Models\Payment::create([
-            'reference_number' => 'PAY-THEME-001',
-            'user_id'          => $this->student->id,
-            'amount'           => 750000,
-            'payment_gateway'  => 'manual_transfer',
-            'status'           => \App\Modules\Commerce\Domain\Enums\PaymentStatus::Pending,
+        $product = \App\Modules\Commerce\Domain\Models\Product::create([
+            'title'             => 'Theme Package',
+            'slug'              => 'theme-pkg',
+            'product_type'      => 'assessment',
+            'assessment_family' => 'toeic',
+            'price'             => 750000,
+            'is_active'         => true,
         ]);
+        $checkout = new \App\Modules\Commerce\Application\CheckoutEngine(
+            new \App\Modules\Commerce\Application\PricingEngine,
+            new \App\Modules\Commerce\Application\InvoiceEngine
+        );
+        $orderRes = $checkout->checkout($this->student, $product);
+        $billing = new \App\Modules\Commerce\Application\BillingEngine;
+        $billing->createPayment($orderRes['invoice'], 'manual_transfer');
 
         $response = $this->actingAs($this->finance)->get(route('finance.dashboard'));
         $response->assertStatus(200);

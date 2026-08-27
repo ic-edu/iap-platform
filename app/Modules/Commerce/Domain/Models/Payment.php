@@ -75,4 +75,16 @@ class Payment extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /**
+     * Scope query to valid Commerce-linked transactions with complete invoice and order hierarchy.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder<\App\Modules\Commerce\Domain\Models\Payment> $query
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Modules\Commerce\Domain\Models\Payment>
+     */
+    public function scopeValidCommerce($query)
+    {
+        return $query->whereNotNull('invoice_id')
+            ->whereHas('invoice.order.items.product');
+    }
 }

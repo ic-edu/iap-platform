@@ -141,29 +141,27 @@ class G1FinanceReportAndRaCommerceSeparationTest extends TestCase
 
     public function test_07_finance_report_can_display_pay_20260827_vzdm(): void
     {
-        $payment = Payment::create([
-            'reference_number' => 'PAY-20260827-VZDM',
-            'user_id'          => $this->studentUser->id,
-            'amount'           => 832500,
-            'payment_gateway'  => 'manual_transfer',
-            'status'           => PaymentStatus::Pending,
-        ]);
+        $product = $this->createSampleProduct();
+        $checkoutEngine = app(CheckoutEngine::class);
+        $billingEngine = app(BillingEngine::class);
+        $res = $checkoutEngine->checkout($this->studentUser, $product);
+        $payment = $billingEngine->createPayment($res['invoice'], 'manual_transfer');
+        $payment->update(['reference_number' => 'PAY-20260827-VZDM']);
 
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'pending']));
         $response->assertStatus(200);
         $response->assertSee('PAY-20260827-VZDM');
-        $response->assertSee('IDR 832,500');
+        $response->assertSee('IDR ' . number_format($payment->amount));
     }
 
     public function test_08_pay_20260827_vzdm_remains_pending(): void
     {
-        $payment = Payment::create([
-            'reference_number' => 'PAY-20260827-VZDM',
-            'user_id'          => $this->studentUser->id,
-            'amount'           => 832500,
-            'payment_gateway'  => 'manual_transfer',
-            'status'           => PaymentStatus::Pending,
-        ]);
+        $product = $this->createSampleProduct();
+        $checkoutEngine = app(CheckoutEngine::class);
+        $billingEngine = app(BillingEngine::class);
+        $res = $checkoutEngine->checkout($this->studentUser, $product);
+        $payment = $billingEngine->createPayment($res['invoice'], 'manual_transfer');
+        $payment->update(['reference_number' => 'PAY-20260827-VZDM']);
 
         $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
 

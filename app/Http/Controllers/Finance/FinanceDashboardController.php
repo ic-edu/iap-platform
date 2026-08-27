@@ -17,19 +17,21 @@ class FinanceDashboardController extends Controller
      */
     public function index(Request $request): View
     {
-        $grossRevenue = (float) Payment::whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])->sum('amount');
-        $pendingPaymentsCount = Payment::where('status', PaymentStatus::Pending)->count();
+        $grossRevenue = (float) Payment::validCommerce()->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])->sum('amount');
+        $pendingPaymentsCount = Payment::validCommerce()->where('status', PaymentStatus::Pending)->count();
         $invoicesIssuedCount = Invoice::count();
         $couponsCount = Coupon::count();
 
-        $recentPendingPayments = Payment::with(['user', 'invoice.order.items.product.test'])
+        $recentPendingPayments = Payment::validCommerce()
+            ->with(['user', 'invoice.order.items.product.test'])
             ->where('status', PaymentStatus::Pending)
             ->latest()
             ->take(5)
             ->get();
 
         // Human UAT presentation: Show the latest legitimate persistent transaction only
-        $latestTransactions = Payment::with(['user', 'invoice.order.items.product'])
+        $latestTransactions = Payment::validCommerce()
+            ->with(['user', 'invoice.order.items.product'])
             ->latest()
             ->take(1)
             ->get();
