@@ -331,7 +331,7 @@ class NavigationService
                     'route' => 'finance.payments.index',
                     'icon' => 'document-report',
                     'permission' => null,
-                    'active_pattern' => 'finance/payments*',
+                    'active_pattern' => 'finance/payments',
                     'badge' => null,
                 ],
             ];

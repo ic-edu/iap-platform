@@ -25,7 +25,13 @@ class FinancePaymentController extends Controller
      */
     public function index(Request $request): View
     {
-        $statusFilter = $request->query('status', 'pending');
+        $isPendingRoute = $request->routeIs('finance.payments.pending');
+
+        if ($request->has('status')) {
+            $statusFilter = $request->query('status');
+        } else {
+            $statusFilter = $isPendingRoute ? 'pending' : 'all';
+        }
 
         $baseQuery = Payment::validCommerce()
             ->with(['user', 'invoice.order.items.product.test'])
@@ -36,7 +42,10 @@ class FinancePaymentController extends Controller
         } elseif (in_array($statusFilter, ['pending', 'success', 'failed', 'refunded'], true)) {
             $query = (clone $baseQuery)->where('status', $statusFilter);
         } else {
-            $query = (clone $baseQuery)->where('status', PaymentStatus::Pending);
+            $statusFilter = $isPendingRoute ? 'pending' : 'all';
+            $query = $isPendingRoute
+                ? (clone $baseQuery)->where('status', PaymentStatus::Pending)
+                : clone $baseQuery;
         }
 
         $payments = $query->paginate(15)->withQueryString();
@@ -45,12 +54,28 @@ class FinancePaymentController extends Controller
         $successCount = Payment::validCommerce()->where('status', PaymentStatus::Success)->count();
         $failedCount = Payment::validCommerce()->where('status', PaymentStatus::Failed)->count();
 
+        $pageTitle = $isPendingRoute
+            ? 'Payment Review & Approval Queue'
+            : 'Payment & Invoice Reports';
+
+        $pageSubtitle = $isPendingRoute
+            ? 'Review candidate payment proofs and confirm or reject pending transactions.'
+            : 'Review transaction history, invoice records, and payment activity.';
+
+        $tabRoute = $isPendingRoute
+            ? 'finance.payments.pending'
+            : 'finance.payments.index';
+
         return view('finance.payments.index', compact(
             'payments',
             'statusFilter',
             'pendingCount',
             'successCount',
-            'failedCount'
+            'failedCount',
+            'isPendingRoute',
+            'pageTitle',
+            'pageSubtitle',
+            'tabRoute'
         ));
     }
 

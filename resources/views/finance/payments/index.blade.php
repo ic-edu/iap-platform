@@ -5,8 +5,8 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">💳 Payment &amp; Invoice Reports</h1>
-            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">Review candidate bank transfer receipts, monitor invoice transaction history, and confirm payment records.</p>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">💳 {{ $pageTitle ?? 'Payment & Invoice Reports' }}</h1>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">{{ $pageSubtitle ?? 'Review transaction history, invoice records, and payment activity.' }}</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('finance.dashboard') }}" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors">
@@ -31,17 +31,20 @@
     @endif
 
     {{-- Filter Tabs --}}
+    @php
+        $targetRoute = $tabRoute ?? (request()->routeIs('finance.payments.pending') ? 'finance.payments.pending' : 'finance.payments.index');
+    @endphp
     <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto text-xs">
-        <a href="{{ route('finance.payments.pending', ['status' => 'pending']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? 'pending') === 'pending' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+        <a href="{{ route($targetRoute, ['status' => 'pending']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? 'pending') === 'pending' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
             ⏳ Pending Review ({{ $pendingCount }})
         </a>
-        <a href="{{ route('finance.payments.pending', ['status' => 'success']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'success' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+        <a href="{{ route($targetRoute, ['status' => 'success']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'success' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
             ✓ Confirmed / Paid ({{ $successCount }})
         </a>
-        <a href="{{ route('finance.payments.pending', ['status' => 'failed']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'failed' ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+        <a href="{{ route($targetRoute, ['status' => 'failed']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'failed' ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
             ✗ Cancelled / Rejected ({{ $failedCount }})
         </a>
-        <a href="{{ route('finance.payments.pending', ['status' => 'all']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'all' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+        <a href="{{ route($targetRoute, ['status' => 'all']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'all' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
             All Transactions
         </a>
     </div>
