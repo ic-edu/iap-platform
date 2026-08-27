@@ -48,7 +48,7 @@
                 <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
                 <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Candidate Payments Requiring Review ({{ $pendingPaymentsCount }})</h2>
             </div>
-            <a href="{{ route('finance.payments.pending') }}" class="text-xs text-amber-700 dark:text-amber-400 font-bold hover:underline">
+            <a href="{{ route('finance.payments.index', ['status' => 'pending']) }}" class="text-xs text-amber-700 dark:text-amber-400 font-bold hover:underline">
                 View Full Queue &rarr;
             </a>
         </div>

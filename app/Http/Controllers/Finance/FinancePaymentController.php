@@ -21,17 +21,11 @@ class FinancePaymentController extends Controller
     ) {}
 
     /**
-     * Display Finance Pending Payments Queue and Payment Reports.
+     * Display Canonical Payment & Invoice Reports Workspace.
      */
     public function index(Request $request): View
     {
-        $isPendingRoute = $request->routeIs('finance.payments.pending');
-
-        if ($request->has('status')) {
-            $statusFilter = $request->query('status');
-        } else {
-            $statusFilter = $isPendingRoute ? 'pending' : 'all';
-        }
+        $statusFilter = $request->query('status', 'all');
 
         $baseQuery = Payment::validCommerce()
             ->with(['user', 'invoice.order.items.product.test'])
@@ -42,10 +36,8 @@ class FinancePaymentController extends Controller
         } elseif (in_array($statusFilter, ['pending', 'success', 'failed', 'refunded'], true)) {
             $query = (clone $baseQuery)->where('status', $statusFilter);
         } else {
-            $statusFilter = $isPendingRoute ? 'pending' : 'all';
-            $query = $isPendingRoute
-                ? (clone $baseQuery)->where('status', PaymentStatus::Pending)
-                : clone $baseQuery;
+            $statusFilter = 'all';
+            $query = clone $baseQuery;
         }
 
         $payments = $query->paginate(15)->withQueryString();
@@ -54,17 +46,8 @@ class FinancePaymentController extends Controller
         $successCount = Payment::validCommerce()->where('status', PaymentStatus::Success)->count();
         $failedCount = Payment::validCommerce()->where('status', PaymentStatus::Failed)->count();
 
-        $pageTitle = $isPendingRoute
-            ? 'Payment Review & Approval Queue'
-            : 'Payment & Invoice Reports';
-
-        $pageSubtitle = $isPendingRoute
-            ? 'Review candidate payment proofs and confirm or reject pending transactions.'
-            : 'Review transaction history, invoice records, and payment activity.';
-
-        $tabRoute = $isPendingRoute
-            ? 'finance.payments.pending'
-            : 'finance.payments.index';
+        $pageTitle = 'Payment & Invoice Reports';
+        $pageSubtitle = 'Review transaction history, invoice records, and candidate payment proofs.';
 
         return view('finance.payments.index', compact(
             'payments',
@@ -72,11 +55,19 @@ class FinancePaymentController extends Controller
             'pendingCount',
             'successCount',
             'failedCount',
-            'isPendingRoute',
             'pageTitle',
-            'pageSubtitle',
-            'tabRoute'
+            'pageSubtitle'
         ));
+    }
+
+    /**
+     * Backward-Compatible Redirect Endpoint for Legacy Pending Queue Route.
+     */
+    public function pending(Request $request): RedirectResponse
+    {
+        $status = $request->query('status', 'pending');
+
+        return redirect()->route('finance.payments.index', ['status' => $status]);
     }
 
     /**

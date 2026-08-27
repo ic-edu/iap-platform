@@ -149,7 +149,7 @@ Route::middleware(['web', 'auth', 'role:finance'])->prefix('finance')->name('fin
     Route::get('/dashboard', [FinanceDashboardController::class, 'index'])
         ->name('dashboard');
 
-    Route::get('/payments/pending', [FinancePaymentController::class, 'index'])
+    Route::get('/payments/pending', [FinancePaymentController::class, 'pending'])
         ->name('payments.pending');
     Route::get('/payments', [FinancePaymentController::class, 'index'])
         ->name('payments.index');

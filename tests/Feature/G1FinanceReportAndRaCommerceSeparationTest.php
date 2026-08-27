@@ -94,8 +94,10 @@ class G1FinanceReportAndRaCommerceSeparationTest extends TestCase
     public function test_02_finance_can_access_pending_payments(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
-        $response->assertStatus(200);
-        $response->assertSee('Payment &amp; Invoice Reports', false);
+        $response->assertRedirect(route('finance.payments.index', ['status' => 'pending']));
+        $followed = $this->get($response->headers->get('Location'));
+        $followed->assertStatus(200);
+        $followed->assertSee('Payment &amp; Invoice Reports', false);
     }
 
     public function test_03_finance_can_access_payment_review(): void

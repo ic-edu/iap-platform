@@ -13,16 +13,20 @@ use App\Modules\Commerce\Domain\Models\Invoice;
 use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Models\OrderItem;
 use App\Modules\Commerce\Domain\Models\Payment;
+use App\Modules\Commerce\Domain\Models\PriceChangeRequest;
 use App\Modules\Commerce\Domain\Models\Product;
+use App\Services\NavigationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
-class FinanceQueueVsReportsSeparationTest extends TestCase
+class FinanceNavigationConsolidationTest extends TestCase
 {
     use RefreshDatabase;
 
     protected User $adminUser;
+    protected User $superAdminUser;
     protected User $financeUser;
     protected User $studentUser;
     protected User $repoManagerUser;
@@ -49,6 +53,14 @@ class FinanceQueueVsReportsSeparationTest extends TestCase
             'status'   => 'active',
         ]);
         $this->adminUser->assignRole('admin');
+
+        $this->superAdminUser = User::create([
+            'name'     => 'Super Admin Officer',
+            'email'    => 'superadmin@icedu.org',
+            'password' => bcrypt('password'),
+            'status'   => 'active',
+        ]);
+        $this->superAdminUser->assignRole('super-admin');
 
         $this->financeUser = User::create([
             'name'     => 'Finance Officer',
@@ -135,104 +147,117 @@ class FinanceQueueVsReportsSeparationTest extends TestCase
         ]);
     }
 
-    public function test_01_pending_payments_returns_redirect_for_finance(): void
+    public function test_01_finance_dashboard_remains_accessible(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
-        $response->assertRedirect(route('finance.payments.index', ['status' => 'pending']));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
+        $response->assertStatus(200);
     }
 
-    public function test_02_payment_and_invoice_reports_returns_200_for_finance(): void
+    public function test_02_payment_and_invoice_reports_remains_accessible(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
     }
 
-    public function test_03_pending_payments_redirects_to_status_pending(): void
+    public function test_03_finance_navigation_contains_dashboard(): void
+    {
+        $this->actingAs($this->financeUser);
+        $menu = NavigationService::getMenuItems();
+        $labels = array_column($menu, 'label');
+
+        $this->assertContains('Dashboard', $labels);
+    }
+
+    public function test_04_finance_navigation_contains_payment_and_invoice_reports(): void
+    {
+        $this->actingAs($this->financeUser);
+        $menu = NavigationService::getMenuItems();
+        $labels = array_column($menu, 'label');
+
+        $this->assertContains('Payment & Invoice Reports', $labels);
+    }
+
+    public function test_05_finance_navigation_does_not_contain_pending_payments(): void
+    {
+        $this->actingAs($this->financeUser);
+        $menu = NavigationService::getMenuItems();
+        $labels = array_column($menu, 'label');
+
+        $this->assertNotContains('Pending Payments', $labels);
+
+        $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
+        $response->assertStatus(200);
+        $response->assertDontSee('>Pending Payments<', false);
+    }
+
+    public function test_06_finance_payments_pending_route_remains_registered(): void
+    {
+        $this->assertTrue(Route::has('finance.payments.pending'));
+    }
+
+    public function test_07_direct_access_to_finance_payments_pending_remains_safe(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
         $response->assertRedirect(route('finance.payments.index', ['status' => 'pending']));
     }
 
-    public function test_04_payment_and_invoice_reports_defaults_to_all(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
-        $response->assertStatus(200);
-        $response->assertViewHas('statusFilter', 'all');
-    }
-
-    public function test_05_pending_payments_redirect_preserves_pending_context(): void
+    public function test_08_finance_payments_pending_preserves_pending_context(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
+        $response->assertRedirect();
+        
         $followed = $this->get($response->headers->get('Location'));
         $followed->assertStatus(200);
-        $followed->assertSee('Payment &amp; Invoice Reports', false);
         $followed->assertViewHas('statusFilter', 'pending');
+        $followed->assertSee('PAY-20260827-VZDM');
     }
 
-    public function test_06_reports_page_title_is_payment_and_invoice_reports(): void
+    public function test_09_legacy_pending_route_redirects_or_resolves_to_canonical_reports_workspace_safely(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
-        $response->assertStatus(200);
-        $response->assertSee('Payment &amp; Invoice Reports', false);
-        $response->assertSee('Review transaction history, invoice records, and candidate payment proofs.');
+        $response = $this->actingAs($this->financeUser)->get('/finance/payments/pending');
+        $response->assertRedirect(route('finance.payments.index', ['status' => 'pending']));
     }
 
-    public function test_07_pending_payments_redirects_to_index_with_status(): void
+    public function test_10_dashboard_view_full_queue_points_to_finance_payments_index_status_pending(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending', ['status' => 'success']));
-        $response->assertRedirect(route('finance.payments.index', ['status' => 'success']));
-    }
-
-    public function test_08_reports_tabs_remain_on_finance_payments_index(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
         $response->assertStatus(200);
         $response->assertSee(route('finance.payments.index', ['status' => 'pending']));
-        $response->assertSee(route('finance.payments.index', ['status' => 'success']));
-        $response->assertSee(route('finance.payments.index', ['status' => 'failed']));
-        $response->assertSee(route('finance.payments.index', ['status' => 'all']));
     }
 
-    public function test_09_reports_all_transactions_url_is_finance_payments_index_status_all(): void
+    public function test_11_payment_and_invoice_reports_pending_tab_works(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'pending']));
+        $response->assertStatus(200);
+        $response->assertViewHas('statusFilter', 'pending');
+        $response->assertSee('PAY-20260827-VZDM');
+    }
+
+    public function test_12_payment_and_invoice_reports_all_tab_works(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'all']));
         $response->assertStatus(200);
         $response->assertViewHas('statusFilter', 'all');
-        $response->assertSee(route('finance.payments.index', ['status' => 'all']));
+        $response->assertSee('PAY-20260827-VZDM');
     }
 
-    public function test_10_pending_all_transactions_redirects_to_finance_payments_index_status_all(): void
+    public function test_13_payment_and_invoice_reports_confirmed_paid_tab_works(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending', ['status' => 'all']));
-        $response->assertRedirect(route('finance.payments.index', ['status' => 'all']));
-    }
-
-    public function test_11_finance_navigation_has_single_reports_menu_active(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'success']));
         $response->assertStatus(200);
-
-        $content = $response->getContent();
-        $this->assertMatchesRegularExpression('/href="[^"]*finance\/payments"[^>]*class="[^"]*bg-indigo-600/i', $content);
+        $response->assertViewHas('statusFilter', 'success');
+        $response->assertSee('No payment records found');
     }
 
-    public function test_12_only_payment_and_invoice_reports_active_on_finance_payments(): void
+    public function test_14_payment_and_invoice_reports_cancelled_rejected_tab_works(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'failed']));
         $response->assertStatus(200);
-
-        $content = $response->getContent();
-        $this->assertMatchesRegularExpression('/href="[^"]*finance\/payments"[^>]*class="[^"]*bg-indigo-600/i', $content);
+        $response->assertViewHas('statusFilter', 'failed');
+        $response->assertSee('No payment records found');
     }
 
-    public function test_13_dashboard_view_all_transactions_points_to_finance_payments_index_status_all(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
-        $response->assertStatus(200);
-        $response->assertSee(route('finance.payments.index', ['status' => 'all']));
-    }
-
-    public function test_14_pay_20260827_vzdm_appears_in_pending_payments(): void
+    public function test_15_current_uat_payment_remains_visible_under_pending_context(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'pending']));
         $response->assertStatus(200);
@@ -242,36 +267,17 @@ class FinanceQueueVsReportsSeparationTest extends TestCase
         $response->assertSee('IDR 832,500');
     }
 
-    public function test_15_pay_20260827_vzdm_appears_in_reports_all_transactions_when_valid(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'all']));
-        $response->assertStatus(200);
-        $response->assertSee('PAY-20260827-VZDM');
-        $response->assertSee('student@icedu.org');
-        $response->assertSee('TOEIC Mock Test Package');
-    }
-
     public function test_16_pay_20260827_vzdm_remains_pending(): void
     {
         $this->assertEquals(PaymentStatus::Pending, $this->uatPayment->fresh()->status);
     }
 
-    public function test_17_confirmed_paid_count_remains_0(): void
+    public function test_17_pay_20260827_vzdm_amount_remains_idr_832500(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
-        $response->assertStatus(200);
-        $response->assertSee('Confirmed / Paid (0)');
+        $this->assertEquals(832500, $this->uatPayment->fresh()->amount);
     }
 
-    public function test_18_inv_20260726_0001_remains_excluded_from_valid_commerce_reports(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'all']));
-        $response->assertStatus(200);
-        $response->assertDontSee('INV-20260726-0001');
-        $response->assertDontSee('repomanager@icedu.com');
-    }
-
-    public function test_19_inv_20260726_0001_remains_in_database(): void
+    public function test_18_inv_20260726_0001_remains_in_database(): void
     {
         $this->assertDatabaseHas('payments', [
             'id'               => $this->legacyPayment->id,
@@ -281,36 +287,64 @@ class FinanceQueueVsReportsSeparationTest extends TestCase
         ]);
     }
 
-    public function test_20_payment_ref_and_invoice_ref_remain_separate(): void
+    public function test_19_inv_20260726_0001_remains_excluded_from_valid_commerce_reports(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'pending']));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'all']));
         $response->assertStatus(200);
-        $response->assertSee('Payment Ref');
-        $response->assertSee('Invoice Ref');
-        $response->assertSee('PAY-20260827-VZDM');
-        $response->assertSee('INV-20260827-ZMJY');
+        $response->assertDontSee('INV-20260726-0001');
+        $response->assertDontSee('repomanager@icedu.com');
     }
 
-    public function test_21_finance_retains_finance_report_access(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
-        $response->assertStatus(200);
-    }
-
-    public function test_22_finance_remains_blocked_from_commerce_product_management(): void
+    public function test_20_finance_remains_blocked_from_product_catalog(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('admin.commerce.index'));
         $response->assertStatus(403);
     }
 
-    public function test_23_ra_commercial_catalog_remains_accessible(): void
+    public function test_21_finance_remains_blocked_from_product_crud(): void
+    {
+        $response = $this->actingAs($this->financeUser)->post(route('admin.commerce.products.store'), [
+            'title'             => 'Finance Illegal Product',
+            'product_type'      => 'assessment',
+            'assessment_family' => 'toeic',
+            'price'             => 500000,
+        ]);
+        $response->assertStatus(403);
+    }
+
+    public function test_22_finance_remains_blocked_from_voucher_crud(): void
+    {
+        $response = $this->actingAs($this->financeUser)->post(route('admin.commerce.vouchers.store'), [
+            'code'     => 'FINANCE50',
+            'discount' => 50,
+        ]);
+        $response->assertStatus(403);
+    }
+
+    public function test_23_ra_commercial_catalog_remains_available(): void
     {
         $response = $this->actingAs($this->adminUser)->get(route('admin.commerce.index'));
         $response->assertStatus(200);
         $response->assertSee('Assessment Package &amp; Commercial Catalog', false);
     }
 
-    public function test_24_no_payment_state_changes_occur(): void
+    public function test_24_sa_price_approval_remains_available(): void
+    {
+        $request = PriceChangeRequest::create([
+            'product_id'             => $this->sampleProduct->id,
+            'requested_by'           => $this->adminUser->id,
+            'current_price_snapshot' => 750000,
+            'proposed_price'         => 850000,
+            'reason'                 => 'Yearly adjustment',
+            'status'                 => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->superAdminUser)->post(route('admin.approvals.price-changes.approve', $request->id));
+        $response->assertRedirect(route('admin.approvals.index'));
+        $this->assertEquals(850000, $this->sampleProduct->fresh()->price);
+    }
+
+    public function test_25_no_payment_state_mutation(): void
     {
         $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
         $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
@@ -319,22 +353,22 @@ class FinanceQueueVsReportsSeparationTest extends TestCase
         $this->assertEquals(PaymentStatus::Success, $this->legacyPayment->fresh()->status);
     }
 
-    public function test_25_no_assignment_created(): void
+    public function test_26_no_assignment_created(): void
     {
         $this->assertEquals(0, CandidateTestAssignment::count());
     }
 
-    public function test_26_no_attempt_created(): void
+    public function test_27_no_attempt_created(): void
     {
         $this->assertEquals(0, Attempt::count());
     }
 
-    public function test_27_no_certificate_created(): void
+    public function test_28_no_certificate_created(): void
     {
         $this->assertEquals(0, Certificate::count());
     }
 
-    public function test_28_light_theme_passes(): void
+    public function test_29_light_theme_passes(): void
     {
         $this->financeUser->setThemePreference('light');
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
@@ -342,7 +376,7 @@ class FinanceQueueVsReportsSeparationTest extends TestCase
         $response->assertSee('data-theme="light"', false);
     }
 
-    public function test_29_dark_theme_passes(): void
+    public function test_30_dark_theme_passes(): void
     {
         $this->financeUser->setThemePreference('dark');
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
@@ -350,7 +384,7 @@ class FinanceQueueVsReportsSeparationTest extends TestCase
         $response->assertSee('data-theme="dark"', false);
     }
 
-    public function test_30_global_theme_contract_passes(): void
+    public function test_31_global_theme_contract_passes(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);

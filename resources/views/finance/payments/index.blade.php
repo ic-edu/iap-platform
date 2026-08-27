@@ -31,20 +31,17 @@
     @endif
 
     {{-- Filter Tabs --}}
-    @php
-        $targetRoute = $tabRoute ?? (request()->routeIs('finance.payments.pending') ? 'finance.payments.pending' : 'finance.payments.index');
-    @endphp
     <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto text-xs">
-        <a href="{{ route($targetRoute, ['status' => 'pending']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? 'pending') === 'pending' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+        <a href="{{ route('finance.payments.index', ['status' => 'pending']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'pending' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
             ⏳ Pending Review ({{ $pendingCount }})
         </a>
-        <a href="{{ route($targetRoute, ['status' => 'success']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'success' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+        <a href="{{ route('finance.payments.index', ['status' => 'success']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'success' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
             ✓ Confirmed / Paid ({{ $successCount }})
         </a>
-        <a href="{{ route($targetRoute, ['status' => 'failed']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'failed' ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+        <a href="{{ route('finance.payments.index', ['status' => 'failed']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'failed' ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
             ✗ Cancelled / Rejected ({{ $failedCount }})
         </a>
-        <a href="{{ route($targetRoute, ['status' => 'all']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? '') === 'all' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+        <a href="{{ route('finance.payments.index', ['status' => 'all']) }}" class="px-4 py-2 rounded-xl font-bold transition-all {{ ($statusFilter ?? 'all') === 'all' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
             All Transactions
         </a>
     </div>

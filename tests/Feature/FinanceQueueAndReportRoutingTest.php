@@ -135,10 +135,10 @@ class FinanceQueueAndReportRoutingTest extends TestCase
         ]);
     }
 
-    public function test_01_pending_payments_route_returns_http_200_for_finance(): void
+    public function test_01_pending_payments_route_redirects_to_canonical_reports_with_pending_status(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
-        $response->assertStatus(200);
+        $response->assertRedirect(route('finance.payments.index', ['status' => 'pending']));
     }
 
     public function test_02_payment_and_invoice_reports_route_returns_http_200_for_finance(): void
@@ -147,11 +147,10 @@ class FinanceQueueAndReportRoutingTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_03_pending_payments_defaults_to_status_pending(): void
+    public function test_03_pending_payments_redirects_with_status_pending(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
-        $response->assertStatus(200);
-        $response->assertViewHas('statusFilter', 'pending');
+        $response->assertRedirect(route('finance.payments.index', ['status' => 'pending']));
     }
 
     public function test_04_payment_and_invoice_reports_defaults_to_status_all(): void
@@ -161,12 +160,13 @@ class FinanceQueueAndReportRoutingTest extends TestCase
         $response->assertViewHas('statusFilter', 'all');
     }
 
-    public function test_05_pending_payments_title_is_payment_review_and_approval_queue(): void
+    public function test_05_pending_payments_redirect_preserves_pending_context(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
-        $response->assertStatus(200);
-        $response->assertSee('Payment Review &amp; Approval Queue', false);
-        $response->assertSee('Review candidate payment proofs and confirm or reject pending transactions.');
+        $followed = $this->get($response->headers->get('Location'));
+        $followed->assertStatus(200);
+        $followed->assertSee('Payment &amp; Invoice Reports', false);
+        $followed->assertViewHas('statusFilter', 'pending');
     }
 
     public function test_06_payment_and_invoice_reports_title_is_payment_and_invoice_reports(): void
@@ -174,17 +174,13 @@ class FinanceQueueAndReportRoutingTest extends TestCase
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
         $response->assertSee('Payment &amp; Invoice Reports', false);
-        $response->assertSee('Review transaction history, invoice records, and payment activity.');
+        $response->assertSee('Review transaction history, invoice records, and candidate payment proofs.');
     }
 
-    public function test_07_pending_payments_tabs_remain_on_finance_payments_pending(): void
+    public function test_07_pending_payments_redirects_with_custom_status(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
-        $response->assertStatus(200);
-        $response->assertSee(route('finance.payments.pending', ['status' => 'pending']));
-        $response->assertSee(route('finance.payments.pending', ['status' => 'success']));
-        $response->assertSee(route('finance.payments.pending', ['status' => 'failed']));
-        $response->assertSee(route('finance.payments.pending', ['status' => 'all']));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending', ['status' => 'success']));
+        $response->assertRedirect(route('finance.payments.index', ['status' => 'success']));
     }
 
     public function test_08_payment_and_invoice_reports_tabs_remain_on_finance_payments_index(): void
@@ -205,25 +201,19 @@ class FinanceQueueAndReportRoutingTest extends TestCase
         $response->assertSee(route('finance.payments.index', ['status' => 'all']));
     }
 
-    public function test_10_pending_all_transactions_resolves_to_finance_payments_pending_status_all(): void
+    public function test_10_pending_all_transactions_redirects_to_finance_payments_index_status_all(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending', ['status' => 'all']));
-        $response->assertStatus(200);
-        $response->assertViewHas('statusFilter', 'all');
-        $response->assertSee(route('finance.payments.pending', ['status' => 'all']));
+        $response->assertRedirect(route('finance.payments.index', ['status' => 'all']));
     }
 
-    public function test_11_only_pending_payments_sidebar_item_is_active_on_finance_payments_pending(): void
+    public function test_11_single_reports_sidebar_item_is_active_on_finance_payments(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
 
         $content = $response->getContent();
-        
-        // Match link with bg-indigo-600 containing Pending Payments
-        $this->assertMatchesRegularExpression('/href="[^"]*finance\/payments\/pending[^"]*"[^>]*class="[^"]*bg-indigo-600/i', $content);
-        // Ensure Payment & Invoice Reports is NOT styled with bg-indigo-600
-        $this->assertDoesNotMatchRegularExpression('/href="[^"]*finance\/payments"[^>]*class="[^"]*bg-indigo-600/i', $content);
+        $this->assertMatchesRegularExpression('/href="[^"]*finance\/payments"[^>]*class="[^"]*bg-indigo-600/i', $content);
     }
 
     public function test_12_only_payment_and_invoice_reports_sidebar_item_is_active_on_finance_payments(): void
@@ -232,11 +222,7 @@ class FinanceQueueAndReportRoutingTest extends TestCase
         $response->assertStatus(200);
 
         $content = $response->getContent();
-
-        // Match link with bg-indigo-600 containing finance/payments (Reports)
         $this->assertMatchesRegularExpression('/href="[^"]*finance\/payments"[^>]*class="[^"]*bg-indigo-600/i', $content);
-        // Ensure Pending Payments is NOT styled with bg-indigo-600
-        $this->assertDoesNotMatchRegularExpression('/href="[^"]*finance\/payments\/pending[^"]*"[^>]*class="[^"]*bg-indigo-600/i', $content);
     }
 
     public function test_13_finance_dashboard_view_all_transactions_resolves_to_finance_payments_index_status_all(): void
@@ -248,7 +234,7 @@ class FinanceQueueAndReportRoutingTest extends TestCase
 
     public function test_14_current_uat_payment_pay_20260827_vzdm_remains_visible_in_pending(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'pending']));
         $response->assertStatus(200);
         $response->assertSee('PAY-20260827-VZDM');
         $response->assertSee('student@icedu.org');
@@ -263,7 +249,7 @@ class FinanceQueueAndReportRoutingTest extends TestCase
     public function test_16_current_uat_payment_amount_remains_idr_832500(): void
     {
         $this->assertEquals(832500, $this->uatPayment->fresh()->amount);
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'pending']));
         $response->assertSee('IDR 832,500');
     }
 
@@ -294,7 +280,7 @@ class FinanceQueueAndReportRoutingTest extends TestCase
 
     public function test_20_payment_ref_and_invoice_ref_remain_separate(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', ['status' => 'pending']));
         $response->assertStatus(200);
         $response->assertSee('Payment Ref');
         $response->assertSee('Invoice Ref');
@@ -305,7 +291,7 @@ class FinanceQueueAndReportRoutingTest extends TestCase
     public function test_21_finance_still_accesses_pending_payments(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
-        $response->assertStatus(200);
+        $response->assertRedirect(route('finance.payments.index', ['status' => 'pending']));
     }
 
     public function test_22_finance_still_accesses_payment_and_invoice_reports(): void
@@ -379,7 +365,7 @@ class FinanceQueueAndReportRoutingTest extends TestCase
     public function test_32_light_theme_passes(): void
     {
         $this->financeUser->setThemePreference('light');
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
         $response->assertSee('data-theme="light"', false);
     }
@@ -394,7 +380,7 @@ class FinanceQueueAndReportRoutingTest extends TestCase
 
     public function test_34_global_theme_contract_passes(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
         $response->assertSee('setIapTheme');
     }

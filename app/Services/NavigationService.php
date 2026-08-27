@@ -318,20 +318,11 @@ class NavigationService
                 ],
                 [
                     'section' => 'Payment Operations',
-                    'label' => 'Pending Payments',
-                    'route' => 'finance.payments.pending',
-                    'icon' => 'credit-card',
-                    'permission' => null,
-                    'active_pattern' => 'finance/payments/pending*',
-                    'badge' => null,
-                ],
-                [
-                    'section' => 'Payment Operations',
                     'label' => 'Payment & Invoice Reports',
                     'route' => 'finance.payments.index',
                     'icon' => 'document-report',
                     'permission' => null,
-                    'active_pattern' => 'finance/payments',
+                    'active_pattern' => 'finance/payments*',
                     'badge' => null,
                 ],
             ];

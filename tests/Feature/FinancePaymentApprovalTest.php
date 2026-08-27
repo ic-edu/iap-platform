@@ -209,7 +209,7 @@ class FinancePaymentApprovalTest extends \Tests\TestCase
     {
         $payment = $this->createPendingPayment($this->mockTestProduct);
 
-        $response = $this->actingAs($this->finance)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->finance)->get(route('finance.payments.index', ['status' => 'pending']));
 
         $response->assertStatus(200);
         $response->assertSee($payment->reference_number);
@@ -602,7 +602,7 @@ class FinancePaymentApprovalTest extends \Tests\TestCase
     {
         $this->finance->setThemePreference('light');
 
-        $response = $this->actingAs($this->finance)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->finance)->get(route('finance.payments.index'));
 
         $response->assertStatus(200);
         $response->assertSee('data-theme="light"', false);
@@ -616,7 +616,7 @@ class FinancePaymentApprovalTest extends \Tests\TestCase
     {
         $this->finance->setThemePreference('dark');
 
-        $response = $this->actingAs($this->finance)->get(route('finance.payments.pending'));
+        $response = $this->actingAs($this->finance)->get(route('finance.payments.index'));
 
         $response->assertStatus(200);
         $response->assertSee('data-theme="dark"', false);
