@@ -108,6 +108,8 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.tests.index');
     Route::get('/teacher/assessments/{test}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'show'])
         ->name('teacher.tests.show');
+    Route::get('/teacher/assessments/{test}/preview', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'previewAsCandidate'])
+        ->name('teacher.tests.preview');
     Route::put('/teacher/assessments/{test}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'update'])
         ->name('teacher.tests.update');
     Route::get('/teacher/assessments/{test}/questions/{question}/edit', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'editQuestion'])

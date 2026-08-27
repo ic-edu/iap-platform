@@ -428,6 +428,64 @@ class TestBuilderController extends Controller
     }
 
     /**
+     * Preview assessment as a candidate (read-only, non-persistent, no attempt created).
+     */
+    public function previewAsCandidate(Request $request, Test $test): View
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        $test->load([
+            'sections.testQuestions.question.choices',
+            'sections.testQuestions.question.passage',
+            'sections.testQuestions.question.passageGroup.passages',
+            'sections.testQuestions.question.audioGroup',
+            'sections.testQuestions.question.mediaAsset',
+            'sections.mediaAssets',
+        ]);
+
+        $validationResult = $this->validateAssessment($test);
+
+        $orderedQuestions = collect();
+        $sectionFirstQuestionIndex = [];
+        $questionSectionMap = [];
+
+        $sections = $test->sections->sortBy('order')->values();
+
+        foreach ($sections as $secIndex => $section) {
+            $firstIdxForThisSection = $orderedQuestions->count();
+            $sectionFirstQuestionIndex[$section->id] = $firstIdxForThisSection;
+
+            $secQuestions = $section->testQuestions->sortBy('order')->map(function ($tq) use ($section) {
+                $q = $tq->question;
+                if ($q) {
+                    $q->section_model = $section;
+                    $q->test_question_order = $tq->order;
+                }
+                return $q;
+            })->filter()->values();
+
+            foreach ($secQuestions as $q) {
+                $idx = $orderedQuestions->count();
+                $questionSectionMap[$idx] = $section->id;
+                $orderedQuestions->push($q);
+            }
+        }
+
+        return view('teacher.assessment_preview', [
+            'test'                      => $test,
+            'sections'                  => $sections,
+            'questions'                 => $orderedQuestions,
+            'sectionFirstQuestionIndex' => $sectionFirstQuestionIndex,
+            'questionSectionMap'        => $questionSectionMap,
+            'validationResult'          => $validationResult,
+        ]);
+    }
+
+    /**
      * Attach an existing Master Question from an Institutional Question Bank to an Assessment section.
      */
     public function attachMasterQuestion(Request $request, Test $test): RedirectResponse
