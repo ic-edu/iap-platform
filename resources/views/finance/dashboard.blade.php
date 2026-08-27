@@ -6,28 +6,28 @@
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
         <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Gross Revenue</span>
-            <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ $grossRevenue }}</span>
-            <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">↑ 12.4% vs last month</span>
+            <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">IDR {{ number_format($grossRevenue) }}</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Confirmed paid transactions</span>
         </div>
 
-        <a href="{{ route('finance.payments.pending') }}" class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 rounded-2xl shadow-sm transition-all group block">
+        <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
             <div class="flex items-center justify-between">
-                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block group-hover:text-amber-600 dark:group-hover:text-amber-400">Pending Approvals</span>
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Pending Approvals</span>
                 <span class="w-2.5 h-2.5 rounded-full {{ $pendingPaymentsCount > 0 ? 'bg-amber-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-700' }}"></span>
             </div>
-            <span class="text-3xl font-black text-amber-600 dark:text-amber-400 mt-1 block">{{ $pendingPaymentsCount }}</span>
-            <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block group-hover:underline">Review payment queue &rarr;</span>
-        </a>
+            <span class="text-3xl font-black text-amber-600 dark:text-amber-400 mt-1 block">{{ number_format($pendingPaymentsCount) }}</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Candidate payments awaiting review</span>
+        </div>
 
         <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Invoices Issued</span>
-            <span class="text-3xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{{ $invoicesIssuedCount }}</span>
-            <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Tax receipts generated</span>
+            <span class="text-3xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{{ number_format($invoicesIssuedCount) }}</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Billing invoices generated</span>
         </div>
 
         <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Promotions</span>
-            <span class="text-3xl font-black text-slate-900 dark:text-white mt-1 block">{{ count($vouchers) }}</span>
+            <span class="text-3xl font-black text-slate-900 dark:text-white mt-1 block">{{ number_format($couponsCount) }}</span>
             <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Active vouchers</span>
         </div>
     </div>
@@ -90,21 +90,28 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-xs">
-                    @foreach ($transactions as $txn)
+                    @forelse ($latestTransactions as $txn)
+                        @php
+                            $userEmail = $txn->user?->email ?? $txn->invoice?->order?->user?->email ?? 'N/A';
+                            $productTitle = $txn->invoice?->order?->items?->first()?->product?->title ?? 'Assessment Order';
+                        @endphp
                         <tr>
-                            <td class="p-4 font-bold text-slate-500 dark:text-slate-400">{{ $txn['id'] }}</td>
-                            <td class="p-4 font-semibold text-slate-900 dark:text-white font-sans text-xs">{{ $txn['user'] }}</td>
-                            <td class="p-4 text-xs text-indigo-600 dark:text-indigo-400 font-medium font-sans">{{ $txn['package'] }}</td>
-                            <td class="p-4 font-bold text-emerald-600 dark:text-emerald-400">{{ $txn['amount'] }}</td>
+                            <td class="p-4 font-bold text-slate-500 dark:text-slate-400">{{ $txn->reference_number ?? $txn->id }}</td>
+                            <td class="p-4 font-semibold text-slate-900 dark:text-white font-sans text-xs">{{ $userEmail }}</td>
+                            <td class="p-4 text-xs text-indigo-600 dark:text-indigo-400 font-medium font-sans">{{ $productTitle }}</td>
+                            <td class="p-4 font-bold text-emerald-600 dark:text-emerald-400">IDR {{ number_format($txn->amount) }}</td>
                             <td class="p-4">
-                                <x-status-badge :status="$txn['status']" />
+                                <x-status-badge :status="$txn->status" />
                             </td>
-                            <td class="p-4 text-right text-xs text-slate-400 font-sans">{{ $txn['date'] }}</td>
+                            <td class="p-4 text-right text-xs text-slate-400 font-sans">{{ $txn->created_at?->format('d M Y, H:i') }}</td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-slate-500 font-sans">No recent payment transactions recorded.</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
     </div>
 @endsection
-

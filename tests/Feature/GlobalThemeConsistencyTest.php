@@ -149,6 +149,14 @@ class GlobalThemeConsistencyTest extends TestCase
 
     public function test_finance_dashboard_renders_responsive_kpis_and_status_badges(): void
     {
+        \App\Modules\Commerce\Domain\Models\Payment::create([
+            'reference_number' => 'PAY-THEME-001',
+            'user_id'          => $this->student->id,
+            'amount'           => 750000,
+            'payment_gateway'  => 'manual_transfer',
+            'status'           => \App\Modules\Commerce\Domain\Enums\PaymentStatus::Pending,
+        ]);
+
         $response = $this->actingAs($this->finance)->get(route('finance.dashboard'));
         $response->assertStatus(200);
         $response->assertSee('text-emerald-600 dark:text-emerald-400', false);

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Finance;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
+use App\Modules\Commerce\Domain\Models\Coupon;
+use App\Modules\Commerce\Domain\Models\Invoice;
 use App\Modules\Commerce\Domain\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,37 +17,30 @@ class FinanceDashboardController extends Controller
      */
     public function index(Request $request): View
     {
-        $vouchers = [
-            ['code' => 'UAT-FREE-2026', 'discount' => '100% OFF', 'uses' => 42, 'status' => 'ACTIVE'],
-            ['code' => 'ICEDU-PROMO-50', 'discount' => '50% OFF', 'uses' => 18, 'status' => 'ACTIVE'],
-            ['code' => 'TOEIC-SCHOLAR', 'discount' => '75% OFF', 'uses' => 5, 'status' => 'ACTIVE'],
-        ];
-
-        $transactions = [
-            ['id' => 'TXN-882194', 'user' => 'student@icedu.org', 'package' => 'TOEIC Diagnostic Prep Package', 'amount' => '$25.00', 'status' => 'PAID', 'date' => now()->subHours(3)->format('d M Y, H:i')],
-            ['id' => 'TXN-882193', 'user' => 'candidate@icedu.org', 'package' => 'TOEFL ITP Standard Exam', 'amount' => '$35.00', 'status' => 'PAID', 'date' => now()->subHours(8)->format('d M Y, H:i')],
-            ['id' => 'TXN-882192', 'user' => 'finance.test@icedu.org', 'package' => 'IELTS Academic Prep Package', 'amount' => '$45.00', 'status' => 'PAID', 'date' => now()->subHours(14)->format('d M Y, H:i')],
-        ];
-
+        $grossRevenue = (float) Payment::whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])->sum('amount');
         $pendingPaymentsCount = Payment::where('status', PaymentStatus::Pending)->count();
-        $recentPendingPayments = Payment::with(['user', 'invoice.order.items.product'])
+        $invoicesIssuedCount = Invoice::count();
+        $couponsCount = Coupon::count();
+
+        $recentPendingPayments = Payment::with(['user', 'invoice.order.items.product.test'])
             ->where('status', PaymentStatus::Pending)
             ->latest()
             ->take(5)
             ->get();
 
-        $grossRevenue = '$14,850.00';
-        $completedTransactionsCount = 342;
-        $invoicesIssuedCount = 289;
+        // Human UAT presentation: Show the latest legitimate persistent transaction only
+        $latestTransactions = Payment::with(['user', 'invoice.order.items.product'])
+            ->latest()
+            ->take(1)
+            ->get();
 
         return view('finance.dashboard', compact(
-            'vouchers',
-            'transactions',
-            'pendingPaymentsCount',
-            'recentPendingPayments',
             'grossRevenue',
-            'completedTransactionsCount',
-            'invoicesIssuedCount'
+            'pendingPaymentsCount',
+            'invoicesIssuedCount',
+            'couponsCount',
+            'recentPendingPayments',
+            'latestTransactions'
         ));
     }
 }
