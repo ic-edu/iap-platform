@@ -11,7 +11,10 @@
         {{-- AUDIO: Display HTML5 player immediately. No duplicate Play Audio button --}}
         <div style="width:100%;max-width:550px;background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.5rem;text-align:center;margin:0 auto;">
             <div style="font-size:2.8rem;margin-bottom:.5rem;">🎵</div>
-            <audio controls controlsList="nodownload noplaybackrate" src="{{ route('media.preview', $media->id) }}" preload="metadata" style="width:100%;max-width:480px;accent-color:#6366f1;"></audio>
+            <audio controls controlsList="nodownload noplaybackrate" src="{{ route('media.preview', $media->id) }}" preload="metadata" style="width:100%;max-width:480px;accent-color:#6366f1;">
+                <source src="{{ route('media.preview', $media->id) }}" type="{{ $media->mime_type ?? 'audio/mpeg' }}">
+                <p style="font-size:.78rem;color:#94a3b8;margin-top:.5rem;">Your browser does not support audio playback for {{ $media->formatLabel() }} format. Please use a compatible browser.</p>
+            </audio>
 
             @if($media->content_text)
             <div style="text-align:left;background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1rem;margin-top:1rem;">

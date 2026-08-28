@@ -186,10 +186,18 @@
                                                 <div class="flex items-center gap-2 mb-2 text-xs font-bold text-indigo-700 dark:text-indigo-300">
                                                     <span>{{ $sectionMedia->title ?: $sectionMedia->name }}</span>
                                                 </div>
-                                                @if(str_starts_with($sectionMedia->mime_type ?? '', 'image/'))
-                                                    <img src="{{ $sectionMedia->url ?? $sectionMedia->path }}" alt="{{ $sectionMedia->title }}" class="max-h-64 object-contain rounded-lg border border-slate-300 dark:border-slate-700">
-                                                @elseif(str_starts_with($sectionMedia->mime_type ?? '', 'audio/'))
-                                                    <audio controls class="w-full" src="{{ $sectionMedia->url ?? $sectionMedia->path }}"></audio>
+                                                @php
+                                                    $isSecImage = $sectionMedia->type === 'image' || str_starts_with($sectionMedia->mime_type ?? '', 'image/');
+                                                    $isSecAudio = $sectionMedia->type === 'audio' || str_starts_with($sectionMedia->mime_type ?? '', 'audio/');
+                                                    $secMediaSrc = $sectionMedia->publicUrl() ?: ($sectionMedia->url ?? $sectionMedia->path);
+                                                @endphp
+                                                @if($isSecImage)
+                                                    <img src="{{ $secMediaSrc }}" alt="{{ $sectionMedia->title }}" class="max-h-64 object-contain rounded-lg border border-slate-300 dark:border-slate-700">
+                                                @elseif($isSecAudio)
+                                                    <audio controls class="w-full" src="{{ $secMediaSrc }}" preload="metadata">
+                                                        <source src="{{ $secMediaSrc }}" type="{{ $sectionMedia->mime_type ?? 'audio/mpeg' }}">
+                                                        Your browser does not support the audio element.
+                                                    </audio>
                                                 @endif
                                             </div>
                                         @endforeach
@@ -234,7 +242,7 @@
                             $passageGroup = $question->passageGroup;
                             $partNum = (int) ($question->part_number ?? 0);
                             $audioUrl = $question->getEffectiveAudioUrl();
-                            $imageUrl = $question->image_url ?: ($question->mediaAsset && str_starts_with($question->mediaAsset->mime_type ?? '', 'image/') ? ($question->mediaAsset->url ?? $question->mediaAsset->path) : null);
+                            $imageUrl = method_exists($question, 'getEffectiveImageUrl') ? $question->getEffectiveImageUrl() : ($question->image_url ?: ($question->mediaAsset && ($question->mediaAsset->type === 'image' || str_starts_with($question->mediaAsset->mime_type ?? '', 'image/')) ? ($question->mediaAsset->publicUrl() ?? $question->mediaAsset->path) : null));
                             $isToeicPart1 = ($partNum === 1);
                             $isMissingPart1Media = $isToeicPart1 && (empty($imageUrl) || empty($audioUrl));
                         @endphp
@@ -302,6 +310,16 @@
 
                                     <!-- Right Pane: Stem Prompt & Choices -->
                                     <div class="lg:col-span-6 xl:col-span-5 flex flex-col justify-between space-y-6">
+                                        @if(!empty($audioUrl))
+                                            <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
+                                                <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
+                                                <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata">
+                                                    <source src="{{ $audioUrl }}">
+                                                    Your browser does not support the audio element.
+                                                </audio>
+                                            </div>
+                                        @endif
+
                                         <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
                                             {!! nl2br(e($question->prompt)) !!}
                                         </div>
@@ -331,7 +349,10 @@
                                     @if(!empty($audioUrl))
                                         <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
                                             <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
-                                            <audio controls class="w-full h-8" src="{{ $audioUrl }}"></audio>
+                                            <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata">
+                                                <source src="{{ $audioUrl }}">
+                                                Your browser does not support the audio element.
+                                            </audio>
                                         </div>
                                     @endif
 

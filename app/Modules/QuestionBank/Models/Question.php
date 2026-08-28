@@ -138,7 +138,7 @@ class Question extends Model
     }
 
     /**
-     * Resolve effective audio URL, checking group first then question.
+     * Resolve effective audio URL, checking group first then mediaAsset then legacy audio_url.
      */
     public function getEffectiveAudioUrl(): ?string
     {
@@ -149,12 +149,36 @@ class Question extends Model
             }
         }
 
+        if ($this->mediaAsset) {
+            $type = $this->mediaAsset->type ?? '';
+            $mime = $this->mediaAsset->mime_type ?? '';
+            if ($type === 'audio' || str_starts_with($mime, 'audio/')) {
+                return $this->mediaAsset->publicUrl() ?: $this->mediaAsset->path;
+            }
+        }
+
         if (!empty($this->audio_url)) {
             return $this->audio_url;
         }
 
+        return null;
+    }
+
+    /**
+     * Resolve effective image URL, checking attached media asset first then legacy image_url.
+     */
+    public function getEffectiveImageUrl(): ?string
+    {
         if ($this->mediaAsset) {
-            return $this->mediaAsset->path;
+            $type = $this->mediaAsset->type ?? '';
+            $mime = $this->mediaAsset->mime_type ?? '';
+            if ($type === 'image' || str_starts_with($mime, 'image/')) {
+                return $this->mediaAsset->publicUrl() ?: $this->mediaAsset->path;
+            }
+        }
+
+        if (!empty($this->image_url)) {
+            return $this->image_url;
         }
 
         return null;

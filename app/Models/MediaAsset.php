@@ -219,4 +219,13 @@ class MediaAsset extends Model
             default   => '📎',
         };
     }
+
+    /**
+     * Clean format label for UI presentation (e.g. JPG, PNG, WEBP, MP3, M4A, WAV, PDF).
+     */
+    public function formatLabel(): string
+    {
+        $ext = strtolower(pathinfo($this->path ?: $this->original_name, PATHINFO_EXTENSION));
+        return strtoupper($ext ?: $this->type);
+    }
 }

@@ -327,8 +327,9 @@ html.dark .imr-modal, html[data-theme="dark"] .imr-modal { background: #0f172a; 
                 @elseif($asset->type === 'audio')
                     <div style="width:90%;padding:.75rem;text-align:center;">
                         <div style="font-size:1.6rem;margin-bottom:.2rem;">🎵</div>
-                        <audio controls controlsList="nodownload noplaybackrate" style="width:100%;height:32px;">
-                            <source src="{{ $asset->publicUrl() }}" type="{{ $asset->mime_type }}">
+                        <audio controls controlsList="nodownload noplaybackrate" style="width:100%;height:32px;" preload="metadata" src="{{ $asset->publicUrl() }}">
+                            <source src="{{ $asset->publicUrl() }}" type="{{ $asset->mime_type ?? 'audio/mpeg' }}">
+                            Your browser does not support audio playback for {{ $asset->formatLabel() }}.
                         </audio>
                         @if($asset->content_text)
                         <button type="button" onclick="toggleTranscript('trans-{{ $asset->id }}')" style="font-size:.65rem;color:#059669;font-weight:700;background:none;border:none;cursor:pointer;margin-top:.3rem;">

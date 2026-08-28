@@ -192,7 +192,7 @@ class MediaController extends Controller
         $user = $request->user();
 
         // Enforce Role Governance: Admin cannot upload media
-        if (!$user->hasRole('teacher') && !$user->hasRole('super-admin')) {
+        if (!$user || (!$user->hasRole('teacher') && !$user->hasRole('super-admin'))) {
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
@@ -202,36 +202,136 @@ class MediaController extends Controller
             abort(403, 'Only Teachers are authorized to upload academic media assets.');
         }
 
-        $request->validate([
-            'file'        => 'required|file|mimes:jpeg,png,webp,jpg,mp3,wav,m4a,pdf|max:10240',
-            'title'       => 'nullable|string|max:255',
-            'category'    => 'nullable|string|max:100',
-            'exam_type'   => 'nullable|string|max:50',
-            'description' => 'nullable|string|max:1000',
-        ]);
+        $customMessages = [
+            'file.required' => 'A media file is required.',
+            'file.file'     => 'The uploaded item must be a valid file.',
+            'file.mimes'    => 'Unsupported media format. Supported image formats: JPG, JPEG, PNG, WebP. Supported audio formats: MP3, M4A, WAV.',
+            'file.min'      => 'The file cannot be empty (0 bytes).',
+            'file.max'      => 'The file size must not exceed 10 MB.',
+        ];
+
+        // Supported format whitelist:
+        // Image: jpg, jpeg, png, webp
+        // Audio: mp3, wav, m4a
+        // Document: pdf
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'file'        => ['required', 'file', 'max:10240', 'mimes:jpeg,png,webp,jpg,mp3,wav,m4a,pdf'],
+            'title'       => ['nullable', 'string', 'max:255'],
+            'category'    => ['nullable', 'string', 'max:100'],
+            'exam_type'   => ['nullable', 'string', 'max:50'],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ], $customMessages);
+
+        if ($validator->fails()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
 
         $file = $request->file('file');
-        $path = $file->store('question-media', 'public');
-        $type = $this->determineFileType($file->getClientOriginalExtension());
+        $ext  = strtolower($file->getClientOriginalExtension());
+        $mime = strtolower($file->getMimeType() ?: '');
+        $realPath = $file->getRealPath();
 
-        $asset = MediaAsset::create([
-            'filename'        => basename($path),
-            'original_name'   => $file->getClientOriginalName(),
-            'title'           => $request->input('title') ?: $file->getClientOriginalName(),
-            'mime_type'       => $file->getMimeType(),
-            'type'            => $type,
-            'category'        => $request->input('category', 'General Assets'),
-            'exam_type'       => $request->input('exam_type', 'general'),
-            'description'     => $request->input('description'),
-            'path'            => $path,
-            'size'            => $file->getSize(),
-            'status'          => 'active',
-            'approval_status' => 'draft',
-            'version'         => '1.0',
-            'uploaded_by'     => $user->id,
-        ]);
+        // 1. Strict extension whitelist
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'mp3', 'wav', 'm4a', 'pdf'];
+        if (!in_array($ext, $allowedExtensions, true)) {
+            $msg = 'Unsupported media format. Supported image formats: JPG, JPEG, PNG, WebP. Supported audio formats: MP3, M4A, WAV.';
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->withErrors(['file' => $msg])->withInput();
+        }
 
-        ActivityLogger::log('media_uploaded', "Media uploaded: {$asset->original_name}", $user);
+        // 2. Strict MIME verification per format
+        $validMimesByExt = [
+            'jpg'  => ['image/jpeg', 'image/pjpeg'],
+            'jpeg' => ['image/jpeg', 'image/pjpeg'],
+            'png'  => ['image/png', 'image/x-png'],
+            'webp' => ['image/webp'],
+            'mp3'  => ['audio/mpeg', 'audio/mp3', 'audio/x-mp3', 'audio/x-mpeg', 'audio/x-mpg'],
+            'm4a'  => ['audio/mp4', 'audio/x-m4a', 'audio/m4a', 'audio/aac'],
+            'wav'  => ['audio/wav', 'audio/x-wav', 'audio/wave', 'audio/vnd.wave'],
+            'pdf'  => ['application/pdf', 'application/x-pdf'],
+        ];
+
+        if (isset($validMimesByExt[$ext]) && !in_array($mime, $validMimesByExt[$ext], true)) {
+            $msg = 'Mismatched or invalid MIME type for ' . strtoupper($ext) . ' file.';
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->withErrors(['file' => $msg])->withInput();
+        }
+
+        // 3. Zero-byte check
+        if ($file->getSize() <= 0) {
+            $msg = 'Zero-byte media files are not accepted.';
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->withErrors(['file' => $msg])->withInput();
+        }
+
+        // 4. Image integrity check (Corrupt image detection)
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            $imageInfo = @getimagesize($realPath);
+            if ($imageInfo === false || empty($imageInfo[0]) || empty($imageInfo[1])) {
+                $msg = 'Corrupt or invalid image file. The image could not be decoded.';
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->back()->withErrors(['file' => $msg])->withInput();
+            }
+        }
+
+        // 5. Audio integrity check
+        if (in_array($ext, ['mp3', 'wav', 'm4a'], true)) {
+            if (!is_readable($realPath)) {
+                $msg = 'Invalid or unreadable audio file.';
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->back()->withErrors(['file' => $msg])->withInput();
+            }
+        }
+
+        // 6. Secure Storage and Transactional MediaAsset Creation
+        \DB::beginTransaction();
+        try {
+            $path = $file->store('question-media', 'public');
+            $type = $this->determineFileType($ext, $mime);
+
+            $asset = MediaAsset::create([
+                'filename'        => basename($path),
+                'original_name'   => basename($file->getClientOriginalName()),
+                'title'           => $request->input('title') ?: basename($file->getClientOriginalName()),
+                'mime_type'       => $mime,
+                'type'            => $type,
+                'category'        => $request->input('category', 'General Assets'),
+                'exam_type'       => $request->input('exam_type', 'general'),
+                'description'     => $request->input('description'),
+                'path'            => $path,
+                'size'            => $file->getSize(),
+                'status'          => 'active',
+                'approval_status' => 'draft',
+                'version'         => '1.0',
+                'uploaded_by'     => $user->id,
+            ]);
+
+            ActivityLogger::log('media_uploaded', "Media uploaded: {$asset->original_name}", $user);
+            \DB::commit();
+        } catch (\Throwable $e) {
+            \DB::rollBack();
+            if (isset($path) && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+            throw $e;
+        }
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
@@ -807,6 +907,10 @@ class MediaController extends Controller
     {
         $user = $request->user();
 
+        if ($user && $user->hasRole('teacher') && !$user->hasRole('super-admin') && (int) $media->uploaded_by !== (int) $user->id) {
+            abort(403, 'Unauthorized. You can only edit your own working media assets.');
+        }
+
         // Linked questions for Reusable Slot Mapping
         $linkedQuestions = \Illuminate\Support\Facades\Schema::hasTable('questions')
             ? \App\Modules\QuestionBank\Models\Question::with('questionBank')
@@ -830,6 +934,10 @@ class MediaController extends Controller
     public function update(Request $request, MediaAsset $media): RedirectResponse
     {
         $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && !$user->hasRole('super-admin') && (int) $media->uploaded_by !== (int) $user->id) {
+            abort(403, 'Unauthorized. You can only update your own working media assets.');
+        }
 
         $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
@@ -999,17 +1107,20 @@ class MediaController extends Controller
             ->count();
     }
 
-    private function determineFileType(string $ext): string
+    private function determineFileType(string $ext, ?string $mime = null): string
     {
         $ext = strtolower($ext);
-        if (in_array($ext, ['mp3', 'wav', 'm4a'])) {
+        if (in_array($ext, ['mp3', 'wav', 'm4a'], true) || ($mime && str_starts_with($mime, 'audio/'))) {
             return 'audio';
         }
-        if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp'])) {
+        if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp'], true) || ($mime && str_starts_with($mime, 'image/'))) {
             return 'image';
         }
-        if ($ext === 'pdf') {
+        if ($ext === 'pdf' || $mime === 'application/pdf') {
             return 'pdf';
+        }
+        if (in_array($ext, ['mp4', 'mov', 'webm'], true) || ($mime && str_starts_with($mime, 'video/'))) {
+            return 'video';
         }
         return 'other';
     }

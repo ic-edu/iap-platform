@@ -379,8 +379,9 @@ html[data-theme="light"] .tm-modal-card,
                     @elseif($media->type === 'audio')
                         <div class="p-4 w-full flex flex-col items-center justify-center gap-2">
                             <span class="text-3xl">🎵</span>
-                            <audio controls class="w-full h-8" preload="none">
-                                <source src="{{ $media->previewUrl() }}" type="{{ $media->mime_type }}">
+                            <audio controls class="w-full h-8" preload="metadata" src="{{ $media->previewUrl() }}">
+                                <source src="{{ $media->previewUrl() }}" type="{{ $media->mime_type ?? 'audio/mpeg' }}">
+                                Your browser does not support audio playback for {{ $media->formatLabel() }}.
                             </audio>
                         </div>
                     @elseif($media->type === 'pdf')

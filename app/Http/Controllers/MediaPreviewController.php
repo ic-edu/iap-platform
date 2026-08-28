@@ -32,13 +32,19 @@ class MediaPreviewController extends Controller
             ]);
         }
 
-        // Resolve storage file path securely
-        $filePath = storage_path('app/public/' . $media->path);
-        if (!file_exists($filePath)) {
+        // Resolve storage file path securely (compatible with real storage, symlinks, and test fake storage)
+        $disk = Storage::disk('public');
+        $filePath = null;
+
+        if ($disk->exists($media->path)) {
+            $filePath = $disk->path($media->path);
+        } elseif (file_exists(storage_path('app/public/' . $media->path))) {
+            $filePath = storage_path('app/public/' . $media->path);
+        } elseif (file_exists(public_path($media->path))) {
             $filePath = public_path($media->path);
         }
 
-        if (file_exists($filePath)) {
+        if ($filePath && file_exists($filePath)) {
             $mimeType = $media->mime_type ?? mime_content_type($filePath) ?: 'application/octet-stream';
 
             return response()->file($filePath, [
