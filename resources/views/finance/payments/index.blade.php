@@ -81,7 +81,9 @@
             <div class="sm:col-span-2">
                 <div class="flex items-center justify-between mb-1">
                     <label for="start_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Start Date</label>
-                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium">dd/mm/yyyy</span>
+                    <span class="text-[10px] {{ !empty($startDate) ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-500 dark:text-slate-400 font-medium' }} font-mono">
+                        {{ !empty($startDate) ? 'Selected' : 'No date filter' }}
+                    </span>
                 </div>
                 <input type="date" name="start_date" id="start_date" value="{{ !empty($startDate) ? $startDate : '' }}" placeholder="dd/mm/yyyy" autocomplete="off" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
             </div>
@@ -90,7 +92,9 @@
             <div class="sm:col-span-2">
                 <div class="flex items-center justify-between mb-1">
                     <label for="end_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">End Date</label>
-                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium">dd/mm/yyyy</span>
+                    <span class="text-[10px] {{ !empty($endDate) ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-500 dark:text-slate-400 font-medium' }} font-mono">
+                        {{ !empty($endDate) ? 'Selected' : 'No date filter' }}
+                    </span>
                 </div>
                 <input type="date" name="end_date" id="end_date" value="{{ !empty($endDate) ? $endDate : '' }}" placeholder="dd/mm/yyyy" autocomplete="off" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
             </div>
@@ -123,9 +127,16 @@
         </form>
 
         {{-- Export Action Strip --}}
+        @php
+            $hasActiveFilter = !empty($search)
+                || !empty($startDate)
+                || !empty($endDate)
+                || !empty($productId)
+                || (($statusFilter ?? 'all') !== 'all');
+        @endphp
         <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <span class="text-slate-600 dark:text-slate-400 font-semibold">
-                Showing <strong class="text-slate-900 dark:text-white">{{ $summary['total_count'] }}</strong> filtered transaction(s)
+                Showing <strong class="text-slate-900 dark:text-white">{{ $summary['total_count'] }}</strong> {{ $hasActiveFilter ? 'filtered transaction(s)' : 'total transaction(s)' }}
             </span>
             <div class="flex items-center gap-2">
                 <a href="{{ route('finance.payments.export.csv', request()->query()) }}" class="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-bold transition-all flex items-center gap-1.5">
