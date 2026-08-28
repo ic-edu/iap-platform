@@ -26,7 +26,7 @@ html.dark .imr-hero, html[data-theme="dark"] .imr-hero {
 }
 .imr-hero__title { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0 0 .3rem; }
 html.dark .imr-hero__title, html[data-theme="dark"] .imr-hero__title { color: #fff; }
-.imr-hero__sub   { font-size: .85rem; color: #475569; margin: 0; }
+.imr-hero__sub   { font-size: .85rem; color: #334155; font-weight: 500; margin: 0; }
 html.dark .imr-hero__sub, html[data-theme="dark"] .imr-hero__sub { color: #94a3b8; }
 
 /* PART 1: CLICKABLE SUMMARY CARDS */
@@ -40,7 +40,7 @@ html.dark .imr-hero__sub, html[data-theme="dark"] .imr-hero__sub { color: #94a3b
 
 .imr-kpi {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 1rem;
     padding: 1.1rem 1.25rem;
     display: flex;
@@ -49,7 +49,7 @@ html.dark .imr-hero__sub, html[data-theme="dark"] .imr-hero__sub { color: #94a3b
     text-decoration: none;
     transition: transform .15s, border-color .15s, box-shadow .15s, background .15s;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    box-shadow: 0 2px 6px rgba(15,23,42,0.04);
 }
 html.dark .imr-kpi, html[data-theme="dark"] .imr-kpi {
     background: #0f172a;
@@ -70,18 +70,18 @@ html.dark .imr-kpi--active, html[data-theme="dark"] .imr-kpi--active {
     background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
 }
 .imr-kpi__count { font-size: 1.85rem; font-weight: 900; line-height: 1; }
-.imr-kpi__label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #475569; }
+.imr-kpi__label { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: #334155; }
 html.dark .imr-kpi__label, html[data-theme="dark"] .imr-kpi__label { color: #94a3b8; }
 
 .imr-filter-bar {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 1rem;
     padding: 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    box-shadow: 0 2px 6px rgba(15,23,42,0.04);
 }
 html.dark .imr-filter-bar, html[data-theme="dark"] .imr-filter-bar {
     background: #0f172a;
@@ -96,7 +96,7 @@ html.dark .imr-filter-bar, html[data-theme="dark"] .imr-filter-bar {
     font-weight: 700;
     text-decoration: none;
     background: #f1f5f9;
-    color: #475569;
+    color: #334155;
     border: 1px solid #cbd5e1;
     transition: all .15s;
 }
@@ -116,21 +116,21 @@ html.dark .imr-exam-btn--active, html[data-theme="dark"] .imr-exam-btn--active {
 
 .imr-card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 1.1rem;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     transition: border-color .2s, transform .15s, box-shadow .2s;
-    box-shadow: 0 2px 6px rgba(15,23,42,0.03);
+    box-shadow: 0 2px 6px rgba(15,23,42,0.04);
 }
 html.dark .imr-card, html[data-theme="dark"] .imr-card {
     background: #0f172a;
     border-color: #1e293b;
     box-shadow: none;
 }
-.imr-card:hover { border-color: #4f46e5; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+.imr-card:hover { border-color: #4f46e5; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
 html.dark .imr-card:hover, html[data-theme="dark"] .imr-card:hover { border-color: #6366f1; }
 
 .imr-card__preview {
@@ -155,38 +155,38 @@ html.dark .imr-card__preview, html[data-theme="dark"] .imr-card__preview {
 html.dark .imr-card__title, html[data-theme="dark"] .imr-card__title { color: #f1f5f9; }
 .imr-card__title:hover { color: #4f46e5; }
 html.dark .imr-card__title:hover, html[data-theme="dark"] .imr-card__title:hover { color: #818cf8; }
-.imr-card__sub { font-size: .72rem; color: #475569; }
+.imr-card__sub { font-size: .75rem; color: #334155; font-weight: 600; }
 html.dark .imr-card__sub, html[data-theme="dark"] .imr-card__sub { color: #94a3b8; }
 
-.imr-tag { padding: .2rem .55rem; border-radius: 99px; font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; display: inline-block; white-space: nowrap; }
-.imr-tag--toefl   { background: rgba(99,102,241,.12); color: #4f46e5; border: 1px solid rgba(99,102,241,.25); }
+.imr-tag { padding: .22rem .6rem; border-radius: 99px; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; display: inline-block; white-space: nowrap; }
+.imr-tag--toefl   { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
 html.dark .imr-tag--toefl, html[data-theme="dark"] .imr-tag--toefl { background: rgba(129,140,248,.15); color: #818cf8; border-color: rgba(129,140,248,.3); }
-.imr-tag--toeic   { background: rgba(16,185,129,.12); color: #059669; border: 1px solid rgba(16,185,129,.25); }
+.imr-tag--toeic   { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
 html.dark .imr-tag--toeic, html[data-theme="dark"] .imr-tag--toeic { background: rgba(52,211,153,.15); color: #34d399; border-color: rgba(52,211,153,.3); }
-.imr-tag--ielts   { background: rgba(244,63,94,.12); color: #e11d48; border: 1px solid rgba(244,63,94,.25); }
+.imr-tag--ielts   { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
 html.dark .imr-tag--ielts, html[data-theme="dark"] .imr-tag--ielts { background: rgba(251,113,133,.15); color: #fb7185; border-color: rgba(251,113,133,.3); }
-.imr-tag--general { background: rgba(100,116,139,.12); color: #475569; border: 1px solid rgba(100,116,139,.25); }
+.imr-tag--general { background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; }
 html.dark .imr-tag--general, html[data-theme="dark"] .imr-tag--general { background: rgba(148,163,184,.15); color: #94a3b8; border-color: rgba(148,163,184,.3); }
 
-.imr-foot { padding: .75rem 1rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.imr-foot { padding: .75rem 1rem; background: #f8fafc; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; gap: .35rem; flex-wrap: wrap; }
 html.dark .imr-foot, html[data-theme="dark"] .imr-foot { background: #0b1329; border-top-color: #1e293b; }
-.imr-btn-neutral { padding: .3rem .55rem; background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; border-radius: .4rem; font-size: .7rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
-html.dark .imr-btn-neutral, html[data-theme="dark"] .imr-btn-neutral { background: #1e293b; border-color: #334155; color: #cbd5e1; }
-.imr-btn-neutral:hover { background: #e2e8f0; color: #0f172a; }
+.imr-btn-neutral { padding: .35rem .6rem; background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; border-radius: .45rem; font-size: .72rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .3rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+html.dark .imr-btn-neutral, html[data-theme="dark"] .imr-btn-neutral { background: #1e293b; border-color: #334155; color: #cbd5e1; box-shadow: none; }
+.imr-btn-neutral:hover { background: #f1f5f9; border-color: #94a3b8; color: #0f172a; }
 html.dark .imr-btn-neutral:hover, html[data-theme="dark"] .imr-btn-neutral:hover { background: #334155; color: #fff; }
 
-.imr-btn-edit { padding: .3rem .55rem; background: #eef2ff; border: 1px solid #c7d2fe; color: #4338ca; border-radius: .4rem; font-size: .7rem; font-weight: 700; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
-html.dark .imr-btn-edit, html[data-theme="dark"] .imr-btn-edit { background: #1e1b4b; border-color: #4338ca; color: #a5b4fc; }
-.imr-btn-edit:hover { background: #e0e7ff; color: #3730a3; }
+.imr-btn-edit { padding: .35rem .6rem; background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; border-radius: .45rem; font-size: .72rem; font-weight: 800; text-decoration: none; transition: all .15s ease; display: inline-flex; align-items: center; gap: .3rem; box-shadow: 0 1px 2px rgba(99,102,241,0.05); }
+html.dark .imr-btn-edit, html[data-theme="dark"] .imr-btn-edit { background: #1e1b4b; border-color: #4338ca; color: #a5b4fc; box-shadow: none; }
+.imr-btn-edit:hover { background: #e0e7ff; color: #312e81; border-color: #818cf8; }
 html.dark .imr-btn-edit:hover, html[data-theme="dark"] .imr-btn-edit:hover { background: #312e81; color: #fff; }
 
-.imr-btn-tracker { background: none; border: none; color: #4f46e5; font-size: .7rem; font-weight: 700; cursor: pointer; padding: .2rem .4rem; border-radius: .35rem; transition: color .15s ease; display: inline-flex; align-items: center; gap: .25rem; }
+.imr-btn-tracker { background: none; border: none; color: #4338ca; font-size: .72rem; font-weight: 800; cursor: pointer; padding: .2rem .4rem; border-radius: .35rem; transition: color .15s ease; display: inline-flex; align-items: center; gap: .3rem; }
 html.dark .imr-btn-tracker, html[data-theme="dark"] .imr-btn-tracker { color: #818cf8; }
-.imr-btn-tracker:hover { color: #3730a3; text-decoration: underline; }
-html.dark .imr-btn-tracker:hover, html[data-theme="dark"] .imr-btn-tracker:hover { color: #6366f1; }
+.imr-btn-tracker:hover { color: #312e81; text-decoration: underline; }
+html.dark .imr-btn-tracker:hover, html[data-theme="dark"] .imr-btn-tracker:hover { color: #a5b4fc; }
 
 .imr-modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,.75); backdrop-filter: blur(6px); z-index: 990; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-.imr-modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.25rem; max-width: 650px; max-height: 85vh; overflow-y: auto; width: 100%; padding: 2rem; box-shadow: 0 24px 64px rgba(0,0,0,.15); }
+.imr-modal { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 1.25rem; max-width: 650px; max-height: 85vh; overflow-y: auto; width: 100%; padding: 2rem; box-shadow: 0 24px 64px rgba(0,0,0,.15); }
 html.dark .imr-modal, html[data-theme="dark"] .imr-modal { background: #0f172a; border-color: #1e293b; box-shadow: 0 24px 64px rgba(0,0,0,.7); }
 </style>
 @endpush
@@ -197,13 +197,14 @@ html.dark .imr-modal, html[data-theme="dark"] .imr-modal { background: #0f172a; 
     {{-- Hero Header --}}
     <div class="imr-hero">
         <div>
-            <h1 class="imr-hero__title">🏛 Institutional Media Repository</h1>
-            <p class="imr-hero__sub">Official single source of truth for Question Media Library and reusable audio, images, PDF documents, and passage texts across iC.edu.</p>
+            <h1 class="imr-hero__title">Institutional Media Repository</h1>
+            <p class="imr-hero__sub">Institutional single source of truth for Question Media Library and reusable audio, images, PDF documents, and passage texts across iC.edu.</p>
         </div>
         <div>
             @if(auth()->user()->hasRole('teacher') || auth()->user()->hasRole('super-admin'))
-            <button type="button" onclick="openUploadModal()" style="padding:.65rem 1.25rem;background:#6366f1;color:#fff;border:none;border-radius:.6rem;font-size:.85rem;font-weight:700;cursor:pointer;">
-                ⬆ Upload Institutional Asset
+            <button type="button" onclick="openUploadModal()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                Upload Institutional Asset
             </button>
             @endif
         </div>
@@ -326,14 +327,17 @@ html.dark .imr-modal, html[data-theme="dark"] .imr-modal { background: #0f172a; 
 
                 @elseif($asset->type === 'audio')
                     <div style="width:90%;padding:.75rem;text-align:center;">
-                        <div style="font-size:1.6rem;margin-bottom:.2rem;">🎵</div>
+                        <div class="text-indigo-600 dark:text-indigo-400 mb-1 flex justify-center">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                        </div>
                         <audio controls controlsList="nodownload noplaybackrate" style="width:100%;height:32px;" preload="metadata" src="{{ $asset->publicUrl() }}">
                             <source src="{{ $asset->publicUrl() }}" type="{{ $asset->mime_type ?? 'audio/mpeg' }}">
                             Your browser does not support audio playback for {{ $asset->formatLabel() }}.
                         </audio>
                         @if($asset->content_text)
-                        <button type="button" onclick="toggleTranscript('trans-{{ $asset->id }}')" style="font-size:.65rem;color:#059669;font-weight:700;background:none;border:none;cursor:pointer;margin-top:.3rem;">
-                            📝 Toggle Transcript
+                        <button type="button" onclick="toggleTranscript('trans-{{ $asset->id }}')" class="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Toggle Transcript
                         </button>
                         <div id="trans-{{ $asset->id }}" class="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300" style="display:none;font-size:.68rem;text-align:left;padding:.5rem;border-radius:.4rem;margin-top:.3rem;max-height:60px;overflow-y:auto;">
                             {{ $asset->content_text }}
@@ -350,18 +354,23 @@ html.dark .imr-modal, html[data-theme="dark"] .imr-modal { background: #0f172a; 
 
                 @elseif($asset->type === 'pdf')
                     <div style="text-align:center;padding:1rem;width:100%;">
-                        <div style="font-size:2.2rem;margin-bottom:.2rem;">📄</div>
-                        <button type="button" onclick="openPdfModal('{{ $asset->publicUrl() }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" style="font-size:.72rem;color:#d97706;font-weight:700;background:none;border:none;cursor:pointer;">
-                            🔍 Embedded PDF Preview ↗
+                        <div class="text-rose-500 mb-1 flex justify-center">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <button type="button" onclick="openPdfModal('{{ $asset->publicUrl() }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            Embedded PDF Preview
                         </button>
                     </div>
 
                 @elseif($asset->type === 'passage')
-                    <div style="padding:.75rem 1rem;font-size:.7rem;line-height:1.35;overflow:hidden;max-height:100%;" class="text-slate-700 dark:text-slate-300">
-                        📝 {{ Str::limit($asset->content_text ?? $asset->description, 130) }}
+                    <div style="padding:.75rem 1rem;font-size:.72rem;line-height:1.4;overflow:hidden;max-height:100%;" class="text-slate-800 dark:text-slate-200">
+                        {{ Str::limit($asset->content_text ?? $asset->description, 130) }}
                     </div>
                 @else
-                    <div style="font-size:2.5rem;">📎</div>
+                    <div class="text-slate-400">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                    </div>
                 @endif
             </div>
 
@@ -372,30 +381,33 @@ html.dark .imr-modal, html[data-theme="dark"] .imr-modal { background: #0f172a; 
                     <span class="imr-tag imr-tag--{{ in_array($exType, ['toefl','toeic','ielts']) ? $exType : 'general' }}">
                         {{ strtoupper($exType) }}
                     </span>
-                    <span style="font-size:.68rem;font-weight:700;" class="text-slate-500 dark:text-slate-400">v{{ $asset->version ?? '1.0' }}</span>
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">v{{ $asset->version ?? '1.0' }}</span>
                 </div>
 
-                {{-- TASK 1: Media Title Plain Text Only (Hyperlink Removed) --}}
-                <div class="imr-card__title" style="margin-top:.35rem;margin-bottom:.15rem;font-size:.9rem;line-height:1.3;">
+                <div class="imr-card__title" style="margin-top:.35rem;margin-bottom:.15rem;font-size:.92rem;line-height:1.35;">
                     {{ $asset->title ?? $asset->original_name }}
                 </div>
                 <div class="imr-card__sub">Folder: {{ $asset->category ?? 'General Assets' }}</div>
-                <div style="font-size:.68rem;margin-top:2px;" class="text-slate-500 dark:text-slate-400">Size: {{ $asset->humanSize() }} • {{ $asset->created_at?->format('d M Y') }}</div>
+                <div class="text-xs font-medium text-slate-600 dark:text-slate-400" style="margin-top:2px;">Size: {{ $asset->humanSize() }} • {{ $asset->created_at?->format('d M Y') }}</div>
             </div>
 
-            {{-- TASK 1: Action Column / Action Buttons (Preview, Edit, Version History, Tracker) --}}
+            {{-- Action Column / Action Buttons (Preview, Edit, Version History, Tracker) --}}
             <div class="imr-foot">
                 <a href="{{ route('admin.media.show', $asset->id) }}" class="imr-btn-neutral">
-                    👁 Preview
+                    <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    Preview
                 </a>
                 <a href="{{ route('admin.media.edit', $asset->id) }}" class="imr-btn-edit">
-                    ✏️ Edit
+                    <svg class="w-3.5 h-3.5 text-indigo-700 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    Edit
                 </a>
                 <a href="{{ route('admin.media.versions', $asset->id) }}" class="imr-btn-neutral">
-                    📄 Version History
+                    <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Version History
                 </a>
                 <button type="button" onclick="showUsageModal('{{ $asset->id }}', '{{ addslashes($asset->title ?? $asset->original_name) }}')" class="imr-btn-tracker">
-                    🔗 Tracker
+                    <svg class="w-3.5 h-3.5 text-indigo-700 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    Tracker
                 </button>
             </div>
         </div>
@@ -511,7 +523,7 @@ html.dark .imr-modal, html[data-theme="dark"] .imr-modal { background: #0f172a; 
                             <label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;" class="text-slate-700 dark:text-slate-300">Exam Type *</label>
                             <select name="exam_type" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-xs w-full">
                                 <option value="toefl">TOEFL iBT</option>
-                                <option value="toeic">TOEIC Official</option>
+                                <option value="toeic">TOEIC Institutional</option>
                                 <option value="ielts">IELTS Academic</option>
                                 <option value="placement">Placement</option>
                                 <option value="grammar">Grammar</option>

@@ -106,40 +106,45 @@ html.dark .imd-paragraph-box, html[data-theme="dark"] .imd-paragraph-box {
 
     {{-- Top Navigation & Action Header --}}
     <div>
-        <a href="{{ route('admin.media.index') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" style="color:#4f46e5;font-size:.8rem;font-weight:700;text-decoration:none;">
-            ← Back
+        <a href="{{ route('admin.media.index') }}" onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); return false; }" class="text-indigo-700 dark:text-indigo-400 text-xs font-bold no-underline inline-flex items-center gap-1 hover:underline">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back
         </a>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.5rem;flex-wrap:wrap;">
             <div>
                 <h1 style="font-size:1.5rem;font-weight:800;margin:0 0 .25rem;" class="text-slate-900 dark:text-white">
                     {{ $media->title ?? $media->original_name }}
                 </h1>
-                <p style="font-size:.82rem;margin:0;" class="text-slate-600 dark:text-slate-400">
-                    Media ID: <code style="color:#6366f1;font-family:monospace;">{{ $media->id }}</code> • Repository: <strong class="text-slate-800 dark:text-slate-200 uppercase">{{ $media->exam_type ?? 'GENERAL' }}</strong>
+                <p style="font-size:.82rem;margin:0;" class="text-slate-700 dark:text-slate-300 font-medium">
+                    Media ID: <code style="color:#4f46e5;font-family:monospace;font-weight:700;">{{ $media->id }}</code> • Repository: <strong class="text-slate-900 dark:text-slate-200 uppercase">{{ $media->exam_type ?? 'GENERAL' }}</strong>
                 </p>
             </div>
 
-            {{-- Action Buttons (TASK 4 & TASK 6: Single Interaction Blueprint, NO duplicate buttons) --}}
+            {{-- Action Buttons --}}
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
 
                 {{-- Edit Asset Button --}}
-                <a href="{{ route('admin.media.edit', $media->id) }}" style="padding:.6rem 1.1rem;background:#4f46e5;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
-                    ✏️ Edit Asset
+                <a href="{{ route('admin.media.edit', $media->id) }}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all inline-flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    Edit Asset
                 </a>
 
-                {{-- Copy Protected Preview URL Button (TASK 5) --}}
-                <button type="button" onclick="copyAssetUrl('{{ route('media.preview', $media->id) }}')" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700" style="padding:.6rem 1.1rem;border-radius:.6rem;font-size:.82rem;font-weight:700;cursor:pointer;">
-                    📋 Copy URL
+                {{-- Copy Protected Preview URL Button --}}
+                <button type="button" onclick="copyAssetUrl('{{ route('media.preview', $media->id) }}')" class="px-4 py-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    Copy URL
                 </button>
 
                 {{-- ROLE GOVERNANCE MATRIX --}}
                 @if(Auth::user()?->hasRole('super-admin'))
-                <a href="{{ route('admin.media.download', $media->id) }}" style="padding:.6rem 1.1rem;background:#059669;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">
-                    ⬇ Download Asset (Super Admin)
+                <a href="{{ route('admin.media.download', $media->id) }}" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all inline-flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download Asset (Super Admin)
                 </a>
                 @elseif(Auth::user()?->hasRole('repository-manager'))
-                <button type="button" onclick="openDownloadRequestModal()" style="padding:.6rem 1.1rem;background:#312e81;border:1px solid #4338ca;color:#a5b4fc;border-radius:.6rem;font-size:.82rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
-                    📥 Request Download
+                <button type="button" onclick="openDownloadRequestModal()" class="px-4 py-2 bg-indigo-900 text-indigo-200 hover:bg-indigo-800 border border-indigo-700 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Request Download
                 </button>
                 @endif
             </div>
@@ -153,7 +158,7 @@ html.dark .imd-paragraph-box, html[data-theme="dark"] .imd-paragraph-box {
 
     @if(!$physicalExists)
     <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#e11d48;padding:1rem 1.25rem;border-radius:.85rem;font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:.75rem;">
-        <span style="font-size:1.5rem;">⚠️</span>
+        <svg class="w-6 h-6 flex-shrink-0 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
         <div>
             Asset file unavailable on local storage. Metadata preview is active below.
         </div>
@@ -162,7 +167,7 @@ html.dark .imd-paragraph-box, html[data-theme="dark"] .imd-paragraph-box {
 
     <div class="imd-grid">
 
-        {{-- Left Column: Centralized Media Preview (TASK 1, 3, 4, 9) --}}
+        {{-- Left Column: Centralized Media Preview --}}
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
 
             <div class="imd-card">
@@ -176,15 +181,15 @@ html.dark .imd-paragraph-box, html[data-theme="dark"] .imd-paragraph-box {
             {{-- Overview Card --}}
             <div class="imd-card">
                 <h3 class="imd-card-title">Asset Overview &amp; Pedagogical Purpose</h3>
-                <p class="text-slate-700 dark:text-slate-300" style="font-size:.85rem;line-height:1.5;margin:0 0 1.25rem;">
-                    {{ $media->description ?? 'Official institutional asset configured for academic evaluation and question authoring.' }}
+                <p class="text-slate-800 dark:text-slate-200 font-medium" style="font-size:.88rem;line-height:1.6;margin:0 0 1.25rem;">
+                    {{ $media->description ?? 'Institutional asset configured for academic evaluation and question authoring.' }}
                 </p>
 
                 @if(!empty($media->tags))
                 <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;">
-                    <span style="font-size:.72rem;font-weight:700;" class="text-slate-500 dark:text-slate-400">Tags:</span>
+                    <span style="font-size:.75rem;font-weight:800;" class="text-slate-700 dark:text-slate-300">Tags:</span>
                     @foreach((array)$media->tags as $tag)
-                    <span class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300" style="padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;">#{{ $tag }}</span>
+                    <span class="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold" style="padding:.2rem .6rem;border-radius:99px;font-size:.72rem;">#{{ $tag }}</span>
                     @endforeach
                 </div>
                 @endif
@@ -200,11 +205,11 @@ html.dark .imd-paragraph-box, html[data-theme="dark"] .imd-paragraph-box {
                 <table class="imd-meta-table">
                     <tr>
                         <th>Media Type</th>
-                        <td><span style="text-transform:uppercase;color:#4f46e5;font-weight:700;">{{ $media->type }}</span></td>
+                        <td><span style="text-transform:uppercase;color:#4338ca;font-weight:800;">{{ $media->type }}</span></td>
                     </tr>
                     <tr>
                         <th>Exam Repository</th>
-                        <td><span style="text-transform:uppercase;color:#059669;font-weight:700;">{{ $media->exam_type ?? 'GENERAL' }}</span></td>
+                        <td><span style="text-transform:uppercase;color:#065f46;font-weight:800;">{{ $media->exam_type ?? 'GENERAL' }}</span></td>
                     </tr>
                     <tr>
                         <th>Folder Category</th>
@@ -212,15 +217,15 @@ html.dark .imd-paragraph-box, html[data-theme="dark"] .imd-paragraph-box {
                     </tr>
                     <tr>
                         <th>Difficulty</th>
-                        <td><span style="text-transform:capitalize;color:#d97706;font-weight:700;">{{ $media->difficulty ?? 'Medium' }}</span></td>
+                        <td><span style="text-transform:capitalize;color:#92400e;font-weight:800;">{{ $media->difficulty ?? 'Medium' }}</span></td>
                     </tr>
                     <tr>
                         <th>Version</th>
-                        <td>v{{ $media->version ?? '1.0' }}</td>
+                        <td><strong>v{{ $media->version ?? '1.0' }}</strong></td>
                     </tr>
                     <tr>
                         <th>Approval Status</th>
-                        <td><span style="color:#059669;text-transform:uppercase;font-weight:700;">{{ $media->approval_status ?? 'APPROVED' }}</span></td>
+                        <td><span style="color:#065f46;text-transform:uppercase;font-weight:800;">{{ $media->approval_status ?? 'APPROVED' }}</span></td>
                     </tr>
                     <tr>
                         <th>Uploader</th>
@@ -239,32 +244,34 @@ html.dark .imd-paragraph-box, html[data-theme="dark"] .imd-paragraph-box {
 
             {{-- Usage Tracker --}}
             <div class="imd-card">
-                <h3 class="imd-card-title">🔗 Usage Tracker &amp; Explorer</h3>
+                <h3 class="imd-card-title">Usage Tracker &amp; Explorer</h3>
 
                 @if($usageInfo['question_count'] > 0)
-                    <div style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);padding:1rem;border-radius:.75rem;margin-bottom:1rem;">
-                        <div style="font-size:.82rem;font-weight:800;color:#059669;margin-bottom:.25rem;">Active Institutional Asset</div>
-                        <div style="font-size:.78rem;" class="text-slate-600 dark:text-slate-400">
+                    <div style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);padding:1rem;border-radius:.75rem;margin-bottom:1rem;">
+                        <div style="font-size:.85rem;font-weight:800;color:#065f46;margin-bottom:.25rem;">Active Institutional Asset</div>
+                        <div style="font-size:.8rem;" class="text-slate-700 dark:text-slate-300 font-medium">
                             Referenced <strong>{{ $usageInfo['question_count'] }}</strong> time(s) across <strong>{{ $usageInfo['question_banks']->count() }}</strong> Question Bank(s).
                         </div>
                     </div>
 
                     <div style="display:flex;flex-direction:column;gap:.6rem;">
-                        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;" class="text-slate-500 dark:text-slate-400">Question Banks using this asset</div>
+                        <div style="font-size:.75rem;font-weight:800;text-transform:uppercase;" class="text-slate-700 dark:text-slate-300">Question Banks using this asset</div>
                         @foreach($usageInfo['question_banks'] as $bank)
-                        <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200" style="display:flex;justify-content:space-between;align-items:center;padding:.65rem .85rem;border-radius:.5rem;font-size:.8rem;font-weight:600;text-decoration:none;">
-                            <span>📁 {{ $bank->title }}</span>
-                            <span style="font-size:.7rem;color:#4f46e5;font-weight:700;">View Bank →</span>
+                        <a href="{{ route('admin.question-banks.show', $bank->id) }}" class="bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200" style="display:flex;justify-content:space-between;align-items:center;padding:.65rem .85rem;border-radius:.5rem;font-size:.82rem;font-weight:700;text-decoration:none;">
+                            <span>{{ $bank->title }}</span>
+                            <span style="font-size:.72rem;color:#4f46e5;font-weight:800;">View Bank →</span>
                         </a>
                         @endforeach
                     </div>
                 @else
-                    <div style="background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.15);padding:1.5rem;border-radius:.85rem;text-align:center;">
-                        <div style="font-size:2rem;margin-bottom:.4rem;">📭</div>
-                        <div style="font-size:.88rem;font-weight:800;margin-bottom:.4rem;" class="text-slate-900 dark:text-white">
+                    <div style="background:rgba(148,163,184,.08);border:1px solid #cbd5e1;padding:1.5rem;border-radius:.85rem;text-align:center;">
+                        <div class="text-slate-400 mb-2 flex justify-center">
+                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        </div>
+                        <div style="font-size:.9rem;font-weight:800;margin-bottom:.4rem;" class="text-slate-900 dark:text-white">
                             No Question Bank references yet.
                         </div>
-                        <div style="font-size:.78rem;margin-bottom:1.25rem;line-height:1.4;" class="text-slate-500 dark:text-slate-400">
+                        <div style="font-size:.8rem;margin-bottom:1.25rem;line-height:1.4;" class="text-slate-600 dark:text-slate-400 font-medium">
                             Attach this asset to new assessment questions using the Media Picker Modal.
                         </div>
                         <a href="{{ route('admin.question-banks.index') }}" style="display:inline-block;padding:.55rem 1.1rem;background:#4f46e5;color:#fff;border-radius:.5rem;font-size:.8rem;font-weight:800;text-decoration:none;">

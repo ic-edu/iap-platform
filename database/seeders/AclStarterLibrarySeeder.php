@@ -71,10 +71,10 @@ class AclStarterLibrarySeeder extends Seeder
             // 1. TOEFL Listening
             'toefl-listening' => [
                 'bank' => [
-                    'title' => 'TOEFL iBT Official Listening Starter Pool',
+                    'title' => 'TOEFL iBT Institutional Listening Starter Pool',
                     'slug'  => 'toefl-listening-core-starter',
                     'test_type' => 'toefl',
-                    'description' => 'Official TOEFL listening dialogues, conversations, and academic lectures.',
+                    'description' => 'Institutional TOEFL listening dialogues, conversations, and academic lectures.',
                 ],
                 'questions' => [
                     [
@@ -1443,7 +1443,7 @@ class AclStarterLibrarySeeder extends Seeder
                         'status'      => $bank->status,
                     ],
                     'created_by'     => $teacher->id,
-                    'change_reason'  => 'Initial official institutional starter deployment',
+                    'change_reason'  => 'Initial institutional starter deployment',
                     'is_current'     => true,
                 ]
             );
@@ -1455,7 +1455,7 @@ class AclStarterLibrarySeeder extends Seeder
                     'actor_id'      => $teacher->id,
                     'created_by'    => $teacher->id,
                     'version'       => '1.0',
-                    'reason'        => 'Seeded official institutional starter repository content',
+                    'reason'        => 'Seeded institutional starter repository content',
                 ]
             );
         }

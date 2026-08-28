@@ -103,7 +103,7 @@ class MediaInstitutionalRepositorySeeder extends Seeder
                 'mime'         => 'audio/wav',
                 'size'         => 180000,
                 'content_text' => "Speaker A: Welcome to the oceanography laboratory. Today we explore chemosynthetic organisms.\nSpeaker B: Are hydrothermal vent nutrients reliant on solar radiation?",
-                'desc'         => 'Official TOEFL iBT listening dialogue audio transcript.',
+                'desc'         => 'Institutional TOEFL iBT listening dialogue audio transcript.',
             ];
         }
 
@@ -119,7 +119,7 @@ class MediaInstitutionalRepositorySeeder extends Seeder
                 'mime'         => 'audio/wav',
                 'size'         => 180000,
                 'content_text' => "Question {$i}: When will the revised logistics schedule be submitted to department leads? Answer A: By Friday afternoon.",
-                'desc'         => 'Official TOEIC listening question audio audio clip.',
+                'desc'         => 'Institutional TOEIC listening question audio clip.',
             ];
         }
 
