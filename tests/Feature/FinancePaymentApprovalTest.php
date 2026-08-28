@@ -631,7 +631,7 @@ class FinancePaymentApprovalTest extends \Tests\TestCase
         $response = $this->actingAs($this->finance)->get(route('finance.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('Gross Revenue');
+        $response->assertSee('Gross Cash Collections');
         $response->assertSee('Pending Approvals');
     }
 }

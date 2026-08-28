@@ -7,41 +7,42 @@ use App\Modules\Commerce\Application\BillingEngine;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Modules\Commerce\Domain\Models\Payment;
 use App\Services\ActivityLogger;
+use App\Services\FinanceReportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FinancePaymentController extends Controller
 {
     public function __construct(
-        protected BillingEngine $billingEngine
+        protected BillingEngine $billingEngine,
+        protected FinanceReportService $reportService
     ) {}
 
     /**
-     * Display Canonical Payment & Invoice Reports Workspace.
+     * Display Canonical Payment & Invoice Reports Workspace with Multi-Factor Filtering.
      */
     public function index(Request $request): View
     {
-        $statusFilter = $request->query('status', 'all');
+        $filters = [
+            'status'     => $request->query('status', 'all'),
+            'search'     => $request->query('search'),
+            'start_date' => $request->query('start_date'),
+            'end_date'   => $request->query('end_date'),
+            'product_id' => $request->query('product_id'),
+        ];
 
-        $baseQuery = Payment::validCommerce()
-            ->with(['user', 'invoice.order.items.product.test'])
-            ->latest();
+        $reportQuery = $this->reportService->buildReportQuery($filters);
+        $summary = $this->reportService->calculateFinancialSummary($reportQuery);
+        $products = $this->reportService->getFilterProducts();
 
-        if ($statusFilter === 'all') {
-            $query = clone $baseQuery;
-        } elseif (in_array($statusFilter, ['pending', 'success', 'failed', 'refunded'], true)) {
-            $query = (clone $baseQuery)->where('status', $statusFilter);
-        } else {
-            $statusFilter = 'all';
-            $query = clone $baseQuery;
-        }
+        $payments = (clone $reportQuery)->paginate(15)->withQueryString();
 
-        $payments = $query->paginate(15)->withQueryString();
-
+        // Overall status metrics for top navigation tabs
         $pendingCount = Payment::validCommerce()->where('status', PaymentStatus::Pending)->count();
         $successCount = Payment::validCommerce()->where('status', PaymentStatus::Success)->count();
         $failedCount = Payment::validCommerce()->where('status', PaymentStatus::Failed)->count();
@@ -49,15 +50,21 @@ class FinancePaymentController extends Controller
         $pageTitle = 'Payment & Invoice Reports';
         $pageSubtitle = 'Review transaction history, invoice records, and candidate payment proofs.';
 
-        return view('finance.payments.index', compact(
-            'payments',
-            'statusFilter',
-            'pendingCount',
-            'successCount',
-            'failedCount',
-            'pageTitle',
-            'pageSubtitle'
-        ));
+        return view('finance.payments.index', [
+            'payments'      => $payments,
+            'statusFilter'  => $filters['status'],
+            'search'        => $filters['search'],
+            'startDate'     => $filters['start_date'],
+            'endDate'       => $filters['end_date'],
+            'productId'     => $filters['product_id'],
+            'summary'       => $summary,
+            'products'      => $products,
+            'pendingCount'  => $pendingCount,
+            'successCount'  => $successCount,
+            'failedCount'   => $failedCount,
+            'pageTitle'     => $pageTitle,
+            'pageSubtitle'  => $pageSubtitle,
+        ]);
     }
 
     /**
@@ -68,6 +75,42 @@ class FinancePaymentController extends Controller
         $status = $request->query('status', 'pending');
 
         return redirect()->route('finance.payments.index', ['status' => $status]);
+    }
+
+    /**
+     * Stream CSV export of filtered payments.
+     */
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $filters = [
+            'status'     => $request->query('status', 'all'),
+            'search'     => $request->query('search'),
+            'start_date' => $request->query('start_date'),
+            'end_date'   => $request->query('end_date'),
+            'product_id' => $request->query('product_id'),
+        ];
+
+        $query = $this->reportService->buildReportQuery($filters);
+
+        return $this->reportService->exportCsv($query);
+    }
+
+    /**
+     * Stream XLSX export of filtered payments.
+     */
+    public function exportXlsx(Request $request): StreamedResponse
+    {
+        $filters = [
+            'status'     => $request->query('status', 'all'),
+            'search'     => $request->query('search'),
+            'start_date' => $request->query('start_date'),
+            'end_date'   => $request->query('end_date'),
+            'product_id' => $request->query('product_id'),
+        ];
+
+        $query = $this->reportService->buildReportQuery($filters);
+
+        return $this->reportService->exportXlsx($query);
     }
 
     /**

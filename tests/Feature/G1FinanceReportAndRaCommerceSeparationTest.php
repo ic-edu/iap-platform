@@ -313,7 +313,7 @@ class G1FinanceReportAndRaCommerceSeparationTest extends TestCase
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
         $response->assertStatus(200);
-        $response->assertSee('Gross Revenue');
+        $response->assertSee('Gross Cash Collections');
     }
 
     public function test_24_finance_dashboard_still_renders_pending_approvals(): void

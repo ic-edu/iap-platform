@@ -103,7 +103,7 @@ class FinanceDashboardLiveDataTest extends TestCase
         $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('Gross Revenue');
+        $response->assertSee('Gross Cash Collections');
         $response->assertSee('IDR 750,000');
     }
 
@@ -114,7 +114,7 @@ class FinanceDashboardLiveDataTest extends TestCase
         $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('Gross Revenue');
+        $response->assertSee('Gross Cash Collections');
         $response->assertSee('IDR 0');
     }
 
@@ -130,21 +130,14 @@ class FinanceDashboardLiveDataTest extends TestCase
         $response->assertSee('2');
     }
 
-    public function test_04_promotions_comes_from_live_promotion_coupon_count(): void
+    public function test_04_unpaid_invoices_comes_from_live_unpaid_invoice_count(): void
     {
-        Coupon::create([
-            'code'        => 'PROMO1',
-            'type'        => 'percentage',
-            'value'       => 10,
-            'usage_limit' => 100,
-            'used_count'  => 0,
-            'is_active'   => true,
-        ]);
+        $this->createPaymentWithOrder('PAY-UNPAID-001', 832500, PaymentStatus::Pending);
 
         $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('Promotions');
+        $response->assertSee('Unpaid Invoices');
         $response->assertSee('1');
     }
 

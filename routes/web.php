@@ -153,6 +153,10 @@ Route::middleware(['web', 'auth', 'role:finance'])->prefix('finance')->name('fin
 
     Route::get('/payments/pending', [FinancePaymentController::class, 'pending'])
         ->name('payments.pending');
+    Route::get('/payments/export/csv', [FinancePaymentController::class, 'exportCsv'])
+        ->name('payments.export.csv');
+    Route::get('/payments/export/xlsx', [FinancePaymentController::class, 'exportXlsx'])
+        ->name('payments.export.xlsx');
     Route::get('/payments', [FinancePaymentController::class, 'index'])
         ->name('payments.index');
     Route::get('/payments/{payment}', [FinancePaymentController::class, 'show'])
