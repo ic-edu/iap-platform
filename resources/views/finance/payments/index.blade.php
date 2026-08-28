@@ -62,7 +62,7 @@
 
     {{-- Multi-Factor Filter Bar & Export Actions --}}
     <div class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-4">
-        <form method="GET" action="{{ route('finance.payments.index') }}" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+        <form method="GET" action="{{ route('finance.payments.index') }}" autocomplete="off" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
             {{-- Preserve active status tab --}}
             <input type="hidden" name="status" value="{{ $statusFilter ?? 'all' }}">
 
@@ -79,14 +79,20 @@
 
             {{-- Start Date --}}
             <div class="sm:col-span-2">
-                <label for="start_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Start Date</label>
-                <input type="date" name="start_date" id="start_date" value="{{ !empty($startDate) ? $startDate : '' }}" placeholder="dd/mm/yyyy" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
+                <div class="flex items-center justify-between mb-1">
+                    <label for="start_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Start Date</label>
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium">dd/mm/yyyy</span>
+                </div>
+                <input type="date" name="start_date" id="start_date" value="{{ !empty($startDate) ? $startDate : '' }}" placeholder="dd/mm/yyyy" autocomplete="off" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
             </div>
 
             {{-- End Date --}}
             <div class="sm:col-span-2">
-                <label for="end_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">End Date</label>
-                <input type="date" name="end_date" id="end_date" value="{{ !empty($endDate) ? $endDate : '' }}" placeholder="dd/mm/yyyy" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
+                <div class="flex items-center justify-between mb-1">
+                    <label for="end_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">End Date</label>
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium">dd/mm/yyyy</span>
+                </div>
+                <input type="date" name="end_date" id="end_date" value="{{ !empty($endDate) ? $endDate : '' }}" placeholder="dd/mm/yyyy" autocomplete="off" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
             </div>
 
             {{-- Product / Package Filter --}}
