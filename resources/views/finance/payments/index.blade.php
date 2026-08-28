@@ -80,13 +80,13 @@
             {{-- Start Date --}}
             <div class="sm:col-span-2">
                 <label for="start_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Start Date</label>
-                <input type="date" name="start_date" id="start_date" value="{{ $startDate ?? '' }}" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                <input type="date" name="start_date" id="start_date" value="{{ !empty($startDate) ? $startDate : '' }}" placeholder="dd/mm/yyyy" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
             </div>
 
             {{-- End Date --}}
             <div class="sm:col-span-2">
                 <label for="end_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">End Date</label>
-                <input type="date" name="end_date" id="end_date" value="{{ $endDate ?? '' }}" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                <input type="date" name="end_date" id="end_date" value="{{ !empty($endDate) ? $endDate : '' }}" placeholder="dd/mm/yyyy" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
             </div>
 
             {{-- Product / Package Filter --}}

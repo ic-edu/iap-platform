@@ -639,4 +639,33 @@ class FinanceOperationalReportingTest extends TestCase
         $response->assertSee('Unpaid Invoices');
         $response->assertSee('Pending Approvals');
     }
+
+    public function test_46_finance_reports_render_start_and_end_date_empty_with_placeholder_by_default(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response->assertStatus(200);
+        $response->assertSee('name="start_date" id="start_date" value="" placeholder="dd/mm/yyyy"', false);
+        $response->assertSee('name="end_date" id="end_date" value="" placeholder="dd/mm/yyyy"', false);
+    }
+
+    public function test_47_clear_filters_removes_date_query_parameters_and_empties_fields(): void
+    {
+        // When filtered with dates
+        $responseFiltered = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
+            'start_date' => '2026-08-20',
+            'end_date'   => '2026-08-27',
+        ]));
+        $responseFiltered->assertStatus(200);
+        $responseFiltered->assertSee('value="2026-08-20"', false);
+        $responseFiltered->assertSee('value="2026-08-27"', false);
+
+        // When Clear is clicked (navigates to base index)
+        $responseCleared = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $responseCleared->assertStatus(200);
+        $responseCleared->assertSee('name="start_date" id="start_date" value="" placeholder="dd/mm/yyyy"', false);
+        $responseCleared->assertSee('name="end_date" id="end_date" value="" placeholder="dd/mm/yyyy"', false);
+        $responseCleared->assertSee('PAY-20260827-VZDM');
+        $responseCleared->assertSee('PAY-20260820-CONF');
+        $responseCleared->assertSee('PAY-20260815-FAIL');
+    }
 }
