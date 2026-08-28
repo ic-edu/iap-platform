@@ -204,14 +204,14 @@ class FinanceDateFilterUxTest extends TestCase
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee('name="start_date" id="start_date" value="" placeholder="dd/mm/yyyy"', false);
+        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
     }
 
     public function test_03_default_end_date_is_empty_when_no_end_date_parameter_exists(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee('name="end_date" id="end_date" value="" placeholder="dd/mm/yyyy"', false);
+        $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
     public function test_04_default_state_contains_no_implicit_date_restriction(): void
@@ -292,14 +292,14 @@ class FinanceDateFilterUxTest extends TestCase
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee('name="start_date" id="start_date" value=""', false);
+        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
     }
 
     public function test_12_clear_removes_end_date(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee('name="end_date" id="end_date" value=""', false);
+        $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
     public function test_13_clear_removes_date_query_parameters(): void
@@ -329,7 +329,7 @@ class FinanceDateFilterUxTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('PAY-20260827-VZDM');
         $response->assertDontSee('PAY-20260820-CONF');
-        $response->assertSee('name="start_date" id="start_date" value=""', false);
+        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
     }
 
     public function test_16_search_works_without_dates(): void
@@ -340,7 +340,7 @@ class FinanceDateFilterUxTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('PAY-20260820-CONF');
         $response->assertDontSee('PAY-20260827-VZDM');
-        $response->assertSee('name="start_date" id="start_date" value=""', false);
+        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
     }
 
     public function test_17_product_filter_works_without_dates(): void
@@ -351,7 +351,7 @@ class FinanceDateFilterUxTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('PAY-20260820-CONF');
         $response->assertDontSee('PAY-20260827-VZDM');
-        $response->assertSee('name="start_date" id="start_date" value=""', false);
+        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
     }
 
     public function test_18_combined_search_status_date_works(): void

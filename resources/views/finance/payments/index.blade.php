@@ -62,6 +62,17 @@
 
     {{-- Multi-Factor Filter Bar & Export Actions --}}
     <div class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-4">
+        @php
+            $formatDateDisplay = function($val) {
+                if (empty($val)) return 'Select day/mo/year';
+                try {
+                    return \Illuminate\Support\Carbon::parse($val)->format('d/m/Y');
+                } catch (\Throwable $e) {
+                    return 'Select day/mo/year';
+                }
+            };
+        @endphp
+
         <form method="GET" action="{{ route('finance.payments.index') }}" autocomplete="off" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
             {{-- Preserve active status tab --}}
             <input type="hidden" name="status" value="{{ $statusFilter ?? 'all' }}">
@@ -79,24 +90,48 @@
 
             {{-- Start Date --}}
             <div class="sm:col-span-2">
-                <div class="flex items-center justify-between mb-1">
-                    <label for="start_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Start Date</label>
-                    <span class="text-[10px] {{ !empty($startDate) ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-500 dark:text-slate-400 font-medium' }} font-mono">
-                        {{ !empty($startDate) ? 'Selected' : 'No date filter' }}
-                    </span>
+                <label for="start_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Start Date</label>
+                <div class="relative group rounded-xl focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500" x-data="{
+                    val: '{{ !empty($startDate) ? $startDate : '' }}',
+                    get formatted() {
+                        if (!this.val) return 'Select day/mo/year';
+                        const p = this.val.split('-');
+                        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : this.val;
+                    }
+                }">
+                    <div class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 flex items-center justify-between pointer-events-none transition-colors">
+                        <span :class="val ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-400 font-normal'" x-text="formatted">
+                            {{ $formatDateDisplay($startDate) }}
+                        </span>
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <input type="date" name="start_date" id="start_date" x-model="val" value="{{ !empty($startDate) ? $startDate : '' }}" autocomplete="off" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer focus:outline-none" aria-label="Start Date">
                 </div>
-                <input type="date" name="start_date" id="start_date" value="{{ !empty($startDate) ? $startDate : '' }}" placeholder="dd/mm/yyyy" autocomplete="off" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
             </div>
 
             {{-- End Date --}}
             <div class="sm:col-span-2">
-                <div class="flex items-center justify-between mb-1">
-                    <label for="end_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">End Date</label>
-                    <span class="text-[10px] {{ !empty($endDate) ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-500 dark:text-slate-400 font-medium' }} font-mono">
-                        {{ !empty($endDate) ? 'Selected' : 'No date filter' }}
-                    </span>
+                <label for="end_date" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">End Date</label>
+                <div class="relative group rounded-xl focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500" x-data="{
+                    val: '{{ !empty($endDate) ? $endDate : '' }}',
+                    get formatted() {
+                        if (!this.val) return 'Select day/mo/year';
+                        const p = this.val.split('-');
+                        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : this.val;
+                    }
+                }">
+                    <div class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 flex items-center justify-between pointer-events-none transition-colors">
+                        <span :class="val ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-400 font-normal'" x-text="formatted">
+                            {{ $formatDateDisplay($endDate) }}
+                        </span>
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <input type="date" name="end_date" id="end_date" x-model="val" value="{{ !empty($endDate) ? $endDate : '' }}" autocomplete="off" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer focus:outline-none" aria-label="End Date">
                 </div>
-                <input type="date" name="end_date" id="end_date" value="{{ !empty($endDate) ? $endDate : '' }}" placeholder="dd/mm/yyyy" autocomplete="off" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
             </div>
 
             {{-- Product / Package Filter --}}

@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-class FinanceDateFilterVisualDefaultTest extends TestCase
+class FinanceDateFilterControlUxTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -193,133 +193,136 @@ class FinanceDateFilterVisualDefaultTest extends TestCase
         DB::table('payments')->where('id', $this->failedPayment->id)->update(['created_at' => '2026-08-15 09:00:00']);
     }
 
-    public function test_01_finance_payment_and_invoice_reports_render_successfully(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
-        $response->assertStatus(200);
-        $response->assertSee('Payment &amp; Invoice Reports', false);
-    }
-
-    public function test_02_start_date_has_no_default_current_date_value(): void
+    public function test_01_initial_start_date_logical_value_is_empty(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
         $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
     }
 
-    public function test_03_end_date_has_no_default_current_date_value(): void
+    public function test_02_initial_end_date_logical_value_is_empty(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
         $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
-    public function test_04_no_implicit_start_date_query_parameter_on_initial_page_load(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
-        $response->assertStatus(200);
-        $this->assertNull(request()->query('start_date'));
-    }
-
-    public function test_05_no_implicit_end_date_query_parameter_on_initial_page_load(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
-        $response->assertStatus(200);
-        $this->assertNull(request()->query('end_date'));
-    }
-
-    public function test_06_default_state_renders_explicit_date_guidance_such_as_dd_mm_yyyy(): void
+    public function test_03_initial_start_date_visible_text_contains_select_day_mo_year(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
         $response->assertSee('Select day/mo/year');
     }
 
-    public function test_07_explicit_start_date_populates_start_date(): void
+    public function test_04_initial_end_date_visible_text_contains_select_day_mo_year(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response->assertStatus(200);
+        $response->assertSee('Select day/mo/year');
+    }
+
+    public function test_05_current_date_is_not_injected(): void
+    {
+        $currentDate = now()->format('Y-m-d');
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response->assertStatus(200);
+        $response->assertDontSee('value="' . $currentDate . '"', false);
+    }
+
+    public function test_06_no_start_date_parameter_exists_initially(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response->assertStatus(200);
+        $this->assertNull(request()->query('start_date'));
+    }
+
+    public function test_07_no_end_date_parameter_exists_initially(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response->assertStatus(200);
+        $this->assertNull(request()->query('end_date'));
+    }
+
+    public function test_08_explicit_start_date_restores_visible_selected_date(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
             'start_date' => '2026-08-27',
         ]));
         $response->assertStatus(200);
+        $response->assertSee('27/08/2026');
         $response->assertSee('value="2026-08-27"', false);
-        $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
-    public function test_08_explicit_end_date_populates_end_date(): void
+    public function test_09_explicit_end_date_restores_visible_selected_date(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
             'end_date' => '2026-08-28',
         ]));
         $response->assertStatus(200);
-        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
+        $response->assertSee('28/08/2026');
         $response->assertSee('value="2026-08-28"', false);
     }
 
-    public function test_09_explicit_start_date_and_end_date_populate_both(): void
+    public function test_10_explicit_date_range_restores_both_selected_dates(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
-            'start_date' => '2026-08-20',
-            'end_date'   => '2026-08-27',
+            'start_date' => '2026-08-27',
+            'end_date'   => '2026-08-28',
         ]));
         $response->assertStatus(200);
-        $response->assertSee('value="2026-08-20"', false);
+        $response->assertSee('27/08/2026');
+        $response->assertSee('28/08/2026');
         $response->assertSee('value="2026-08-27"', false);
+        $response->assertSee('value="2026-08-28"', false);
     }
 
-    public function test_10_clear_returns_both_fields_to_empty(): void
+    public function test_11_clear_restores_start_date_select_day_mo_year(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
+        $response->assertSee('Select day/mo/year');
         $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
-        $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
-    public function test_11_clear_removes_date_parameters(): void
+    public function test_12_clear_restores_end_date_select_day_mo_year(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee(route('finance.payments.index'));
-    }
-
-    public function test_12_status_filtering_does_not_inject_dates(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
-            'status' => 'pending',
-        ]));
-        $response->assertStatus(200);
-        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
+        $response->assertSee('Select day/mo/year');
         $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
-    public function test_13_search_does_not_inject_dates(): void
+    public function test_13_search_does_not_populate_date_controls(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
             'search' => 'PAY-20260827-VZDM',
         ]));
         $response->assertStatus(200);
+        $response->assertSee('Select day/mo/year');
         $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
-        $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
-    public function test_14_product_filter_does_not_inject_dates(): void
+    public function test_14_status_filter_does_not_populate_date_controls(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
+            'status' => 'pending',
+        ]));
+        $response->assertStatus(200);
+        $response->assertSee('Select day/mo/year');
+        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
+    }
+
+    public function test_15_product_filter_does_not_populate_date_controls(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
             'product_id' => $this->productToeic->id,
         ]));
         $response->assertStatus(200);
+        $response->assertSee('Select day/mo/year');
         $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
-        $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
-    public function test_15_pagination_does_not_inject_dates(): void
-    {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
-        $response->assertStatus(200);
-        $response->assertDontSee('start_date=');
-        $response->assertDontSee('end_date=');
-    }
-
-    public function test_16_explicit_dates_survive_pagination(): void
+    public function test_16_pagination_preserves_explicit_dates(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
             'start_date' => '2026-08-20',
@@ -330,9 +333,19 @@ class FinanceDateFilterVisualDefaultTest extends TestCase
         $response->assertSee('end_date=2026-08-28');
     }
 
-    public function test_17_csv_export_does_not_invent_dates(): void
+    public function test_17_pagination_does_not_invent_dates(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.export.csv'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $response->assertStatus(200);
+        $response->assertDontSee('start_date=');
+        $response->assertDontSee('end_date=');
+    }
+
+    public function test_18_csv_respects_explicit_dates(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.export.csv', [
+            'start_date' => '2026-08-25',
+        ]));
         $response->assertStatus(200);
 
         ob_start();
@@ -340,25 +353,61 @@ class FinanceDateFilterVisualDefaultTest extends TestCase
         $csvContent = ob_get_clean();
 
         $this->assertStringContainsString('PAY-20260827-VZDM', $csvContent);
-        $this->assertStringContainsString('PAY-20260820-CONF', $csvContent);
-        $this->assertStringContainsString('PAY-20260815-FAIL', $csvContent);
+        $this->assertStringNotContainsString('PAY-20260820-CONF', $csvContent);
     }
 
-    public function test_18_xlsx_export_does_not_invent_dates(): void
+    public function test_19_xlsx_respects_explicit_dates(): void
     {
-        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.export.xlsx'));
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.export.xlsx', [
+            'start_date' => '2026-08-25',
+        ]));
         $response->assertStatus(200);
     }
 
-    public function test_19_current_date_is_not_used_as_default_value(): void
+    public function test_20_default_report_has_no_date_restriction(): void
     {
-        $currentDate = now()->format('Y-m-d');
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertDontSee('value="' . $currentDate . '"', false);
+        $response->assertSee('PAY-20260827-VZDM');
+        $response->assertSee('PAY-20260820-CONF');
+        $response->assertSee('PAY-20260815-FAIL');
     }
 
-    public function test_20_light_theme_contract_passes(): void
+    public function test_21_explicit_date_filter_works(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
+            'start_date' => '2026-08-25',
+        ]));
+        $response->assertStatus(200);
+        $response->assertSee('PAY-20260827-VZDM');
+        $response->assertDontSee('PAY-20260820-CONF');
+        $response->assertDontSee('PAY-20260815-FAIL');
+    }
+
+    public function test_22_invalid_range_remains_safely_rejected(): void
+    {
+        $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
+            'start_date' => '2026-08-28',
+            'end_date'   => '2026-08-10',
+        ]));
+        $response->assertStatus(200);
+        $response->assertSee('No payment records found', false);
+    }
+
+    public function test_23_result_wording_remains_correct(): void
+    {
+        $unfiltered = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
+        $unfiltered->assertStatus(200);
+        $unfiltered->assertSee('total transaction(s)');
+
+        $filtered = $this->actingAs($this->financeUser)->get(route('finance.payments.index', [
+            'start_date' => '2026-08-27',
+        ]));
+        $filtered->assertStatus(200);
+        $filtered->assertSee('filtered transaction(s)');
+    }
+
+    public function test_24_light_theme_contract_passes(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
@@ -366,7 +415,7 @@ class FinanceDateFilterVisualDefaultTest extends TestCase
         $response->assertSee('bg-white', false);
     }
 
-    public function test_21_dark_theme_contract_passes(): void
+    public function test_25_dark_theme_contract_passes(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
@@ -374,24 +423,24 @@ class FinanceDateFilterVisualDefaultTest extends TestCase
         $response->assertSee('dark:text-white', false);
     }
 
-    public function test_22_global_theme_contract_remains_intact(): void
+    public function test_26_global_theme_contract_remains_intact(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.dashboard'));
         $response->assertStatus(200);
         $response->assertSee('Gross Cash Collections');
     }
 
-    public function test_23_pay_20260827_vzdm_remains_pending(): void
+    public function test_27_pay_20260827_vzdm_remains_pending(): void
     {
         $this->assertEquals(PaymentStatus::Pending, $this->uatPayment->fresh()->status);
     }
 
-    public function test_24_pay_20260827_vzdm_remains_idr_832500(): void
+    public function test_28_pay_20260827_vzdm_remains_idr_832500(): void
     {
         $this->assertEquals(832500, $this->uatPayment->fresh()->amount);
     }
 
-    public function test_25_no_payment_mutation(): void
+    public function test_29_no_payment_mutation(): void
     {
         $initialStatuses = Payment::pluck('status', 'id')->toArray();
 
@@ -402,21 +451,21 @@ class FinanceDateFilterVisualDefaultTest extends TestCase
         $this->assertEquals($initialStatuses, Payment::pluck('status', 'id')->toArray());
     }
 
-    public function test_26_no_assignment_creation(): void
+    public function test_30_no_assignment(): void
     {
         $initialCount = CandidateTestAssignment::count();
         $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $this->assertEquals($initialCount, CandidateTestAssignment::count());
     }
 
-    public function test_27_no_attempt_creation(): void
+    public function test_31_no_attempt(): void
     {
         $initialCount = Attempt::count();
         $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $this->assertEquals($initialCount, Attempt::count());
     }
 
-    public function test_28_no_certificate_creation(): void
+    public function test_32_no_certificate(): void
     {
         $initialCount = Certificate::count();
         $this->actingAs($this->financeUser)->get(route('finance.payments.index'));

@@ -197,8 +197,8 @@ class FinanceDateFilterSemanticUxTest extends TestCase
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee('name="start_date" id="start_date" value=""', false);
-        $response->assertSee('name="end_date" id="end_date" value=""', false);
+        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
+        $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
     public function test_02_initial_date_fields_have_no_query_parameters(): void
@@ -213,14 +213,14 @@ class FinanceDateFilterSemanticUxTest extends TestCase
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee('No date filter');
+        $response->assertSee('Select day/mo/year');
     }
 
     public function test_04_initial_end_date_helper_indicates_no_date_filter(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee('No date filter');
+        $response->assertSee('Select day/mo/year');
     }
 
     public function test_05_initial_unfiltered_result_uses_total_transactions_wording(): void
@@ -238,7 +238,6 @@ class FinanceDateFilterSemanticUxTest extends TestCase
         ]));
         $response->assertStatus(200);
         $response->assertSee('filtered transaction(s)');
-        $response->assertSee('Selected');
     }
 
     public function test_07_explicit_end_date_produces_filtered_wording(): void
@@ -248,7 +247,6 @@ class FinanceDateFilterSemanticUxTest extends TestCase
         ]));
         $response->assertStatus(200);
         $response->assertSee('filtered transaction(s)');
-        $response->assertSee('Selected');
     }
 
     public function test_08_explicit_start_and_end_produces_filtered_wording(): void
@@ -259,7 +257,6 @@ class FinanceDateFilterSemanticUxTest extends TestCase
         ]));
         $response->assertStatus(200);
         $response->assertSee('filtered transaction(s)');
-        $response->assertSee('Selected');
     }
 
     public function test_09_search_produces_filtered_wording(): void
@@ -269,7 +266,6 @@ class FinanceDateFilterSemanticUxTest extends TestCase
         ]));
         $response->assertStatus(200);
         $response->assertSee('filtered transaction(s)');
-        $response->assertSee('No date filter');
     }
 
     public function test_10_product_filter_produces_filtered_wording(): void
@@ -279,7 +275,6 @@ class FinanceDateFilterSemanticUxTest extends TestCase
         ]));
         $response->assertStatus(200);
         $response->assertSee('filtered transaction(s)');
-        $response->assertSee('No date filter');
     }
 
     public function test_11_status_only_filter_produces_filtered_wording(): void
@@ -289,16 +284,15 @@ class FinanceDateFilterSemanticUxTest extends TestCase
         ]));
         $response->assertStatus(200);
         $response->assertSee('filtered transaction(s)');
-        $response->assertSee('No date filter');
     }
 
     public function test_12_clear_restores_no_date_filter_state(): void
     {
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
-        $response->assertSee('No date filter');
-        $response->assertSee('name="start_date" id="start_date" value=""', false);
-        $response->assertSee('name="end_date" id="end_date" value=""', false);
+        $response->assertSee('Select day/mo/year');
+        $response->assertSee('name="start_date" id="start_date" x-model="val" value=""', false);
+        $response->assertSee('name="end_date" id="end_date" x-model="val" value=""', false);
     }
 
     public function test_13_clear_restores_total_wording(): void
@@ -317,7 +311,8 @@ class FinanceDateFilterSemanticUxTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('value="2026-08-27"', false);
         $response->assertSee('value="2026-08-28"', false);
-        $response->assertSee('Selected');
+        $response->assertSee('27/08/2026');
+        $response->assertSee('28/08/2026');
     }
 
     public function test_15_no_implicit_current_date_is_generated(): void
