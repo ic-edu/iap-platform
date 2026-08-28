@@ -17,7 +17,13 @@
         $from = request('from');
         $testId = request('test_id');
 
-        if ($from === 'dashboard') {
+        if ($from === 'academic_library' && request('category')) {
+            $backUrl = route('admin.academic-library.show', request('category'));
+            $backLabel = '← Back to Academic Library';
+        } elseif ($from === 'academic_library' || $from === 'academic_explorer') {
+            $backUrl = route('admin.academic-library.explorer');
+            $backLabel = '← Back to Library Explorer';
+        } elseif ($from === 'dashboard') {
             $backUrl = route('teacher.dashboard');
             $backLabel = '← Back to Teacher Dashboard';
         } elseif ($from === 'test_builder' && $testId) {
@@ -1059,6 +1065,7 @@
         </div>
     </div>
 
+    @if (Auth::user()?->hasRole('repository-manager') || Auth::user()?->hasRole('super-admin'))
     <!-- Request Archive Modal (QB-002) -->
     <div id="archive-bank-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
@@ -1082,6 +1089,7 @@
             </form>
         </div>
     </div>
+    @endif
 
     {{-- Teacher Request Repository Revision Modal --}}
     <div id="teacher-request-revision-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" onclick="closeTeacherRequestRevisionModal(event)">

@@ -171,23 +171,6 @@ class MediaInstitutionalRepositorySeeder extends Seeder
             ];
         }
 
-        // 5. PASSAGES (31 items >= 21 requirement)
-        for ($i = 1; $i <= 31; $i++) {
-            $ex = ($i <= 8) ? 'toefl' : (($i <= 18) ? 'toeic' : (($i <= 26) ? 'ielts' : 'placement'));
-            $samples[] = [
-                'title'        => "Academic Reading Passage {$i}: Educational Research Text",
-                'type'         => 'passage',
-                'exam_type'    => $ex,
-                'category'     => 'Reading Passage',
-                'sub_category' => 'Text Passage',
-                'path'         => "media/sample_passage_{$i}.txt",
-                'mime'         => 'text/plain',
-                'size'         => 1400,
-                'content_text' => "Paragraph A: Geothermal energy systems extract steam from sub-surface volcanic reservoirs. While carbon emissions remain significantly lower than coal-fired facilities, environmental impact evaluations must account for atmospheric trace gas venting.",
-                'desc'         => 'Rich text academic reading passage content.',
-            ];
-        }
-
         // Save records to database
         foreach ($samples as $s) {
             MediaAsset::updateOrCreate(

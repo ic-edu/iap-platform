@@ -158,11 +158,15 @@
                 'rejected'              => '#fb7185',
                 default                 => '#94a3b8',
             };
+            $isTeacherUser = Auth::user()?->hasRole('teacher') && !Auth::user()?->hasRole(['repository-manager', 'super-admin']);
+            $repoUrl = $isTeacherUser
+                ? route('teacher.question-banks.show', ['questionBank' => $bank->id, 'from' => 'academic_library', 'category' => $category->slug])
+                : route('admin.repository-manager.question-bank-validate', $bank->id);
         @endphp
         <div class="al-repo-card">
             <div>
                 <div class="al-repo-card__head">
-                    <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" class="al-repo-card__title">
+                    <a href="{{ $repoUrl }}" class="al-repo-card__title">
                         {{ $bank->title }}
                     </a>
                     <span style="padding:.2rem .6rem;border-radius:99px;font-size:.65rem;font-weight:800;text-transform:uppercase;background:rgba(255,255,255,.05);color:{{ $badgeColor }};border:1px solid {{ $badgeColor }}40;white-space:nowrap;">
@@ -193,7 +197,7 @@
                 </div>
             </div>
 
-            <a href="{{ route('admin.repository-manager.question-bank-validate', $bank->id) }}" class="exp-btn-open" style="display:block;text-align:center;padding:.6rem;border-radius:.6rem;font-size:.8rem;font-weight:700;text-decoration:none;">
+            <a href="{{ $repoUrl }}" class="exp-btn-open" style="display:block;text-align:center;padding:.6rem;border-radius:.6rem;font-size:.8rem;font-weight:700;text-decoration:none;">
                 Open Repository →
             </a>
         </div>

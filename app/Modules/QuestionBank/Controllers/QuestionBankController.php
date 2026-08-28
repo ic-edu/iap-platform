@@ -163,8 +163,12 @@ class QuestionBankController extends Controller
     {
         $user = $request->user();
 
-        if ($user && $user->hasRole('teacher') && (int) $questionBank->created_by !== (int) $user->id) {
-            abort(403, 'Unauthorized access to question bank.');
+        if ($user && $user->hasRole('teacher')) {
+            $isOwner = (int) $questionBank->created_by === (int) $user->id;
+            $isPublishedOrApproved = in_array($questionBank->status, ['published', 'approved'], true) || (bool) $questionBank->is_published;
+            if (!$isOwner && !$isPublishedOrApproved) {
+                abort(403, 'Unauthorized access to question bank.');
+            }
         }
 
         $questionBank->load(['questions.choices', 'category', 'aclCategory', 'archiveRequests', 'versions.creator', 'auditTrails.actor']);

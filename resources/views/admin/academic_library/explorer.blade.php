@@ -164,11 +164,17 @@
     @else
     <div class="exp-grid">
         @foreach($explorerData['audits'] as $audit)
+        @php
+            $isTeacherUser = Auth::user()?->hasRole('teacher') && !Auth::user()?->hasRole(['repository-manager', 'super-admin']);
+            $repoUrl = $isTeacherUser
+                ? route('teacher.question-banks.show', ['questionBank' => $audit['bank_id'], 'from' => 'academic_explorer', 'filter' => $explorerData['filter']])
+                : route('admin.repository-manager.question-bank-validate', ['questionBank' => $audit['bank_id'], 'from' => 'explorer', 'filter' => $explorerData['filter']]);
+        @endphp
         <div class="exp-card">
             <div>
                 <div class="exp-card__head">
                     <div>
-                        <a href="{{ route('admin.repository-manager.question-bank-validate', ['questionBank' => $audit['bank_id'], 'from' => 'explorer', 'filter' => $explorerData['filter']]) }}" class="exp-card__title">
+                        <a href="{{ $repoUrl }}" class="exp-card__title">
                             {{ $audit['title'] }}
                         </a>
                         <div class="exp-card__sub">
@@ -233,7 +239,7 @@
                 <div style="font-size:.7rem;color:#64748b;">
                     Author: <strong>{{ $audit['governance']['contributor'] }}</strong>
                 </div>
-                <a href="{{ route('admin.repository-manager.question-bank-validate', ['questionBank' => $audit['bank_id'], 'from' => 'explorer', 'filter' => $explorerData['filter']]) }}" class="exp-btn-open" style="padding:.45rem .95rem;border-radius:.5rem;font-size:.78rem;font-weight:700;text-decoration:none;">
+                <a href="{{ $repoUrl }}" class="exp-btn-open" style="padding:.45rem .95rem;border-radius:.5rem;font-size:.78rem;font-weight:700;text-decoration:none;">
                     Open Repository →
                 </a>
             </div>
