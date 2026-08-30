@@ -438,6 +438,17 @@
                                     🟢 Valid
                                 </span>
                                 @endif
+                                @php
+                                    $diffVal = is_object($q->difficulty) ? $q->difficulty->value : (string) ($q->difficulty ?? 'medium');
+                                    $diffBadgeColor = match($diffVal) {
+                                        'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+                                        'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+                                        default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+                                    };
+                                @endphp
+                                <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $diffBadgeColor }}">
+                                    ⚡ Auto: {{ ucfirst($diffVal) }}@if(!empty($q->difficulty_score)) ({{ $q->difficulty_score }})@endif
+                                </span>
                             </div>
                             <div class="text-sm font-bold text-slate-900 dark:text-white">
                                 {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
@@ -733,7 +744,7 @@
 
             <div id="create-q-passage-container" class="hidden bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-1.5">
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">📖 Reading Passage Text <span class="text-rose-500">*</span></label>
-                <textarea name="passage_text" id="create-q-passage-text" rows="3" placeholder="Enter reading passage text for Part 6 / 7..." class="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs"></textarea>
+                <textarea name="passage_text" id="create-q-passage-text" rows="3" oninput="updateCreateModalAutoDifficulty()" placeholder="Enter reading passage text for Part 6 / 7..." class="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs"></textarea>
             </div>
             @endif
 
@@ -761,16 +772,28 @@
 
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Question Prompt / Stem <span class="text-rose-500">*</span></label>
-                <textarea name="prompt" required rows="3" placeholder="Enter the complete question prompt..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                <textarea name="prompt" required rows="3" oninput="updateCreateModalAutoDifficulty()" placeholder="Enter the complete question prompt..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Difficulty <span class="text-rose-500">*</span></label>
-                <select name="difficulty" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    <option value="easy">Easy</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="hard">Hard</option>
-                </select>
+            {{-- Auto-Difficulty Status Area (Read-Only) --}}
+            <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        ⚡ Question Difficulty
+                    </label>
+                    <span id="create-q-auto-diff-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                        <span id="create-q-auto-diff-dot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        <span id="create-q-auto-diff-text">Waiting for required inputs</span>
+                    </span>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <span id="create-q-auto-diff-hint" class="text-[11px] text-slate-500 dark:text-slate-400">
+                        Difficulty is detected automatically from question content, part rules, and attached media.
+                    </span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        Auto-Detected
+                    </span>
+                </div>
                 <input type="hidden" name="points" value="1">
             </div>
 
@@ -879,7 +902,7 @@
                     <div class="create-choice-row flex items-center gap-2.5 bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 transition-all" id="create-choice-row-{{ $i }}">
                         <input type="radio" name="correct_choice" value="{{ $i }}" id="create-correct-{{ $i }}" onchange="updateCreateModalCorrectChoice()" class="accent-emerald-600 w-4 h-4 cursor-pointer">
                         <label for="create-correct-{{ $i }}" class="font-extrabold text-indigo-600 dark:text-indigo-400 text-xs w-5 cursor-pointer">{{ $label }}.</label>
-                        <input type="text" name="choices[]" placeholder="Option {{ $label }} text" {{ $i < 2 ? 'required' : '' }} class="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <input type="text" name="choices[]" oninput="updateCreateModalAutoDifficulty()" placeholder="Option {{ $label }} text" {{ $i < 2 ? 'required' : '' }} class="flex-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                         <span class="create-correct-badge hidden items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold uppercase whitespace-nowrap" id="create-correct-badge-{{ $i }}">
                             ✓ CORRECT ANSWER
                         </span>
@@ -1345,6 +1368,9 @@
         }
 
         closeQuestionMediaPicker();
+        if (typeof updateCreateModalAutoDifficulty === 'function') {
+            updateCreateModalAutoDifficulty();
+        }
     }
 
     function removeQuestionAttachedMedia(mode, type) {
@@ -1373,6 +1399,10 @@
 
         if (imgInput && audioInput && !imgInput.value && !audioInput.value && mediaIdInput) {
             mediaIdInput.value = '';
+        }
+
+        if (typeof updateCreateModalAutoDifficulty === 'function') {
+            updateCreateModalAutoDifficulty();
         }
     }
 
@@ -1476,6 +1506,150 @@
         } else {
             if (choiceRow3) choiceRow3.style.display = 'flex';
         }
+
+        updateCreateModalAutoDifficulty();
+    }
+
+    function updateCreateModalAutoDifficulty() {
+        const form = document.getElementById('create-authored-question-form');
+        if (!form) return;
+
+        const partVal = parseInt(form.querySelector('#create-q-part-number')?.value || '1');
+        const prompt = (form.querySelector('textarea[name="prompt"]')?.value || '').trim();
+        const choices = Array.from(form.querySelectorAll('input[name="choices[]"]'))
+            .map(input => input.value.trim())
+            .filter(v => v.length > 0);
+        const hasImg = !document.getElementById('q-preview-image-card')?.classList.contains('hidden') && !!document.getElementById('q-image-url')?.value;
+        const hasAudio = !document.getElementById('q-preview-audio-card')?.classList.contains('hidden') && !!document.getElementById('q-audio-url')?.value;
+        const passageText = (form.querySelector('#create-q-passage-text')?.value || '').trim();
+
+        const badge = document.getElementById('create-q-auto-diff-badge');
+        const dot = document.getElementById('create-q-auto-diff-dot');
+        const text = document.getElementById('create-q-auto-diff-text');
+        const hint = document.getElementById('create-q-auto-diff-hint');
+
+        if (!badge || !text) return;
+
+        let status = 'pending';
+        let level = 'Medium';
+        let badgeClass = 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+        let dotColor = 'bg-slate-400';
+        let hintMsg = 'Difficulty is detected automatically from question content and media.';
+
+        if (partVal === 1) {
+            if (!hasImg && !hasAudio && choices.length === 0 && !prompt) {
+                status = 'pending';
+                text.textContent = 'Waiting for required inputs';
+                hintMsg = 'Attach image + audio and provide 4 choices for final detection.';
+            } else if (hasImg && hasAudio && choices.length >= 4) {
+                status = 'final';
+                let totalWords = choices.reduce((acc, c) => acc + c.split(/\s+/).filter(Boolean).length, 0);
+                let avg = choices.length > 0 ? totalWords / choices.length : 0;
+                level = avg >= 8 ? 'Hard' : (avg <= 5.5 ? 'Easy' : 'Medium');
+                text.textContent = `Final — ${level}`;
+                hintMsg = `Part 1 fully specified (Image + Audio + ${choices.length} choices). Auto-detected: ${level}.`;
+            } else {
+                status = 'provisional';
+                let missing = [];
+                if (!hasImg) missing.push('Image');
+                if (!hasAudio) missing.push('Audio');
+                if (choices.length < 4) missing.push('4 Choices');
+                level = 'Medium';
+                text.textContent = `Provisional — ${level}`;
+                hintMsg = `Partially complete (Waiting for: ${missing.join(', ')}).`;
+            }
+        } else if (partVal === 2) {
+            if (!hasAudio && choices.length === 0 && !prompt) {
+                status = 'pending';
+                text.textContent = 'Waiting for required inputs';
+                hintMsg = 'Attach audio or prompt and enter 3 responses.';
+            } else if (choices.length >= 3 && (prompt || hasAudio)) {
+                status = 'final';
+                level = prompt.toLowerCase().match(/^(when|where|who|what time)\b/) ? 'Easy' : (prompt.toLowerCase().match(/^(why don\'t|could you|would you)\b/) ? 'Medium' : 'Hard');
+                text.textContent = `Final — ${level}`;
+                hintMsg = `Part 2 specified (Audio/Prompt + ${choices.length} choices). Auto-detected: ${level}.`;
+            } else {
+                status = 'provisional';
+                text.textContent = 'Provisional — Medium';
+                hintMsg = `Partially complete (Waiting for 3 responses / audio).`;
+            }
+        } else if (partVal >= 3 && partVal <= 4) {
+            if (!hasAudio && choices.length === 0 && !prompt) {
+                status = 'pending';
+                text.textContent = 'Waiting for required inputs';
+            } else if (prompt && choices.length >= 4) {
+                status = 'final';
+                level = prompt.toLowerCase().match(/(imply|suggest|probably do next|look at)/) ? 'Hard' : (prompt.toLowerCase().match(/(problem|where|what time)/) ? 'Easy' : 'Medium');
+                text.textContent = `Final — ${level}`;
+                hintMsg = `Stem and options complete. Auto-detected: ${level}.`;
+            } else {
+                status = 'provisional';
+                text.textContent = 'Provisional — Medium';
+                hintMsg = 'Partially complete.';
+            }
+        } else if (partVal === 5) {
+            if (!prompt && choices.length === 0) {
+                status = 'pending';
+                text.textContent = 'Waiting for required inputs';
+            } else if (prompt && choices.length >= 4) {
+                status = 'final';
+                let words = prompt.split(/\s+/).filter(Boolean).length;
+                level = words >= 20 ? 'Hard' : (words <= 12 ? 'Easy' : 'Medium');
+                text.textContent = `Final — ${level}`;
+                hintMsg = `Sentence prompt + 4 choices complete. Auto-detected: ${level}.`;
+            } else {
+                status = 'provisional';
+                text.textContent = 'Provisional — Medium';
+            }
+        } else if (partVal === 6 || partVal === 7) {
+            if (!passageText && !prompt && choices.length === 0) {
+                status = 'pending';
+                text.textContent = 'Waiting for required inputs';
+            } else if (passageText && prompt && choices.length >= 4) {
+                status = 'final';
+                level = prompt.toLowerCase().match(/(suggest|infer|not mentioned|except)/) ? 'Hard' : 'Medium';
+                text.textContent = `Final — ${level}`;
+                hintMsg = `Passage and question complete. Auto-detected: ${level}.`;
+            } else {
+                status = 'provisional';
+                text.textContent = 'Provisional — Medium';
+                hintMsg = 'Waiting for passage text or choices completion.';
+            }
+        } else {
+            if (!prompt && choices.length === 0) {
+                status = 'pending';
+                text.textContent = 'Waiting for required inputs';
+            } else if (prompt && choices.length >= 2) {
+                status = 'final';
+                text.textContent = 'Final — Medium';
+            } else {
+                status = 'provisional';
+                text.textContent = 'Provisional — Medium';
+            }
+        }
+
+        if (status === 'final') {
+            if (level === 'Easy') {
+                badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800';
+                dotColor = 'bg-emerald-500';
+            } else if (level === 'Hard') {
+                badgeClass = 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800';
+                dotColor = 'bg-rose-500';
+            } else {
+                badgeClass = 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800';
+                dotColor = 'bg-amber-500';
+            }
+        } else if (status === 'provisional') {
+            badgeClass = 'bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800';
+            dotColor = 'bg-sky-500';
+        } else {
+            badgeClass = 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+            dotColor = 'bg-slate-400';
+        }
+
+        badge.className = `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${badgeClass}`;
+        dot.className = `w-1.5 h-1.5 rounded-full ${dotColor}`;
+        if (hint) hint.textContent = hintMsg;
     }
 
     function updateCreateModalCorrectChoice() {
@@ -1510,6 +1684,7 @@
                 }
             }
         }
+        updateCreateModalAutoDifficulty();
     }
 
     function validateCreateQuestionForm(form) {
@@ -1570,6 +1745,7 @@
             }
 
             updateCreateModalCorrectChoice();
+            updateCreateModalAutoDifficulty();
         }
     }
     function closeCreateAuthoredQuestionModal(e) {

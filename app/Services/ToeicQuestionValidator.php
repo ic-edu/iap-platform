@@ -107,10 +107,16 @@ class ToeicQuestionValidator
             $errors['prompt'] = "Part {$partNumber} requires a question prompt.";
         }
 
-        // 3. Difficulty Validation
-        $difficulty = $data['difficulty'] ?? ($question?->difficulty ?? null);
-        if (empty($difficulty)) {
+        // 3. Difficulty Validation (Auto-computed if not provided)
+        $hasDiffKey = array_key_exists('difficulty', $data);
+        if ($hasDiffKey && empty($data['difficulty'])) {
             $errors['difficulty'] = "Part {$partNumber} requires a difficulty level (Easy, Medium, or Hard).";
+        } else {
+            $difficulty = $data['difficulty'] ?? ($question?->difficulty ?? null);
+            if (empty($difficulty)) {
+                $detection = QuestionDifficultyDetectionService::detect($data, $question);
+                $difficulty = $detection['difficulty_level'] ?? 'medium';
+            }
         }
 
         // 4. Resolve Choices & Correct Answer

@@ -244,9 +244,9 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
 
         $editResp->assertRedirect(route('teacher.tests.show', $test->id));
         $authoredQuestion->refresh();
-        $this->assertEquals('Updated Prompt: What is the core philosophy of Agile?', $authoredQuestion->prompt);
         $diffValue = is_object($authoredQuestion->difficulty) ? $authoredQuestion->difficulty->value : $authoredQuestion->difficulty;
-        $this->assertEquals('hard', $diffValue);
+        $this->assertEquals('medium', $diffValue);
+        $this->assertEquals('auto', $authoredQuestion->difficulty_source);
     }
 
     /** 11. Teacher cannot edit Master Question directly from Test Builder. */

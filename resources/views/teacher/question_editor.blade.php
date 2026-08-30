@@ -42,7 +42,7 @@
 
             <div>
                 <label style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Prompt Stem Text</label>
-                <textarea name="prompt" rows="4" required style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;line-height:1.5;">{{ old('prompt', $question->prompt) }}</textarea>
+                <textarea name="prompt" rows="4" required oninput="updateEditorAutoDifficulty()" style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;line-height:1.5;">{{ old('prompt', $question->prompt) }}</textarea>
             </div>
 
             @php
@@ -67,7 +67,7 @@
 
             <div id="eq-passage-container" style="display:{{ in_array($curPart, [6,7]) ? 'block' : 'none' }};background:#f8fafc;padding:1rem;border-radius:.75rem;border:1px solid #e2e8f0;">
                 <label style="display:block;font-size:.85rem;font-weight:800;color:#334155;margin-bottom:.4rem;">📖 Reading Passage Text <span style="color:#f43f5e;">*</span></label>
-                <textarea name="passage_text" id="eq-passage-text" rows="4" placeholder="Enter passage text for Part 6 / 7..." style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;">{{ old('passage_text', $question->passage_text ?? ($question->passage?->content ?? '')) }}</textarea>
+                <textarea name="passage_text" id="eq-passage-text" rows="4" oninput="updateEditorAutoDifficulty()" placeholder="Enter passage text for Part 6 / 7..." style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;">{{ old('passage_text', $question->passage_text ?? ($question->passage?->content ?? '')) }}</textarea>
             </div>
             @endif
 
@@ -83,13 +83,23 @@
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Difficulty *</label>
-                    @php $diffVal = is_object($question->difficulty) ? $question->difficulty->value : $question->difficulty; @endphp
-                    <select name="difficulty" required style="width:100%;padding:.7rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;">
-                        <option value="easy" {{ $diffVal === 'easy' ? 'selected' : '' }}>Easy</option>
-                        <option value="medium" {{ $diffVal === 'medium' || empty($diffVal) ? 'selected' : '' }}>Medium</option>
-                        <option value="hard" {{ $diffVal === 'hard' ? 'selected' : '' }}>Hard</option>
-                    </select>
+                    <label style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">⚡ Auto-Detected Difficulty</label>
+                    @php
+                        $diffVal = is_object($question->difficulty) ? $question->difficulty->value : ($question->difficulty ?? 'medium');
+                        $diffScore = $question->difficulty_score;
+                        $diffStatus = $question->difficulty_status ?? 'final';
+                    @endphp
+                    <div id="eq-auto-diff-card" style="padding:.65rem .85rem;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:.6rem;display:flex;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:.5rem;">
+                            <span id="eq-auto-diff-dot" style="width:8px;height:8px;border-radius:50%;background:{{ $diffVal === 'easy' ? '#10b981' : ($diffVal === 'hard' ? '#f43f5e' : '#f59e0b') }};display:inline-block;"></span>
+                            <span id="eq-auto-diff-text" style="font-size:.85rem;font-weight:800;color:#0f172a;">
+                                {{ ucfirst($diffStatus) }}: {{ ucfirst($diffVal) }}@if(!empty($diffScore)) (Score: {{ $diffScore }})@endif
+                            </span>
+                        </div>
+                        <span id="eq-auto-diff-badge-source" style="font-size:.7rem;font-weight:700;text-transform:uppercase;padding:.2rem .45rem;border-radius:.35rem;background:#e2e8f0;color:#475569;">
+                            System Auto
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -222,7 +232,7 @@
                     <div class="choice-row" id="edit-choice-row-{{ $cIdx }}" style="display:flex;align-items:center;gap:.75rem;background:{{ $isCorrectChoice ? '#ecfdf5' : '#f8fafc' }};padding:.65rem .85rem;border-radius:.6rem;border:1px solid {{ $isCorrectChoice ? '#10b981' : '#e2e8f0' }};transition:all .15s ease;">
                         <input type="radio" name="correct_choice" value="{{ $cIdx }}" id="edit-correct-{{ $cIdx }}" onchange="updateEditorCorrectChoice()" {{ $isCorrectChoice ? 'checked' : '' }} style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
                         <label for="edit-correct-{{ $cIdx }}" class="choice-label" style="font-weight:800;color:#4f46e5;font-size:.85rem;width:1.5rem;cursor:pointer;margin:0;">{{ chr(65 + $cIdx) }}.</label>
-                        <input type="text" name="choices[{{ $cIdx }}]" value="{{ is_object($cObj) ? ($cObj->content ?? $cObj->choice_text) : '' }}" placeholder="Option {{ chr(65 + $cIdx) }} text" style="flex:1;padding:.5rem .75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.5rem;color:#0f172a;font-size:.88rem;">
+                        <input type="text" name="choices[{{ $cIdx }}]" oninput="updateEditorAutoDifficulty()" value="{{ is_object($cObj) ? ($cObj->content ?? $cObj->choice_text) : '' }}" placeholder="Option {{ chr(65 + $cIdx) }} text" style="flex:1;padding:.5rem .75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.5rem;color:#0f172a;font-size:.88rem;">
                         <span class="correct-indicator" id="edit-correct-badge-{{ $cIdx }}" style="display:{{ $isCorrectChoice ? 'inline-flex' : 'none' }};align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:.4rem;background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;font-size:.72rem;font-weight:800;letter-spacing:.03em;white-space:nowrap;">
                             ✓ CORRECT ANSWER
                         </span>
@@ -233,6 +243,124 @@
             </div>
 
             <script>
+            function updateEditorAutoDifficulty() {
+                const form = document.getElementById('edit-question-form');
+                if (!form) return;
+
+                const partVal = parseInt(form.querySelector('#eq-part-number')?.value || '1');
+                const prompt = (form.querySelector('textarea[name="prompt"]')?.value || '').trim();
+                const choices = Array.from(form.querySelectorAll('#choices-container input[type="text"]'))
+                    .map(input => input.value.trim())
+                    .filter(v => v.length > 0);
+                const hasImg = document.getElementById('eq-preview-image-card')?.style.display !== 'none' && !!document.getElementById('eq-image-url')?.value;
+                const hasAudio = document.getElementById('eq-preview-audio-card')?.style.display !== 'none' && !!document.getElementById('eq-audio-url')?.value;
+                const passageText = (form.querySelector('#eq-passage-text')?.value || '').trim();
+
+                const dot = document.getElementById('eq-auto-diff-dot');
+                const text = document.getElementById('eq-auto-diff-text');
+                if (!text || !dot) return;
+
+                let status = 'pending';
+                let level = 'Medium';
+                let dotColor = '#f59e0b';
+
+                if (partVal === 1) {
+                    if (!hasImg && !hasAudio && choices.length === 0 && !prompt) {
+                        status = 'Pending';
+                        text.textContent = 'Pending: Waiting for required inputs';
+                        dotColor = '#94a3b8';
+                    } else if (hasImg && hasAudio && choices.length >= 4) {
+                        status = 'Final';
+                        let totalWords = choices.reduce((acc, c) => acc + c.split(/\s+/).filter(Boolean).length, 0);
+                        let avg = choices.length > 0 ? totalWords / choices.length : 0;
+                        level = avg >= 8 ? 'Hard' : (avg <= 5.5 ? 'Easy' : 'Medium');
+                        dotColor = level === 'Easy' ? '#10b981' : (level === 'Hard' ? '#f43f5e' : '#f59e0b');
+                        text.textContent = `Final: ${level}`;
+                    } else {
+                        status = 'Provisional';
+                        text.textContent = 'Provisional: Medium';
+                        dotColor = '#0ea5e9';
+                    }
+                } else if (partVal === 2) {
+                    if (!hasAudio && choices.length === 0 && !prompt) {
+                        status = 'Pending';
+                        text.textContent = 'Pending: Waiting for inputs';
+                        dotColor = '#94a3b8';
+                    } else if (choices.length >= 3 && (prompt || hasAudio)) {
+                        status = 'Final';
+                        level = prompt.toLowerCase().match(/^(when|where|who|what time)\b/) ? 'Easy' : (prompt.toLowerCase().match(/^(why don\'t|could you|would you)\b/) ? 'Medium' : 'Hard');
+                        dotColor = level === 'Easy' ? '#10b981' : (level === 'Hard' ? '#f43f5e' : '#f59e0b');
+                        text.textContent = `Final: ${level}`;
+                    } else {
+                        status = 'Provisional';
+                        text.textContent = 'Provisional: Medium';
+                        dotColor = '#0ea5e9';
+                    }
+                } else if (partVal >= 3 && partVal <= 4) {
+                    if (!hasAudio && choices.length === 0 && !prompt) {
+                        status = 'Pending';
+                        text.textContent = 'Pending: Waiting for inputs';
+                        dotColor = '#94a3b8';
+                    } else if (prompt && choices.length >= 4) {
+                        status = 'Final';
+                        level = prompt.toLowerCase().match(/(imply|suggest|probably do next|look at)/) ? 'Hard' : (prompt.toLowerCase().match(/(problem|where|what time)/) ? 'Easy' : 'Medium');
+                        dotColor = level === 'Easy' ? '#10b981' : (level === 'Hard' ? '#f43f5e' : '#f59e0b');
+                        text.textContent = `Final: ${level}`;
+                    } else {
+                        status = 'Provisional';
+                        text.textContent = 'Provisional: Medium';
+                        dotColor = '#0ea5e9';
+                    }
+                } else if (partVal === 5) {
+                    if (!prompt && choices.length === 0) {
+                        status = 'Pending';
+                        text.textContent = 'Pending: Waiting for inputs';
+                        dotColor = '#94a3b8';
+                    } else if (prompt && choices.length >= 4) {
+                        status = 'Final';
+                        let words = prompt.split(/\s+/).filter(Boolean).length;
+                        level = words >= 20 ? 'Hard' : (words <= 12 ? 'Easy' : 'Medium');
+                        dotColor = level === 'Easy' ? '#10b981' : (level === 'Hard' ? '#f43f5e' : '#f59e0b');
+                        text.textContent = `Final: ${level}`;
+                    } else {
+                        status = 'Provisional';
+                        text.textContent = 'Provisional: Medium';
+                        dotColor = '#0ea5e9';
+                    }
+                } else if (partVal === 6 || partVal === 7) {
+                    if (!passageText && !prompt && choices.length === 0) {
+                        status = 'Pending';
+                        text.textContent = 'Pending: Waiting for inputs';
+                        dotColor = '#94a3b8';
+                    } else if (passageText && prompt && choices.length >= 4) {
+                        status = 'Final';
+                        level = prompt.toLowerCase().match(/(suggest|infer|not mentioned|except)/) ? 'Hard' : 'Medium';
+                        dotColor = level === 'Easy' ? '#10b981' : (level === 'Hard' ? '#f43f5e' : '#f59e0b');
+                        text.textContent = `Final: ${level}`;
+                    } else {
+                        status = 'Provisional';
+                        text.textContent = 'Provisional: Medium';
+                        dotColor = '#0ea5e9';
+                    }
+                } else {
+                    if (!prompt && choices.length === 0) {
+                        status = 'Pending';
+                        text.textContent = 'Pending: Waiting for inputs';
+                        dotColor = '#94a3b8';
+                    } else if (prompt && choices.length >= 2) {
+                        status = 'Final';
+                        text.textContent = 'Final: Medium';
+                        dotColor = '#f59e0b';
+                    } else {
+                        status = 'Provisional';
+                        text.textContent = 'Provisional: Medium';
+                        dotColor = '#0ea5e9';
+                    }
+                }
+
+                dot.style.background = dotColor;
+            }
+
             function onToeicPartChange(part) {
                 part = parseInt(part);
                 const secInput = document.getElementById('eq-section');
@@ -266,6 +394,8 @@
                         }
                     }
                 }
+
+                updateEditorAutoDifficulty();
             }
 
             document.addEventListener('DOMContentLoaded', function() {
@@ -689,6 +819,9 @@ function applySelectedQuestionMedia(item) {
 
     if (noMediaMsg) noMediaMsg.style.display = 'none';
     closeQuestionMediaPicker();
+    if (typeof updateEditorAutoDifficulty === 'function') {
+        updateEditorAutoDifficulty();
+    }
 }
 
 function removeQuestionAttachedMedia(type) {
@@ -716,6 +849,10 @@ function removeQuestionAttachedMedia(type) {
     if (!imgInput.value && !audioInput.value) {
         mediaIdInput.value = '';
         if (noMediaMsg) noMediaMsg.style.display = 'block';
+    }
+
+    if (typeof updateEditorAutoDifficulty === 'function') {
+        updateEditorAutoDifficulty();
     }
 }
 

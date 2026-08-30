@@ -91,20 +91,35 @@ class TestBuilderService
         $partNumber = isset($data['part_number']) && $data['part_number'] !== '' ? (int) $data['part_number'] : null;
         $sectionType = $data['section'] ?? ($partNumber ? ToeicQuestionValidator::deriveSection($partNumber) : ($section->section_type->value ?? $section->section_type ?? 'reading'));
 
+        if (empty($data['difficulty']) || empty($data['difficulty_score'])) {
+            $detection = \App\Services\QuestionDifficultyDetectionService::detect($data);
+            $data['difficulty'] = $detection['difficulty_level'];
+            $data['difficulty_score'] = $detection['difficulty_score'];
+            $data['difficulty_status'] = $detection['difficulty_status'];
+            $data['difficulty_source'] = 'auto';
+            $data['difficulty_factors'] = $detection['difficulty_factors'];
+            $data['difficulty_detected_at'] = $detection['difficulty_detected_at'];
+        }
+
         $question = \App\Modules\QuestionBank\Models\Question::create([
-            'question_bank_id' => null,
-            'media_asset_id'   => $data['media_asset_id'] ?? null,
-            'image_url'        => $data['image_url'] ?? null,
-            'audio_url'        => $data['audio_url'] ?? null,
-            'passage_id'       => $data['passage_id'] ?? null,
-            'prompt'           => $data['prompt'],
-            'section'          => $sectionType ?: 'reading',
-            'part_number'      => $partNumber,
-            'question_type'    => $data['question_type'] ?? 'multiple_choice',
-            'difficulty'       => $data['difficulty'] ?? 'medium',
-            'points'           => $data['points'] ?? 1,
-            'explanation'      => $data['explanation'] ?? null,
-            'passage_text'     => $data['passage_text'] ?? null,
+            'question_bank_id'       => null,
+            'media_asset_id'         => $data['media_asset_id'] ?? null,
+            'image_url'              => $data['image_url'] ?? null,
+            'audio_url'              => $data['audio_url'] ?? null,
+            'passage_id'             => $data['passage_id'] ?? null,
+            'prompt'                 => $data['prompt'],
+            'section'                => $sectionType ?: 'reading',
+            'part_number'            => $partNumber,
+            'question_type'          => $data['question_type'] ?? 'multiple_choice',
+            'difficulty'             => $data['difficulty'] ?? 'medium',
+            'difficulty_score'       => $data['difficulty_score'] ?? null,
+            'difficulty_status'      => $data['difficulty_status'] ?? 'final',
+            'difficulty_source'      => $data['difficulty_source'] ?? 'auto',
+            'difficulty_factors'     => $data['difficulty_factors'] ?? null,
+            'difficulty_detected_at' => $data['difficulty_detected_at'] ?? now(),
+            'points'                 => $data['points'] ?? 1,
+            'explanation'            => $data['explanation'] ?? null,
+            'passage_text'           => $data['passage_text'] ?? null,
         ]);
 
         if (!empty($data['choices']) && is_array($data['choices'])) {
@@ -161,16 +176,27 @@ class TestBuilderService
 
             $questions = $data['questions'] ?? [];
             foreach ($questions as $qData) {
+                $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
+                    'part_number'    => $partNumber,
+                    'audio_url'      => $data['audio_url'] ?? null,
+                    'media_asset_id' => $data['media_asset_id'] ?? null,
+                ]));
+
                 $question = Question::create([
-                    'question_bank_id' => null,
-                    'audio_group_id'   => $audioGroup->id,
-                    'prompt'           => $qData['prompt'],
-                    'section'          => $sectionType,
-                    'part_number'      => $partNumber,
-                    'question_type'    => 'multiple_choice',
-                    'difficulty'       => $qData['difficulty'] ?? 'medium',
-                    'points'           => 1,
-                    'explanation'      => $qData['explanation'] ?? null,
+                    'question_bank_id'       => null,
+                    'audio_group_id'         => $audioGroup->id,
+                    'prompt'                 => $qData['prompt'],
+                    'section'                => $sectionType,
+                    'part_number'            => $partNumber,
+                    'question_type'          => 'multiple_choice',
+                    'difficulty'             => $qDetect['difficulty_level'],
+                    'difficulty_score'       => $qDetect['difficulty_score'],
+                    'difficulty_status'      => $qDetect['difficulty_status'],
+                    'difficulty_source'      => 'auto',
+                    'difficulty_factors'     => $qDetect['difficulty_factors'],
+                    'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
+                    'points'                 => 1,
+                    'explanation'            => $qData['explanation'] ?? null,
                 ]);
 
                 $correctChoiceIdx = $qData['correct_choice'] ?? 0;
@@ -244,16 +270,27 @@ class TestBuilderService
 
             $questions = $data['questions'] ?? [];
             foreach ($questions as $qData) {
+                $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
+                    'part_number'  => $partNumber,
+                    'passage_type' => $passageType,
+                    'passage_text' => $passages[0]['content'] ?? null,
+                ]));
+
                 $question = Question::create([
-                    'question_bank_id' => null,
-                    'passage_group_id' => $passageGroup->id,
-                    'prompt'           => $qData['prompt'],
-                    'section'          => $sectionType,
-                    'part_number'      => $partNumber,
-                    'question_type'    => 'multiple_choice',
-                    'difficulty'       => $qData['difficulty'] ?? 'medium',
-                    'points'           => 1,
-                    'explanation'      => $qData['explanation'] ?? null,
+                    'question_bank_id'       => null,
+                    'passage_group_id'       => $passageGroup->id,
+                    'prompt'                 => $qData['prompt'],
+                    'section'                => $sectionType,
+                    'part_number'            => $partNumber,
+                    'question_type'          => 'multiple_choice',
+                    'difficulty'             => $qDetect['difficulty_level'],
+                    'difficulty_score'       => $qDetect['difficulty_score'],
+                    'difficulty_status'      => $qDetect['difficulty_status'],
+                    'difficulty_source'      => 'auto',
+                    'difficulty_factors'     => $qDetect['difficulty_factors'],
+                    'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
+                    'points'                 => 1,
+                    'explanation'            => $qData['explanation'] ?? null,
                 ]);
 
                 $correctChoiceIdx = $qData['correct_choice'] ?? 0;

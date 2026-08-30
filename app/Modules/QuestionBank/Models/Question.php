@@ -52,6 +52,11 @@ class Question extends Model
         'part_number',
         'question_type',
         'difficulty',
+        'difficulty_score',
+        'difficulty_status',
+        'difficulty_source',
+        'difficulty_factors',
+        'difficulty_detected_at',
         'points',
         'explanation',
     ];
@@ -62,6 +67,9 @@ class Question extends Model
             'section' => SectionType::class,
             'question_type' => QuestionType::class,
             'difficulty' => DifficultyLevel::class,
+            'difficulty_score' => 'integer',
+            'difficulty_factors' => 'array',
+            'difficulty_detected_at' => 'datetime',
             'points' => 'integer',
             'part_number' => 'integer',
         ];

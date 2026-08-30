@@ -8,6 +8,7 @@ use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Assessment\Services\TestBuilderService;
 use App\Modules\QuestionBank\Models\Question;
+use App\Services\QuestionDifficultyDetectionService;
 use App\Services\ToeicQuestionValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -561,10 +562,12 @@ class TestBuilderController extends Controller
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
 
+        $detection = QuestionDifficultyDetectionService::detect($request->all());
+
         if ($request->filled('part_number')) {
             $toeicData = $request->all();
             $toeicData['prompt'] = $validated['prompt'];
-            $toeicData['difficulty'] = $validated['difficulty'] ?? 'medium';
+            $toeicData['difficulty'] = $detection['difficulty_level'];
             ToeicQuestionValidator::validate($toeicData);
             $partNumber = (int) $request->input('part_number');
             $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
@@ -610,19 +613,24 @@ class TestBuilderController extends Controller
         }
 
         $this->builderService->createAssessmentQuestion($section, [
-            'prompt'         => $validated['prompt'],
-            'section'        => $sectionType,
-            'part_number'    => $partNumber,
-            'question_type'  => $validated['question_type'],
-            'difficulty'     => $validated['difficulty'] ?? 'medium',
-            'points'         => $validated['points'] ?? 1,
-            'explanation'    => $validated['explanation'] ?? null,
-            'media_asset_id' => $validated['media_asset_id'] ?? null,
-            'image_url'      => $validated['image_url'] ?? null,
-            'audio_url'      => $validated['audio_url'] ?? null,
-            'passage_id'     => $validated['passage_id'] ?? null,
-            'passage_text'   => $validated['passage_text'] ?? null,
-            'choices'        => $choices,
+            'prompt'                 => $validated['prompt'],
+            'section'                => $sectionType,
+            'part_number'            => $partNumber,
+            'question_type'          => $validated['question_type'],
+            'difficulty'             => $detection['difficulty_level'],
+            'difficulty_score'       => $detection['difficulty_score'],
+            'difficulty_status'      => $detection['difficulty_status'],
+            'difficulty_source'      => 'auto',
+            'difficulty_factors'     => $detection['difficulty_factors'],
+            'difficulty_detected_at' => $detection['difficulty_detected_at'],
+            'points'                 => $validated['points'] ?? 1,
+            'explanation'            => $validated['explanation'] ?? null,
+            'media_asset_id'         => $validated['media_asset_id'] ?? null,
+            'image_url'              => $validated['image_url'] ?? null,
+            'audio_url'              => $validated['audio_url'] ?? null,
+            'passage_id'             => $validated['passage_id'] ?? null,
+            'passage_text'           => $validated['passage_text'] ?? null,
+            'choices'                => $choices,
         ]);
 
         return redirect()->route('teacher.tests.show', $test->id)
@@ -654,7 +662,7 @@ class TestBuilderController extends Controller
             'audio_script'    => ['nullable', 'string'],
             'questions'       => ['required', 'array', 'size:3'],
             'questions.*.prompt'         => ['required', 'string'],
-            'questions.*.difficulty'     => ['required', 'string'],
+            'questions.*.difficulty'     => ['nullable', 'string'],
             'questions.*.explanation'    => ['nullable', 'string'],
             'questions.*.choices'        => ['required', 'array', 'size:4'],
             'questions.*.correct_choice' => ['required'],
@@ -696,7 +704,7 @@ class TestBuilderController extends Controller
             'passages.*.order_in_group'=> ['nullable', 'integer'],
             'questions'        => ['required', 'array', 'min:2', 'max:5'],
             'questions.*.prompt'         => ['required', 'string'],
-            'questions.*.difficulty'     => ['required', 'string'],
+            'questions.*.difficulty'     => ['nullable', 'string'],
             'questions.*.explanation'    => ['nullable', 'string'],
             'questions.*.choices'        => ['required', 'array', 'size:4'],
             'questions.*.correct_choice' => ['required'],
@@ -978,10 +986,12 @@ class TestBuilderController extends Controller
             'section'        => ['nullable', 'string'],
         ]);
 
+        $detection = QuestionDifficultyDetectionService::detect($request->all(), $question);
+
         if ($request->filled('part_number')) {
             $toeicData = $request->all();
             $toeicData['prompt'] = $validated['prompt'];
-            $toeicData['difficulty'] = $validated['difficulty'] ?? $question->difficulty ?? 'medium';
+            $toeicData['difficulty'] = $detection['difficulty_level'];
             ToeicQuestionValidator::validate($toeicData, $question);
             $partNumber = (int) $request->input('part_number');
             $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
@@ -996,7 +1006,12 @@ class TestBuilderController extends Controller
         // Reuse existing Question ID (TASK 3 & TASK 9)
         $question->prompt = $validated['prompt'];
         if (isset($validated['question_type'])) $question->question_type = $validated['question_type'];
-        if (isset($validated['difficulty'])) $question->difficulty = $validated['difficulty'];
+        $question->difficulty = $detection['difficulty_level'];
+        $question->difficulty_score = $detection['difficulty_score'];
+        $question->difficulty_status = $detection['difficulty_status'];
+        $question->difficulty_source = 'auto';
+        $question->difficulty_factors = $detection['difficulty_factors'];
+        $question->difficulty_detected_at = $detection['difficulty_detected_at'];
         if (isset($validated['explanation'])) $question->explanation = $validated['explanation'];
         if (isset($validated['passage_id'])) $question->passage_id = $validated['passage_id'];
         if (isset($validated['passage_text'])) $question->passage_text = $validated['passage_text'];
