@@ -36,6 +36,7 @@ class MediaAsset extends Model
         'filename',
         'original_name',
         'mime_type',
+        'content_hash',
         'type',
         'category',
         'sub_category',

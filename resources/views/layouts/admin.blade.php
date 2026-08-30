@@ -712,6 +712,8 @@
     <!-- Global IAP Modal System -->
     <x-iap-modal />
 
+    @stack('modals')
+
     @stack('scripts')
 </body>
 </html>

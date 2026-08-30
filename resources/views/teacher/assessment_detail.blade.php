@@ -1163,8 +1163,9 @@
     </div>
 </div>
 
-{{-- Modal 6: General Asset Preview Modal --}}
-<div id="asset-preview-modal" class="hidden fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeAssetPreviewModal(event)">
+@push('modals')
+{{-- Modal 6: General Asset Preview Modal (Root Portal Layer) --}}
+<div id="asset-preview-modal" class="hidden fixed inset-0 z-[10002] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10002;" onclick="closeAssetPreviewModal(event)">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
         <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
             <div id="apm-title" class="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">Preview Asset</div>
@@ -1175,8 +1176,8 @@
     </div>
 </div>
 
-{{-- Modal 7: Question Media Picker Modal --}}
-<div id="question-media-picker-modal" class="hidden fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeQuestionMediaPicker(event)">
+{{-- Modal 7: Question Media Picker Modal (Root Portal Layer) --}}
+<div id="question-media-picker-modal" class="hidden fixed inset-0 z-[10001] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10001;" onclick="closeQuestionMediaPicker(event)">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
 
         {{-- Header --}}
@@ -1189,7 +1190,7 @@
                     <span>Attach Question Media</span>
                 </div>
                 <div class="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
-                    Upload a new file or select existing media from the Institutional Media Library.
+                    Upload a new working file or choose from existing media library.
                 </div>
             </div>
             <button type="button" onclick="closeQuestionMediaPicker()" aria-label="Close media picker" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -1200,10 +1201,15 @@
         {{-- SECTION A: UPLOAD NEW FILE --}}
         <div class="space-y-2">
             <div class="flex items-center justify-between">
-                <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    Upload New File
+                <div>
+                    <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        Upload New File
+                    </div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        New uploads are saved to My Media and can be attached immediately.
+                    </div>
                 </div>
-                <div id="qm-accepted-formats-label" class="text-[11px] text-slate-500 dark:text-slate-400">
+                <div id="qm-accepted-formats-label" class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
                     Max 10 MB
                 </div>
             </div>
@@ -1283,20 +1289,30 @@
         <div class="relative my-0.5">
             <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200 dark:border-slate-800"></div></div>
             <div class="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
-                <span class="bg-white dark:bg-slate-900 px-3 text-slate-400 dark:text-slate-500">OR CHOOSE FROM INSTITUTIONAL MEDIA LIBRARY</span>
+                <span class="bg-white dark:bg-slate-900 px-3 text-slate-400 dark:text-slate-500">OR CHOOSE EXISTING MEDIA</span>
             </div>
         </div>
 
-        {{-- SECTION B: INSTITUTIONAL MEDIA LIBRARY --}}
+        {{-- SECTION B: CHOOSE EXISTING MEDIA (SOURCE TABS + FILTERS) --}}
         <div class="space-y-2.5 flex-1 flex flex-col min-h-0">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between flex-wrap gap-2">
                 <div>
                     <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                        Choose from Institutional Media Library
+                        Choose Existing Media
                     </div>
                     <div class="text-[11px] text-slate-500 dark:text-slate-400">
-                        Select an existing governed media asset.
+                        Browse your working drafts or approved institutional media.
                     </div>
+                </div>
+
+                {{-- Source Selector Tabs: [ My Media ] [ Institutional Library ] --}}
+                <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700" role="tablist">
+                    <button type="button" id="qm-source-my-btn" onclick="setQuestionMediaSource('my', event)" role="tab" aria-selected="true" class="px-3 py-1 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-sm transition-all">
+                        My Media
+                    </button>
+                    <button type="button" id="qm-source-inst-btn" onclick="setQuestionMediaSource('institutional', event)" role="tab" aria-selected="false" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all">
+                        Institutional Library
+                    </button>
                 </div>
             </div>
 
@@ -1310,7 +1326,7 @@
                     <button type="button" onclick="filterQuestionMediaModal('pdf', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">PDFs</button>
                 </div>
                 <div class="relative min-w-[200px]">
-                    <input type="text" id="qm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    <input type="text" id="qm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
             </div>
@@ -1327,15 +1343,39 @@
         </div>
     </div>
 </div>
+@endpush
 
 <script>
     let sectionMediaLibrary = [];
     let questionMediaLibrary = [];
     let currentAsmSectionId = null;
     let currentQuestionMediaTargetMode = 'create';
+    let currentQuestionMediaSource = 'my';
+    let currentQuestionMediaType = 'all';
+
+    function setQuestionMediaSource(source, e = null) {
+        currentQuestionMediaSource = source;
+        const myBtn = document.getElementById('qm-source-my-btn');
+        const instBtn = document.getElementById('qm-source-inst-btn');
+        if (myBtn && instBtn) {
+            if (source === 'my') {
+                myBtn.className = 'px-3 py-1 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-sm transition-all';
+                myBtn.setAttribute('aria-selected', 'true');
+                instBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all';
+                instBtn.setAttribute('aria-selected', 'false');
+            } else {
+                instBtn.className = 'px-3 py-1 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-sm transition-all';
+                instBtn.setAttribute('aria-selected', 'true');
+                myBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all';
+                myBtn.setAttribute('aria-selected', 'false');
+            }
+        }
+        loadQuestionMediaList(currentQuestionMediaType);
+    }
 
     function openQuestionMediaPicker(mode = 'create', defaultType = 'all') {
         currentQuestionMediaTargetMode = mode;
+        currentQuestionMediaType = defaultType;
         const modal = document.getElementById('question-media-picker-modal');
         if (modal) {
             modal.classList.remove('hidden');
@@ -1357,7 +1397,7 @@
         }
 
         clearQuestionMediaFileSelection();
-        fetchQuestionMediaLibrary(defaultType);
+        loadQuestionMediaList(defaultType);
     }
 
     function closeQuestionMediaPicker(e) {
@@ -1494,15 +1534,12 @@
         }
     }
 
-    function fetchQuestionMediaLibrary(defaultType = 'all') {
+    function loadQuestionMediaList(defaultType = 'all') {
         const container = document.getElementById('qm-media-list-container');
-        if (questionMediaLibrary.length > 0) {
-            filterQuestionMediaModal(defaultType);
-            return;
-        }
-
+        if (!container) return;
         container.innerHTML = '<div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>';
-        fetch('/admin/media/list')
+
+        fetch(`/admin/media/list?source=${currentQuestionMediaSource}`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && Array.isArray(data.data)) {
@@ -1518,6 +1555,7 @@
     }
 
     function filterQuestionMediaModal(type, e = null) {
+        currentQuestionMediaType = type;
         const buttons = document.querySelectorAll('.qm-filter-btn');
         buttons.forEach(btn => {
             btn.className = 'qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold transition-colors';

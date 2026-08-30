@@ -528,7 +528,8 @@
     </div>
 </div>
 
-{{-- General Asset Preview Modal --}}
+@push('modals')
+{{-- General Asset Preview Modal (Root Portal Layer) --}}
 <div id="asset-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:10002;align-items:center;justify-content:center;padding:1.5rem;" onclick="closeAssetPreviewModal(event)">
     <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1rem;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.15);" onclick="event.stopPropagation()">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #e2e8f0;padding-bottom:.6rem;">
@@ -540,7 +541,7 @@
     </div>
 </div>
 
-{{-- Question Media Picker Modal --}}
+{{-- Question Media Picker Modal (Root Portal Layer) --}}
 <div id="question-media-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.7);backdrop-filter:blur(4px);z-index:10001;align-items:center;justify-content:center;padding:1rem;" onclick="closeQuestionMediaPicker(event)">
     <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;max-width:720px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.18);gap:1rem;" onclick="event.stopPropagation()">
 
@@ -554,7 +555,7 @@
                     <span>Attach Question Media</span>
                 </div>
                 <div style="font-size:.75rem;color:#64748b;margin-top:.25rem;font-weight:500;">
-                    Upload a new file or select existing media from the Institutional Media Library.
+                    Upload a new working file or choose from existing media library.
                 </div>
             </div>
             <button type="button" onclick="closeQuestionMediaPicker()" aria-label="Close media picker" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;line-height:1;padding:.25rem;border-radius:.35rem;">✕</button>
@@ -563,10 +564,15 @@
         {{-- SECTION A: UPLOAD NEW FILE --}}
         <div style="display:flex;flex-direction:column;gap:.5rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#1e293b;">
-                    Upload New File
+                <div>
+                    <div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#1e293b;">
+                        Upload New File
+                    </div>
+                    <div style="font-size:.7rem;color:#64748b;margin-top:.15rem;">
+                        New uploads are saved to My Media and can be attached immediately.
+                    </div>
                 </div>
-                <div id="eqm-accepted-formats-label" style="font-size:.7rem;color:#64748b;">
+                <div id="eqm-accepted-formats-label" style="font-size:.7rem;color:#64748b;font-weight:700;">
                     Max 10 MB
                 </div>
             </div>
@@ -646,20 +652,30 @@
         <div style="position:relative;margin:.25rem 0;text-align:center;">
             <div style="position:absolute;top:50%;left:0;right:0;border-top:1px solid #e2e8f0;z-index:1;"></div>
             <span style="position:relative;z-index:2;background:#ffffff;padding:0 .75rem;font-size:.68rem;font-weight:900;letter-spacing:.05em;color:#94a3b8;text-transform:uppercase;">
-                OR CHOOSE FROM INSTITUTIONAL MEDIA LIBRARY
+                OR CHOOSE EXISTING MEDIA
             </span>
         </div>
 
-        {{-- SECTION B: INSTITUTIONAL MEDIA LIBRARY --}}
+        {{-- SECTION B: CHOOSE EXISTING MEDIA (SOURCE TABS + FILTERS) --}}
         <div style="display:flex;flex-direction:column;gap:.6rem;flex:1;min-height:0;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
                 <div>
                     <div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#1e293b;">
-                        Choose from Institutional Media Library
+                        Choose Existing Media
                     </div>
                     <div style="font-size:.7rem;color:#64748b;">
-                        Select an existing governed media asset.
+                        Browse your working drafts or approved institutional media.
                     </div>
+                </div>
+
+                {{-- Source Selector Tabs: [ My Media ] [ Institutional Library ] --}}
+                <div style="display:flex;align-items:center;gap:.25rem;padding:.2rem;background:#f1f5f9;border-radius:.5rem;border:1px solid #cbd5e1;" role="tablist">
+                    <button type="button" id="eqm-source-my-btn" onclick="setEditorMediaSource('my', event)" role="tab" aria-selected="true" style="padding:.25rem .65rem;border-radius:.4rem;font-size:.72rem;font-weight:800;background:#4f46e5;color:#fff;border:none;cursor:pointer;">
+                        My Media
+                    </button>
+                    <button type="button" id="eqm-source-inst-btn" onclick="setEditorMediaSource('institutional', event)" role="tab" aria-selected="false" style="padding:.25rem .65rem;border-radius:.4rem;font-size:.72rem;font-weight:700;background:transparent;color:#475569;border:none;cursor:pointer;">
+                        Institutional Library
+                    </button>
                 </div>
             </div>
 
@@ -673,7 +689,7 @@
                     <button type="button" onclick="filterQuestionMediaModal('pdf', event)" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">PDFs</button>
                 </div>
                 <div style="position:relative;min-width:180px;">
-                    <input type="text" id="eqm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." style="padding:.35rem .7rem .35rem 1.8rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.45rem;color:#0f172a;font-size:.75rem;width:100%;box-sizing:border-box;">
+                    <input type="text" id="eqm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media..." style="padding:.35rem .7rem .35rem 1.8rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.45rem;color:#0f172a;font-size:.75rem;width:100%;box-sizing:border-box;">
                     <svg style="position:absolute;left:.55rem;top:.55rem;width:.75rem;height:.75rem;color:#94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
             </div>
@@ -685,16 +701,50 @@
         </div>
 
         {{-- Footer --}}
-        <div style="display:flex;justify-content:flex-end;gap:.75rem;border-top:1px solid #e2e8f0;padding-top:.75rem;">
-            <button type="button" onclick="closeQuestionMediaPicker()" style="padding:.45rem 1rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.78rem;font-weight:700;cursor:pointer;">Close</button>
+        <div style="display:flex;justify-content:flex-end;gap:.5rem;border-top:1px solid #e2e8f0;padding-top:.75rem;">
+            <button type="button" onclick="closeQuestionMediaPicker()" style="padding:.45rem 1.1rem;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:.6rem;font-size:.75rem;font-weight:700;cursor:pointer;">Close</button>
         </div>
     </div>
 </div>
+@endpush
 
 <script>
 let questionMediaLibrary = [];
+let currentEditorMediaSource = 'my';
+let currentEditorMediaType = 'all';
+
+function setEditorMediaSource(source, e = null) {
+    currentEditorMediaSource = source;
+    const myBtn = document.getElementById('eqm-source-my-btn');
+    const instBtn = document.getElementById('eqm-source-inst-btn');
+    if (myBtn && instBtn) {
+        if (source === 'my') {
+            myBtn.style.background = '#4f46e5';
+            myBtn.style.color = '#ffffff';
+            myBtn.style.fontWeight = '800';
+            myBtn.setAttribute('aria-selected', 'true');
+            instBtn.style.background = 'transparent';
+            instBtn.style.color = '#475569';
+            instBtn.style.fontWeight = '700';
+            instBtn.setAttribute('aria-selected', 'false');
+        } else {
+            instBtn.style.background = '#4f46e5';
+            instBtn.style.color = '#ffffff';
+            instBtn.style.fontWeight = '800';
+            instBtn.setAttribute('aria-selected', 'true');
+            myBtn.style.background = 'transparent';
+            myBtn.style.color = '#475569';
+            myBtn.style.fontWeight = '700';
+            myBtn.setAttribute('aria-selected', 'false');
+        }
+    }
+    fetchQuestionMediaLibrary(() => {
+        filterQuestionMediaModal(currentEditorMediaType);
+    });
+}
 
 function openQuestionMediaPicker(defaultType = 'all') {
+    currentEditorMediaType = defaultType;
     const modal = document.getElementById('question-media-picker-modal');
     if (modal) modal.style.display = 'flex';
 
@@ -847,14 +897,8 @@ function handleEditorMediaDrop(e) {
 
 function fetchQuestionMediaLibrary(onLoaded) {
     const container = document.getElementById('eqm-media-list-container');
-    if (questionMediaLibrary.length > 0) {
-        renderQuestionMediaGrid(questionMediaLibrary);
-        if (typeof onLoaded === 'function') onLoaded();
-        return;
-    }
-
     container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>';
-    fetch('/admin/media/list')
+    fetch(`/admin/media/list?source=${currentEditorMediaSource}`)
         .then(res => res.json())
         .then(data => {
             if (data.success && Array.isArray(data.data)) {
@@ -871,6 +915,7 @@ function fetchQuestionMediaLibrary(onLoaded) {
 }
 
 function filterQuestionMediaModal(type, e = null) {
+    currentEditorMediaType = type;
     const buttons = document.querySelectorAll('.eqm-filter-btn');
     buttons.forEach(btn => {
         btn.style.background = '#f1f5f9';

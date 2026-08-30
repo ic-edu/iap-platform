@@ -134,6 +134,7 @@ class MediaController extends Controller
     public function list(Request $request): JsonResponse
     {
         $user     = $request->user();
+        $source   = $request->query('source', 'all');
         $type     = $request->query('type');
         $examType = $request->query('exam_type');
         $category = $request->query('category');
@@ -141,13 +142,25 @@ class MediaController extends Controller
 
         $query = MediaAsset::active()->latest()->take(100);
 
-        if ($user && $user->hasRole('teacher')) {
-            $query->where(function($q) use ($user) {
-                $q->where('uploaded_by', $user->id)
-                  ->orWhere('approval_status', 'approved');
-            });
-        } else {
+        if ($source === 'my') {
+            if ($user && $user->hasRole('teacher')) {
+                $query->where('uploaded_by', $user->id)
+                      ->whereIn('approval_status', ['draft', 'working', 'pending_review', 'revision_requested', 'rejected', null]);
+            } else {
+                $query->where('uploaded_by', $user?->id ?? 0);
+            }
+        } elseif ($source === 'institutional') {
             $query->where('approval_status', 'approved');
+        } else {
+            // Default backward-compatible fallback
+            if ($user && $user->hasRole('teacher')) {
+                $query->where(function($q) use ($user) {
+                    $q->where('uploaded_by', $user->id)
+                      ->orWhere('approval_status', 'approved');
+                });
+            } else {
+                $query->where('approval_status', 'approved');
+            }
         }
 
         if ($type && $type !== 'all') {
@@ -175,6 +188,8 @@ class MediaController extends Controller
             'type'           => $m->type,
             'exam_type'      => strtoupper($m->exam_type ?? 'GENERAL'),
             'category'       => $m->category ?? 'General',
+            'version'        => $m->version ?? '1.0',
+            'approval_status'=> $m->approval_status ?? 'draft',
             'content_text'   => $m->content_text,
             'size'           => $m->humanSize(),
             'uploaded_at'    => $m->created_at?->format('Y-m-d H:i'),
@@ -300,16 +315,54 @@ class MediaController extends Controller
             }
         }
 
-        // 6. Secure Storage and Transactional MediaAsset Creation
+        // 6. SHA-256 Content Hash Calculation & Same-Owner Deduplication
+        $contentHash = hash_file('sha256', $realPath);
+
         \DB::beginTransaction();
         try {
+            // Check for existing asset by same owner with identical content hash
+            $existingAsset = MediaAsset::where('uploaded_by', $user->id)
+                ->where('content_hash', $contentHash)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingAsset) {
+                ActivityLogger::log('media_reused', "Media reused from My Media: {$existingAsset->original_name}", $user);
+                \DB::commit();
+
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success'  => true,
+                        'reused'   => true,
+                        'message'  => 'Existing file reused from My Media.',
+                        'id'       => $existingAsset->id,
+                        'url'      => $existingAsset->publicUrl(),
+                        'filename' => $existingAsset->original_name,
+                        'title'    => $existingAsset->title,
+                        'type'     => $existingAsset->type,
+                        'size'     => $existingAsset->humanSize(),
+                    ]);
+                }
+
+                return redirect()->back()->with('status', "Existing media '{$existingAsset->title}' reused from My Media.");
+            }
+
+            // Safe Versioning for same filename with different content
+            $originalName = basename($file->getClientOriginalName());
+            $priorAssetsCount = MediaAsset::where('uploaded_by', $user->id)
+                ->where('original_name', $originalName)
+                ->count();
+            $version = $priorAssetsCount > 0 ? (string) number_format(1.0 + ($priorAssetsCount * 1.0), 1) : '1.0';
+
             $path = $file->store('question-media', 'public');
             $type = $this->determineFileType($ext, $mime);
 
             $asset = MediaAsset::create([
                 'filename'        => basename($path),
-                'original_name'   => basename($file->getClientOriginalName()),
-                'title'           => $request->input('title') ?: basename($file->getClientOriginalName()),
+                'original_name'   => $originalName,
+                'title'           => $request->input('title') ?: $originalName,
+                'content_hash'    => $contentHash,
                 'mime_type'       => $mime,
                 'type'            => $type,
                 'category'        => $request->input('category', 'General Assets'),
@@ -319,7 +372,7 @@ class MediaController extends Controller
                 'size'            => $file->getSize(),
                 'status'          => 'active',
                 'approval_status' => 'draft',
-                'version'         => '1.0',
+                'version'         => $version,
                 'uploaded_by'     => $user->id,
             ]);
 
