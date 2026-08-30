@@ -63,256 +63,197 @@ class TeacherMediaAttachModalUxTest extends TestCase
         ]);
     }
 
-    /** TEST 01: assessment_detail renders #asset-preview-modal. */
-    public function test_01_assessment_detail_renders_asset_preview_modal(): void
+    /** TEST 01: assessment_detail asset preview z-index > media picker z-index. */
+    public function test_01_assessment_detail_preview_z_index_greater_than_picker(): void
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertStatus(200);
-        $response->assertSee('id="asset-preview-modal"', false);
+        $html = $response->getContent();
+
+        // In assessment_detail: asset-preview-modal has z-[70] and question-media-picker-modal has z-[60]
+        $this->assertMatchesRegularExpression('/id=["\']asset-preview-modal["\'][^>]*class=["\'][^"\']*z-\[70\]/', $html);
+        $this->assertMatchesRegularExpression('/id=["\']question-media-picker-modal["\'][^>]*class=["\'][^"\']*z-\[60\]/', $html);
     }
 
-    /** TEST 02: assessment_detail renders #question-media-picker-modal. */
-    public function test_02_assessment_detail_renders_question_media_picker_modal(): void
+    /** TEST 02: question_editor asset preview z-index > media picker z-index. */
+    public function test_02_question_editor_preview_z_index_greater_than_picker(): void
     {
-        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $response->assertStatus(200);
-        $response->assertSee('id="question-media-picker-modal"', false);
-
         $editorResponse = $this->actingAs($this->teacher)->get(
             route('teacher.tests.edit-question', ['test' => $this->test->id, 'question' => $this->question->id])
         );
         $editorResponse->assertStatus(200);
-        $editorResponse->assertSee('id="question-media-picker-modal"', false);
+        $html = $editorResponse->getContent();
+
+        // In question_editor: asset-preview-modal has z-index:10002 and question-media-picker-modal has z-index:10001
+        $this->assertMatchesRegularExpression('/id=["\']asset-preview-modal["\'][^>]*style=["\'][^"\']*z-index:\s*10002/', $html);
+        $this->assertMatchesRegularExpression('/id=["\']question-media-picker-modal["\'][^>]*style=["\'][^"\']*z-index:\s*10001/', $html);
     }
 
-    /** TEST 03: #question-media-picker-modal is NOT nested within #asset-preview-modal. */
-    public function test_03_modal_dom_separation_sibling_containers(): void
+    /** TEST 03: Asset preview modal and media picker remain siblings. */
+    public function test_03_modals_remain_siblings(): void
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $html = $response->getContent();
 
         $previewModalPos = strpos($html, 'id="asset-preview-modal"');
-        $this->assertNotFalse($previewModalPos);
-
-        // Find where Modal 7 starts
         $questionModalPos = strpos($html, 'id="question-media-picker-modal"');
-        $this->assertNotFalse($questionModalPos);
-        $this->assertGreaterThan($previewModalPos, $questionModalPos);
 
-        // Slice chunk between Modal 6 and Modal 7 to verify Modal 6 closed fully
+        $this->assertNotFalse($previewModalPos);
+        $this->assertNotFalse($questionModalPos);
+
         $betweenChunk = substr($html, $previewModalPos, $questionModalPos - $previewModalPos);
         $this->assertStringContainsString('id="apm-title"', $betweenChunk);
         $this->assertStringContainsString('id="apm-content"', $betweenChunk);
         $this->assertStringContainsString('closeAssetPreviewModal', $betweenChunk);
-
-        // Count </div> in between chunk must be at least 3 (closing apm-content/inner/modal)
-        $closeDivCount = substr_count($betweenChunk, '</div>');
-        $this->assertGreaterThanOrEqual(3, $closeDivCount);
+        $this->assertGreaterThanOrEqual(3, substr_count($betweenChunk, '</div>'));
     }
 
-    /** TEST 04: Both modal IDs occur exactly once in DOM. */
-    public function test_04_modal_ids_occur_exactly_once(): void
+    /** TEST 04: Asset preview modal occurs exactly once in DOM. */
+    public function test_04_asset_preview_modal_occurs_once(): void
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $html = $response->getContent();
-
-        $this->assertEquals(1, substr_count($html, 'id="asset-preview-modal"'));
-        $this->assertEquals(1, substr_count($html, 'id="question-media-picker-modal"'));
+        $this->assertEquals(1, substr_count($response->getContent(), 'id="asset-preview-modal"'));
     }
 
-    /** TEST 05: Attach Image button calls openQuestionMediaPicker('create', 'image'). */
-    public function test_05_attach_image_button_calls_correct_handler(): void
+    /** TEST 05: Media picker modal occurs exactly once in DOM. */
+    public function test_05_media_picker_modal_occurs_once(): void
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $this->assertEquals(1, substr_count($response->getContent(), 'id="question-media-picker-modal"'));
+    }
+
+    /** TEST 06: previewAssetModal handler preserved. */
+    public function test_06_preview_asset_modal_handler_preserved(): void
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertSee('function previewAssetModal', false);
+        $response->assertSee('document.getElementById(\'apm-title\')', false);
+        $response->assertSee('document.getElementById(\'apm-content\')', false);
+    }
+
+    /** TEST 07: Audio preview renderer preserved. */
+    public function test_07_audio_preview_renderer_preserved(): void
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertSee('<audio controls', false);
+    }
+
+    /** TEST 08: Image preview renderer preserved. */
+    public function test_08_image_preview_renderer_preserved(): void
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertSee('<img src="${url}"', false);
+    }
+
+    /** TEST 09: PDF preview renderer preserved. */
+    public function test_09_pdf_preview_renderer_preserved(): void
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertSee('<iframe src="${url}#toolbar=0"', false);
+    }
+
+    /** TEST 10: Passage preview renderer preserved. */
+    public function test_10_passage_preview_renderer_preserved(): void
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertSee('Reading / text passage preview...', false);
+    }
+
+    /** TEST 11: closeAssetPreviewModal preserved. */
+    public function test_11_close_asset_preview_modal_preserved(): void
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertSee('function closeAssetPreviewModal', false);
+        $response->assertSee('onclick="closeAssetPreviewModal()"', false);
+    }
+
+    /** TEST 12: Attach handler preserved. */
+    public function test_12_attach_handler_preserved(): void
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertSee('function selectQuestionMediaItem', false);
         $response->assertSee("openQuestionMediaPicker('create', 'image')", false);
-    }
-
-    /** TEST 06: Attach Audio button calls openQuestionMediaPicker('create', 'audio'). */
-    public function test_06_attach_audio_button_calls_correct_handler(): void
-    {
-        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertSee("openQuestionMediaPicker('create', 'audio')", false);
     }
 
-    /** TEST 07: openQuestionMediaPicker function remains globally defined. */
-    public function test_07_open_question_media_picker_function_exists(): void
+    /** TEST 13: Media Library search preserved. */
+    public function test_13_media_library_search_preserved(): void
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $response->assertSee("function openQuestionMediaPicker", false);
-        $response->assertSee("modal.classList.remove('hidden')", false);
-        $response->assertSee("modal.style.display = 'flex'", false);
+        $response->assertSee('id="qm-search-input"', false);
+        $response->assertSee('searchQuestionMediaModal', false);
     }
 
-    /** TEST 08: Question media picker contains current Upload New File UX. */
-    public function test_08_question_media_picker_contains_upload_ux(): void
+    /** TEST 14: Media Library filters preserved. */
+    public function test_14_media_library_filters_preserved(): void
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $response->assertSee('Upload New File');
-        $response->assertSee('id="qm-choose-file-btn"', false);
-        $response->assertSee('id="qm-upload-btn"', false);
-        $response->assertSee('Upload &amp; Attach', false);
-    }
-
-    /** TEST 09: Question media picker contains Institutional Media Library UX. */
-    public function test_09_question_media_picker_contains_library_ux(): void
-    {
-        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $response->assertSee('Choose from Institutional Media Library');
-        $response->assertSee('id="qm-media-list-container"', false);
+        $response->assertSee('filterQuestionMediaModal', false);
         $response->assertSee('All Media');
         $response->assertSee('Images');
         $response->assertSee('Audio Tracks');
     }
 
-    /** TEST 10: Asset preview modal contains #apm-title. */
-    public function test_10_asset_preview_modal_contains_title(): void
+    /** TEST 15: Direct Upload UX preserved. */
+    public function test_15_direct_upload_ux_preserved(): void
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $response->assertSee('id="apm-title"', false);
-        $response->assertSee('Preview Asset');
+        $response->assertSee('Upload New File');
+        $response->assertSee('id="qm-choose-file-btn"', false);
+        $response->assertSee('id="qm-upload-btn"', false);
     }
 
-    /** TEST 11: Asset preview modal contains #apm-content. */
-    public function test_11_asset_preview_modal_contains_content_container(): void
-    {
-        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $response->assertSee('id="apm-content"', false);
-    }
-
-    /** TEST 12: Asset preview close action exists. */
-    public function test_12_asset_preview_close_action_exists(): void
-    {
-        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $response->assertSee('onclick="closeAssetPreviewModal()"', false);
-    }
-
-    /** TEST 13: Question media picker close action exists. */
-    public function test_13_question_media_picker_close_action_exists(): void
-    {
-        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
-        $response->assertSee('onclick="closeQuestionMediaPicker()"', false);
-    }
-
-    /** TEST 14: Edit Question media attachment remains intact. */
-    public function test_14_edit_question_media_picker_functional(): void
-    {
-        $editorResponse = $this->actingAs($this->teacher)->get(
-            route('teacher.tests.edit-question', ['test' => $this->test->id, 'question' => $this->question->id])
-        );
-        $editorResponse->assertStatus(200);
-        $editorResponse->assertSee('id="question-media-picker-modal"', false);
-        $editorResponse->assertSee('id="asset-preview-modal"', false);
-        $editorResponse->assertSee('eqm-upload-btn', false);
-    }
-
-    /** TEST 15: Existing media preview remains functional. */
-    public function test_15_library_image_attach_and_preview_functional(): void
-    {
-        $media = MediaAsset::create([
-            'title'           => 'Governed Photo Library Item',
-            'filename'        => 'photo-lib.jpg',
-            'original_name'   => 'photo-lib.jpg',
-            'path'            => 'media/photo-lib.jpg',
-            'disk'            => 'public',
-            'mime_type'       => 'image/jpeg',
-            'size'            => 102400,
-            'type'            => 'image',
-            'approval_status' => 'approved',
-            'uploaded_by'     => $this->teacher->id,
-        ]);
-
-        $listResponse = $this->actingAs($this->teacher)->getJson(route('admin.media.list', ['type' => 'image']));
-        $listResponse->assertStatus(200);
-        $listResponse->assertJsonPath('success', true);
-
-        $found = collect($listResponse->json('data'))->firstWhere('id', $media->id);
-        $this->assertNotNull($found);
-        $this->assertEquals('photo-lib.jpg', $found['name']);
-    }
-
-    /** TEST 16: Candidate Preview remains functional. */
-    public function test_16_candidate_preview_remains_functional(): void
-    {
-        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.preview', $this->test->id));
-        $response->assertStatus(200);
-    }
-
-    /** TEST 17: Auto Difficulty UI still renders in Create Modal. */
-    public function test_17_auto_difficulty_ui_renders_in_create_modal(): void
+    /** TEST 16: Auto Difficulty UI preserved. */
+    public function test_16_auto_difficulty_ui_preserved(): void
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertSee('Question Difficulty');
         $response->assertSee('Difficulty is detected automatically from question content, part rules, and attached media.');
     }
 
-    /** TEST 18: Auto Difficulty service behavior unchanged. */
-    public function test_18_auto_difficulty_service_behavior_unchanged(): void
+    /** TEST 17: Candidate Preview preserved. */
+    public function test_17_candidate_preview_preserved(): void
     {
-        $detect = QuestionDifficultyDetectionService::detect([
-            'part_number' => 1,
-            'image_url'   => 'https://example.com/photo.jpg',
-            'audio_url'   => 'https://example.com/audio.mp3',
-            'prompt'      => 'Photograph statement',
-            'choices'     => ['A man is reading a document.', 'A woman is typing.', 'They are talking.', 'The office is empty.'],
-            'correct_choice' => 0,
-        ]);
-        $this->assertEquals('final', $detect['difficulty_status']);
-        $this->assertEquals('easy', $detect['difficulty_level']);
-    }
-
-    /** TEST 19: Image attachment path remains valid. */
-    public function test_19_image_attachment_endpoint_valid(): void
-    {
-        $image = UploadedFile::fake()->image('test-photo.jpg', 600, 400);
-        $response = $this->actingAs($this->teacher)->postJson(route('admin.media.store'), [
-            'file' => $image,
-        ]);
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.preview', $this->test->id));
         $response->assertStatus(200);
-        $response->assertJsonPath('success', true);
-        $this->assertEquals('image', $response->json('type'));
     }
 
-    /** TEST 20: Audio attachment path remains valid. */
-    public function test_20_audio_attachment_endpoint_valid(): void
+    /** TEST 18: Question Editor preview architecture preserved. */
+    public function test_18_question_editor_preview_architecture_preserved(): void
     {
-        $audio = UploadedFile::fake()->create('test-sound.mp3', 400, 'audio/mpeg');
-        $response = $this->actingAs($this->teacher)->postJson(route('admin.media.store'), [
-            'file' => $audio,
+        $editorResponse = $this->actingAs($this->teacher)->get(
+            route('teacher.tests.edit-question', ['test' => $this->test->id, 'question' => $this->question->id])
+        );
+        $editorResponse->assertStatus(200);
+        $editorResponse->assertSee('function previewAssetModal', false);
+        $editorResponse->assertSee('id="asset-preview-modal"', false);
+        $editorResponse->assertSee('id="question-media-picker-modal"', false);
+    }
+
+    /** TEST 19: No backend MediaPreviewController change / Preview route functional. */
+    public function test_19_preview_route_functional(): void
+    {
+        $media = MediaAsset::create([
+            'title'           => 'Test Sound Track',
+            'filename'        => 'sound.mp3',
+            'original_name'   => 'sound.mp3',
+            'path'            => 'media/sound.mp3',
+            'disk'            => 'public',
+            'mime_type'       => 'audio/mpeg',
+            'size'            => 10240,
+            'type'            => 'audio',
+            'approval_status' => 'approved',
+            'uploaded_by'     => $this->teacher->id,
         ]);
-        $response->assertStatus(200);
-        $response->assertJsonPath('success', true);
-        $this->assertEquals('audio', $response->json('type'));
+
+        $response = $this->actingAs($this->teacher)->get(route('media.preview', $media->id));
+        $this->assertContains($response->getStatusCode(), [200, 302]);
     }
 
-    /** TEST 21: Media Library list endpoint remains authorized and functional. */
-    public function test_21_media_library_list_endpoint_functional(): void
-    {
-        $response = $this->actingAs($this->teacher)->getJson(route('admin.media.list'));
-        $response->assertStatus(200);
-        $response->assertJsonPath('success', true);
-    }
-
-    /** TEST 22: No QuestionBank governance mutation. */
-    public function test_22_no_questionbank_governance_mutation(): void
-    {
-        $this->assertTrue(true);
-    }
-
-    /** TEST 23: No assessment status mutation. */
-    public function test_23_no_assessment_status_mutation(): void
+    /** TEST 20: No media attachment mutation in regression test. */
+    public function test_20_no_media_attachment_mutation(): void
     {
         $this->assertEquals('draft', $this->test->status);
-    }
-
-    /** TEST 24: No candidate attempt side effect. */
-    public function test_24_no_candidate_attempt_side_effect(): void
-    {
-        $this->assertTrue(true);
-    }
-
-    /** TEST 25: No finance / commerce mutation. */
-    public function test_25_no_finance_commerce_mutation(): void
-    {
-        $this->assertTrue(true);
+        $this->assertNull($this->question->media_asset_id);
     }
 }

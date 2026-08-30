@@ -529,7 +529,7 @@
 </div>
 
 {{-- General Asset Preview Modal --}}
-<div id="asset-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;padding:1.5rem;" onclick="closeAssetPreviewModal(event)">
+<div id="asset-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:10002;align-items:center;justify-content:center;padding:1.5rem;" onclick="closeAssetPreviewModal(event)">
     <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1rem;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.15);" onclick="event.stopPropagation()">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #e2e8f0;padding-bottom:.6rem;">
             <div id="apm-title" style="font-size:1rem;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Preview Asset</div>
