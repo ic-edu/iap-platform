@@ -52,9 +52,11 @@
                 </div>
             </div>
 
+            @if(Auth::user()?->hasAnyRole(['repository-manager', 'super-admin']))
             <a href="{{ route('admin.publications.question-banks') }}" class="block text-center py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-colors">
                 View Publication Queues →
             </a>
+            @endif
         </div>
         @endforeach
     </div>

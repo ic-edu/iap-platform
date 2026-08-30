@@ -119,8 +119,13 @@ class RoleDashboardRoutingAndWorkspaceIsolationTest extends TestCase
         $test->refresh();
         $this->assertEquals('approved', $test->status);
 
-        // 4. Admin publishes approved test
-        $this->actingAs($admin)->post(route('admin.tests.publish', $test))->assertRedirect(route('admin.tests.index'));
+        // 4. Operational Admin / RA CANNOT publish approved test (Governance Cleanup G1)
+        $this->actingAs($admin)->post(route('admin.tests.publish', $test))->assertStatus(403);
+
+        // 5. Repository Manager publishes approved test
+        $repoManager = User::factory()->create();
+        $repoManager->assignRole('repository-manager');
+        $this->actingAs($repoManager)->post(route('admin.tests.publish', $test))->assertRedirect(route('admin.tests.index'));
         $test->refresh();
         $this->assertEquals('published', $test->status);
         $this->assertTrue((bool) $test->is_published);

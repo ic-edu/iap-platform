@@ -271,8 +271,8 @@ class TestBuilderController extends Controller
     public function publish(Test $test): RedirectResponse
     {
         $user = request()->user();
-        if ($user && $user->hasRole('teacher')) {
-            abort(403, 'Teachers cannot publish assessments. Admin publication queue required.');
+        if (! $user || (! $user->hasRole('repository-manager') && ! $user->hasRole('super-admin'))) {
+            abort(403, 'Operational Admins and Teachers cannot publish assessments. Assessment publishing is strictly reserved for Repository Managers.');
         }
 
         if ($test->status !== 'approved') {

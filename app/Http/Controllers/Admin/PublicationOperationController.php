@@ -109,17 +109,17 @@ class PublicationOperationController extends Controller
     }
 
     /**
-     * Publish approved Assessment Test (Admin Operation - ADMIN-OPS-001 Section 11).
+     * Publish approved Assessment Test (Repository Manager Operation).
      */
     public function publishAssessment(Request $request, Test $test): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('admin') || $actor->hasRole('super-admin')) {
-            abort(403, 'Publishing Assessment Tests is strictly reserved for Operational Admins.');
+        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+            abort(403, 'Publishing Assessment Tests is strictly reserved for Repository Managers.');
         }
 
         if ($test->status !== 'approved') {
-            abort(403, 'Cannot publish: Assessment Test must be approved by Super Admin first.');
+            abort(403, 'Cannot publish: Assessment Test must be approved by Super Admin or Repository Manager first.');
         }
 
         $test->update([
@@ -144,7 +144,7 @@ class PublicationOperationController extends Controller
             try {
                 $test->creator->notify(new EnterpriseSystemNotification(
                     title: 'Assessment Published',
-                    message: "Your Assessment Test '{$test->title}' has been published live by Operational Admin {$actor->name}.",
+                    message: "Your Assessment Test '{$test->title}' has been published live by Repository Manager {$actor->name}.",
                     type: 'ASSESSMENT_PUBLISHED',
                     priority: 'HIGH',
                     entityType: 'assessment',
@@ -160,13 +160,13 @@ class PublicationOperationController extends Controller
     }
 
     /**
-     * Unpublish Assessment Test (Admin Operation).
+     * Unpublish Assessment Test (Repository Manager Operation).
      */
     public function unpublishAssessment(Request $request, Test $test): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('admin') || $actor->hasRole('super-admin')) {
-            abort(403, 'Unpublishing Assessment Tests is strictly reserved for Operational Admins.');
+        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+            abort(403, 'Unpublishing Assessment Tests is strictly reserved for Repository Managers.');
         }
 
         $test->update([
