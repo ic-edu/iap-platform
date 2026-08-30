@@ -212,15 +212,15 @@
                     </button>
                 </div>
                 <div id="choices-container" style="display:flex;flex-direction:column;gap:.6rem;">
-                    @php 
-                        $choicesList = $question->choices && $question->choices->isNotEmpty() 
-                            ? $question->choices 
+                    @php
+                        $choicesList = $question->choices && $question->choices->isNotEmpty()
+                            ? $question->choices
                             : collect([
                                 (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
                                 (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
                                 (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
                                 (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
-                            ]); 
+                            ]);
                     @endphp
                     @foreach($choicesList as $cIdx => $cObj)
                     @php
@@ -541,50 +541,152 @@
 </div>
 
 {{-- Question Media Picker Modal --}}
-<div id="question-media-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:10001;align-items:center;justify-content:center;padding:1rem;" onclick="closeQuestionMediaPicker(event)">
-    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.15);" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #e2e8f0;padding-bottom:.75rem;">
+<div id="question-media-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.7);backdrop-filter:blur(4px);z-index:10001;align-items:center;justify-content:center;padding:1rem;" onclick="closeQuestionMediaPicker(event)">
+    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:1.25rem;max-width:720px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.5rem;box-shadow:0 25px 60px rgba(0,0,0,.18);gap:1rem;" onclick="event.stopPropagation()">
+
+        {{-- Header --}}
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e2e8f0;padding-bottom:.75rem;">
             <div>
                 <div style="font-size:1.1rem;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:.5rem;">
-                    <span>📎</span> Attach Question Media
+                    <svg style="width:1.25rem;height:1.25rem;color:#4f46e5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                    </svg>
+                    <span>Attach Question Media</span>
                 </div>
-                <div style="font-size:.72rem;color:#64748b;margin-top:.2rem;">
-                    Select an Image (photograph) or Audio prompt from the Institutional Media Library, or upload directly.
+                <div style="font-size:.75rem;color:#64748b;margin-top:.25rem;font-weight:500;">
+                    Upload a new file or select existing media from the Institutional Media Library.
                 </div>
             </div>
-            <button type="button" onclick="closeQuestionMediaPicker()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;">×</button>
+            <button type="button" onclick="closeQuestionMediaPicker()" aria-label="Close media picker" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;line-height:1;padding:.25rem;border-radius:.35rem;">✕</button>
         </div>
 
-        {{-- Direct Upload Toggle Bar --}}
-        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.75rem 1rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
-            <div style="display:flex;align-items:center;gap:.5rem;">
-                <span style="font-size:1.1rem;">⬆️</span>
-                <input type="file" id="eqm-direct-file-input" accept="image/*,audio/*,application/pdf" style="font-size:.75rem;color:#334155;">
+        {{-- SECTION A: UPLOAD NEW FILE --}}
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#1e293b;">
+                    Upload New File
+                </div>
+                <div id="eqm-accepted-formats-label" style="font-size:.7rem;color:#64748b;">
+                    Max 10 MB
+                </div>
             </div>
-            <button type="button" id="eqm-upload-btn" onclick="uploadQuestionMediaFile()" style="padding:.4rem 1rem;background:#059669;color:#fff;border:none;border-radius:.45rem;font-size:.75rem;font-weight:800;cursor:pointer;">
-                Upload &amp; Attach
-            </button>
-        </div>
 
-        {{-- Library Filters & Search --}}
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
-            <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
-                <button type="button" onclick="filterQuestionMediaModal('all')" class="eqm-filter-btn active" style="padding:.35rem .7rem;background:#4f46e5;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
-                <button type="button" onclick="filterQuestionMediaModal('image')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🖼️ Images</button>
-                <button type="button" onclick="filterQuestionMediaModal('audio')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">🎵 Audio Tracks</button>
-                <button type="button" onclick="filterQuestionMediaModal('passage')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📖 Passages</button>
-                <button type="button" onclick="filterQuestionMediaModal('pdf')" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">📄 PDFs</button>
+            {{-- Dropzone Panel --}}
+            <div id="eqm-dropzone" ondragover="handleEditorMediaDragOver(event)" ondragleave="handleEditorMediaDragLeave(event)" ondrop="handleEditorMediaDrop(event)" style="background:#f8fafc;border:2px dashed #cbd5e1;border-radius:.85rem;padding:1.1rem;text-align:center;transition:all .2s ease;">
+
+                {{-- Accessible Native Input --}}
+                <input type="file" id="eqm-direct-file-input" accept="image/jpeg,image/png,image/webp,audio/mpeg,audio/mp3,audio/wav,audio/x-m4a,audio/m4a,application/pdf" onchange="handleEditorMediaFileSelect(this)" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;" aria-label="Select media file to upload">
+
+                {{-- State 1: Empty / No file selected --}}
+                <div id="eqm-empty-upload-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;">
+                    <div style="width:2.5rem;height:2.5rem;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;color:#4f46e5;">
+                        <svg style="width:1.25rem;height:1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-size:.8rem;font-weight:700;color:#1e293b;">
+                            Select a file to upload or drag and drop here
+                        </div>
+                        <div id="eqm-no-file-text" style="font-size:.72rem;color:#64748b;margin-top:.15rem;">
+                            No file selected
+                        </div>
+                        <div id="eqm-accepted-formats-text" style="font-size:.7rem;color:#94a3b8;font-family:monospace;margin-top:.25rem;">
+                            JPG, JPEG, PNG, WebP, MP3, M4A, WAV, PDF
+                        </div>
+                    </div>
+                    <div style="margin-top:.25rem;">
+                        <button type="button" id="eqm-choose-file-btn" onclick="document.getElementById('eqm-direct-file-input').click()" style="padding:.45rem 1.1rem;background:#4f46e5;color:#fff;border:none;border-radius:.6rem;font-size:.75rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 1px 2px rgba(0,0,0,.05);">
+                            <svg style="width:.9rem;height:.9rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Choose File</span>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- State 2: Selected File State --}}
+                <div id="eqm-selected-upload-state" style="display:none;background:#ffffff;border:1px solid #e2e8f0;border-radius:.65rem;padding:.75rem;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;">
+                        <div style="display:flex;align-items:center;gap:.75rem;min-width:0;text-align:left;">
+                            <div id="eqm-selected-icon-container" style="width:2.25rem;height:2.25rem;border-radius:.45rem;background:#eef2ff;display:flex;align-items:center;justify-content:center;color:#4f46e5;flex-shrink:0;">
+                                <svg style="width:1.15rem;height:1.15rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <div style="min-width:0;">
+                                <div style="display:flex;align-items:center;gap:.4rem;">
+                                    <span id="eqm-selected-type-badge" style="font-size:.65rem;font-weight:900;text-transform:uppercase;padding:.1rem .35rem;border-radius:.25rem;background:#e0e7ff;color:#3730a3;">FILE</span>
+                                    <span id="eqm-selected-filesize" style="font-size:.7rem;color:#64748b;font-family:monospace;"></span>
+                                </div>
+                                <div id="eqm-selected-filename" style="font-size:.8rem;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:.15rem;max-width:340px;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0;">
+                            <button type="button" onclick="document.getElementById('eqm-direct-file-input').click()" style="padding:.35rem .65rem;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">
+                                Change File
+                            </button>
+                            <button type="button" onclick="clearEditorMediaFileSelection()" style="padding:.35rem .65rem;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;" title="Remove selected file">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Action Row --}}
+                <div style="margin-top:.75rem;display:flex;justify-content:flex-end;align-items:center;gap:.5rem;">
+                    <button type="button" id="eqm-upload-btn" onclick="uploadQuestionMediaFile()" disabled aria-disabled="true" style="padding:.45rem 1.1rem;background:#e2e8f0;color:#94a3b8;border:1px solid #cbd5e1;border-radius:.6rem;font-size:.75rem;font-weight:800;cursor:not-allowed;display:inline-flex;align-items:center;gap:.4rem;transition:all .2s ease;">
+                        <svg style="width:.9rem;height:.9rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span>Upload &amp; Attach</span>
+                    </button>
+                </div>
+
+                {{-- Inline Error Box --}}
+                <div id="eqm-upload-error" style="display:none;background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:.5rem .75rem;border-radius:.55rem;font-size:.72rem;font-weight:700;text-align:left;margin-top:.6rem;"></div>
             </div>
-            <input type="text" id="eqm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." style="padding:.35rem .7rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.45rem;color:#0f172a;font-size:.75rem;min-width:180px;">
         </div>
 
-        {{-- Media Grid Container --}}
-        <div id="eqm-media-list-container" style="flex:1;min-height:220px;max-height:300px;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:.6rem;">
-            <div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>
+        {{-- VISUAL SEPARATOR --}}
+        <div style="position:relative;margin:.25rem 0;text-align:center;">
+            <div style="position:absolute;top:50%;left:0;right:0;border-top:1px solid #e2e8f0;z-index:1;"></div>
+            <span style="position:relative;z-index:2;background:#ffffff;padding:0 .75rem;font-size:.68rem;font-weight:900;letter-spacing:.05em;color:#94a3b8;text-transform:uppercase;">
+                OR CHOOSE FROM INSTITUTIONAL MEDIA LIBRARY
+            </span>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;gap:.75rem;border-top:1px solid #1e293b;padding-top:.75rem;margin-top:.75rem;">
-            <button type="button" onclick="closeQuestionMediaPicker()" style="padding:.5rem 1rem;background:#334155;color:#fff;border:none;border-radius:.45rem;font-size:.8rem;font-weight:700;cursor:pointer;">Close</button>
+        {{-- SECTION B: INSTITUTIONAL MEDIA LIBRARY --}}
+        <div style="display:flex;flex-direction:column;gap:.6rem;flex:1;min-height:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#1e293b;">
+                        Choose from Institutional Media Library
+                    </div>
+                    <div style="font-size:.7rem;color:#64748b;">
+                        Select an existing governed media asset.
+                    </div>
+                </div>
+            </div>
+
+            {{-- Library Filters & Search --}}
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+                <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+                    <button type="button" onclick="filterQuestionMediaModal('all', event)" class="eqm-filter-btn active" style="padding:.35rem .7rem;background:#4f46e5;color:#fff;border:none;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">All Media</button>
+                    <button type="button" onclick="filterQuestionMediaModal('image', event)" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">Images</button>
+                    <button type="button" onclick="filterQuestionMediaModal('audio', event)" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">Audio Tracks</button>
+                    <button type="button" onclick="filterQuestionMediaModal('passage', event)" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">Passages</button>
+                    <button type="button" onclick="filterQuestionMediaModal('pdf', event)" class="eqm-filter-btn" style="padding:.35rem .7rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.72rem;font-weight:700;cursor:pointer;">PDFs</button>
+                </div>
+                <div style="position:relative;min-width:180px;">
+                    <input type="text" id="eqm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." style="padding:.35rem .7rem .35rem 1.8rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.45rem;color:#0f172a;font-size:.75rem;width:100%;box-sizing:border-box;">
+                    <svg style="position:absolute;left:.55rem;top:.55rem;width:.75rem;height:.75rem;color:#94a3b8;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+
+            {{-- Media Grid Container --}}
+            <div id="eqm-media-list-container" style="flex:1;min-height:180px;max-height:260px;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:.65rem;padding:.75rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:.6rem;">
+                <div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">Loading media library...</div>
+            </div>
+        </div>
+
+        {{-- Footer --}}
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;border-top:1px solid #e2e8f0;padding-top:.75rem;">
+            <button type="button" onclick="closeQuestionMediaPicker()" style="padding:.45rem 1rem;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:.45rem;font-size:.78rem;font-weight:700;cursor:pointer;">Close</button>
         </div>
     </div>
 </div>
@@ -595,6 +697,21 @@ let questionMediaLibrary = [];
 function openQuestionMediaPicker(defaultType = 'all') {
     const modal = document.getElementById('question-media-picker-modal');
     if (modal) modal.style.display = 'flex';
+
+    const formatsText = document.getElementById('eqm-accepted-formats-text');
+    const formatsLabel = document.getElementById('eqm-accepted-formats-label');
+    if (defaultType === 'image') {
+        if (formatsText) formatsText.textContent = 'Accepted image formats: JPG, JPEG, PNG, WebP';
+        if (formatsLabel) formatsLabel.textContent = 'Max 10 MB (Image)';
+    } else if (defaultType === 'audio') {
+        if (formatsText) formatsText.textContent = 'Accepted audio formats: MP3, M4A, WAV';
+        if (formatsLabel) formatsLabel.textContent = 'Max 10 MB (Audio)';
+    } else {
+        if (formatsText) formatsText.textContent = 'JPG, JPEG, PNG, WebP, MP3, M4A, WAV, PDF';
+        if (formatsLabel) formatsLabel.textContent = 'Max 10 MB';
+    }
+
+    clearEditorMediaFileSelection();
     fetchQuestionMediaLibrary(() => {
         if (defaultType && defaultType !== 'all') {
             filterQuestionMediaModal(defaultType);
@@ -606,6 +723,125 @@ function closeQuestionMediaPicker(e) {
     if (!e || e.target === document.getElementById('question-media-picker-modal')) {
         const modal = document.getElementById('question-media-picker-modal');
         if (modal) modal.style.display = 'none';
+        clearEditorMediaFileSelection();
+    }
+}
+
+function handleEditorMediaFileSelect(input) {
+    const file = input?.files?.[0];
+    const emptyState = document.getElementById('eqm-empty-upload-state');
+    const selectedState = document.getElementById('eqm-selected-upload-state');
+    const filenameEl = document.getElementById('eqm-selected-filename');
+    const filesizeEl = document.getElementById('eqm-selected-filesize');
+    const typeBadgeEl = document.getElementById('eqm-selected-type-badge');
+    const uploadBtn = document.getElementById('eqm-upload-btn');
+    const errBox = document.getElementById('eqm-upload-error');
+
+    if (errBox) {
+        errBox.style.display = 'none';
+        errBox.textContent = '';
+    }
+
+    if (!file) {
+        clearEditorMediaFileSelection();
+        return;
+    }
+
+    const sizeFormatted = file.size > 1048576
+        ? (file.size / 1048576).toFixed(1) + ' MB'
+        : (file.size / 1024).toFixed(1) + ' KB';
+
+    let typeName = 'FILE';
+    const mime = file.type || '';
+    const nameLower = file.name.toLowerCase();
+    if (mime.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(nameLower)) {
+        typeName = 'IMAGE';
+    } else if (mime.startsWith('audio/') || /\.(mp3|m4a|wav)$/i.test(nameLower)) {
+        typeName = 'AUDIO';
+    } else if (mime === 'application/pdf' || /\.pdf$/i.test(nameLower)) {
+        typeName = 'PDF';
+    }
+
+    if (filenameEl) filenameEl.textContent = file.name;
+    if (filesizeEl) filesizeEl.textContent = sizeFormatted;
+    if (typeBadgeEl) typeBadgeEl.textContent = typeName;
+
+    if (emptyState) emptyState.style.display = 'none';
+    if (selectedState) selectedState.style.display = 'block';
+
+    if (uploadBtn) {
+        uploadBtn.disabled = false;
+        uploadBtn.removeAttribute('aria-disabled');
+        uploadBtn.style.background = '#059669';
+        uploadBtn.style.color = '#ffffff';
+        uploadBtn.style.border = 'none';
+        uploadBtn.style.cursor = 'pointer';
+        uploadBtn.style.boxShadow = '0 2px 4px rgba(5,150,105,.25)';
+    }
+}
+
+function clearEditorMediaFileSelection() {
+    const input = document.getElementById('eqm-direct-file-input');
+    if (input) input.value = '';
+
+    const emptyState = document.getElementById('eqm-empty-upload-state');
+    const selectedState = document.getElementById('eqm-selected-upload-state');
+    const uploadBtn = document.getElementById('eqm-upload-btn');
+    const errBox = document.getElementById('eqm-upload-error');
+
+    if (emptyState) emptyState.style.display = 'flex';
+    if (selectedState) selectedState.style.display = 'none';
+    if (errBox) {
+        errBox.style.display = 'none';
+        errBox.textContent = '';
+    }
+
+    if (uploadBtn) {
+        uploadBtn.disabled = true;
+        uploadBtn.setAttribute('aria-disabled', 'true');
+        uploadBtn.style.background = '#e2e8f0';
+        uploadBtn.style.color = '#94a3b8';
+        uploadBtn.style.border = '1px solid #cbd5e1';
+        uploadBtn.style.cursor = 'not-allowed';
+        uploadBtn.style.boxShadow = 'none';
+        uploadBtn.innerHTML = `
+            <svg style="width:.9rem;height:.9rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            <span>Upload &amp; Attach</span>
+        `;
+    }
+}
+
+function handleEditorMediaDragOver(e) {
+    e.preventDefault();
+    const dropzone = document.getElementById('eqm-dropzone');
+    if (dropzone) {
+        dropzone.style.borderColor = '#6366f1';
+        dropzone.style.background = '#eef2ff';
+    }
+}
+
+function handleEditorMediaDragLeave(e) {
+    e.preventDefault();
+    const dropzone = document.getElementById('eqm-dropzone');
+    if (dropzone) {
+        dropzone.style.borderColor = '#cbd5e1';
+        dropzone.style.background = '#f8fafc';
+    }
+}
+
+function handleEditorMediaDrop(e) {
+    e.preventDefault();
+    const dropzone = document.getElementById('eqm-dropzone');
+    if (dropzone) {
+        dropzone.style.borderColor = '#cbd5e1';
+        dropzone.style.background = '#f8fafc';
+    }
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const input = document.getElementById('eqm-direct-file-input');
+        if (input) {
+            input.files = e.dataTransfer.files;
+            handleEditorMediaFileSelect(input);
+        }
     }
 }
 
@@ -634,26 +870,33 @@ function fetchQuestionMediaLibrary(onLoaded) {
         });
 }
 
-function filterQuestionMediaModal(type) {
+function filterQuestionMediaModal(type, e = null) {
     const buttons = document.querySelectorAll('.eqm-filter-btn');
     buttons.forEach(btn => {
-        btn.style.background = '#1e293b';
-        btn.style.color = '#cbd5e1';
-        btn.style.border = '1px solid #334155';
+        btn.style.background = '#f1f5f9';
+        btn.style.color = '#475569';
+        btn.style.border = '1px solid #cbd5e1';
     });
-    
+
     // Highlight matching button
-    buttons.forEach(btn => {
-        if ((type === 'all' && btn.textContent.includes('All Media')) ||
-            (type === 'image' && btn.textContent.includes('Images')) ||
-            (type === 'audio' && btn.textContent.includes('Audio')) ||
-            (type === 'passage' && btn.textContent.includes('Passages')) ||
-            (type === 'pdf' && btn.textContent.includes('PDFs'))) {
-            btn.style.background = '#6366f1';
-            btn.style.color = '#fff';
-            btn.style.border = 'none';
-        }
-    });
+    if (e && e.target && e.target.classList.contains('eqm-filter-btn')) {
+        e.target.style.background = '#4f46e5';
+        e.target.style.color = '#ffffff';
+        e.target.style.border = 'none';
+    } else {
+        buttons.forEach(btn => {
+            const text = btn.textContent.toLowerCase();
+            if ((type === 'all' && text.includes('all')) ||
+                (type === 'image' && text.includes('images')) ||
+                (type === 'audio' && text.includes('audio')) ||
+                (type === 'passage' && text.includes('passages')) ||
+                (type === 'pdf' && text.includes('pdfs'))) {
+                btn.style.background = '#4f46e5';
+                btn.style.color = '#ffffff';
+                btn.style.border = 'none';
+            }
+        });
+    }
 
     const query = (document.getElementById('eqm-search-input')?.value || '').toLowerCase();
     let filtered = questionMediaLibrary;
@@ -678,41 +921,44 @@ function searchQuestionMediaModal(query) {
 function renderQuestionMediaGrid(items) {
     const container = document.getElementById('eqm-media-list-container');
     if (!items || items.length === 0) {
-        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">No media assets found.</div>';
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:.75rem;padding:2rem;">No media assets found in library.</div>';
         return;
     }
 
     container.innerHTML = '';
     items.forEach(item => {
         const card = document.createElement('div');
-        card.style.cssText = 'background:#131d31;border:1px solid #334155;border-radius:.55rem;padding:.65rem;display:flex;flex-direction:column;justify-content:space-between;gap:.4rem;';
+        card.style.cssText = 'background:#ffffff;border:1px solid #e2e8f0;border-radius:.65rem;padding:.75rem;display:flex;flex-direction:column;justify-content:space-between;gap:.5rem;box-shadow:0 1px 2px rgba(0,0,0,.03);';
 
-        let icon = '📎';
-        if (item.type === 'audio') icon = '🎵';
-        else if (item.type === 'image') icon = '🖼️';
-        else if (item.type === 'passage') icon = '📖';
-        else if (item.type === 'pdf') icon = '📄';
-
-        let previewHtml = '';
-        if (item.type === 'image') {
-            previewHtml = `<img src="${item.url}" style="width:100%;height:60px;object-fit:cover;border-radius:.35rem;border:1px solid #334155;margin-bottom:.3rem;">`;
+        let icon = '<svg style="width:.85rem;height:.85rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>';
+        if (item.type === 'audio') {
+            icon = '<svg style="width:.85rem;height:.85rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>';
+        } else if (item.type === 'image') {
+            icon = '<svg style="width:.85rem;height:.85rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+        } else if (item.type === 'pdf') {
+            icon = '<svg style="width:.85rem;height:.85rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>';
         }
 
         card.innerHTML = `
             <div>
-                ${previewHtml}
-                <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.25rem;">
-                    <span style="font-size:.65rem;font-weight:800;color:#818cf8;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);padding:.1rem .35rem;border-radius:.25rem;text-transform:uppercase;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
+                    <span style="font-size:.65rem;font-weight:800;color:#4338ca;background:#eef2ff;border:1px solid #c7d2fe;padding:.1rem .35rem;border-radius:.25rem;text-transform:uppercase;display:inline-flex;align-items:center;gap:.25rem;">
                         ${icon} ${item.type}
                     </span>
+                    <span style="font-size:.68rem;color:#64748b;font-weight:500;">${item.size || ''}</span>
                 </div>
-                <div style="font-size:.75rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.title || item.name}">
+                <div style="font-size:.78rem;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.title || item.name}">
                     ${item.title || item.name}
                 </div>
             </div>
-            <button type="button" onclick='applySelectedQuestionMedia(${JSON.stringify(item)})' style="margin-top:.4rem;padding:.35rem .6rem;background:#4f46e5;color:#fff;border:none;border-radius:.35rem;font-size:.72rem;font-weight:700;cursor:pointer;width:100%;text-align:center;">
-                Use This Media
-            </button>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.4rem;padding-top:.4rem;border-top:1px solid #f1f5f9;">
+                <button type="button" onclick="previewAssetModal('${item.id}', '${(item.title || item.name || '').replace(/'/g, "\\'")}', '${item.type}', '${item.url}')" style="padding:.25rem .55rem;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:.35rem;font-size:.7rem;font-weight:700;cursor:pointer;">
+                    Preview
+                </button>
+                <button type="button" onclick='applySelectedQuestionMedia(${JSON.stringify(item)})' style="padding:.25rem .75rem;background:#4f46e5;color:#fff;border:none;border-radius:.35rem;font-size:.7rem;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.05);">
+                    Attach
+                </button>
+            </div>
         `;
         container.appendChild(card);
     });
@@ -721,20 +967,37 @@ function renderQuestionMediaGrid(items) {
 function uploadQuestionMediaFile() {
     const fileInput = document.getElementById('eqm-direct-file-input');
     const file = fileInput?.files?.[0];
+    const btn = document.getElementById('eqm-upload-btn');
+    const errBox = document.getElementById('eqm-upload-error');
+
+    if (errBox) {
+        errBox.style.display = 'none';
+        errBox.textContent = '';
+    }
+
     if (!file) {
-        alert('Please select a file to upload first.');
+        if (errBox) {
+            errBox.textContent = '⚠️ Please select a file to upload first.';
+            errBox.style.display = 'block';
+        }
         return;
     }
 
-    const btn = document.getElementById('eqm-upload-btn');
     btn.disabled = true;
-    btn.innerHTML = 'Uploading...';
+    btn.setAttribute('aria-disabled', 'true');
+    btn.innerHTML = `
+        <svg style="width:.9rem;height:.9rem;animation:spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
+            <circle style="opacity:.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path style="opacity:.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Uploading...</span>
+    `;
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('_token', '{{ csrf_token() }}');
 
-    fetch('/admin/media', {
+    fetch('{{ route('admin.media.store') }}', {
         method: 'POST',
         body: formData,
         headers: {
@@ -751,8 +1014,6 @@ function uploadQuestionMediaFile() {
         return data;
     })
     .then(data => {
-        btn.disabled = false;
-        btn.innerHTML = 'Upload &amp; Attach';
         const assetData = data.asset || data;
         const assetId = assetData.id || data.id;
         if (data.success && assetId) {
@@ -761,19 +1022,32 @@ function uploadQuestionMediaFile() {
                 title: assetData.title || assetData.filename || assetData.original_name,
                 name: assetData.filename || assetData.original_name,
                 url: assetData.url || (assetId ? `/media/${assetId}/preview` : ''),
-                type: assetData.type
+                type: assetData.type,
+                size: assetData.size
             };
             questionMediaLibrary.unshift(item);
             applySelectedQuestionMedia(item);
-            fileInput.value = '';
+            clearEditorMediaFileSelection();
         } else {
-            alert(data.message || 'Error uploading media asset.');
+            if (errBox) {
+                errBox.textContent = '⚠️ ' + (data.message || 'Error uploading media asset.');
+                errBox.style.display = 'block';
+            }
         }
     })
     .catch((err) => {
+        if (errBox) {
+            errBox.textContent = '⚠️ ' + (err.message || 'Communication error while uploading media asset.');
+            errBox.style.display = 'block';
+        }
+    })
+    .finally(() => {
         btn.disabled = false;
-        btn.innerHTML = 'Upload &amp; Attach';
-        alert(err.message || 'Communication error while uploading media asset.');
+        btn.removeAttribute('aria-disabled');
+        btn.innerHTML = `
+            <svg style="width:.9rem;height:.9rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            <span>Upload &amp; Attach</span>
+        `;
     });
 }
 

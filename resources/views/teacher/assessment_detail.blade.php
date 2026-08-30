@@ -1167,57 +1167,153 @@
 <div id="asset-preview-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeAssetPreviewModal(event)">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
         <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div id="apm-title" class="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">Preview Asset</div>
-            <button type="button" onclick="closeAssetPreviewModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
-        </div>
-        <div id="apm-content" class="flex justify-center items-center min-h-[180px]">
-        </div>
-    </div>
-</div>
-
-{{-- Modal 7: Question Media Picker Modal --}}
+            <div id="apm-title" class="text-sm sm:text-base font-black text-slate{{-- Modal 7: Question Media Picker Modal --}}
 <div id="question-media-picker-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeQuestionMediaPicker(event)">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col p-6 sm:p-7 shadow-2xl space-y-4" onclick="event.stopPropagation()">
-        <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+
+        {{-- Header --}}
+        <div class="flex justify-between items-start pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
                 <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>📎</span> Attach Question Media
+                    <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                    </svg>
+                    <span>Attach Question Media</span>
                 </div>
-                <div class="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-                    Select an Image (photograph) or Audio prompt from the Institutional Media Library, or upload directly.
+                <div class="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
+                    Upload a new file or select existing media from the Institutional Media Library.
                 </div>
             </div>
-            <button type="button" onclick="closeQuestionMediaPicker()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
-        </div>
-
-        {{-- Direct Upload Toggle Bar --}}
-        <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex justify-between items-center flex-wrap gap-2.5">
-            <div class="flex items-center gap-2">
-                <span class="text-lg">⬆️</span>
-                <input type="file" id="qm-direct-file-input" accept="image/*,audio/*,application/pdf" class="text-xs text-slate-700 dark:text-slate-300">
-            </div>
-            <button type="button" id="qm-upload-btn" onclick="uploadQuestionMediaFile()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-sm">
-                Upload &amp; Attach
+            <button type="button" onclick="closeQuestionMediaPicker()" aria-label="Close media picker" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
-        {{-- Library Filters & Search --}}
-        <div class="flex gap-2 flex-wrap items-center justify-between">
-            <div class="flex gap-1.5 flex-wrap">
-                <button type="button" onclick="filterQuestionMediaModal('all', event)" class="qm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm">All Media</button>
-                <button type="button" onclick="filterQuestionMediaModal('image', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">🖼️ Images</button>
-                <button type="button" onclick="filterQuestionMediaModal('audio', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">🎵 Audio Tracks</button>
-                <button type="button" onclick="filterQuestionMediaModal('passage', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">📖 Passages</button>
-                <button type="button" onclick="filterQuestionMediaModal('pdf', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">📄 PDFs</button>
+        {{-- SECTION A: UPLOAD NEW FILE --}}
+        <div class="space-y-2">
+            <div class="flex items-center justify-between">
+                <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                    Upload New File
+                </div>
+                <div id="qm-accepted-formats-label" class="text-[11px] text-slate-500 dark:text-slate-400">
+                    Max 10 MB
+                </div>
             </div>
-            <input type="text" id="qm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." class="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs min-w-[180px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+
+            {{-- Dropzone / Upload Panel --}}
+            <div id="qm-dropzone" ondragover="handleQuestionMediaDragOver(event)" ondragleave="handleQuestionMediaDragLeave(event)" ondrop="handleQuestionMediaDrop(event)" class="bg-slate-50 dark:bg-slate-950/80 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4 transition-all">
+
+                {{-- Accessible Hidden Native Input --}}
+                <input type="file" id="qm-direct-file-input" accept="image/jpeg,image/png,image/webp,audio/mpeg,audio/mp3,audio/wav,audio/x-m4a,audio/m4a,application/pdf" onchange="handleQuestionMediaFileSelect(this)" class="sr-only" aria-label="Select media file to upload">
+
+                {{-- State 1: No file selected --}}
+                <div id="qm-empty-upload-state" class="flex flex-col items-center justify-center py-2 space-y-2.5 text-center">
+                    <div class="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Select a file to upload or drag and drop here
+                        </div>
+                        <div id="qm-no-file-text" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                            No file selected
+                        </div>
+                        <div id="qm-accepted-formats-text" class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-mono">
+                            JPG, JPEG, PNG, WebP, MP3, M4A, WAV, PDF
+                        </div>
+                    </div>
+                    <div class="pt-1">
+                        <button type="button" id="qm-choose-file-btn" onclick="document.getElementById('qm-direct-file-input').click()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-sm inline-flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Choose File</span>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- State 2: Selected file state (Hidden initially) --}}
+                <div id="qm-selected-upload-state" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div id="qm-selected-icon-container" class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <div class="min-w-0 text-left">
+                                <div class="flex items-center gap-2">
+                                    <span id="qm-selected-type-badge" class="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">FILE</span>
+                                    <span id="qm-selected-filesize" class="text-[11px] text-slate-500 dark:text-slate-400 font-mono"></span>
+                                </div>
+                                <div id="qm-selected-filename" class="text-xs font-extrabold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md mt-0.5"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" onclick="document.getElementById('qm-direct-file-input').click()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+                                Change File
+                            </button>
+                            <button type="button" onclick="clearQuestionMediaFileSelection()" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-lg border border-rose-200 dark:border-rose-900/40 transition-colors" title="Remove selected file">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Action Row --}}
+                <div class="mt-3 flex justify-end items-center gap-2">
+                    <button type="button" id="qm-upload-btn" onclick="uploadQuestionMediaFile()" disabled aria-disabled="true" class="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-extrabold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all inline-flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span>Upload &amp; Attach</span>
+                    </button>
+                </div>
+
+                {{-- Inline Error Box --}}
+                <div id="qm-upload-error" class="hidden bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 p-2.5 rounded-xl text-xs font-bold text-left mt-2"></div>
+            </div>
         </div>
 
-        {{-- Media Grid Container --}}
-        <div id="qm-media-list-container" class="flex-1 min-h-[220px] max-h-[300px] overflow-y-auto bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>
+        {{-- VISUAL SEPARATOR --}}
+        <div class="relative my-0.5">
+            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200 dark:border-slate-800"></div></div>
+            <div class="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
+                <span class="bg-white dark:bg-slate-900 px-3 text-slate-400 dark:text-slate-500">OR CHOOSE FROM INSTITUTIONAL MEDIA LIBRARY</span>
+            </div>
         </div>
 
+        {{-- SECTION B: INSTITUTIONAL MEDIA LIBRARY --}}
+        <div class="space-y-2.5 flex-1 flex flex-col min-h-0">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        Choose from Institutional Media Library
+                    </div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                        Select an existing governed media asset.
+                    </div>
+                </div>
+            </div>
+
+            {{-- Filters & Search --}}
+            <div class="flex gap-2 flex-wrap items-center justify-between">
+                <div class="flex gap-1.5 flex-wrap">
+                    <button type="button" onclick="filterQuestionMediaModal('all', event)" class="qm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm">All Media</button>
+                    <button type="button" onclick="filterQuestionMediaModal('image', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">Images</button>
+                    <button type="button" onclick="filterQuestionMediaModal('audio', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">Audio Tracks</button>
+                    <button type="button" onclick="filterQuestionMediaModal('passage', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">Passages</button>
+                    <button type="button" onclick="filterQuestionMediaModal('pdf', event)" class="qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">PDFs</button>
+                </div>
+                <div class="relative min-w-[200px]">
+                    <input type="text" id="qm-search-input" onkeyup="searchQuestionMediaModal(this.value)" placeholder="Search media library..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+
+            {{-- Media Grid Container --}}
+            <div id="qm-media-list-container" class="flex-1 min-h-[180px] max-h-[260px] overflow-y-auto bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>
+            </div>
+        </div>
+
+        {{-- Footer --}}
         <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
             <button type="button" onclick="closeQuestionMediaPicker()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Close</button>
         </div>
@@ -1237,6 +1333,22 @@
             modal.classList.remove('hidden');
             modal.style.display = 'flex';
         }
+
+        // Configure accepted formats context helper
+        const formatsText = document.getElementById('qm-accepted-formats-text');
+        const formatsLabel = document.getElementById('qm-accepted-formats-label');
+        if (defaultType === 'image') {
+            if (formatsText) formatsText.textContent = 'Accepted image formats: JPG, JPEG, PNG, WebP';
+            if (formatsLabel) formatsLabel.textContent = 'Max 10 MB (Image)';
+        } else if (defaultType === 'audio') {
+            if (formatsText) formatsText.textContent = 'Accepted audio formats: MP3, M4A, WAV';
+            if (formatsLabel) formatsLabel.textContent = 'Max 10 MB (Audio)';
+        } else {
+            if (formatsText) formatsText.textContent = 'JPG, JPEG, PNG, WebP, MP3, M4A, WAV, PDF';
+            if (formatsLabel) formatsLabel.textContent = 'Max 10 MB';
+        }
+
+        clearQuestionMediaFileSelection();
         fetchQuestionMediaLibrary(defaultType);
     }
 
@@ -1246,6 +1358,130 @@
             if (modal) {
                 modal.classList.add('hidden');
                 modal.style.display = 'none';
+            }
+            clearQuestionMediaFileSelection();
+        }
+    }
+
+    function handleQuestionMediaFileSelect(input) {
+        const file = input?.files?.[0];
+        const emptyState = document.getElementById('qm-empty-upload-state');
+        const selectedState = document.getElementById('qm-selected-upload-state');
+        const filenameEl = document.getElementById('qm-selected-filename');
+        const filesizeEl = document.getElementById('qm-selected-filesize');
+        const typeBadgeEl = document.getElementById('qm-selected-type-badge');
+        const uploadBtn = document.getElementById('qm-upload-btn');
+        const errBox = document.getElementById('qm-upload-error');
+
+        if (errBox) {
+            errBox.classList.add('hidden');
+            errBox.style.display = 'none';
+            errBox.textContent = '';
+        }
+
+        if (!file) {
+            clearQuestionMediaFileSelection();
+            return;
+        }
+
+        // Format file size
+        const sizeFormatted = file.size > 1048576
+            ? (file.size / 1048576).toFixed(1) + ' MB'
+            : (file.size / 1024).toFixed(1) + ' KB';
+
+        // Detect Type
+        let typeName = 'FILE';
+        const mime = file.type || '';
+        const nameLower = file.name.toLowerCase();
+        if (mime.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(nameLower)) {
+            typeName = 'IMAGE';
+        } else if (mime.startsWith('audio/') || /\.(mp3|m4a|wav)$/i.test(nameLower)) {
+            typeName = 'AUDIO';
+        } else if (mime === 'application/pdf' || /\.pdf$/i.test(nameLower)) {
+            typeName = 'PDF';
+        }
+
+        if (filenameEl) filenameEl.textContent = file.name;
+        if (filesizeEl) filesizeEl.textContent = sizeFormatted;
+        if (typeBadgeEl) typeBadgeEl.textContent = typeName;
+
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.style.display = 'none';
+        }
+        if (selectedState) {
+            selectedState.classList.remove('hidden');
+            selectedState.style.display = 'block';
+        }
+
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.removeAttribute('aria-disabled');
+            uploadBtn.className = 'px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-md shadow-emerald-500/20 cursor-pointer transition-all inline-flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1';
+        }
+    }
+
+    function clearQuestionMediaFileSelection() {
+        const input = document.getElementById('qm-direct-file-input');
+        if (input) input.value = '';
+
+        const emptyState = document.getElementById('qm-empty-upload-state');
+        const selectedState = document.getElementById('qm-selected-upload-state');
+        const uploadBtn = document.getElementById('qm-upload-btn');
+        const errBox = document.getElementById('qm-upload-error');
+
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.style.display = 'flex';
+        }
+        if (selectedState) {
+            selectedState.classList.add('hidden');
+            selectedState.style.display = 'none';
+        }
+        if (errBox) {
+            errBox.classList.add('hidden');
+            errBox.style.display = 'none';
+            errBox.textContent = '';
+        }
+
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+            uploadBtn.setAttribute('aria-disabled', 'true');
+            uploadBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <span>Upload &amp; Attach</span>
+            `;
+            uploadBtn.className = 'px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-extrabold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all inline-flex items-center gap-1.5';
+        }
+    }
+
+    function handleQuestionMediaDragOver(e) {
+        e.preventDefault();
+        const dropzone = document.getElementById('qm-dropzone');
+        if (dropzone) {
+            dropzone.classList.add('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-950/20');
+        }
+    }
+
+    function handleQuestionMediaDragLeave(e) {
+        e.preventDefault();
+        const dropzone = document.getElementById('qm-dropzone');
+        if (dropzone) {
+            dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-950/20');
+        }
+    }
+
+    function handleQuestionMediaDrop(e) {
+        e.preventDefault();
+        const dropzone = document.getElementById('qm-dropzone');
+        if (dropzone) {
+            dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-950/20');
+        }
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const input = document.getElementById('qm-direct-file-input');
+            if (input) {
+                input.files = e.dataTransfer.files;
+                handleQuestionMediaFileSelect(input);
             }
         }
     }
@@ -1276,10 +1512,22 @@
     function filterQuestionMediaModal(type, e = null) {
         const buttons = document.querySelectorAll('.qm-filter-btn');
         buttons.forEach(btn => {
-            btn.className = 'qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold';
+            btn.className = 'qm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold transition-colors';
         });
+
         if (e && e.target && e.target.classList.contains('qm-filter-btn')) {
             e.target.className = 'qm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm';
+        } else {
+            buttons.forEach(btn => {
+                const text = btn.textContent.toLowerCase();
+                if ((type === 'all' && text.includes('all')) ||
+                    (type === 'image' && text.includes('images')) ||
+                    (type === 'audio' && text.includes('audio')) ||
+                    (type === 'passage' && text.includes('passages')) ||
+                    (type === 'pdf' && text.includes('pdfs'))) {
+                    btn.className = 'qm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm';
+                }
+            });
         }
 
         const query = (document.getElementById('qm-search-input')?.value || '').toLowerCase();
@@ -1314,12 +1562,22 @@
             const card = document.createElement('div');
             card.className = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col justify-between gap-2.5';
 
-            const icon = media.type === 'audio' ? '🎵' : (media.type === 'image' ? '🖼️' : (media.type === 'pdf' ? '📄' : (media.type === 'passage' ? '📖' : '📎')));
+            let typeIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>';
+            if (media.type === 'audio') {
+                typeIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>';
+            } else if (media.type === 'image') {
+                typeIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+            } else if (media.type === 'pdf') {
+                typeIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>';
+            }
 
             card.innerHTML = `
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
-                        <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">${icon} ${media.type}</span>
+                        <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 inline-flex items-center gap-1">
+                            ${typeIconSvg}
+                            <span>${media.type}</span>
+                        </span>
                         <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">${media.size || ''}</span>
                     </div>
                     <div class="text-xs font-bold text-slate-900 dark:text-white truncate" title="${media.title || media.name}">
@@ -1327,7 +1585,7 @@
                     </div>
                 </div>
                 <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <button type="button" onclick="previewAssetModal('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-[11px] font-bold">👁️ Preview</button>
+                    <button type="button" onclick="previewAssetModal('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-[11px] font-bold">Preview</button>
                     <button type="button" onclick="selectQuestionMediaItem('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-sm">Attach</button>
                 </div>
             `;
@@ -1376,7 +1634,7 @@
     function removeQuestionAttachedMedia(mode, type) {
         const prefix = (mode === 'edit') ? 'eq-' : 'q-';
         const imgInput = document.getElementById(prefix + 'image-url');
-        const audioInput = document.getElementById(prefix + 'audio-url');
+        const audioInput = document.getElementById('q-audio-url');
         const mediaIdInput = document.getElementById(prefix + 'media-asset-id');
 
         if (type === 'image') {
@@ -1409,8 +1667,20 @@
     function uploadQuestionMediaFile() {
         const fileInput = document.getElementById('qm-direct-file-input');
         const uploadBtn = document.getElementById('qm-upload-btn');
+        const errBox = document.getElementById('qm-upload-error');
+
+        if (errBox) {
+            errBox.classList.add('hidden');
+            errBox.style.display = 'none';
+            errBox.textContent = '';
+        }
+
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            alert('Please select a file to upload.');
+            if (errBox) {
+                errBox.textContent = '⚠️ Please select a file to upload first.';
+                errBox.classList.remove('hidden');
+                errBox.style.display = 'block';
+            }
             return;
         }
 
@@ -1420,7 +1690,14 @@
         formData.append('_token', '{{ csrf_token() }}');
 
         uploadBtn.disabled = true;
-        uploadBtn.innerHTML = '⏳ Uploading...';
+        uploadBtn.setAttribute('aria-disabled', 'true');
+        uploadBtn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-1.5 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Uploading...</span>
+        `;
 
         fetch('{{ route('admin.media.store') }}', {
             method: 'POST',
@@ -1433,29 +1710,40 @@
         .then(async res => {
             const data = await res.json();
             if (!res.ok || !data.success) {
-                const msg = data.message || 'Upload failed.';
+                const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Upload failed.');
                 throw new Error(msg);
             }
             return data;
         })
         .then(data => {
-            questionMediaLibrary.unshift({
-                id: data.id,
-                title: data.title || data.filename,
-                name: data.filename,
-                type: data.type,
-                size: data.size,
-                url: data.url
-            });
-            selectQuestionMediaItem(data.id, data.title || data.filename, data.type, data.url);
-            fileInput.value = '';
+            const assetData = data.asset || data;
+            const assetId = assetData.id || data.id;
+            const item = {
+                id: assetId,
+                title: assetData.title || assetData.filename || assetData.original_name,
+                name: assetData.filename || assetData.original_name,
+                type: assetData.type,
+                size: assetData.size,
+                url: assetData.url || (assetId ? `/media/${assetId}/preview` : '')
+            };
+            questionMediaLibrary.unshift(item);
+            selectQuestionMediaItem(item.id, item.title, item.type, item.url);
+            clearQuestionMediaFileSelection();
         })
         .catch(err => {
-            alert('Upload error: ' + err.message);
+            if (errBox) {
+                errBox.textContent = '⚠️ ' + (err.message || 'Upload error. Please try again.');
+                errBox.classList.remove('hidden');
+                errBox.style.display = 'block';
+            }
         })
         .finally(() => {
             uploadBtn.disabled = false;
-            uploadBtn.innerHTML = 'Upload &amp; Attach';
+            uploadBtn.removeAttribute('aria-disabled');
+            uploadBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <span>Upload &amp; Attach</span>
+            `;
         });
     }
 
