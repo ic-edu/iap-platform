@@ -6,6 +6,7 @@ use App\Models\QuestionBankArchiveRequest;
 use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Commerce\Domain\Models\PriceChangeRequest;
 use App\Modules\QuestionBank\Models\QuestionBank;
 
 class ApprovalEngine
@@ -34,6 +35,7 @@ class ApprovalEngine
             'tests' => fn (): int => Test::where('status', 'pending')->count(),
             'user_creations' => fn (): int => UserCreationRequest::where('status', 'pending')->count(),
             'user_deletions' => fn (): int => UserDeletionRequest::where('status', 'pending')->count(),
+            'price_changes' => fn (): int => PriceChangeRequest::where('status', 'pending')->count(),
         ];
     }
 
