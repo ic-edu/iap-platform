@@ -725,7 +725,11 @@ test('TEST 29: Updating Part 2 question via TestBuilderController with empty tra
         'choices'        => ['', '', ''],
     ]);
 
-    $response->assertRedirect(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertRedirect(route('teacher.tests.show', [
+        'test'    => $this->toeicTest->id,
+        'section' => $this->part2Section->id,
+        'focus'   => 'question-card-' . $q->id,
+    ]));
 
     $q->refresh();
     $choices = $q->choices()->orderBy('order')->get();

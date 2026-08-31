@@ -1000,7 +1000,27 @@ class TestBuilderController extends Controller
             ]);
         }
 
-        return view('teacher.question_editor', compact('test', 'question'));
+        // Authoritative Return Context Resolution
+        $originSectionId = $request->query('return_section') ?? $request->query('section');
+        if ($originSectionId && !$test->sections()->where('id', (string) $originSectionId)->exists()) {
+            $originSectionId = null;
+        }
+        if (!$originSectionId) {
+            $originSectionId = \App\Modules\Assessment\Models\TestQuestion::where('question_id', (string) $question->id)
+                ->whereHas('section', fn($q) => $q->where('test_id', (string) $test->id))
+                ->first()?->test_section_id;
+        }
+        if (!$originSectionId && $question->part_number) {
+            $originSectionId = $test->sections()->where('title', 'LIKE', "%Part {$question->part_number}%")->orWhere('order', $question->part_number)->first()?->id;
+        }
+
+        $returnFocus = $request->query('return_focus') ?? $request->query('focus') ?? ('question-card-' . $question->id);
+
+        $returnUrl = $originSectionId
+            ? route('teacher.tests.show', ['test' => $test->id, 'section' => $originSectionId, 'focus' => $returnFocus])
+            : route('teacher.tests.show', $test->id);
+
+        return view('teacher.question_editor', compact('test', 'question', 'originSectionId', 'returnFocus', 'returnUrl'));
     }
 
     /**
@@ -1161,8 +1181,36 @@ class TestBuilderController extends Controller
             ->where('question_id', (string) $question->id)
             ->delete();
 
-        return redirect()->route('teacher.tests.show', $test->id)
+        // Authoritative Return Context Resolution
+        $returnSectionId = $request->input('return_section') ?? $request->input('section');
+        if ($returnSectionId && !$test->sections()->where('id', (string) $returnSectionId)->exists()) {
+            $returnSectionId = null;
+        }
+        if (!$returnSectionId) {
+            $returnSectionId = \App\Modules\Assessment\Models\TestQuestion::where('question_id', (string) $question->id)
+                ->whereHas('section', fn($q) => $q->where('test_id', (string) $test->id))
+                ->first()?->test_section_id;
+        }
+        if (!$returnSectionId && $question->part_number) {
+            $returnSectionId = $test->sections()->where('title', 'LIKE', "%Part {$question->part_number}%")->orWhere('order', $question->part_number)->first()?->id;
+        }
+
+        $returnFocus = $request->input('return_focus') ?? $request->input('focus') ?? ('question-card-' . $question->id);
+
+        $redirectParams = ['test' => $test->id];
+        if ($returnSectionId) {
+            $redirectParams['section'] = $returnSectionId;
+            $redirectParams['focus'] = $returnFocus;
+        }
+
+        $redirect = redirect()->route('teacher.tests.show', $redirectParams)
             ->with('status', "Question #{$question->id} updated successfully.");
+
+        if ($returnSectionId) {
+            $redirect->with('expanded_section_id', $returnSectionId);
+        }
+
+        return $redirect;
     }
 
     /**

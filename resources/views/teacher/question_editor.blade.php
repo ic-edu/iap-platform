@@ -15,7 +15,7 @@
             </h1>
         </div>
         <div class="flex gap-3 items-center">
-            <a href="{{ route('teacher.tests.show', $test->id) }}" class="gov-btn-secondary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
+            <a href="{{ $returnUrl ?? route('teacher.tests.show', $test->id) }}" class="gov-btn-secondary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 ← Back to Assessment
             </a>
             <a href="{{ route('teacher.dashboard') }}" class="gov-btn-primary px-4 py-2 text-xs font-bold inline-flex items-center gap-1.5">
@@ -35,6 +35,9 @@
         <form id="edit-question-form" method="POST" action="{{ route('teacher.tests.update-question', ['test' => $test->id, 'question' => $question->id]) }}" onsubmit="return validateEditQuestionForm(this)" style="display:flex;flex-direction:column;gap:1.25rem;">
             @csrf
             @method('PUT')
+
+            <input type="hidden" name="return_section" value="{{ old('return_section', $originSectionId ?? request('return_section', request('section'))) }}">
+            <input type="hidden" name="return_focus" value="{{ old('return_focus', $returnFocus ?? request('return_focus', request('focus', 'question-card-' . $question->id))) }}">
 
             <div id="edit-q-validation-error" style="display:none;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;padding:.75rem 1rem;border-radius:.6rem;font-size:.85rem;font-weight:700;">
                 ⚠️ Please select the correct answer.
@@ -542,7 +545,7 @@
             </div>
 
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;border-top:1px solid #e2e8f0;padding-top:1.25rem;">
-                <a href="{{ route('teacher.tests.show', $test->id) }}" style="padding:.75rem 1.25rem;background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:.65rem;font-size:.85rem;font-weight:700;text-decoration:none;">
+                <a href="{{ $returnUrl ?? route('teacher.tests.show', array_filter(['test' => $test->id, 'section' => $originSectionId ?? null, 'focus' => $returnFocus ?? null])) }}" style="padding:.75rem 1.25rem;background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:.65rem;font-size:.85rem;font-weight:700;text-decoration:none;">
                     Cancel
                 </a>
                 <button type="submit" style="padding:.75rem 1.75rem;background:#4f46e5;color:#fff;border:none;border-radius:.65rem;font-size:.88rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.25);">

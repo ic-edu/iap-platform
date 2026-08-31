@@ -723,7 +723,7 @@
                                                                     default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
                                                                 };
                                                             @endphp
-                                                            <div class="flex items-center gap-2 flex-wrap">
+                                                            <div @if($slotQ) id="question-card-{{ $slotQ->id }}" @endif class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
                                                                 <span class="text-slate-400 font-mono">{{ $s === 2 ? '└──' : '├──' }}</span>
                                                                 @if($slotComplete && $slotGlobalNum)
                                                                     <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q{{ $slotGlobalNum }} ✓ Complete:</span>
@@ -849,11 +849,11 @@
                                                         <button type="button" onclick="openTeacherRequestRevisionModal('{{ $q->question_bank_id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50 text-xs font-bold inline-flex items-center gap-1">
                                                             🛠 Request Master Revision
                                                         </button>
-                                                        <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1">
+                                                        <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id, 'return_section' => $sec->id, 'return_focus' => 'question-card-' . $q->id]) }}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1">
                                                             🔒 Governed Master
                                                         </a>
                                                     @else
-                                                        <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" class="px-3 py-1.5 rounded-xl {{ $hasWarning ? 'bg-amber-600 hover:bg-amber-500' : 'bg-indigo-600 hover:bg-indigo-500' }} text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
+                                                        <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id, 'return_section' => $sec->id, 'return_focus' => 'question-card-' . $q->id]) }}" class="px-3 py-1.5 rounded-xl {{ $hasWarning ? 'bg-amber-600 hover:bg-amber-500' : 'bg-indigo-600 hover:bg-indigo-500' }} text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
                                                             {{ $hasWarning ? '✏️ Fix Issue' : '✏️ Edit Question' }}
                                                         </a>
                                                     @endif
@@ -3839,6 +3839,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         const targetSectionId = urlParams.get('section') || @json(session('expanded_section_id') ?? request('section'));
+        const focusParam = urlParams.get('focus') || @json(request('focus'));
         const hash = window.location.hash;
 
         let autoExpandId = targetSectionId;
@@ -3852,14 +3853,49 @@
             }
         }
 
+        let focusTargetId = focusParam;
+        if (!focusTargetId && hash && !hash.startsWith('#section')) {
+            focusTargetId = hash.replace('#', '');
+        }
+
         if (autoExpandId) {
             const body = document.getElementById(`section-body-${autoExpandId}`);
             if (body) {
                 toggleSectionCollapse(autoExpandId, true);
-                const card = document.getElementById(`section-card-${autoExpandId}`);
-                if (card) {
-                    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        if (focusTargetId) {
+            const cleanId = focusTargetId.replace(/^#/, '');
+            let focusEl = document.getElementById(cleanId);
+            if (!focusEl && !cleanId.startsWith('question-card-') && !cleanId.startsWith('audio-group-card-')) {
+                focusEl = document.getElementById(`question-card-${cleanId}`) || document.getElementById(`audio-group-card-${cleanId}`);
+            }
+            if (focusEl) {
+                const parentSectionCard = focusEl.closest('.section-card');
+                if (parentSectionCard) {
+                    const secId = parentSectionCard.getAttribute('data-section-id');
+                    if (secId) toggleSectionCollapse(secId, true);
                 }
+                const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                setTimeout(() => {
+                    focusEl.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+                    focusEl.classList.add('ring-2', 'ring-indigo-500', 'transition-all');
+                    setTimeout(() => {
+                        focusEl.classList.remove('ring-2', 'ring-indigo-500');
+                    }, 2000);
+                }, 120);
+                return;
+            }
+        }
+
+        if (autoExpandId) {
+            const card = document.getElementById(`section-card-${autoExpandId}`);
+            if (card) {
+                const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                setTimeout(() => {
+                    card.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'nearest' });
+                }, 100);
             }
         }
     });
