@@ -89,8 +89,9 @@ class QuestionDifficultyDetectionService
         $isToeic = !empty($partNumber) || ToeicQuestionValidator::isToeic($question) || ToeicQuestionValidator::isToeic($data);
 
         if ($isToeic && !empty($partNumber)) {
+            $entityCount = $choicesInfo['entity_count'] ?? 0;
             $detection = match ((int) $partNumber) {
-                1 => self::detectPart1($prompt, $choices, $correctIndex, $hasImage, $hasAudio),
+                1 => self::detectPart1($prompt, $choices, $correctIndex, $hasImage, $hasAudio, $entityCount),
                 2 => self::detectPart2($prompt, $choices, $correctIndex, $hasAudio),
                 3, 4 => self::detectPart3Or4($prompt, $choices, $correctIndex, $hasAudio, (int) $partNumber),
                 5 => self::detectPart5($prompt, $choices, $correctIndex),
@@ -125,23 +126,25 @@ class QuestionDifficultyDetectionService
         array $choices,
         mixed $correctIndex,
         bool $hasImage,
-        bool $hasAudio
+        bool $hasAudio,
+        int $entityCount = 0
     ): array {
+        $choicesCount = max(count($choices), $entityCount);
         $factors = [
             'part'           => 1,
             'part_name'      => 'Photographs',
             'has_image'      => $hasImage,
             'has_audio'      => $hasAudio,
-            'choices_count'  => count($choices),
+            'choices_count'  => $choicesCount,
             'missing_inputs' => [],
         ];
 
         if (!$hasImage) $factors['missing_inputs'][] = 'image';
         if (!$hasAudio) $factors['missing_inputs'][] = 'audio';
-        if (count($choices) < 4) $factors['missing_inputs'][] = 'choices (4 required)';
+        if ($choicesCount < 4) $factors['missing_inputs'][] = 'choices (4 required)';
 
         // Lifecycle State
-        if (empty($prompt) && empty($choices) && !$hasImage && !$hasAudio) {
+        if (empty($prompt) && empty($choices) && !$hasImage && !$hasAudio && $choicesCount === 0) {
             return [
                 'difficulty_level'   => 'medium',
                 'difficulty_score'   => 50,
@@ -150,7 +153,7 @@ class QuestionDifficultyDetectionService
             ];
         }
 
-        $isComplete = $hasImage && $hasAudio && count($choices) === 4;
+        $isComplete = $hasImage && $hasAudio && $choicesCount === 4;
         $status = $isComplete ? 'final' : 'provisional';
 
         // Base score for Part 1 items
@@ -179,7 +182,10 @@ class QuestionDifficultyDetectionService
 
         $avgWords = count($choices) > 0 ? $totalWords / count($choices) : 0;
 
-        if ($avgWords <= 6.5 && $advancedWordCount === 0) {
+        if (count($choices) === 0) {
+            $score = 35;
+            $reasons[] = 'Standard audio-only Part 1 photograph item';
+        } elseif ($avgWords <= 6.5 && $advancedWordCount === 0) {
             $score -= 10;
             $reasons[] = 'Short, direct action statements (e.g. basic present continuous)';
         } elseif ($avgWords >= 8 || $advancedWordCount >= 2 || $hasComplexStructure) {
@@ -663,8 +669,9 @@ class QuestionDifficultyDetectionService
     {
         $choices = [];
         $correctIndex = $data['correct_choice'] ?? ($data['correct_choice_id'] ?? null);
-
+        $entityCount = 0;
         if (isset($data['choices']) && is_array($data['choices'])) {
+            $entityCount = count($data['choices']);
             foreach ($data['choices'] as $idx => $c) {
                 $text = is_array($c) ? ($c['content'] ?? ($c['choice_text'] ?? '')) : (string) $c;
                 if (!empty(trim($text))) {
@@ -673,6 +680,7 @@ class QuestionDifficultyDetectionService
             }
         } elseif ($question) {
             $dbChoices = $question->choices()->get();
+            $entityCount = $dbChoices->count();
             foreach ($dbChoices as $idx => $dbc) {
                 $text = (string) ($dbc->content ?? $dbc->choice_text ?? '');
                 if (!empty(trim($text))) {
@@ -687,6 +695,7 @@ class QuestionDifficultyDetectionService
         return [
             'choices'       => $choices,
             'correct_index' => $correctIndex,
+            'entity_count'  => $entityCount,
         ];
     }
 

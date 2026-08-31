@@ -569,7 +569,7 @@
                                                         <label class="preview-choice-label flex items-center p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer transition-all">
                                                             <input type="radio" name="preview_choice_{{ $question->id }}" value="{{ $choice->id }}" onchange="selectPreviewChoice('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})" class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500">
                                                             <span class="ml-3 text-xs sm:text-sm text-slate-900 dark:text-slate-200 font-semibold">
-                                                                @if($partNum === 2)
+                                                                @if(in_array((int)$partNum, [1, 2], true))
                                                                     <strong class="text-indigo-600 dark:text-indigo-400">({{ $choice->label }})</strong>
                                                                 @else
                                                                     <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
@@ -603,7 +603,7 @@
                                                 <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
                                                     {!! nl2br(e($question->prompt)) !!}
                                                 </div>
-                                            @elseif($partNum !== 6 && $partNum !== 2)
+                                            @elseif($partNum !== 6 && $partNum !== 2 && $partNum !== 1)
                                                 <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed text-slate-400">
                                                     (No stem prompt)
                                                 </div>
@@ -614,7 +614,7 @@
                                                     <label class="preview-choice-label flex items-center p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer transition-all">
                                                         <input type="radio" name="preview_choice_{{ $question->id }}" value="{{ $choice->id }}" onchange="selectPreviewChoice('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})" class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500">
                                                         <span class="ml-3 text-xs sm:text-sm text-slate-900 dark:text-slate-200 font-semibold">
-                                                            @if($partNum === 2)
+                                                            @if(in_array((int)$partNum, [1, 2], true))
                                                                 <strong class="text-indigo-600 dark:text-indigo-400">({{ $choice->label }})</strong>
                                                             @else
                                                                 <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}

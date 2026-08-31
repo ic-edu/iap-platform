@@ -247,9 +247,11 @@ class Question extends Model
             return false;
         }
 
-        $nonEmpty = $choices->filter(fn($c) => !empty(trim((string) ($c->content ?? $c->choice_text ?? ''))));
-        if ($nonEmpty->count() !== 4) {
-            return false;
+        if (!in_array($partNumber, [1, 2], true)) {
+            $nonEmpty = $choices->filter(fn($c) => !empty(trim((string) ($c->content ?? $c->choice_text ?? ''))));
+            if ($nonEmpty->count() !== 4) {
+                return false;
+            }
         }
 
         return $choices->contains(fn($c) => (bool) $c->is_correct);

@@ -2866,7 +2866,19 @@
         const choicesLabel = document.getElementById('create-q-choices-label');
         const choicesHint = document.getElementById('create-q-choices-hint');
 
-        if (part === 2) {
+        if (part === 1) {
+            if (choiceRow3) choiceRow3.style.display = 'flex';
+            if (choicesLabel) choicesLabel.textContent = 'STATEMENTS & CORRECT ANSWER';
+            if (choicesHint) choicesHint.textContent = 'Candidates hear the four statements in the audio and select A, B, C, or D. Statement transcripts are optional authoring metadata and are not shown during the test.';
+            for (let i = 0; i < 4; i++) {
+                const row = document.getElementById(`create-choice-row-${i}`);
+                const inp = row ? row.querySelector('input[type="text"]') : null;
+                if (inp) {
+                    inp.placeholder = 'Optional statement transcript...';
+                    inp.removeAttribute('required');
+                }
+            }
+        } else if (part === 2) {
             if (choiceRow3) choiceRow3.style.display = 'none';
             if (choiceInput3) {
                 choiceInput3.value = '';
@@ -2930,20 +2942,19 @@
             if (!hasImg && !hasAudio && choices.length === 0 && !prompt) {
                 status = 'pending';
                 text.textContent = 'Waiting for required inputs';
-                hintMsg = 'Attach image + audio and provide 4 choices for final detection.';
-            } else if (hasImg && hasAudio && choices.length >= 4) {
+                hintMsg = 'Attach image + audio for Part 1 detection.';
+            } else if (hasImg && hasAudio) {
                 status = 'final';
                 let totalWords = choices.reduce((acc, c) => acc + c.split(/\s+/).filter(Boolean).length, 0);
                 let avg = choices.length > 0 ? totalWords / choices.length : 0;
-                level = avg >= 8 ? 'Hard' : (avg <= 5.5 ? 'Easy' : 'Medium');
+                level = choices.length > 0 ? (avg >= 8 ? 'Hard' : (avg <= 5.5 ? 'Easy' : 'Medium')) : 'Easy';
                 text.textContent = `Final — ${level}`;
-                hintMsg = `Part 1 fully specified (Image + Audio + ${choices.length} choices). Auto-detected: ${level}.`;
+                hintMsg = `Part 1 fully specified (Image + Audio). Auto-detected: ${level}.`;
             } else {
                 status = 'provisional';
                 let missing = [];
                 if (!hasImg) missing.push('Image');
                 if (!hasAudio) missing.push('Audio');
-                if (choices.length < 4) missing.push('4 Choices');
                 level = 'Medium';
                 text.textContent = `Provisional — ${level}`;
                 hintMsg = `Partially complete (Waiting for: ${missing.join(', ')}).`;

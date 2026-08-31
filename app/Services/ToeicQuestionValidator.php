@@ -103,7 +103,7 @@ class ToeicQuestionValidator
 
         // 2. Prompt Validation
         $prompt = $data['prompt'] ?? ($question?->prompt ?? '');
-        if (!in_array($partNumber, [2, 6], true) && empty(trim((string) $prompt))) {
+        if (!in_array($partNumber, [1, 2, 6], true) && empty(trim((string) $prompt))) {
             $errors['prompt'] = "Part {$partNumber} requires a question prompt.";
         }
 
@@ -149,6 +149,17 @@ class ToeicQuestionValidator
 
                 if ($choiceCount !== 4) {
                     $errors['choices'] = 'Part 1 requires exactly 4 answer choices (A, B, C, D).';
+                }
+
+                if ($choicesInfo['correct_count'] !== 1) {
+                    $errors['correct_choice'] = 'Part 1 requires exactly one correct answer choice.';
+                }
+
+                if (!empty($choicesInfo['labels']) && count($choicesInfo['labels']) === 4) {
+                    $expectedLabels = ['A', 'B', 'C', 'D'];
+                    if (array_values($choicesInfo['labels']) !== $expectedLabels) {
+                        $errors['choice_labels'] = 'Part 1 choices must be labeled A, B, C, and D.';
+                    }
                 }
                 break;
 
@@ -304,7 +315,7 @@ class ToeicQuestionValidator
                     $isCorrect = true;
                 }
 
-                if ($partNumber === 2) {
+                if (in_array((int) $partNumber, [1, 2], true)) {
                     $validCount++;
                     $labels[] = strtoupper((string) $label);
                     if ($isCorrect) {
@@ -335,7 +346,7 @@ class ToeicQuestionValidator
         // 2. From existing question model relations
         if ($question) {
             $choices = $question->choices()->get();
-            if ($partNumber === 2) {
+            if (in_array((int) $partNumber, [1, 2], true)) {
                 $count = $choices->count();
             } else {
                 $count = $choices->filter(fn($c) => !empty(trim((string) ($c->content ?? $c->choice_text ?? ''))))->count();

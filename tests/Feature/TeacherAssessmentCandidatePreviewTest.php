@@ -264,8 +264,11 @@ class TeacherAssessmentCandidatePreviewTest extends TestCase
         $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
 
         $response->assertStatus(200);
-        $response->assertSee('The woman is presenting to colleagues.', false);
-        $response->assertSee('The meeting room is completely empty.', false);
+        // Part 1 (audio-only) displays radio options (A), (B), (C), (D) without leaking statement transcript text
+        $response->assertSee('(A)', false);
+        $response->assertDontSee('The woman is presenting to colleagues.', false);
+        $response->assertDontSee('The meeting room is completely empty.', false);
+        // Part 5 (reading) displays textual choices
         $response->assertSee('beginning', false);
         $response->assertSee('beginner', false);
     }

@@ -583,8 +583,9 @@ class TestBuilderController extends Controller
         $hasCorrect = false;
         if (!empty($validated['choices'])) {
             foreach ($validated['choices'] as $idx => $choiceText) {
+                if ($partNumber === 1 && count($choices) >= 4) break;
                 if ($partNumber === 2 && count($choices) >= 3) break;
-                if ($partNumber !== 2 && empty(trim((string)$choiceText))) continue;
+                if (!in_array($partNumber, [1, 2], true) && empty(trim((string)$choiceText))) continue;
                 $isCorrect = (!is_null($correctChoice) && $correctChoice !== '' && (string) $idx === (string) $correctChoice);
                 if ($isCorrect) {
                     $hasCorrect = true;
@@ -1291,11 +1292,13 @@ class TestBuilderController extends Controller
             $validIdx = 0;
             $hasCorrect = false;
             $existingChoices = $question->choices()->get();
+            $isPart1 = ((int) ($question->part_number ?? $request->input('part_number')) === 1);
             $isPart2 = ((int) ($question->part_number ?? $request->input('part_number')) === 2);
 
             foreach ($choicesData as $idx => $choiceText) {
+                if ($isPart1 && $validIdx >= 4) break;
                 if ($isPart2 && $validIdx >= 3) break;
-                if (!$isPart2 && empty(trim((string)$choiceText))) continue;
+                if (!$isPart1 && !$isPart2 && empty(trim((string)$choiceText))) continue;
 
                 $isCorrect = (!is_null($correctChoiceIndex) && $correctChoiceIndex !== '' && (string) $idx === (string) $correctChoiceIndex);
                 if ($isCorrect) {
