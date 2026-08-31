@@ -478,6 +478,7 @@ class TestBuilderService
             foreach ($passages as $pData) {
                 Passage::create([
                     'passage_group_id' => $passageGroup->id,
+                    'question_bank_id' => null,
                     'test_id'          => $test?->id,
                     'order_in_group'   => $pIdx,
                     'document_type'    => $pData['document_type'] ?? 'article',

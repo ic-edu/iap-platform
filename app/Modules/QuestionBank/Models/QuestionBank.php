@@ -227,4 +227,14 @@ class QuestionBank extends Model
     {
         return $this->hasMany(\App\Modules\QuestionBank\Models\PassageGroup::class, 'question_bank_id');
     }
+
+    /**
+     * Get associated passages.
+     *
+     * @return HasMany<\App\Modules\QuestionBank\Models\Passage, $this>
+     */
+    public function passages(): HasMany
+    {
+        return $this->hasMany(\App\Modules\QuestionBank\Models\Passage::class, 'question_bank_id');
+    }
 }
