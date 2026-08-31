@@ -144,7 +144,39 @@ class TestBuilderService
     }
 
     /**
-     * Create an Assessment-authored Shared Audio Group (Part 3 / Part 4) with 3 child questions.
+     * Helper to determine if a submitted child question is complete according to TOEIC standards.
+     *
+     * @param array<string, mixed> $qData
+     * @return bool
+     */
+    public function isChildComplete(array $qData): bool
+    {
+        if (empty(trim((string) ($qData['prompt'] ?? '')))) {
+            return false;
+        }
+
+        $choices = $qData['choices'] ?? [];
+        if (!is_array($choices) || count($choices) !== 4) {
+            return false;
+        }
+
+        foreach ($choices as $choice) {
+            $content = is_array($choice) ? ($choice['content'] ?? ($choice['choice_text'] ?? '')) : (string) $choice;
+            if (empty(trim($content))) {
+                return false;
+            }
+        }
+
+        $correctChoice = $qData['correct_choice'] ?? null;
+        if (is_null($correctChoice) || $correctChoice === '') {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Create an Assessment-authored Shared Audio Group (Part 3 / Part 4) with up to 3 child questions.
      */
     public function createAudioGroup(TestSection $section, array $data): AudioGroup
     {
@@ -153,13 +185,12 @@ class TestBuilderService
         $groupType = $data['group_type'] ?? ($partNumber === 4 ? 'talk' : 'conversation');
         $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
 
-        // Run validation
-        ToeicQuestionValidator::validateAudioGroup([
-            'group_type'     => $groupType,
-            'part_number'    => $partNumber,
-            'media_asset_id' => $data['media_asset_id'] ?? null,
-            'audio_url'      => $data['audio_url'] ?? null,
-        ], $data['questions'] ?? []);
+        $hasAudio = !empty($data['audio_url']) || !empty($data['media_asset_id']);
+        if (!$hasAudio) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'audio_url' => 'Shared audio is required before saving audio group.',
+            ]);
+        }
 
         return DB::transaction(function () use ($section, $test, $data, $partNumber, $groupType, $sectionType) {
             $audioGroup = AudioGroup::create([
@@ -176,6 +207,10 @@ class TestBuilderService
 
             $questions = $data['questions'] ?? [];
             foreach ($questions as $qData) {
+                if (!$this->isChildComplete($qData)) {
+                    continue;
+                }
+
                 $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
                     'part_number'    => $partNumber,
                     'audio_url'      => $data['audio_url'] ?? null,
@@ -223,7 +258,148 @@ class TestBuilderService
                 ]);
             }
 
-            return $audioGroup;
+            return $audioGroup->fresh(['questions.choices', 'mediaAsset']);
+        });
+    }
+
+    /**
+     * Update an Assessment-authored Shared Audio Group and synchronize child questions progressively.
+     */
+    public function updateAudioGroup(AudioGroup $audioGroup, array $data, ?TestSection $section = null): AudioGroup
+    {
+        $test = $audioGroup->test;
+        $partNumber = (int) ($data['part_number'] ?? $audioGroup->part_number ?? 3);
+        $groupType = $data['group_type'] ?? $audioGroup->group_type ?? ($partNumber === 4 ? 'talk' : 'conversation');
+        $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
+
+        if (!$section && $test) {
+            $section = $test->sections()->where('order', $partNumber)->first()
+                ?? $test->sections()->where('section_type', 'listening')->first()
+                ?? $test->sections()->first();
+        }
+
+        $hasAudio = !empty($data['audio_url']) || !empty($data['media_asset_id']) || !empty($audioGroup->audio_url) || !empty($audioGroup->media_asset_id);
+        if (!$hasAudio) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'audio_url' => 'Shared audio is required for audio group.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($audioGroup, $section, $test, $data, $partNumber, $groupType, $sectionType) {
+            $audioGroup->update([
+                'title'          => $data['title'] ?? $audioGroup->title,
+                'group_type'     => $groupType,
+                'part_number'    => $partNumber,
+                'media_asset_id' => array_key_exists('media_asset_id', $data) ? $data['media_asset_id'] : $audioGroup->media_asset_id,
+                'audio_url'      => array_key_exists('audio_url', $data) ? $data['audio_url'] : $audioGroup->audio_url,
+                'audio_script'   => array_key_exists('audio_script', $data) ? $data['audio_script'] : $audioGroup->audio_script,
+            ]);
+
+            $existingQuestions = $audioGroup->questions()->with('choices')->get()->keyBy('id');
+            $existingList = $audioGroup->questions()->with('choices')->orderBy('created_at', 'asc')->get()->values();
+            $submittedQuestions = $data['questions'] ?? [];
+
+            foreach ($submittedQuestions as $slotIdx => $qData) {
+                $qId = $qData['id'] ?? null;
+                $matchedQuestion = null;
+
+                if ($qId && isset($existingQuestions[$qId])) {
+                    $matchedQuestion = $existingQuestions[$qId];
+                } elseif (isset($existingList[$slotIdx])) {
+                    $matchedQuestion = $existingList[$slotIdx];
+                }
+
+                $isComplete = $this->isChildComplete($qData);
+
+                if ($matchedQuestion) {
+                    if ($isComplete) {
+                        $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
+                            'part_number'    => $partNumber,
+                            'audio_url'      => $audioGroup->audio_url,
+                            'media_asset_id' => $audioGroup->media_asset_id,
+                        ]), $matchedQuestion);
+
+                        $matchedQuestion->update([
+                            'prompt'                 => $qData['prompt'],
+                            'difficulty'             => $qDetect['difficulty_level'],
+                            'difficulty_score'       => $qDetect['difficulty_score'],
+                            'difficulty_status'      => $qDetect['difficulty_status'],
+                            'difficulty_source'      => 'auto',
+                            'difficulty_factors'     => $qDetect['difficulty_factors'],
+                            'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
+                            'explanation'            => $qData['explanation'] ?? null,
+                        ]);
+
+                        $correctChoiceIdx = $qData['correct_choice'] ?? 0;
+                        $choices = $qData['choices'] ?? [];
+                        $matchedQuestion->choices()->delete();
+                        foreach ($choices as $cIdx => $choice) {
+                            $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                            $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                            QuestionChoice::create([
+                                'question_id' => $matchedQuestion->id,
+                                'label'       => chr(65 + $cIdx),
+                                'content'     => $content,
+                                'choice_text' => $content,
+                                'is_correct'  => $isCorrect,
+                                'order'       => $cIdx + 1,
+                            ]);
+                        }
+                    }
+                } else {
+                    if ($isComplete) {
+                        $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
+                            'part_number'    => $partNumber,
+                            'audio_url'      => $audioGroup->audio_url,
+                            'media_asset_id' => $audioGroup->media_asset_id,
+                        ]));
+
+                        $newQuestion = Question::create([
+                            'question_bank_id'       => null,
+                            'audio_group_id'         => $audioGroup->id,
+                            'prompt'                 => $qData['prompt'],
+                            'section'                => $sectionType,
+                            'part_number'            => $partNumber,
+                            'question_type'          => 'multiple_choice',
+                            'difficulty'             => $qDetect['difficulty_level'],
+                            'difficulty_score'       => $qDetect['difficulty_score'],
+                            'difficulty_status'      => $qDetect['difficulty_status'],
+                            'difficulty_source'      => 'auto',
+                            'difficulty_factors'     => $qDetect['difficulty_factors'],
+                            'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
+                            'points'                 => 1,
+                            'explanation'            => $qData['explanation'] ?? null,
+                        ]);
+
+                        $correctChoiceIdx = $qData['correct_choice'] ?? 0;
+                        $choices = $qData['choices'] ?? [];
+                        foreach ($choices as $cIdx => $choice) {
+                            $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                            $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                            QuestionChoice::create([
+                                'question_id' => $newQuestion->id,
+                                'label'       => chr(65 + $cIdx),
+                                'content'     => $content,
+                                'choice_text' => $content,
+                                'is_correct'  => $isCorrect,
+                                'order'       => $cIdx + 1,
+                            ]);
+                        }
+
+                        if ($section) {
+                            $nextOrder = (TestQuestion::where('test_section_id', $section->id)->max('order') ?? 0) + 1;
+                            TestQuestion::create([
+                                'test_section_id' => $section->id,
+                                'question_id'     => $newQuestion->id,
+                                'order'           => $nextOrder,
+                                'points'          => 1,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            return $audioGroup->fresh(['questions.choices', 'mediaAsset']);
         });
     }
 
@@ -681,9 +857,23 @@ class TestBuilderService
             }
         }
 
+        // Structural Rule 4: TOEIC Audio Group Completeness Check (Part 3 & Part 4)
+        $testAudioGroups = AudioGroup::where('test_id', (string) $test->id)->with(['questions.choices', 'mediaAsset'])->get();
+        foreach ($testAudioGroups as $ag) {
+            $agCheck = ToeicQuestionValidator::checkAudioGroup($ag);
+            if (!$agCheck['is_valid']) {
+                $partLabel = $ag->part_number === 4 ? 'Part 4 Talks' : 'Part 3 Conversations';
+                $groupTitle = $ag->title ?: 'Audio Group';
+                $completeCount = $ag->questions->filter(fn($q) => $q->isCompleteChild())->count();
+                foreach ($agCheck['errors'] as $agErrKey => $agErrMsg) {
+                    $errors[] = "{$partLabel} - '{$groupTitle}' (Progress: {$completeCount}/3 complete): {$agErrMsg}";
+                }
+            }
+        }
+
         return [
             'is_valid'  => empty($errors),
-            'errors'    => $errors,
+            'errors'    => array_values(array_unique($errors)),
             'questions' => $allQuestions,
         ];
     }

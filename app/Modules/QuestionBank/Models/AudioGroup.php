@@ -138,13 +138,35 @@ class AudioGroup extends Model
     }
 
     /**
+     * Get count of complete child questions.
+     */
+    public function getCompleteQuestionsCountAttribute(): int
+    {
+        return $this->questions->filter(fn($q) => $q->isCompleteChild())->count();
+    }
+
+    /**
+     * Check if group authoring is complete (has audio + exactly 3 complete child questions).
+     */
+    public function isComplete(): bool
+    {
+        $hasAudio = !empty($this->audio_url) || !empty($this->media_asset_id);
+        return $hasAudio && $this->complete_questions_count === 3;
+    }
+
+    /**
+     * Authoring completeness status: 'complete' | 'draft'.
+     */
+    public function getAuthoringStatusAttribute(): string
+    {
+        return $this->isComplete() ? 'complete' : 'draft';
+    }
+
+    /**
      * Check if group satisfies the strict TOEIC requirement: exactly 3 questions + audio asset attached.
      */
     public function isValidGroup(): bool
     {
-        $hasAudio = !empty($this->audio_url) || !empty($this->media_asset_id);
-        $questionCount = $this->questions()->count();
-
-        return $hasAudio && $questionCount === 3;
+        return $this->isComplete();
     }
 }

@@ -7,6 +7,7 @@ use App\Models\MediaAsset;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Assessment\Services\TestBuilderService;
+use App\Modules\QuestionBank\Models\AudioGroup;
 use App\Modules\QuestionBank\Models\Question;
 use App\Services\QuestionDifficultyDetectionService;
 use App\Services\ToeicQuestionValidator;
@@ -648,7 +649,7 @@ class TestBuilderController extends Controller
     }
 
     /**
-     * Create an Assessment-authored Shared Audio Group (Part 3 / Part 4) with 3 child questions.
+     * Create an Assessment-authored Shared Audio Group (Part 3 / Part 4) with up to 3 child questions.
      */
     public function createAudioGroup(Request $request, Test $test): RedirectResponse
     {
@@ -667,24 +668,98 @@ class TestBuilderController extends Controller
             'title'           => ['nullable', 'string', 'max:255'],
             'group_type'      => ['required', 'string', 'in:conversation,talk'],
             'part_number'     => ['required', 'integer', 'in:3,4'],
-            'media_asset_id'  => ['nullable', 'string'],
+            'media_asset_id'  => ['nullable', 'exists:media_assets,id'],
             'audio_url'       => ['nullable', 'string'],
             'audio_script'    => ['nullable', 'string'],
             'questions'       => ['required', 'array', 'size:3'],
-            'questions.*.prompt'         => ['required', 'string'],
+            'questions.*.prompt'         => ['nullable', 'string'],
             'questions.*.difficulty'     => ['nullable', 'string'],
             'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['required', 'array', 'size:4'],
-            'questions.*.correct_choice' => ['required'],
+            'questions.*.choices'        => ['nullable', 'array'],
+            'questions.*.correct_choice' => ['nullable'],
         ]);
+
+        if ((int) $validated['part_number'] === 3 && $validated['group_type'] !== 'conversation') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'group_type' => ['Part 3 audio group must have group_type set to conversation.'],
+            ]);
+        }
+        if ((int) $validated['part_number'] === 4 && $validated['group_type'] !== 'talk') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'group_type' => ['Part 4 audio group must have group_type set to talk.'],
+            ]);
+        }
+
+        if (empty($validated['media_asset_id']) && empty($validated['audio_url'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'media_asset_id' => ['Please attach a shared audio file before saving this audio question group.'],
+            ]);
+        }
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
 
-        $this->builderService->createAudioGroup($section, $validated);
+        $audioGroup = $this->builderService->createAudioGroup($section, $validated);
+
+        $statusMsg = $audioGroup->isComplete()
+            ? "Part {$validated['part_number']} Shared Audio Group successfully created and attached to '{$section->title}' (3/3 Complete)."
+            : "Part {$validated['part_number']} Shared Audio Group draft saved to '{$section->title}' ({$audioGroup->complete_questions_count}/3 Complete).";
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Part {$validated['part_number']} Shared Audio Group successfully created and attached to '{$section->title}'.")
+            ->with('status', $statusMsg)
             ->with('expanded_section_id', $section->id);
+    }
+
+    /**
+     * Update an Assessment-authored Shared Audio Group (Part 3 / Part 4) and its child questions.
+     */
+    public function updateAudioGroup(Request $request, Test $test, AudioGroup $audioGroup): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $validated = $request->validate([
+            'test_section_id' => ['nullable', 'exists:test_sections,id'],
+            'title'           => ['nullable', 'string', 'max:255'],
+            'group_type'      => ['nullable', 'string', 'in:conversation,talk'],
+            'part_number'     => ['nullable', 'integer', 'in:3,4'],
+            'media_asset_id'  => ['nullable', 'exists:media_assets,id'],
+            'audio_url'       => ['nullable', 'string'],
+            'audio_script'    => ['nullable', 'string'],
+            'questions'       => ['nullable', 'array', 'max:3'],
+            'questions.*.id'             => ['nullable', 'string'],
+            'questions.*.prompt'         => ['nullable', 'string'],
+            'questions.*.difficulty'     => ['nullable', 'string'],
+            'questions.*.explanation'    => ['nullable', 'string'],
+            'questions.*.choices'        => ['nullable', 'array'],
+            'questions.*.correct_choice' => ['nullable'],
+        ]);
+
+        $section = null;
+        if (!empty($validated['test_section_id'])) {
+            $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->first();
+        }
+
+        $updatedGroup = $this->builderService->updateAudioGroup($audioGroup, $validated, $section);
+
+        $statusMsg = $updatedGroup->isComplete()
+            ? "Part {$updatedGroup->part_number} Audio Group saved successfully (3/3 Complete)."
+            : "Part {$updatedGroup->part_number} Audio Group draft saved ({$updatedGroup->complete_questions_count}/3 Complete).";
+
+        $redirect = redirect()->route('teacher.tests.show', $test->id)
+            ->with('status', $statusMsg);
+
+        if ($section) {
+            $redirect->with('expanded_section_id', $section->id);
+        }
+
+        return $redirect;
     }
 
     /**

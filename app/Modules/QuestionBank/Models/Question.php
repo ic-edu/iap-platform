@@ -213,6 +213,16 @@ class Question extends Model
     }
 
     /**
+     * Get test question bindings across sections.
+     *
+     * @return HasMany<\App\Modules\Assessment\Models\TestQuestion, $this>
+     */
+    public function testQuestions(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Assessment\Models\TestQuestion::class, 'question_id');
+    }
+
+    /**
      * Get associated tags.
      *
      * @return BelongsToMany<Tag, $this>
@@ -220,5 +230,27 @@ class Question extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'question_tags', 'question_id', 'tag_id');
+    }
+
+    /**
+     * Check if child question meets completeness criteria for TOEIC Audio/Passage group.
+     */
+    public function isCompleteChild(): bool
+    {
+        if (empty(trim((string) $this->prompt))) {
+            return false;
+        }
+
+        $choices = $this->relationLoaded('choices') ? $this->choices : $this->choices()->get();
+        if ($choices->count() !== 4) {
+            return false;
+        }
+
+        $nonEmpty = $choices->filter(fn($c) => !empty(trim((string) ($c->content ?? $c->choice_text ?? ''))));
+        if ($nonEmpty->count() !== 4) {
+            return false;
+        }
+
+        return $choices->contains(fn($c) => (bool) $c->is_correct);
     }
 }

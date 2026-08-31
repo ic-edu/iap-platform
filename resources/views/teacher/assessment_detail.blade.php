@@ -465,6 +465,110 @@
                                         <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
                                             <span>📝 Questions in this Section ({{ $secQCount }})</span>
                                         </div>
+
+                                        @if($secPartNumber && in_array((int)$secPartNumber, [3, 4]))
+                                            @php
+                                                $secAudioGroups = \App\Modules\QuestionBank\Models\AudioGroup::where('test_id', (string)$test->id)
+                                                    ->where('part_number', (int)$secPartNumber)
+                                                    ->with(['questions.choices', 'mediaAsset'])
+                                                    ->get();
+                                            @endphp
+                                            @foreach($secAudioGroups as $ag)
+                                                @php
+                                                    $agCompleteCount = $ag->complete_questions_count;
+                                                    $agIsComplete = $ag->isComplete();
+                                                    $agAudioUrl = $ag->getEffectiveAudioUrl();
+                                                    $agAudioTitle = $ag->mediaAsset?->title ?: basename($agAudioUrl ?? 'Shared Audio');
+                                                    $agJson = [
+                                                        'id'                  => $ag->id,
+                                                        'title'               => $ag->title,
+                                                        'group_type'          => $ag->group_type,
+                                                        'part_number'         => $ag->part_number,
+                                                        'media_asset_id'      => $ag->media_asset_id,
+                                                        'audio_url'           => $ag->audio_url,
+                                                        'audio_script'        => $ag->audio_script,
+                                                        'audio_title'         => $agAudioTitle,
+                                                        'audio_effective_url' => $agAudioUrl,
+                                                        'complete_count'      => $agCompleteCount,
+                                                        'is_complete'         => $agIsComplete,
+                                                        'questions'           => $ag->questions->sortBy('created_at')->values()->map(function($cq) {
+                                                            $choices = $cq->choices->sortBy('order')->values();
+                                                            $correctIdx = $choices->search(fn($c) => (bool)$c->is_correct);
+                                                            return [
+                                                                'id'             => $cq->id,
+                                                                'prompt'         => $cq->prompt,
+                                                                'explanation'    => $cq->explanation,
+                                                                'difficulty'     => is_object($cq->difficulty) ? $cq->difficulty->value : $cq->difficulty,
+                                                                'choices'        => $choices->map(fn($c) => $c->content ?? $c->choice_text)->toArray(),
+                                                                'correct_choice' => $correctIdx !== false ? $correctIdx : 0,
+                                                                'is_complete'    => $cq->isCompleteChild(),
+                                                            ];
+                                                        })->toArray(),
+                                                    ];
+                                                @endphp
+                                                <div class="bg-white dark:bg-slate-900 border {{ $agIsComplete ? 'border-slate-200 dark:border-slate-800' : 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20' }} rounded-xl p-4 shadow-sm space-y-3">
+                                                    <div class="flex justify-between items-start flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                                        <div>
+                                                            <div class="flex items-center gap-2 flex-wrap">
+                                                                <span class="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                                    <span>🎧</span> {{ $ag->title ?: ($ag->isTalk() ? 'Talk Audio Group' : 'Conversation Audio Group') }}
+                                                                </span>
+                                                                <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
+                                                                    {{ $ag->isTalk() ? 'TALK' : 'CONVERSATION' }}
+                                                                </span>
+                                                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full {{ $agIsComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800' }}">
+                                                                    Progress: {{ $agCompleteCount }} / 3 Complete
+                                                                </span>
+                                                                @if($agIsComplete)
+                                                                    <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">🟢 VALID</span>
+                                                                @else
+                                                                    <span class="text-[10px] font-bold text-amber-700 dark:text-amber-300">🟡 INCOMPLETE</span>
+                                                                @endif
+                                                            </div>
+                                                            @if($agAudioUrl)
+                                                            <div class="flex items-center gap-2 mt-1.5">
+                                                                <span class="text-xs text-slate-500 dark:text-slate-400">Shared Audio: <strong>{{ \Illuminate\Support\Str::limit($agAudioTitle, 35) }}</strong></span>
+                                                                <button type="button" onclick="previewAssetModal('', '{{ addslashes($agAudioTitle) }}', 'audio', '{{ $agAudioUrl }}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-500">
+                                                                    👁️ Preview Audio
+                                                                </button>
+                                                            </div>
+                                                            @endif
+                                                        </div>
+                                                        <div class="flex items-center gap-2">
+                                                            <button type="button"
+                                                                    onclick="openEditAudioGroupModal({{ json_encode($agJson) }}, '{{ $sec->id }}', '{{ addslashes($sec->title) }}')"
+                                                                    class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-sm inline-flex items-center gap-1 transition-all">
+                                                                <span>✏️</span> Edit Group
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Slot Overview Tree --}}
+                                                    <div class="space-y-1.5 pl-2 text-xs">
+                                                        @for($s = 0; $s < 3; $s++)
+                                                            @php
+                                                                $slotQ = $ag->questions->sortBy('created_at')->values()->get($s);
+                                                                $slotComplete = $slotQ && $slotQ->isCompleteChild();
+                                                            @endphp
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="text-slate-400 font-mono">{{ $s === 2 ? '└──' : '├──' }}</span>
+                                                                @if($slotComplete)
+                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q#{{ $slotQ->testQuestions()->first()?->order ?? ($s + 1) }} ✓ Complete:</span>
+                                                                    <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt, 60) }}</span>
+                                                                @elseif($slotQ)
+                                                                    <span class="font-bold text-amber-700 dark:text-amber-300">Slot {{ $s + 1 }} ○ Incomplete:</span>
+                                                                    <span class="text-slate-500 italic truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt ?: 'Missing choices or correct answer', 50) }}</span>
+                                                                @else
+                                                                    <span class="font-bold text-slate-400">Slot {{ $s + 1 }} ○ Incomplete:</span>
+                                                                    <span class="text-slate-400 italic">Pending authoring</span>
+                                                                @endif
+                                                            </div>
+                                                        @endfor
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        @endif
+
                                         @forelse($secQuestions as $qItem)
                                             @php
                                                 $q = $qItem['question'];
@@ -1367,7 +1471,7 @@
 </div>
 
 @push('modals')
-{{-- Modal 2b: Create Assessment-Authored Shared Audio Group (Part 3 / Part 4) --}}
+{{-- Modal 2b: Create / Edit Assessment-Authored Shared Audio Group (Part 3 / Part 4) --}}
 <div id="create-audio-group-modal" class="hidden fixed inset-0 z-[10000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10000;" onclick="closeCreateAudioGroupModal(event)">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4 overflow-y-auto" onclick="event.stopPropagation()">
         {{-- Header --}}
@@ -1380,9 +1484,10 @@
                 <div class="flex items-center gap-2 mt-1 flex-wrap">
                     <span id="ag-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold"></span>
                     <span id="ag-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">LISTENING • PART 3</span>
+                    <span id="ag-header-progress" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">Progress: 0 / 3 Complete</span>
                 </div>
                 <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                    1 shared audio stimulus + exactly 3 child questions.
+                    TOEIC Part 3/4 uses exactly 3 questions per audio group. You may save your progress before all 3 questions are complete.
                 </div>
             </div>
             <button type="button" onclick="closeCreateAudioGroupModal()" aria-label="Close audio group modal" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -1392,6 +1497,7 @@
 
         <form id="create-audio-group-form" method="POST" action="{{ route('teacher.tests.create-audio-group', $test->id) }}" onsubmit="return validateCreateAudioGroupForm(this)" class="space-y-5">
             @csrf
+            <input type="hidden" name="_method" id="ag-form-method" value="POST">
             {{-- Locked Contextual Fields --}}
             <input type="hidden" name="test_section_id" id="ag-section-id" value="" required>
             <input type="hidden" name="part_number" id="ag-part-number" value="3" required>
@@ -1477,17 +1583,18 @@
             {{-- 2. Exactly 3 Child Question Panels --}}
             <div class="space-y-4">
                 <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                    <span>Child Questions (Exactly 3 Questions Required)</span>
+                    <span>Child Questions</span>
                     <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 lowercase">Questions 1, 2, 3</span>
                 </div>
 
                 @for($i = 0; $i < 3; $i++)
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+                    <input type="hidden" name="questions[{{ $i }}][id]" id="ag-q{{ $i }}-id" value="">
                     {{-- Question Panel Header --}}
                     <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-black px-2 py-0.5 rounded bg-indigo-600 text-white">QUESTION {{ $i + 1 }} OF 3</span>
-                            <span id="ag-q{{ $i }}-number-preview" class="text-xs font-bold text-indigo-600 dark:text-indigo-400"></span>
+                            <span id="ag-q{{ $i }}-status-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">○ Incomplete</span>
                         </div>
                         <div id="ag-q{{ $i }}-diff-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                             <span id="ag-q{{ $i }}-diff-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
@@ -1498,16 +1605,16 @@
                     {{-- Question Prompt --}}
                     <div>
                         <label for="ag-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Question {{ $i + 1 }} Prompt / Stem <span class="text-rose-500">*</span>
+                            Question {{ $i + 1 }} Prompt / Stem
                         </label>
-                        <textarea name="questions[{{ $i }}][prompt]" id="ag-q{{ $i }}-prompt" required rows="2" oninput="updateAudioGroupAutoDifficulty()" placeholder="e.g. What does the woman suggest the man do?" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                        <textarea name="questions[{{ $i }}][prompt]" id="ag-q{{ $i }}-prompt" rows="2" oninput="updateAudioGroupAutoDifficulty()" placeholder="e.g. What does the woman suggest the man do?" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
                     </div>
 
                     {{-- Answer Choices (A, B, C, D) --}}
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
                             <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                                Answer Choices (A–D) &amp; Correct Answer <span class="text-rose-500">*</span>
+                                Answer Choices (A–D) &amp; Correct Answer
                             </label>
                             <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Select radio for correct answer</span>
                         </div>
@@ -1516,7 +1623,7 @@
                             <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
                                 <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="ag-q{{ $i }}-correct-{{ $cIdx }}" {{ $cIdx === 0 ? 'checked' : '' }} onchange="updateAudioGroupAutoDifficulty()" class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
                                 <span class="text-xs font-black text-slate-700 dark:text-slate-300 w-4">{{ $optLabel }}</span>
-                                <input type="text" name="questions[{{ $i }}][choices][]" id="ag-q{{ $i }}-choice-{{ $cIdx }}" required oninput="updateAudioGroupAutoDifficulty()" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                                <input type="text" name="questions[{{ $i }}][choices][]" id="ag-q{{ $i }}-choice-{{ $cIdx }}" oninput="updateAudioGroupAutoDifficulty()" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                             </div>
                             @endforeach
                         </div>
@@ -1539,8 +1646,8 @@
                     Cancel
                 </button>
                 <button type="submit" id="ag-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
-                    <span>💾</span>
-                    <span>Save Audio Group</span>
+                    <span id="ag-submit-icon">💾</span>
+                    <span id="ag-submit-text">Save Draft Group</span>
                 </button>
             </div>
         </form>
@@ -2595,11 +2702,18 @@
 
     function openCreateAudioGroupModal(sectionId, partNumber, sectionTitle = '') {
         const modal = document.getElementById('create-audio-group-modal');
+        const form = document.getElementById('create-audio-group-form');
+        const methodInput = document.getElementById('ag-form-method');
         if (!modal) return;
 
         const partNum = parseInt(partNumber) || 3;
         const isTalk = partNum === 4;
         const groupType = isTalk ? 'talk' : 'conversation';
+
+        if (form) {
+            form.action = "{{ route('teacher.tests.create-audio-group', $test->id) }}";
+        }
+        if (methodInput) methodInput.value = 'POST';
 
         // Locked context values
         const secInput = document.getElementById('ag-section-id');
@@ -2628,8 +2742,10 @@
         removeAudioGroupAttachedMedia();
 
         for (let i = 0; i < 3; i++) {
+            const idEl = document.getElementById(`ag-q${i}-id`);
             const promptEl = document.getElementById(`ag-q${i}-prompt`);
             const explEl = document.getElementById(`ag-q${i}-explanation`);
+            if (idEl) idEl.value = '';
             if (promptEl) promptEl.value = '';
             if (explEl) explEl.value = '';
             for (let c = 0; c < 4; c++) {
@@ -2638,6 +2754,96 @@
             }
             const correct0 = document.getElementById(`ag-q${i}-correct-0`);
             if (correct0) correct0.checked = true;
+        }
+
+        updateAudioGroupAutoDifficulty();
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+
+    function openEditAudioGroupModal(agData, sectionId = '', sectionTitle = '') {
+        const modal = document.getElementById('create-audio-group-modal');
+        const form = document.getElementById('create-audio-group-form');
+        const methodInput = document.getElementById('ag-form-method');
+        if (!modal || !agData) return;
+
+        const partNum = parseInt(agData.part_number) || 3;
+        const isTalk = partNum === 4;
+        const groupType = isTalk ? 'talk' : 'conversation';
+
+        if (form) {
+            form.action = `/teacher/assessments/{{ $test->id }}/audio-groups/${agData.id}`;
+        }
+        if (methodInput) methodInput.value = 'PUT';
+
+        const secInput = document.getElementById('ag-section-id');
+        const partInput = document.getElementById('ag-part-number');
+        const typeInput = document.getElementById('ag-group-type');
+        if (secInput) secInput.value = sectionId;
+        if (partInput) partInput.value = partNum;
+        if (typeInput) typeInput.value = groupType;
+
+        const modalTitle = document.getElementById('ag-modal-title');
+        const targetSecTitle = document.getElementById('ag-target-section-title');
+        const partBadge = document.getElementById('ag-part-badge');
+        const scriptLabel = document.getElementById('ag-script-label');
+
+        if (modalTitle) modalTitle.textContent = isTalk ? 'Edit Talk Group' : 'Edit Conversation Group';
+        if (targetSecTitle) targetSecTitle.textContent = `Target Section: ${sectionTitle || (isTalk ? 'Part 4: Talks' : 'Part 3: Conversations')}`;
+        if (partBadge) partBadge.textContent = isTalk ? 'LISTENING • PART 4' : 'LISTENING • PART 3';
+        if (scriptLabel) scriptLabel.textContent = isTalk ? 'Talk Script / Transcript (Optional)' : 'Conversation Script / Transcript (Optional)';
+
+        // Populate audio group metadata
+        const titleInput = document.getElementById('ag-title');
+        const scriptInput = document.getElementById('ag-audio-script');
+        if (titleInput) titleInput.value = agData.title || '';
+        if (scriptInput) scriptInput.value = agData.audio_script || '';
+
+        // Media attachment
+        const mediaIdInput = document.getElementById('ag-media-asset-id');
+        const audioInput = document.getElementById('ag-audio-url');
+        if (mediaIdInput) mediaIdInput.value = agData.media_asset_id || '';
+        if (audioInput) audioInput.value = agData.audio_url || '';
+
+        const effectiveUrl = agData.audio_effective_url || agData.audio_url || '';
+        const audioTitle = agData.audio_title || agData.title || 'Shared Audio';
+        const prevCard = document.getElementById('ag-preview-audio-card');
+        const emptyCard = document.getElementById('ag-empty-audio-card');
+        const prevTitle = document.getElementById('ag-preview-audio-title');
+        const player = document.getElementById('ag-preview-audio-player');
+
+        if (effectiveUrl || agData.media_asset_id) {
+            if (prevTitle) prevTitle.textContent = audioTitle;
+            if (player) player.src = effectiveUrl;
+            if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+            if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+        } else {
+            removeAudioGroupAttachedMedia();
+        }
+
+        // Populate questions (up to 3 slots)
+        const qList = agData.questions || [];
+        for (let i = 0; i < 3; i++) {
+            const q = qList[i] || null;
+            const idEl = document.getElementById(`ag-q${i}-id`);
+            const promptEl = document.getElementById(`ag-q${i}-prompt`);
+            const explEl = document.getElementById(`ag-q${i}-explanation`);
+
+            if (idEl) idEl.value = q ? q.id : '';
+            if (promptEl) promptEl.value = q ? (q.prompt || '') : '';
+            if (explEl) explEl.value = q ? (q.explanation || '') : '';
+
+            const choices = q ? (q.choices || []) : [];
+            const correctIdx = q ? (q.correct_choice ?? 0) : 0;
+
+            for (let c = 0; c < 4; c++) {
+                const choiceEl = document.getElementById(`ag-q${i}-choice-${c}`);
+                if (choiceEl) choiceEl.value = choices[c] || '';
+            }
+
+            const radio = document.getElementById(`ag-q${i}-correct-${correctIdx}`) || document.getElementById(`ag-q${i}-correct-0`);
+            if (radio) radio.checked = true;
         }
 
         updateAudioGroupAutoDifficulty();
@@ -2676,13 +2882,33 @@
 
     function updateAudioGroupAutoDifficulty() {
         const hasAudio = !!document.getElementById('ag-media-asset-id')?.value || !!document.getElementById('ag-audio-url')?.value;
+        let completeCount = 0;
 
         for (let i = 0; i < 3; i++) {
             const prompt = (document.getElementById(`ag-q${i}-prompt`)?.value || '').trim();
             const choices = Array.from(document.querySelectorAll(`input[name="questions[${i}][choices][]"]`))
                 .map(input => input.value.trim())
                 .filter(v => v.length > 0);
+            const radioChecked = !!document.querySelector(`input[name="questions[${i}][correct_choice]"]:checked`);
 
+            const isSlotComplete = prompt.length > 0 && choices.length === 4 && radioChecked;
+            if (isSlotComplete) {
+                completeCount++;
+            }
+
+            // Update slot status badge
+            const statusBadge = document.getElementById(`ag-q${i}-status-badge`);
+            if (statusBadge) {
+                if (isSlotComplete) {
+                    statusBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800';
+                    statusBadge.textContent = '✓ Complete';
+                } else {
+                    statusBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700';
+                    statusBadge.textContent = '○ Incomplete';
+                }
+            }
+
+            // Auto Difficulty badge
             const badge = document.getElementById(`ag-q${i}-diff-badge`);
             const dot = document.getElementById(`ag-q${i}-diff-dot`);
             const text = document.getElementById(`ag-q${i}-diff-text`);
@@ -2714,6 +2940,23 @@
                 dot.className = 'w-2 h-2 rounded-full bg-amber-500';
                 text.textContent = 'Provisional — Medium';
             }
+        }
+
+        // Header progress badge
+        const headerProg = document.getElementById('ag-header-progress');
+        if (headerProg) {
+            headerProg.textContent = `Progress: ${completeCount} / 3 Complete`;
+            if (completeCount === 3) {
+                headerProg.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800';
+            } else {
+                headerProg.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700';
+            }
+        }
+
+        // Dynamic Submit button text
+        const submitBtnText = document.getElementById('ag-submit-text');
+        if (submitBtnText) {
+            submitBtnText.textContent = (completeCount === 3) ? 'Save Audio Group' : 'Save Draft Group';
         }
     }
 
