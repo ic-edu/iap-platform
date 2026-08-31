@@ -569,7 +569,13 @@
                                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
                                     <div class="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                         <div class="flex items-center gap-2 flex-wrap">
-                                            @if($isToeicTest && in_array((int)$secPartNumber, [3, 4], true))
+                                            @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
+                                            <button type="button"
+                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
+                                                    class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                <span>📖</span> + Add Passage Group
+                                            </button>
+                                            @elseif($isToeicTest && in_array((int)$secPartNumber, [3, 4], true))
                                             <button type="button"
                                                     onclick="openCreateAudioGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
                                                     class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
@@ -585,13 +591,6 @@
                                                     onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
                                                     class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5">
                                                 <span>➕</span> + Add Question
-                                            </button>
-                                            @endif
-                                            @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
-                                            <button type="button"
-                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
-                                                    class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 text-xs font-bold inline-flex items-center gap-1.5">
-                                                <span>📖</span> + Add Passage Group
                                             </button>
                                             @endif
                                             <button type="button"
@@ -838,7 +837,7 @@
                                                                 @else
                                                                     <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q#{{ $pqIdx + 1 }} ✓ Complete:</span>
                                                                 @endif
-                                                                <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ \Illuminate\Support\Str::limit($pq->prompt, 60) }}</span>
+                                                                <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ $pq->prompt ? \Illuminate\Support\Str::limit($pq->prompt, 60) : 'Passage-embedded blank' }}</span>
                                                                 @if($pqDiffVal)
                                                                     <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $pqDiffBadgeColor }}">
                                                                         Auto: {{ ucfirst($pqDiffVal) }}
@@ -962,15 +961,29 @@
                                                 </div>
                                             </div>
                                         @empty
-                                            @if($secAudioGroups->isEmpty())
+                                            @if($secAudioGroups->isEmpty() && $secPassageGroups->isEmpty())
                                                 <div class="p-6 text-center bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
                                                     <div class="text-slate-400 font-bold text-xs">No questions assigned to this section yet.</div>
                                                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                                                    <button type="button"
-                                                            onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
-                                                            class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
-                                                        <span>➕</span> + Add Question to this Section
-                                                    </button>
+                                                        @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
+                                                        <button type="button"
+                                                                onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
+                                                                class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                            <span>📖</span> + Add Passage Group to this Section
+                                                        </button>
+                                                        @elseif($isToeicTest && in_array((int)$secPartNumber, [3, 4], true))
+                                                        <button type="button"
+                                                                onclick="openCreateAudioGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
+                                                                class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                            <span>🎧</span> + Add Audio Group to this Section
+                                                        </button>
+                                                        @else
+                                                        <button type="button"
+                                                                onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
+                                                                class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
+                                                            <span>➕</span> + Add Question to this Section
+                                                        </button>
+                                                        @endif
                                                     @endif
                                                 </div>
                                             @endif
@@ -1205,9 +1218,10 @@
                             @php
                                 $firstQ = $sec->testQuestions->first()?->question;
                                 $optPartNumber = $firstQ?->part_number ?? ($sec->order ?? ($secIdx + 1));
+                                $isPassagePart = in_array((int)$optPartNumber, [6, 7], true);
                             @endphp
-                            <option value="{{ $sec->id }}" data-part="{{ $optPartNumber }}" data-title="{{ $sec->title }}" data-type="{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}">
-                                {{ $sec->title }} (Part {{ $optPartNumber }} • {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'Listening') }})
+                            <option value="{{ $sec->id }}" data-part="{{ $optPartNumber }}" data-title="{{ $sec->title }}" data-type="{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}" {{ $isPassagePart ? 'disabled' : '' }}>
+                                {{ $sec->title }} (Part {{ $optPartNumber }} • {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'Listening') }}){{ $isPassagePart ? ' — Must author via Passage Group' : '' }}
                             </option>
                         @endforeach
                     </select>
@@ -2010,10 +2024,16 @@
 
                     {{-- Question Prompt / Target Blank --}}
                     <div>
-                        <label for="pg-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Question {{ $i + 1 }} Prompt / Blank Stem <span class="text-rose-500">*</span>
-                        </label>
-                        <textarea name="questions[{{ $i }}][prompt]" id="pg-q{{ $i }}-prompt" rows="2" required placeholder="e.g. Select the best word to complete blank [{{ 131 + $i }}]..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="pg-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Question Note / Blank Context (Optional)
+                            </label>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Optional note</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mb-1">
+                            The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.
+                        </div>
+                        <textarea name="questions[{{ $i }}][prompt]" id="pg-q{{ $i }}-prompt" rows="2" placeholder="Optional authoring note for blank [{{ 131 + $i }}]..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
                     </div>
 
                     {{-- Answer Choices (A, B, C, D) --}}

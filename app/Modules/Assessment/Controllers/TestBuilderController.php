@@ -540,11 +540,17 @@ class TestBuilderController extends Controller
         $detection = QuestionDifficultyDetectionService::detect($request->all());
 
         if ($request->filled('part_number')) {
+            $partNumber = (int) $request->input('part_number');
+            if (in_array($partNumber, [6, 7], true)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'part_number' => "Part {$partNumber} questions must be authored through a Passage Group.",
+                ]);
+            }
+
             $toeicData = $request->all();
             $toeicData['prompt'] = $validated['prompt'];
             $toeicData['difficulty'] = $detection['difficulty_level'];
             ToeicQuestionValidator::validate($toeicData);
-            $partNumber = (int) $request->input('part_number');
             $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
 
             // Server-side Integrity Defense: Ensure Part Number matches target Section type
@@ -808,7 +814,7 @@ class TestBuilderController extends Controller
             'passages.*.document_type' => ['nullable', 'string'],
             'passages.*.order_in_group'=> ['nullable', 'integer'],
             'questions'        => ['required', 'array', 'min:2', 'max:5'],
-            'questions.*.prompt'         => ['required', 'string'],
+            'questions.*.prompt'         => ['nullable', 'string'],
             'questions.*.difficulty'     => ['nullable', 'string'],
             'questions.*.explanation'    => ['nullable', 'string'],
             'questions.*.choices'        => ['required', 'array', 'size:4'],
