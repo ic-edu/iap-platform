@@ -8,6 +8,7 @@ use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Assessment\Services\TestBuilderService;
 use App\Modules\QuestionBank\Models\AudioGroup;
+use App\Modules\QuestionBank\Models\PassageGroup;
 use App\Modules\QuestionBank\Models\Question;
 use App\Services\QuestionDifficultyDetectionService;
 use App\Services\ToeicQuestionValidator;
@@ -828,6 +829,114 @@ class TestBuilderController extends Controller
         return redirect()->route('teacher.tests.show', $test->id)
             ->with('status', "Part {$validated['part_number']} " . ucfirst($validated['passage_type']) . " Passage Group successfully created and attached to '{$section->title}'.")
             ->with('expanded_section_id', $section->id);
+    }
+
+    /**
+     * Update an Assessment-authored Shared Passage Group and its child questions.
+     */
+    public function updatePassageGroup(Request $request, Test $test, PassageGroup $passageGroup): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true)) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        $validated = $request->validate([
+            'test_section_id'  => ['nullable', 'exists:test_sections,id'],
+            'title'            => ['nullable', 'string', 'max:255'],
+            'part_number'      => ['nullable', 'integer', 'in:6,7'],
+            'passage_type'     => ['nullable', 'string', 'in:single,double,triple'],
+            'context_metadata' => ['nullable', 'array'],
+            'passages'         => ['required', 'array', 'min:1', 'max:3'],
+            'passages.*.id'            => ['nullable', 'string'],
+            'passages.*.title'         => ['nullable', 'string', 'max:255'],
+            'passages.*.content'       => ['required', 'string'],
+            'passages.*.document_type' => ['nullable', 'string'],
+            'passages.*.order_in_group'=> ['nullable', 'integer'],
+            'questions'        => ['required', 'array', 'min:2', 'max:5'],
+            'questions.*.id'             => ['nullable', 'string'],
+            'questions.*.prompt'         => ['nullable', 'string'],
+            'questions.*.difficulty'     => ['nullable', 'string'],
+            'questions.*.explanation'    => ['nullable', 'string'],
+            'questions.*.choices'        => ['required', 'array', 'size:4'],
+            'questions.*.correct_choice' => ['required'],
+        ]);
+
+        $section = null;
+        if (!empty($validated['test_section_id'])) {
+            $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->first();
+        }
+
+        $updatedGroup = $this->builderService->updatePassageGroup($passageGroup, $validated, $section);
+
+        $partNum = $updatedGroup->part_number;
+        $groupTypeName = ((int) $partNum === 6) ? 'Text Completion' : 'Reading Passage';
+        $statusMsg = $updatedGroup->isComplete()
+            ? "Part {$partNum} {$groupTypeName} Group saved successfully."
+            : "Part {$partNum} {$groupTypeName} Group updated.";
+
+        $redirect = redirect()->route('teacher.tests.show', array_filter([
+            'test'    => $test->id,
+            'section' => $section?->id,
+            'focus'   => "passage-group-card-{$updatedGroup->id}",
+        ]))->with('status', $statusMsg);
+
+        if ($section) {
+            $redirect->with('expanded_section_id', $section->id);
+        }
+
+        return $redirect;
+    }
+
+    /**
+     * Remove an Assessment-authored Shared Passage Group from Assessment.
+     */
+    public function destroyPassageGroup(Request $request, Test $test, PassageGroup $passageGroup): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true) || $test->is_published) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        if ((string) $passageGroup->test_id !== (string) $test->id) {
+            abort(404, 'Passage group does not belong to this assessment.');
+        }
+
+        $partNumber = $passageGroup->part_number;
+        $originSection = $test->sections()->where('title', 'LIKE', "%Part {$partNumber}%")->orWhere('order', $partNumber)->first()
+            ?? $test->sections()->where('section_type', 'reading')->first();
+        $originSectionId = $originSection?->id;
+
+        $isPart6 = ((int) $partNumber === 6);
+        $groupType = $isPart6 ? 'Text Completion' : 'Reading Passage';
+
+        try {
+            $this->builderService->deletePassageGroup($test, $passageGroup);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->withErrors($e->validator);
+        }
+
+        $redirect = redirect()->route('teacher.tests.show', array_filter([
+            'test'    => $test->id,
+            'section' => $originSectionId,
+        ]))->with('status', "Part {$partNumber} {$groupType} Group removed successfully.");
+
+        if ($originSectionId) {
+            $redirect->with('expanded_section_id', $originSectionId);
+        }
+
+        return $redirect;
     }
 
     /**

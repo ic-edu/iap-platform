@@ -231,6 +231,13 @@
                         ->get()
                         ->groupBy(fn($ag) => (int)$ag->part_number);
 
+                    // Pre-load all passage groups for the test once to avoid N+1 queries
+                    $allTestPassageGroups = \App\Modules\QuestionBank\Models\PassageGroup::where('test_id', (string)$test->id)
+                        ->with(['passages', 'questions.choices'])
+                        ->orderBy('order')
+                        ->get()
+                        ->groupBy(fn($pg) => (int)$pg->part_number);
+
                     // Compute Section Validation Rollups
                     $sectionRollups = [];
                     $partsNeedingAttentionCount = 0;
@@ -244,12 +251,15 @@
                         $sAudioGroups = ($sPartNum && in_array((int)$sPartNum, [3, 4], true))
                             ? ($allTestAudioGroups->get((int)$sPartNum) ?? collect())
                             : collect();
+                        $sPassageGroups = ($sPartNum && in_array((int)$sPartNum, [6, 7], true))
+                            ? ($allTestPassageGroups->get((int)$sPartNum) ?? collect())
+                            : collect();
 
                         $blockingIssues = [];
                         $firstIssueId = null;
                         $completeQCount = 0;
 
-                        if ($sQCount === 0 && $sAudioGroups->isEmpty()) {
+                        if ($sQCount === 0 && $sAudioGroups->isEmpty() && $sPassageGroups->isEmpty()) {
                             $status = 'not_started';
                             $blockingIssues[] = "Section '{$sModel->title}' has no questions assigned.";
                             $firstIssueId = "section-card-{$sModel->id}";
@@ -268,6 +278,19 @@
                                         $blockingIssues[] = "Q#{$qNum}: {$errText}";
                                         if (!$firstIssueId) {
                                             $firstIssueId = "audio-group-card-{$qModel->audio_group_id}";
+                                        }
+                                    } else {
+                                        $completeQCount++;
+                                    }
+                                } elseif (!empty($qModel->passage_group_id)) {
+                                    // Child question belongs to PassageGroup
+                                    $pureQWarnings = array_filter($qWarnings, fn($w) => !str_starts_with($w, 'Passage Group Finding:'));
+                                    if (!empty($pureQWarnings) || !$qModel->isCompleteChild()) {
+                                        $qNum = $qItem['number'];
+                                        $errText = !empty($pureQWarnings) ? implode('; ', $pureQWarnings) : 'Incomplete question details';
+                                        $blockingIssues[] = "Q#{$qNum}: {$errText}";
+                                        if (!$firstIssueId) {
+                                            $firstIssueId = "passage-group-card-{$qModel->passage_group_id}";
                                         }
                                     } else {
                                         $completeQCount++;
@@ -298,6 +321,23 @@
                                         $blockingIssues[] = "Audio Group '{$agTitle}' ({$agCompCount}/3 complete): Requires 1 shared audio and exactly 3 complete questions.";
                                         if (!$firstIssueId) {
                                             $firstIssueId = "audio-group-card-{$agModel->id}";
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 3. Evaluate Passage Group completeness (for Part 6 / Part 7)
+                            if ($sPassageGroups->isNotEmpty()) {
+                                foreach ($sPassageGroups as $pgModel) {
+                                    $pgCheck = \App\Services\ToeicQuestionValidator::checkPassageGroup($pgModel);
+                                    if (!$pgCheck['is_valid']) {
+                                        $isPart6 = ((int)$pgModel->part_number === 6);
+                                        $pgTitle = $pgModel->title ?: ($isPart6 ? 'Text Completion Group' : 'Reading Passage Group');
+                                        foreach ($pgCheck['errors'] as $pgErr) {
+                                            $blockingIssues[] = "Passage Group '{$pgTitle}': {$pgErr}";
+                                        }
+                                        if (!$firstIssueId) {
+                                            $firstIssueId = "passage-group-card-{$pgModel->id}";
                                         }
                                     }
                                 }
@@ -779,11 +819,7 @@
                                         @endphp
                                         @if($secPartNumber && in_array((int)$secPartNumber, [6, 7]))
                                             @php
-                                                $secPassageGroups = \App\Modules\QuestionBank\Models\PassageGroup::where('test_id', (string)$test->id)
-                                                    ->where('part_number', (int)$secPartNumber)
-                                                    ->orderBy('order')
-                                                    ->with(['passages', 'questions.choices'])
-                                                    ->get();
+                                                $secPassageGroups = $allTestPassageGroups->get((int)$secPartNumber) ?? collect();
                                             @endphp
                                             @foreach($secPassageGroups as $pg)
                                                 @php
@@ -792,9 +828,41 @@
                                                     $pgSortedQuestions = $pg->questions->sortBy(function($cq) use ($globalQuestionNumberMap) {
                                                         return $globalQuestionNumberMap[(string)$cq->id] ?? ($cq->created_at?->timestamp ?? 0);
                                                     })->values();
-                                                    $pgCompleteCount = $pgSortedQuestions->count();
+                                                    $pgCheck = \App\Services\ToeicQuestionValidator::checkPassageGroup($pg);
+                                                    $pgIsComplete = $pgCheck['is_valid'] ?? false;
+                                                    $pgCompleteCount = $pgSortedQuestions->filter(fn($cq) => $cq->isCompleteChild())->count();
+                                                    $isPart6 = ((int)$pg->part_number === 6);
+                                                    $groupTypeName = $isPart6 ? 'Text Completion' : 'Reading Passage';
+                                                    $pgJson = [
+                                                        'id'             => $pg->id,
+                                                        'title'          => $pg->title,
+                                                        'part_number'    => $pg->part_number,
+                                                        'passage_type'   => $pg->passage_type,
+                                                        'passages'       => $pg->passages->map(fn($p) => [
+                                                            'id'             => $p->id,
+                                                            'title'          => $p->title,
+                                                            'content'        => $p->content,
+                                                            'document_type'  => $p->document_type,
+                                                            'order_in_group' => $p->order_in_group,
+                                                        ])->toArray(),
+                                                        'complete_count' => $pgCompleteCount,
+                                                        'is_complete'    => $pgIsComplete,
+                                                        'questions'      => $pgSortedQuestions->map(function($cq) {
+                                                            $choices = $cq->choices->sortBy('order')->values();
+                                                            $correctIdx = $choices->search(fn($c) => (bool)$c->is_correct);
+                                                            return [
+                                                                'id'             => $cq->id,
+                                                                'prompt'         => $cq->prompt,
+                                                                'explanation'    => $cq->explanation,
+                                                                'difficulty'     => is_object($cq->difficulty) ? $cq->difficulty->value : $cq->difficulty,
+                                                                'choices'        => $choices->map(fn($c) => $c->content ?? $c->choice_text)->toArray(),
+                                                                'correct_choice' => $correctIdx !== false ? $correctIdx : 0,
+                                                                'is_complete'    => $cq->isCompleteChild(),
+                                                            ];
+                                                        })->toArray(),
+                                                    ];
                                                 @endphp
-                                                <div id="passage-group-card-{{ $pg->id }}" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+                                                <div id="passage-group-card-{{ $pg->id }}" class="bg-white dark:bg-slate-900 border {{ $pgIsComplete ? 'border-slate-200 dark:border-slate-800' : 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20' }} rounded-xl p-4 shadow-sm space-y-3">
                                                     <div class="flex justify-between items-start flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                                                         <div>
                                                             <div class="flex items-center gap-2 flex-wrap">
@@ -802,17 +870,42 @@
                                                                     <span>📖</span> {{ $pg->title ?: ('Part ' . $pg->part_number . ' ' . ucfirst($pg->passage_type) . ' Passage Group') }}
                                                                 </span>
                                                                 <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
-                                                                    {{ ((int)$pg->part_number === 6) ? 'Text Completion Group' : 'Passage Group (' . ucfirst($pg->passage_type) . ')' }}
+                                                                    {{ $isPart6 ? 'Text Completion Group' : 'Passage Group (' . ucfirst($pg->passage_type) . ')' }}
                                                                 </span>
-                                                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800">
-                                                                    Progress: {{ $pgCompleteCount }} / {{ ((int)$pg->part_number === 6) ? 4 : $pgCompleteCount }} Complete
+                                                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full {{ $pgIsComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800' }}">
+                                                                    Progress: {{ $pgCompleteCount }} / {{ $isPart6 ? 4 : $pgSortedQuestions->count() }} Complete
                                                                 </span>
-                                                                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">🟢 VALID</span>
+                                                                @if($pgIsComplete)
+                                                                    <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">🟢 VALID</span>
+                                                                @else
+                                                                    <span class="text-[10px] font-bold text-amber-700 dark:text-amber-300">🟡 INCOMPLETE</span>
+                                                                @endif
                                                             </div>
                                                             @if($pgFirstPassage)
                                                             <div class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 italic line-clamp-2">
                                                                 Passage: {{ \Illuminate\Support\Str::limit($pgFirstPassage->content, 120) }}
                                                             </div>
+                                                            @endif
+                                                        </div>
+                                                        <div class="flex items-center gap-2">
+                                                            <button type="button"
+                                                                    onclick="openEditPassageGroupModal({{ json_encode($pgJson) }}, '{{ $sec->id }}', '{{ addslashes($sec->title) }}')"
+                                                                    class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-sm inline-flex items-center gap-1 transition-all">
+                                                                <span>✏️</span> Edit Group
+                                                            </button>
+
+                                                            @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']) && !$test->is_published)
+                                                            @php
+                                                                $groupConfirmTitle = "Remove {$groupTypeName} Group?";
+                                                                $groupConfirmMsg = "This will remove this assessment Passage Group and its assessment-authored child questions. This action cannot be undone.";
+                                                            @endphp
+                                                            <form action="{{ route('teacher.tests.destroy-passage-group', ['test' => $test->id, 'passageGroup' => $pg->id]) }}" method="POST" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: '{{ $groupConfirmTitle }}', message: '{{ $groupConfirmMsg }}', confirmText: 'Remove Group', variant: 'danger', form: this });">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold inline-flex items-center gap-1 transition-all">
+                                                                    🗑 Remove Group
+                                                                </button>
+                                                            </form>
                                                             @endif
                                                         </div>
                                                     </div>
@@ -1965,6 +2058,7 @@
 
         <form id="create-passage-group-form" method="POST" action="{{ route('teacher.tests.create-passage-group', $test->id) }}" class="space-y-5">
             @csrf
+            <input type="hidden" name="_method" id="pg-form-method" value="POST">
             {{-- Locked Contextual Fields --}}
             <input type="hidden" name="test_section_id" id="pg-section-id" value="" required>
             <input type="hidden" name="part_number" id="pg-part-number" value="6" required>
@@ -1992,6 +2086,7 @@
                     <input type="text" name="title" id="pg-group-title" placeholder="e.g. Training Course Announcement, Customer Email, Staff Memo..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                 </div>
 
+                <input type="hidden" name="passages[0][id]" id="pg-passage-id" value="">
                 <input type="hidden" name="passages[0][title]" value="Document 1">
                 <input type="hidden" name="passages[0][document_type]" value="article">
                 <input type="hidden" name="passages[0][order_in_group]" value="1">
@@ -2014,6 +2109,7 @@
                 </div>
 
                 @for($i = 0; $i < 4; $i++)
+                <input type="hidden" name="questions[{{ $i }}][id]" id="pg-q{{ $i }}-id" value="">
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                         <div class="flex items-center gap-2">
@@ -2073,7 +2169,7 @@
                 </button>
                 <button type="submit" id="pg-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
                     <span>💾</span>
-                    <span>Save Passage Group</span>
+                    <span id="pg-submit-text">Save Passage Group</span>
                 </button>
             </div>
         </form>
@@ -3349,31 +3445,54 @@
 
     function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '') {
         const modal = document.getElementById('create-passage-group-modal');
+        const form = document.getElementById('create-passage-group-form');
+        const methodInput = document.getElementById('pg-form-method');
         if (!modal) return;
 
+        if (form) {
+            form.action = `{{ route('teacher.tests.create-passage-group', $test->id) }}`;
+        }
+        if (methodInput) methodInput.value = 'POST';
+
         const partNum = parseInt(partNumber) || 6;
+        const isPart6 = partNum === 6;
         const secInput = document.getElementById('pg-section-id');
         const partInput = document.getElementById('pg-part-number');
+        const typeInput = document.getElementById('pg-passage-type');
         const titleLabel = document.getElementById('pg-target-section-title');
         const modalTitle = document.getElementById('pg-modal-title');
         const partBadge = document.getElementById('pg-part-badge');
+        const submitText = document.getElementById('pg-submit-text');
 
         if (secInput) secInput.value = sectionId;
         if (partInput) partInput.value = partNum;
-        if (titleLabel) titleLabel.textContent = `Target Section: ${sectionTitle || (partNum === 6 ? 'Part 6: Text Completion' : 'Part 7: Reading Comprehension')}`;
-        if (modalTitle) modalTitle.textContent = partNum === 6 ? 'Create Text Completion Group' : 'Create Reading Passage Group';
-        if (partBadge) partBadge.textContent = partNum === 6 ? 'READING • PART 6' : 'READING • PART 7';
+        if (typeInput) typeInput.value = 'single';
+        if (titleLabel) titleLabel.textContent = `Target Section: ${sectionTitle || (isPart6 ? 'Part 6: Text Completion' : 'Part 7: Reading Comprehension')}`;
+        if (modalTitle) modalTitle.textContent = isPart6 ? 'Create Text Completion Group' : 'Create Reading Passage Group';
+        if (partBadge) partBadge.textContent = isPart6 ? 'READING • PART 6' : 'READING • PART 7';
+        if (submitText) submitText.textContent = 'Save Passage Group';
 
         // Clear previous input fields
         const groupTitleInput = document.getElementById('pg-group-title');
         const passageContentInput = document.getElementById('pg-passage-content');
+        const passageIdInput = document.getElementById('pg-passage-id');
         if (groupTitleInput) groupTitleInput.value = '';
         if (passageContentInput) passageContentInput.value = '';
+        if (passageIdInput) passageIdInput.value = '';
 
         for (let i = 0; i < 4; i++) {
+            const idEl = document.getElementById(`pg-q${i}-id`);
             const promptEl = document.getElementById(`pg-q${i}-prompt`);
             const explEl = document.getElementById(`pg-q${i}-explanation`);
-            if (promptEl) promptEl.value = '';
+            if (idEl) idEl.value = '';
+            if (promptEl) {
+                promptEl.value = '';
+                if (isPart6) {
+                    promptEl.removeAttribute('required');
+                } else {
+                    promptEl.setAttribute('required', 'required');
+                }
+            }
             if (explEl) explEl.value = '';
             for (let c = 0; c < 4; c++) {
                 const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
@@ -3381,6 +3500,87 @@
             }
             const correct0 = document.getElementById(`pg-q${i}-correct-0`);
             if (correct0) correct0.checked = true;
+        }
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+
+    function openEditPassageGroupModal(pgData, sectionId = '', sectionTitle = '') {
+        const modal = document.getElementById('create-passage-group-modal');
+        const form = document.getElementById('create-passage-group-form');
+        const methodInput = document.getElementById('pg-form-method');
+        if (!modal || !pgData) return;
+
+        const partNum = parseInt(pgData.part_number) || 6;
+        const isPart6 = partNum === 6;
+
+        if (form) {
+            form.action = `/teacher/assessments/{{ $test->id }}/passage-groups/${pgData.id}`;
+        }
+        if (methodInput) methodInput.value = 'PUT';
+
+        const secInput = document.getElementById('pg-section-id');
+        const partInput = document.getElementById('pg-part-number');
+        const typeInput = document.getElementById('pg-passage-type');
+        if (secInput) secInput.value = sectionId;
+        if (partInput) partInput.value = partNum;
+        if (typeInput) typeInput.value = pgData.passage_type || 'single';
+
+        const modalTitle = document.getElementById('pg-modal-title');
+        const targetSecTitle = document.getElementById('pg-target-section-title');
+        const partBadge = document.getElementById('pg-part-badge');
+        const submitText = document.getElementById('pg-submit-text');
+
+        if (modalTitle) modalTitle.textContent = isPart6 ? 'Edit Text Completion Group' : 'Edit Reading Passage Group';
+        if (targetSecTitle) targetSecTitle.textContent = `Target Section: ${sectionTitle || (isPart6 ? 'Part 6: Text Completion' : 'Part 7: Reading Comprehension')}`;
+        if (partBadge) partBadge.textContent = isPart6 ? 'READING • PART 6' : 'READING • PART 7';
+        if (submitText) submitText.textContent = 'Update Passage Group';
+
+        // Populate Passage text & title
+        const titleInput = document.getElementById('pg-group-title');
+        const contentInput = document.getElementById('pg-passage-content');
+        const pIdInput = document.getElementById('pg-passage-id');
+        if (titleInput) titleInput.value = pgData.title || '';
+
+        const passages = pgData.passages || [];
+        if (passages.length > 0) {
+            if (contentInput) contentInput.value = passages[0].content || '';
+            if (pIdInput) pIdInput.value = passages[0].id || '';
+        } else {
+            if (contentInput) contentInput.value = '';
+            if (pIdInput) pIdInput.value = '';
+        }
+
+        // Populate questions (4 slots)
+        const qList = pgData.questions || [];
+        for (let i = 0; i < 4; i++) {
+            const q = qList[i] || null;
+            const idEl = document.getElementById(`pg-q${i}-id`);
+            const promptEl = document.getElementById(`pg-q${i}-prompt`);
+            const explEl = document.getElementById(`pg-q${i}-explanation`);
+
+            if (idEl) idEl.value = q ? q.id : '';
+            if (promptEl) {
+                promptEl.value = q ? (q.prompt || '') : '';
+                if (isPart6) {
+                    promptEl.removeAttribute('required');
+                } else {
+                    promptEl.setAttribute('required', 'required');
+                }
+            }
+            if (explEl) explEl.value = q ? (q.explanation || '') : '';
+
+            const choices = q ? (q.choices || []) : [];
+            const correctIdx = q ? (q.correct_choice ?? 0) : 0;
+
+            for (let c = 0; c < 4; c++) {
+                const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
+                if (choiceEl) choiceEl.value = choices[c] || '';
+            }
+
+            const radio = document.getElementById(`pg-q${i}-correct-${correctIdx}`) || document.getElementById(`pg-q${i}-correct-0`);
+            if (radio) radio.checked = true;
         }
 
         modal.classList.remove('hidden');
