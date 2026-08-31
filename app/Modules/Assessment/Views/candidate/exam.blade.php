@@ -417,13 +417,23 @@
 
                                         <div class="passage-scroll-container overflow-y-auto pr-2 space-y-4 text-sm text-slate-200 leading-relaxed max-h-[60vh]" id="passage-scroll-{{ $question->id }}">
                                             @foreach($effectivePassages as $pIdx => $pass)
+                                                @php
+                                                    $passImg = $pass->getEffectiveImageUrl();
+                                                @endphp
                                                 <div id="passage-doc-{{ $question->id }}-{{ $pIdx }}" class="passage-doc-content {{ $pIdx > 0 ? 'hidden' : '' }}">
                                                     @if($pass->title && $effectivePassages->count() === 1)
                                                         <h4 class="font-bold text-base text-indigo-300 mb-2 border-b border-slate-800 pb-1.5">{{ $pass->title }}</h4>
                                                     @endif
-                                                    <div class="prose prose-invert max-w-none text-slate-200 text-sm whitespace-pre-line leading-relaxed select-text">
-                                                        {!! nl2br(e($pass->content)) !!}
-                                                    </div>
+                                                    @if(!empty($passImg))
+                                                        <div class="mb-4 text-center">
+                                                            <img src="{{ $passImg }}" alt="{{ $pass->title ?: 'Passage Document' }}" class="max-w-full rounded-lg mx-auto border border-slate-800 shadow-md object-contain" style="max-height: 500px;">
+                                                        </div>
+                                                    @endif
+                                                    @if(!empty($pass->content))
+                                                        <div class="prose prose-invert max-w-none text-slate-200 text-sm whitespace-pre-line leading-relaxed select-text">
+                                                            {!! nl2br(e($pass->content)) !!}
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @endforeach
                                         </div>

@@ -530,13 +530,23 @@
                                                 </div>
                                                 <div class="overflow-y-auto pr-2 space-y-4 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed select-text">
                                                     @foreach($effectivePassages as $pIdx => $pass)
+                                                        @php
+                                                            $passImg = $pass->getEffectiveImageUrl();
+                                                        @endphp
                                                         <div id="passage-content-{{ $question->id }}-{{ $pIdx }}" class="passage-doc-content {{ $pIdx > 0 ? 'hidden' : '' }}">
                                                             @if($pass->title && $effectivePassages->count() === 1)
                                                                 <h4 class="font-bold text-sm text-indigo-700 dark:text-indigo-400 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1">{{ $pass->title }}</h4>
                                                             @endif
-                                                            <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm whitespace-pre-line leading-relaxed">
-                                                                {!! nl2br(e($pass->content)) !!}
-                                                            </div>
+                                                            @if(!empty($passImg))
+                                                                <div class="mb-4 text-center">
+                                                                    <img src="{{ $passImg }}" alt="{{ $pass->title ?: 'Passage Document' }}" class="max-w-full rounded-lg mx-auto border border-slate-200 dark:border-slate-800 shadow-sm object-contain" style="max-height: 480px;">
+                                                                </div>
+                                                            @endif
+                                                            @if(!empty($pass->content))
+                                                                <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm whitespace-pre-line leading-relaxed">
+                                                                    {!! nl2br(e($pass->content)) !!}
+                                                                </div>
+                                                            @endif
                                                         </div>
                                                     @endforeach
                                                 </div>

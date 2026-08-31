@@ -31,7 +31,39 @@ class Passage extends Model
         'title',
         'content',
         'audio_url',
+        'image_url',
+        'media_asset_id',
     ];
+
+    /**
+     * Get attached media asset.
+     *
+     * @return BelongsTo<\App\Models\MediaAsset, $this>
+     */
+    public function mediaAsset(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MediaAsset::class, 'media_asset_id');
+    }
+
+    /**
+     * Resolve effective image URL, checking attached media asset first then legacy image_url.
+     */
+    public function getEffectiveImageUrl(): ?string
+    {
+        if ($this->mediaAsset) {
+            $type = $this->mediaAsset->type ?? '';
+            $mime = $this->mediaAsset->mime_type ?? '';
+            if ($type === 'image' || str_starts_with($mime, 'image/')) {
+                return $this->mediaAsset->publicUrl() ?: $this->mediaAsset->path;
+            }
+        }
+
+        if (!empty($this->image_url)) {
+            return $this->image_url;
+        }
+
+        return null;
+    }
 
     /**
      * Get parent passage group.

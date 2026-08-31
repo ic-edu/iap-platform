@@ -844,6 +844,8 @@
                                                             'content'        => $p->content,
                                                             'document_type'  => $p->document_type,
                                                             'order_in_group' => $p->order_in_group,
+                                                            'image_url'      => $p->getEffectiveImageUrl(),
+                                                            'media_asset_id' => $p->media_asset_id,
                                                         ])->toArray(),
                                                         'complete_count' => $pgCompleteCount,
                                                         'is_complete'    => $pgIsComplete,
@@ -888,6 +890,11 @@
                                                             @endif
                                                         </div>
                                                         <div class="flex items-center gap-2">
+                                                            <button type="button"
+                                                                    onclick="openPassageGroupPreviewModal({{ json_encode($pgJson) }})"
+                                                                    class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-extrabold border border-slate-300 dark:border-slate-700 shadow-sm inline-flex items-center gap-1 transition-all">
+                                                                <span>👁</span> Preview Passage
+                                                            </button>
                                                             <button type="button"
                                                                     onclick="openEditPassageGroupModal({{ json_encode($pgJson) }}, '{{ $sec->id }}', '{{ addslashes($sec->title) }}')"
                                                                     class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-sm inline-flex items-center gap-1 transition-all">
@@ -2032,7 +2039,7 @@
     </div>
 </div>
 
-{{-- Modal 2c: Create Assessment-Authored Shared Passage Group (Part 6 Text Completion) --}}
+{{-- Modal 2c: Create/Edit Assessment-Authored Shared Passage Group (Part 6 / Part 7) --}}
 <div id="create-passage-group-modal" class="hidden fixed inset-0 z-[10000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10000;" onclick="closeCreatePassageGroupModal(event)">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4 overflow-y-auto" onclick="event.stopPropagation()">
         {{-- Header --}}
@@ -2045,9 +2052,9 @@
                 <div class="flex items-center gap-2 mt-1 flex-wrap">
                     <span id="pg-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold"></span>
                     <span id="pg-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">READING • PART 6</span>
-                    <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">4 Child Questions</span>
+                    <span id="pg-count-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">4 Child Questions</span>
                 </div>
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                <div id="pg-helper-text" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
                     One text is shared by exactly 4 questions.
                 </div>
             </div>
@@ -2064,16 +2071,52 @@
             <input type="hidden" name="part_number" id="pg-part-number" value="6" required>
             <input type="hidden" name="passage_type" id="pg-passage-type" value="single" required>
 
+            {{-- Part 7 Standards-Aware Passage Set Type Selector --}}
+            <div id="pg-set-type-wrapper" class="hidden bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-black uppercase tracking-wider text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                        <span>📑</span> PASSAGE SET TYPE <span class="text-rose-500">*</span>
+                    </span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Controls documents &amp; question count</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <button type="button" id="pg-type-btn-single" onclick="setPassageSetType('single')" class="flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left bg-white dark:bg-slate-900 border-indigo-600 shadow-sm">
+                        <div class="flex items-center gap-2 font-black text-xs text-indigo-700 dark:text-indigo-300">
+                            <span>📄</span> Single Passage
+                        </div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium leading-tight">
+                            1 Document • 2 to 4 Questions
+                        </div>
+                    </button>
+                    <button type="button" id="pg-type-btn-double" onclick="setPassageSetType('double')" class="flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-indigo-400">
+                        <div class="flex items-center gap-2 font-black text-xs text-slate-700 dark:text-slate-300">
+                            <span>📄📄</span> Double Passage
+                        </div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium leading-tight">
+                            2 Documents • Exactly 5 Questions
+                        </div>
+                    </button>
+                    <button type="button" id="pg-type-btn-triple" onclick="setPassageSetType('triple')" class="flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-indigo-400">
+                        <div class="flex items-center gap-2 font-black text-xs text-slate-700 dark:text-slate-300">
+                            <span>📄📄📄</span> Triple Passage
+                        </div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium leading-tight">
+                            3 Documents • Exactly 5 Questions
+                        </div>
+                    </button>
+                </div>
+            </div>
+
             {{-- 1. Passage Group Title & Stimulus Section --}}
-            <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+            <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4">
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                             <span>📄</span>
-                            <span>Text / Passage Stimulus</span>
+                            <span id="pg-stimulus-heading">Text / Passage Stimulus</span>
                             <span class="text-rose-500">*</span>
                         </div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <div id="pg-stimulus-subheading" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                             This text is shared by all 4 questions in this group.
                         </div>
                     </div>
@@ -2086,50 +2129,148 @@
                     <input type="text" name="title" id="pg-group-title" placeholder="e.g. Training Course Announcement, Customer Email, Staff Memo..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                 </div>
 
-                <input type="hidden" name="passages[0][id]" id="pg-passage-id" value="">
-                <input type="hidden" name="passages[0][title]" value="Document 1">
-                <input type="hidden" name="passages[0][document_type]" value="article">
-                <input type="hidden" name="passages[0][order_in_group]" value="1">
-
-                <div>
-                    <label for="pg-passage-content" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Passage Text <span class="text-rose-500">*</span>
-                    </label>
-                    <textarea name="passages[0][content]" id="pg-passage-content" rows="6" required placeholder="Enter the reading text stimulus (with blanks [131] to [134] for Part 6)..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                {{-- Document Tabs for Double/Triple --}}
+                <div id="pg-doc-tabs-bar" class="hidden flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+                    <button type="button" id="pg-doc-tab-btn-0" onclick="switchPassageDocTab(0)" class="px-3 py-1.5 rounded-lg text-xs font-black border bg-indigo-600 text-white border-indigo-600 shadow-sm transition-all">Document 1</button>
+                    <button type="button" id="pg-doc-tab-btn-1" onclick="switchPassageDocTab(1)" class="px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 transition-all">Document 2</button>
+                    <button type="button" id="pg-doc-tab-btn-2" onclick="switchPassageDocTab(2)" class="hidden px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 transition-all">Document 3</button>
                 </div>
-            </div>
 
-            {{-- 2. Child Questions (Exactly 4 Questions) --}}
-            <div class="space-y-4">
-                <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
-                    <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                        <span>📝</span>
-                        <span>Child Questions (Exactly 4 Questions Required)</span>
+                {{-- Document Panels (Up to 3) --}}
+                @for($d = 0; $d < 3; $d++)
+                <div id="pg-doc-panel-{{ $d }}" class="{{ $d > 0 ? 'hidden' : '' }} space-y-3 p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                    <input type="hidden" name="passages[{{ $d }}][id]" id="pg-doc-{{ $d }}-id" value="">
+                    <input type="hidden" name="passages[{{ $d }}][order_in_group]" id="pg-doc-{{ $d }}-order" value="{{ $d + 1 }}">
+                    <input type="hidden" name="passages[{{ $d }}][content_mode]" id="pg-doc-{{ $d }}-content-mode" value="text">
+                    <input type="hidden" name="passages[{{ $d }}][image_url]" id="pg-doc-{{ $d }}-image-url" value="">
+                    <input type="hidden" name="passages[{{ $d }}][media_asset_id]" id="pg-doc-{{ $d }}-media-asset-id" value="">
+
+                    <div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-black text-[11px] flex items-center justify-center">{{ $d + 1 }}</span>
+                            <span class="text-xs font-extrabold text-slate-900 dark:text-white">Document {{ $d + 1 }}</span>
+                        </div>
+                        {{-- Document Type Selector --}}
+                        <div class="flex items-center gap-1.5">
+                            <label for="pg-doc-{{ $d }}-type" class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Type:</label>
+                            <select name="passages[{{ $d }}][document_type]" id="pg-doc-{{ $d }}-type" class="px-2.5 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                <option value="article">Article / Report</option>
+                                <option value="email">E-mail</option>
+                                <option value="memo">Memo</option>
+                                <option value="advertisement">Advertisement</option>
+                                <option value="notice">Notice / Announcement</option>
+                                <option value="schedule">Schedule / Timetable</option>
+                                <option value="form">Form / Application</option>
+                                <option value="invoice">Invoice / Receipt</option>
+                                <option value="chat">Text Message Chain</option>
+                                <option value="webpage">Web Page</option>
+                                <option value="letter">Letter</option>
+                                <option value="other">Other Document</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label for="pg-doc-{{ $d }}-title" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Document Title (Optional)
+                            </label>
+                            <input type="text" name="passages[{{ $d }}][title]" id="pg-doc-{{ $d }}-title" placeholder="e.g. Flight Schedule, Customer Feedback..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        </div>
+
+                        {{-- Content Mode Selector (Only Part 7) --}}
+                        <div id="pg-doc-{{ $d }}-mode-selector-wrap" class="hidden">
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Content Stimulus Format
+                            </label>
+                            <div class="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                                <button type="button" id="pg-doc-{{ $d }}-mode-text-btn" onclick="setPassageDocContentMode({{ $d }}, 'text')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-indigo-600 text-white shadow-sm transition-all">Text</button>
+                                <button type="button" id="pg-doc-{{ $d }}-mode-image-btn" onclick="setPassageDocContentMode({{ $d }}, 'image')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all">Visual Image</button>
+                                <button type="button" id="pg-doc-{{ $d }}-mode-text_image-btn" onclick="setPassageDocContentMode({{ $d }}, 'text_image')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all">Text + Image</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Passage Text Input --}}
+                    <div id="pg-doc-{{ $d }}-text-wrap">
+                        <label for="pg-doc-{{ $d }}-content" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Passage Text <span class="text-rose-500" id="pg-doc-{{ $d }}-text-req">*</span>
+                        </label>
+                        <textarea name="passages[{{ $d }}][content]" id="{{ $d === 0 ? 'pg-passage-content' : 'pg-doc-' . $d . '-content' }}" rows="5" placeholder="Enter reading passage text..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                    </div>
+
+                    {{-- Visual Document Image Attachment --}}
+                    <div id="pg-doc-{{ $d }}-image-wrap" class="hidden space-y-2">
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Attached Visual Document Stimulus <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                            Attach candidate-readable visual document (e.g. advertisement layout, form, timetable, invoice).
+                        </div>
+                        {{-- Empty state --}}
+                        <div id="pg-doc-{{ $d }}-empty-image-card" class="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-center">
+                            <svg class="w-8 h-8 text-indigo-500 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">No visual document attached</span>
+                            <button type="button" onclick="openQuestionMediaPicker('passage-{{ $d }}', 'image')" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                <span>🖼</span> Attach Visual Document
+                            </button>
+                        </div>
+                        {{-- Attached state --}}
+                        <div id="pg-doc-{{ $d }}-preview-image-card" class="hidden flex items-center justify-between p-3 bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl">
+                            <div class="flex items-center gap-3">
+                                <img id="pg-doc-{{ $d }}-preview-image-thumb" src="" alt="Attached Document" class="w-16 h-16 object-contain rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+                                <div>
+                                    <div id="pg-doc-{{ $d }}-preview-image-title" class="text-xs font-bold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-sm">Document.png</div>
+                                    <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800">Visual Document Attached</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="previewAssetModal(document.getElementById('pg-doc-{{ $d }}-media-asset-id').value, document.getElementById('pg-doc-{{ $d }}-preview-image-title').textContent, 'image', document.getElementById('pg-doc-{{ $d }}-image-url').value)" class="px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-colors">Preview</button>
+                                <button type="button" onclick="removePassageDocMedia({{ $d }})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200 transition-colors">Remove</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                @endfor
+            </div>
 
-                @for($i = 0; $i < 4; $i++)
-                <input type="hidden" name="questions[{{ $i }}][id]" id="pg-q{{ $i }}-id" value="">
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+            {{-- 2. Child Questions Panel (2 to 5 Questions) --}}
+            <div class="space-y-4">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
+                    <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <span>📝</span>
+                        <span id="pg-questions-heading">Child Questions (Exactly 4 Questions Required)</span>
+                    </div>
+                    <button type="button" id="pg-add-question-btn" onclick="addPassageChildQuestion()" class="hidden px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-xs font-extrabold inline-flex items-center gap-1 transition-all">
+                        <span>+</span> Add Question
+                    </button>
+                </div>
+
+                @for($i = 0; $i < 5; $i++)
+                <div id="pg-q-card-{{ $i }}" class="{{ $i >= 4 ? 'hidden' : '' }} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+                    <input type="hidden" name="questions[{{ $i }}][id]" id="pg-q{{ $i }}-id" value="">
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                         <div class="flex items-center gap-2">
                             <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center">{{ $i + 1 }}</span>
-                            <span class="text-xs font-extrabold text-slate-900 dark:text-white">Question {{ $i + 1 }} of 4</span>
+                            <span class="text-xs font-extrabold text-slate-900 dark:text-white" id="pg-q{{ $i }}-label">{{ $i < 4 ? 'Question ' . ($i + 1) . ' of 4' : 'Question ' . ($i + 1) }}</span>
                         </div>
+                        <button type="button" id="pg-q{{ $i }}-remove-btn" onclick="removePassageChildQuestion({{ $i }})" class="hidden px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors">
+                            ✕ Remove
+                        </button>
                     </div>
 
-                    {{-- Question Prompt / Target Blank --}}
+                    {{-- Question Prompt / Stem --}}
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label for="pg-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                                Question Note / Blank Context (Optional)
+                                <span id="pg-q{{ $i }}-prompt-label">Question Note / Blank Context (Optional)</span> <span class="text-rose-500 hidden" id="pg-q{{ $i }}-prompt-req">*</span>
                             </label>
-                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Optional note</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium" id="pg-q{{ $i }}-prompt-note">Optional note</span>
                         </div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mb-1">
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mb-1" id="pg-q{{ $i }}-prompt-help">
                             The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.
                         </div>
-                        <textarea name="questions[{{ $i }}][prompt]" id="pg-q{{ $i }}-prompt" rows="2" placeholder="Optional authoring note for blank [{{ 131 + $i }}]..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                        <textarea name="questions[{{ $i }}][prompt]" id="pg-q{{ $i }}-prompt" rows="2" placeholder="e.g. What is suggested about the advertisement?" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
                     </div>
 
                     {{-- Answer Choices (A, B, C, D) --}}
@@ -2143,9 +2284,9 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             @foreach(['A', 'B', 'C', 'D'] as $cIdx => $optLabel)
                             <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
-                                <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="pg-q{{ $i }}-correct-{{ $cIdx }}" {{ $cIdx === 0 ? 'checked' : '' }} required class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
+                                <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="pg-q{{ $i }}-correct-{{ $cIdx }}" {{ $cIdx === 0 ? 'checked' : '' }} class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
                                 <span class="text-xs font-black text-slate-700 dark:text-slate-300 w-4">{{ $optLabel }}</span>
-                                <input type="text" name="questions[{{ $i }}][choices][]" id="pg-q{{ $i }}-choice-{{ $cIdx }}" required placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                                <input type="text" name="questions[{{ $i }}][choices][]" id="pg-q{{ $i }}-choice-{{ $cIdx }}" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                             </div>
                             @endforeach
                         </div>
@@ -2173,6 +2314,39 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+{{-- Modal 2d: Passage Group Full Documents Preview Modal (Root Portal Layer) --}}
+<div id="passage-group-preview-modal" class="hidden fixed inset-0 z-[10002] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10002;" onclick="closePassageGroupPreviewModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4 overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-start pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+                <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>📖</span>
+                    <span id="pg-prev-modal-title">Reading Passage Documents</span>
+                </div>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <span id="pg-prev-badge-type" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">Single Passage</span>
+                    <span id="pg-prev-badge-docs" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">1 Document</span>
+                </div>
+            </div>
+            <button type="button" onclick="closePassageGroupPreviewModal()" aria-label="Close preview" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div id="pg-prev-tabs-bar" class="hidden flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        </div>
+
+        <div id="pg-prev-documents-container" class="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+        </div>
+
+        <div class="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button type="button" onclick="closePassageGroupPreviewModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
+                Close Preview
+            </button>
+        </div>
     </div>
 </div>
 
@@ -2652,6 +2826,26 @@
     }
 
     function selectQuestionMediaItem(id, title, type, url) {
+        if (currentQuestionMediaTargetMode && currentQuestionMediaTargetMode.startsWith('passage-')) {
+            const d = parseInt(currentQuestionMediaTargetMode.split('-')[1]);
+            const mediaIdInput = document.getElementById(`pg-doc-${d}-media-asset-id`);
+            const imgInput = document.getElementById(`pg-doc-${d}-image-url`);
+            if (mediaIdInput) mediaIdInput.value = id;
+            if (imgInput) imgInput.value = url;
+
+            const prevCard = document.getElementById(`pg-doc-${d}-preview-image-card`);
+            const emptyCard = document.getElementById(`pg-doc-${d}-empty-image-card`);
+            const thumb = document.getElementById(`pg-doc-${d}-preview-image-thumb`);
+            const titleEl = document.getElementById(`pg-doc-${d}-preview-image-title`);
+
+            if (thumb) thumb.src = url;
+            if (titleEl) titleEl.textContent = title;
+            if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+            if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+            closeQuestionMediaPicker();
+            return;
+        }
+
         if (currentQuestionMediaTargetMode === 'audio-group') {
             const mediaIdInput = document.getElementById('ag-media-asset-id');
             const audioInput = document.getElementById('ag-audio-url');
@@ -3454,6 +3648,241 @@
         }
     }
 
+    let currentPassageSetType = 'single';
+    let currentPassageChildQCount = 2;
+    let currentPassagePartNum = 7;
+    let currentPassageActiveDoc = 0;
+
+    function setPassageSetType(type) {
+        currentPassageSetType = type;
+        const typeInput = document.getElementById('pg-passage-type');
+        if (typeInput) typeInput.value = type;
+
+        // Button styles
+        ['single', 'double', 'triple'].forEach(t => {
+            const btn = document.getElementById(`pg-type-btn-${t}`);
+            if (btn) {
+                if (t === type) {
+                    btn.className = 'flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left bg-white dark:bg-slate-900 border-indigo-600 shadow-sm';
+                    const iconText = btn.querySelector('div:first-child');
+                    if (iconText) iconText.className = 'flex items-center gap-2 font-black text-xs text-indigo-700 dark:text-indigo-300';
+                } else {
+                    btn.className = 'flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-indigo-400';
+                    const iconText = btn.querySelector('div:first-child');
+                    if (iconText) iconText.className = 'flex items-center gap-2 font-black text-xs text-slate-700 dark:text-slate-300';
+                }
+            }
+        });
+
+        const countBadge = document.getElementById('pg-count-badge');
+        const helperText = document.getElementById('pg-helper-text');
+        const tabsBar = document.getElementById('pg-doc-tabs-bar');
+        const tabBtn2 = document.getElementById('pg-doc-tab-btn-2');
+        const questionsHeading = document.getElementById('pg-questions-heading');
+        const addQBtn = document.getElementById('pg-add-question-btn');
+
+        if (type === 'single') {
+            if (countBadge) countBadge.textContent = '2–4 Child Questions';
+            if (helperText) helperText.textContent = 'Single passage followed by 2 to 4 reading comprehension questions.';
+            if (tabsBar) tabsBar.classList.add('hidden');
+            switchPassageDocTab(0);
+            if (questionsHeading) questionsHeading.textContent = 'Child Questions (2 to 4 Questions Allowed)';
+            if (addQBtn) addQBtn.classList.remove('hidden');
+
+            if (currentPassageChildQCount < 2) currentPassageChildQCount = 2;
+            if (currentPassageChildQCount > 4) currentPassageChildQCount = 4;
+            updateChildQuestionsVisibility();
+        } else if (type === 'double') {
+            if (countBadge) countBadge.textContent = 'Exactly 5 Child Questions';
+            if (helperText) helperText.textContent = 'Two related documents followed by exactly 5 reading comprehension questions.';
+            if (tabsBar) tabsBar.classList.remove('hidden');
+            if (tabBtn2) tabBtn2.classList.add('hidden');
+            switchPassageDocTab(0);
+            if (questionsHeading) questionsHeading.textContent = 'Child Questions (Exactly 5 Questions Required)';
+            if (addQBtn) addQBtn.classList.add('hidden');
+
+            currentPassageChildQCount = 5;
+            updateChildQuestionsVisibility();
+        } else if (type === 'triple') {
+            if (countBadge) countBadge.textContent = 'Exactly 5 Child Questions';
+            if (helperText) helperText.textContent = 'Three related documents followed by exactly 5 reading comprehension questions.';
+            if (tabsBar) tabsBar.classList.remove('hidden');
+            if (tabBtn2) tabBtn2.classList.remove('hidden');
+            switchPassageDocTab(0);
+            if (questionsHeading) questionsHeading.textContent = 'Child Questions (Exactly 5 Questions Required)';
+            if (addQBtn) addQBtn.classList.add('hidden');
+
+            currentPassageChildQCount = 5;
+            updateChildQuestionsVisibility();
+        }
+    }
+
+    function switchPassageDocTab(docIdx) {
+        currentPassageActiveDoc = docIdx;
+        for (let d = 0; d < 3; d++) {
+            const panel = document.getElementById(`pg-doc-panel-${d}`);
+            const tabBtn = document.getElementById(`pg-doc-tab-btn-${d}`);
+            if (d === docIdx) {
+                if (panel) panel.classList.remove('hidden');
+                if (tabBtn) {
+                    tabBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-black border bg-indigo-600 text-white border-indigo-600 shadow-sm transition-all';
+                }
+            } else {
+                if (panel) panel.classList.add('hidden');
+                if (tabBtn) {
+                    tabBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 transition-all';
+                }
+            }
+        }
+    }
+
+    function setPassageDocContentMode(docIdx, mode) {
+        const modeInput = document.getElementById(`pg-doc-${docIdx}-content-mode`);
+        if (modeInput) modeInput.value = mode;
+
+        const textBtn = document.getElementById(`pg-doc-${docIdx}-mode-text-btn`);
+        const imgBtn = document.getElementById(`pg-doc-${docIdx}-mode-image-btn`);
+        const textImgBtn = document.getElementById(`pg-doc-${docIdx}-mode-text_image-btn`);
+
+        [textBtn, imgBtn, textImgBtn].forEach(b => {
+            if (b) b.className = 'px-2 py-1 rounded-lg text-[11px] font-extrabold text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all';
+        });
+
+        if (mode === 'text' && textBtn) textBtn.className = 'px-2 py-1 rounded-lg text-[11px] font-extrabold bg-indigo-600 text-white shadow-sm transition-all';
+        if (mode === 'image' && imgBtn) imgBtn.className = 'px-2 py-1 rounded-lg text-[11px] font-extrabold bg-indigo-600 text-white shadow-sm transition-all';
+        if (mode === 'text_image' && textImgBtn) textImgBtn.className = 'px-2 py-1 rounded-lg text-[11px] font-extrabold bg-indigo-600 text-white shadow-sm transition-all';
+
+        const textWrap = document.getElementById(`pg-doc-${docIdx}-text-wrap`);
+        const imageWrap = document.getElementById(`pg-doc-${docIdx}-image-wrap`);
+
+        if (mode === 'text') {
+            if (textWrap) textWrap.classList.remove('hidden');
+            if (imageWrap) imageWrap.classList.add('hidden');
+        } else if (mode === 'image') {
+            if (textWrap) textWrap.classList.add('hidden');
+            if (imageWrap) imageWrap.classList.remove('hidden');
+        } else if (mode === 'text_image') {
+            if (textWrap) textWrap.classList.remove('hidden');
+            if (imageWrap) imageWrap.classList.remove('hidden');
+        }
+    }
+
+    function removePassageDocMedia(d) {
+        const mediaIdInput = document.getElementById(`pg-doc-${d}-media-asset-id`);
+        const imgInput = document.getElementById(`pg-doc-${d}-image-url`);
+        if (mediaIdInput) mediaIdInput.value = '';
+        if (imgInput) imgInput.value = '';
+
+        const prevCard = document.getElementById(`pg-doc-${d}-preview-image-card`);
+        const emptyCard = document.getElementById(`pg-doc-${d}-empty-image-card`);
+        const thumb = document.getElementById(`pg-doc-${d}-preview-image-thumb`);
+        if (thumb) thumb.src = '';
+        if (prevCard) { prevCard.classList.add('hidden'); prevCard.style.display = 'none'; }
+        if (emptyCard) { emptyCard.classList.remove('hidden'); emptyCard.style.display = 'flex'; }
+    }
+
+    function addPassageChildQuestion() {
+        if (currentPassageSetType === 'single' && currentPassageChildQCount < 4) {
+            currentPassageChildQCount++;
+            updateChildQuestionsVisibility();
+        }
+    }
+
+    function removePassageChildQuestion(qIdx) {
+        if (currentPassageSetType === 'single' && currentPassageChildQCount > 2) {
+            // Shift contents up if removing middle question
+            for (let i = qIdx; i < currentPassageChildQCount - 1; i++) {
+                const curPrompt = document.getElementById(`pg-q${i}-prompt`);
+                const nextPrompt = document.getElementById(`pg-q${i + 1}-prompt`);
+                const curExpl = document.getElementById(`pg-q${i}-explanation`);
+                const nextExpl = document.getElementById(`pg-q${i + 1}-explanation`);
+                const curId = document.getElementById(`pg-q${i}-id`);
+                const nextId = document.getElementById(`pg-q${i + 1}-id`);
+
+                if (curPrompt && nextPrompt) curPrompt.value = nextPrompt.value;
+                if (curExpl && nextExpl) curExpl.value = nextExpl.value;
+                if (curId && nextId) curId.value = nextId.value;
+
+                for (let c = 0; c < 4; c++) {
+                    const curChoice = document.getElementById(`pg-q${i}-choice-${c}`);
+                    const nextChoice = document.getElementById(`pg-q${i + 1}-choice-${c}`);
+                    if (curChoice && nextChoice) curChoice.value = nextChoice.value;
+                }
+
+                const nextRadioChecked = document.querySelector(`input[name="questions[${i + 1}][correct_choice]"]:checked`);
+                if (nextRadioChecked) {
+                    const curRadio = document.getElementById(`pg-q${i}-correct-${nextRadioChecked.value}`);
+                    if (curRadio) curRadio.checked = true;
+                }
+            }
+
+            // Clear the last slot
+            const lastIdx = currentPassageChildQCount - 1;
+            const lastPrompt = document.getElementById(`pg-q${lastIdx}-prompt`);
+            const lastExpl = document.getElementById(`pg-q${lastIdx}-explanation`);
+            const lastId = document.getElementById(`pg-q${lastIdx}-id`);
+            if (lastPrompt) lastPrompt.value = '';
+            if (lastExpl) lastExpl.value = '';
+            if (lastId) lastId.value = '';
+            for (let c = 0; c < 4; c++) {
+                const choiceEl = document.getElementById(`pg-q${lastIdx}-choice-${c}`);
+                if (choiceEl) choiceEl.value = '';
+            }
+
+            currentPassageChildQCount--;
+            updateChildQuestionsVisibility();
+        }
+    }
+
+    function updateChildQuestionsVisibility() {
+        const isPart6 = currentPassagePartNum === 6;
+        const targetCount = isPart6 ? 4 : currentPassageChildQCount;
+
+        for (let i = 0; i < 5; i++) {
+            const card = document.getElementById(`pg-q-card-${i}`);
+            const removeBtn = document.getElementById(`pg-q${i}-remove-btn`);
+            const promptInput = document.getElementById(`pg-q${i}-prompt`);
+            const choiceInputs = Array.from(document.querySelectorAll(`input[id^="pg-q${i}-choice-"]`));
+
+            if (i < targetCount) {
+                if (card) card.classList.remove('hidden');
+                if (removeBtn) {
+                    if (!isPart6 && currentPassageSetType === 'single' && targetCount > 2 && i >= 2) {
+                        removeBtn.classList.remove('hidden');
+                    } else {
+                        removeBtn.classList.add('hidden');
+                    }
+                }
+                if (promptInput) {
+                    if (isPart6) {
+                        promptInput.removeAttribute('required');
+                    } else {
+                        promptInput.setAttribute('required', 'required');
+                    }
+                }
+                choiceInputs.forEach(ci => ci.setAttribute('required', 'required'));
+            } else {
+                if (card) card.classList.add('hidden');
+                if (promptInput) promptInput.removeAttribute('required');
+                choiceInputs.forEach(ci => ci.removeAttribute('required'));
+            }
+        }
+
+        const addQBtn = document.getElementById('pg-add-question-btn');
+        if (addQBtn) {
+            if (!isPart6 && currentPassageSetType === 'single') {
+                addQBtn.classList.remove('hidden');
+                if (targetCount >= 4) {
+                    addQBtn.classList.add('opacity-50', 'pointer-events-none');
+                } else {
+                    addQBtn.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            } else {
+                addQBtn.classList.add('hidden');
+            }
+        }
+    }
+
     function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '') {
         const modal = document.getElementById('create-passage-group-modal');
         const form = document.getElementById('create-passage-group-form');
@@ -3465,46 +3894,102 @@
         }
         if (methodInput) methodInput.value = 'POST';
 
-        const partNum = parseInt(partNumber) || 6;
+        const partNum = parseInt(partNumber) || 7;
+        currentPassagePartNum = partNum;
         const isPart6 = partNum === 6;
+
         const secInput = document.getElementById('pg-section-id');
         const partInput = document.getElementById('pg-part-number');
-        const typeInput = document.getElementById('pg-passage-type');
         const titleLabel = document.getElementById('pg-target-section-title');
         const modalTitle = document.getElementById('pg-modal-title');
         const partBadge = document.getElementById('pg-part-badge');
         const submitText = document.getElementById('pg-submit-text');
+        const setTypeWrap = document.getElementById('pg-set-type-wrapper');
 
         if (secInput) secInput.value = sectionId;
         if (partInput) partInput.value = partNum;
-        if (typeInput) typeInput.value = 'single';
         if (titleLabel) titleLabel.textContent = `Target Section: ${sectionTitle || (isPart6 ? 'Part 6: Text Completion' : 'Part 7: Reading Comprehension')}`;
         if (modalTitle) modalTitle.textContent = isPart6 ? 'Create Text Completion Group' : 'Create Reading Passage Group';
         if (partBadge) partBadge.textContent = isPart6 ? 'READING • PART 6' : 'READING • PART 7';
         if (submitText) submitText.textContent = 'Save Passage Group';
 
-        // Clear previous input fields
+        // Clear group title
         const groupTitleInput = document.getElementById('pg-group-title');
-        const passageContentInput = document.getElementById('pg-passage-content');
-        const passageIdInput = document.getElementById('pg-passage-id');
         if (groupTitleInput) groupTitleInput.value = '';
-        if (passageContentInput) passageContentInput.value = '';
-        if (passageIdInput) passageIdInput.value = '';
 
-        for (let i = 0; i < 4; i++) {
+        // Clear document panels
+        for (let d = 0; d < 3; d++) {
+            const idEl = document.getElementById(`pg-doc-${d}-id`);
+            const titleEl = document.getElementById(`pg-doc-${d}-title`);
+            const contentEl = document.getElementById(`pg-doc-${d}-content`);
+            const typeEl = document.getElementById(`pg-doc-${d}-type`);
+            if (idEl) idEl.value = '';
+            if (titleEl) titleEl.value = '';
+            if (contentEl) contentEl.value = '';
+            if (typeEl) typeEl.value = 'article';
+            removePassageDocMedia(d);
+            setPassageDocContentMode(d, 'text');
+
+            const modeWrap = document.getElementById(`pg-doc-${d}-mode-selector-wrap`);
+            if (modeWrap) {
+                if (isPart6) modeWrap.classList.add('hidden');
+                else modeWrap.classList.remove('hidden');
+            }
+        }
+
+        // Configure Part 6 vs Part 7
+        if (isPart6) {
+            if (setTypeWrap) setTypeWrap.classList.add('hidden');
+            const stimulusHeading = document.getElementById('pg-stimulus-heading');
+            const stimulusSub = document.getElementById('pg-stimulus-subheading');
+            if (stimulusHeading) stimulusHeading.textContent = 'Text / Passage Stimulus';
+            if (stimulusSub) stimulusSub.textContent = 'This text is shared by all 4 questions in this group.';
+            setPassageSetType('single');
+            currentPassageChildQCount = 4;
+        } else {
+            if (setTypeWrap) setTypeWrap.classList.remove('hidden');
+            const stimulusHeading = document.getElementById('pg-stimulus-heading');
+            const stimulusSub = document.getElementById('pg-stimulus-subheading');
+            if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
+            if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
+            currentPassageChildQCount = 2;
+            setPassageSetType('single');
+        }
+
+        // Configure questions prompt labels & requirements
+        for (let i = 0; i < 5; i++) {
             const idEl = document.getElementById(`pg-q${i}-id`);
             const promptEl = document.getElementById(`pg-q${i}-prompt`);
             const explEl = document.getElementById(`pg-q${i}-explanation`);
+            const promptLabel = document.getElementById(`pg-q${i}-prompt-label`);
+            const promptReq = document.getElementById(`pg-q${i}-prompt-req`);
+            const promptNote = document.getElementById(`pg-q${i}-prompt-note`);
+            const promptHelp = document.getElementById(`pg-q${i}-prompt-help`);
+
             if (idEl) idEl.value = '';
-            if (promptEl) {
-                promptEl.value = '';
-                if (isPart6) {
+            if (promptEl) promptEl.value = '';
+            if (explEl) explEl.value = '';
+
+            if (isPart6) {
+                if (promptLabel) promptLabel.textContent = 'Question Note / Blank Context';
+                if (promptReq) promptReq.classList.add('hidden');
+                if (promptNote) promptNote.textContent = 'Optional note';
+                if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
+                if (promptEl) {
+                    promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
                     promptEl.removeAttribute('required');
-                } else {
+                }
+            } else {
+                if (promptLabel) promptLabel.textContent = 'QUESTION PROMPT / STEM';
+                if (promptReq) promptReq.classList.remove('hidden');
+                if (promptNote) promptNote.textContent = 'Required';
+                if (promptHelp) promptHelp.textContent = 'Specific reading comprehension question stem for this document.';
+                if (promptEl) {
+                    promptEl.placeholder = 'e.g. What is suggested about the advertisement?';
                     promptEl.setAttribute('required', 'required');
                 }
             }
-            if (explEl) explEl.value = '';
+
             for (let c = 0; c < 4; c++) {
                 const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
                 if (choiceEl) choiceEl.value = '';
@@ -3512,6 +3997,8 @@
             const correct0 = document.getElementById(`pg-q${i}-correct-0`);
             if (correct0) correct0.checked = true;
         }
+
+        updateChildQuestionsVisibility();
 
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
@@ -3523,7 +4010,8 @@
         const methodInput = document.getElementById('pg-form-method');
         if (!modal || !pgData) return;
 
-        const partNum = parseInt(pgData.part_number) || 6;
+        const partNum = parseInt(pgData.part_number) || 7;
+        currentPassagePartNum = partNum;
         const isPart6 = partNum === 6;
 
         if (form) {
@@ -3533,54 +4021,140 @@
 
         const secInput = document.getElementById('pg-section-id');
         const partInput = document.getElementById('pg-part-number');
-        const typeInput = document.getElementById('pg-passage-type');
-        if (secInput) secInput.value = sectionId;
-        if (partInput) partInput.value = partNum;
-        if (typeInput) typeInput.value = pgData.passage_type || 'single';
-
+        const setTypeWrap = document.getElementById('pg-set-type-wrapper');
         const modalTitle = document.getElementById('pg-modal-title');
         const targetSecTitle = document.getElementById('pg-target-section-title');
         const partBadge = document.getElementById('pg-part-badge');
         const submitText = document.getElementById('pg-submit-text');
 
+        if (secInput) secInput.value = sectionId;
+        if (partInput) partInput.value = partNum;
         if (modalTitle) modalTitle.textContent = isPart6 ? 'Edit Text Completion Group' : 'Edit Reading Passage Group';
         if (targetSecTitle) targetSecTitle.textContent = `Target Section: ${sectionTitle || (isPart6 ? 'Part 6: Text Completion' : 'Part 7: Reading Comprehension')}`;
         if (partBadge) partBadge.textContent = isPart6 ? 'READING • PART 6' : 'READING • PART 7';
         if (submitText) submitText.textContent = 'Update Passage Group';
 
-        // Populate Passage text & title
+        // Title
         const titleInput = document.getElementById('pg-group-title');
-        const contentInput = document.getElementById('pg-passage-content');
-        const pIdInput = document.getElementById('pg-passage-id');
         if (titleInput) titleInput.value = pgData.title || '';
 
-        const passages = pgData.passages || [];
-        if (passages.length > 0) {
-            if (contentInput) contentInput.value = passages[0].content || '';
-            if (pIdInput) pIdInput.value = passages[0].id || '';
+        // Configure Part 6 vs Part 7
+        if (isPart6) {
+            if (setTypeWrap) setTypeWrap.classList.add('hidden');
+            const stimulusHeading = document.getElementById('pg-stimulus-heading');
+            const stimulusSub = document.getElementById('pg-stimulus-subheading');
+            if (stimulusHeading) stimulusHeading.textContent = 'Text / Passage Stimulus';
+            if (stimulusSub) stimulusSub.textContent = 'This text is shared by all 4 questions in this group.';
+            setPassageSetType('single');
+            currentPassageChildQCount = 4;
         } else {
-            if (contentInput) contentInput.value = '';
-            if (pIdInput) pIdInput.value = '';
+            if (setTypeWrap) setTypeWrap.classList.remove('hidden');
+            const stimulusHeading = document.getElementById('pg-stimulus-heading');
+            const stimulusSub = document.getElementById('pg-stimulus-subheading');
+            if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
+            if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
+            setPassageSetType(pgData.passage_type || 'single');
         }
 
-        // Populate questions (4 slots)
+        // Clear all document slots first
+        for (let d = 0; d < 3; d++) {
+            const idEl = document.getElementById(`pg-doc-${d}-id`);
+            const titleEl = document.getElementById(`pg-doc-${d}-title`);
+            const contentEl = document.getElementById(`pg-doc-${d}-content`);
+            const typeEl = document.getElementById(`pg-doc-${d}-type`);
+            if (idEl) idEl.value = '';
+            if (titleEl) titleEl.value = '';
+            if (contentEl) contentEl.value = '';
+            if (typeEl) typeEl.value = 'article';
+            removePassageDocMedia(d);
+            setPassageDocContentMode(d, 'text');
+
+            const modeWrap = document.getElementById(`pg-doc-${d}-mode-selector-wrap`);
+            if (modeWrap) {
+                if (isPart6) modeWrap.classList.add('hidden');
+                else modeWrap.classList.remove('hidden');
+            }
+        }
+
+        // Populate passages
+        const passages = pgData.passages || [];
+        passages.forEach((p, d) => {
+            if (d >= 3) return;
+            const idEl = document.getElementById(`pg-doc-${d}-id`);
+            const titleEl = document.getElementById(`pg-doc-${d}-title`);
+            const contentEl = document.getElementById(`pg-doc-${d}-content`);
+            const typeEl = document.getElementById(`pg-doc-${d}-type`);
+            const mediaIdEl = document.getElementById(`pg-doc-${d}-media-asset-id`);
+            const imgUrlEl = document.getElementById(`pg-doc-${d}-image-url`);
+
+            if (idEl) idEl.value = p.id || '';
+            if (titleEl) titleEl.value = p.title || '';
+            if (contentEl) contentEl.value = p.content || '';
+            if (typeEl) typeEl.value = p.document_type || 'article';
+            if (mediaIdEl) mediaIdEl.value = p.media_asset_id || '';
+            if (imgUrlEl) imgUrlEl.value = p.image_url || '';
+
+            const hasText = !!p.content && p.content.trim().length > 0;
+            const hasImg = !!p.image_url || !!p.media_asset_id;
+
+            let mode = 'text';
+            if (hasImg && hasText) mode = 'text_image';
+            else if (hasImg && !hasText) mode = 'image';
+
+            setPassageDocContentMode(d, mode);
+
+            if (hasImg) {
+                const prevCard = document.getElementById(`pg-doc-${d}-preview-image-card`);
+                const emptyCard = document.getElementById(`pg-doc-${d}-empty-image-card`);
+                const thumb = document.getElementById(`pg-doc-${d}-preview-image-thumb`);
+                const titleE = document.getElementById(`pg-doc-${d}-preview-image-title`);
+
+                if (thumb) thumb.src = p.image_url;
+                if (titleE) titleE.textContent = p.title || 'Document Image';
+                if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+                if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+            }
+        });
+
+        // Questions
         const qList = pgData.questions || [];
-        for (let i = 0; i < 4; i++) {
+        if (!isPart6 && (pgData.passage_type || 'single') === 'single') {
+            currentPassageChildQCount = Math.max(2, Math.min(4, qList.length));
+        }
+
+        for (let i = 0; i < 5; i++) {
             const q = qList[i] || null;
             const idEl = document.getElementById(`pg-q${i}-id`);
             const promptEl = document.getElementById(`pg-q${i}-prompt`);
             const explEl = document.getElementById(`pg-q${i}-explanation`);
+            const promptLabel = document.getElementById(`pg-q${i}-prompt-label`);
+            const promptReq = document.getElementById(`pg-q${i}-prompt-req`);
+            const promptNote = document.getElementById(`pg-q${i}-prompt-note`);
+            const promptHelp = document.getElementById(`pg-q${i}-prompt-help`);
 
             if (idEl) idEl.value = q ? q.id : '';
-            if (promptEl) {
-                promptEl.value = q ? (q.prompt || '') : '';
-                if (isPart6) {
+            if (promptEl) promptEl.value = q ? (q.prompt || '') : '';
+            if (explEl) explEl.value = q ? (q.explanation || '') : '';
+
+            if (isPart6) {
+                if (promptLabel) promptLabel.textContent = 'Question Note / Blank Context';
+                if (promptReq) promptReq.classList.add('hidden');
+                if (promptNote) promptNote.textContent = 'Optional note';
+                if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
+                if (promptEl) {
+                    promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
                     promptEl.removeAttribute('required');
-                } else {
+                }
+            } else {
+                if (promptLabel) promptLabel.textContent = 'QUESTION PROMPT / STEM';
+                if (promptReq) promptReq.classList.remove('hidden');
+                if (promptNote) promptNote.textContent = 'Required';
+                if (promptHelp) promptHelp.textContent = 'Specific reading comprehension question stem for this document.';
+                if (promptEl) {
+                    promptEl.placeholder = 'e.g. What is suggested about the advertisement?';
                     promptEl.setAttribute('required', 'required');
                 }
             }
-            if (explEl) explEl.value = q ? (q.explanation || '') : '';
 
             const choices = q ? (q.choices || []) : [];
             const correctIdx = q ? (q.correct_choice ?? 0) : 0;
@@ -3594,6 +4168,8 @@
             if (radio) radio.checked = true;
         }
 
+        updateChildQuestionsVisibility();
+
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
     }
@@ -3601,6 +4177,114 @@
     function closeCreatePassageGroupModal(e = null) {
         if (!e || e.target === document.getElementById('create-passage-group-modal')) {
             const modal = document.getElementById('create-passage-group-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
+        }
+    }
+
+    function openPassageGroupPreviewModal(pgData) {
+        const modal = document.getElementById('passage-group-preview-modal');
+        if (!modal || !pgData) return;
+
+        const titleEl = document.getElementById('pg-prev-modal-title');
+        const typeBadge = document.getElementById('pg-prev-badge-type');
+        const docsBadge = document.getElementById('pg-prev-badge-docs');
+        const tabsBar = document.getElementById('pg-prev-tabs-bar');
+        const container = document.getElementById('pg-prev-documents-container');
+
+        const partNum = parseInt(pgData.part_number) || 7;
+        const passType = pgData.passage_type || 'single';
+        const passages = pgData.passages || [];
+
+        if (titleEl) titleEl.textContent = pgData.title || (`Part ${partNum} ${passType.charAt(0).toUpperCase() + passType.slice(1)} Passage Group`);
+        if (typeBadge) typeBadge.textContent = `${passType.charAt(0).toUpperCase() + passType.slice(1)} Passage`;
+        if (docsBadge) docsBadge.textContent = `${passages.length} Document(s)`;
+
+        if (container) container.innerHTML = '';
+        if (tabsBar) {
+            tabsBar.innerHTML = '';
+            if (passages.length > 1) {
+                tabsBar.classList.remove('hidden');
+            } else {
+                tabsBar.classList.add('hidden');
+            }
+        }
+
+        passages.forEach((pass, pIdx) => {
+            // Tab button
+            if (tabsBar && passages.length > 1) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = `pg-preview-tab-btn-${pIdx}`;
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300'}`;
+                btn.textContent = pass.title || `Document ${pIdx + 1}`;
+                btn.onclick = () => switchPassageGroupPreviewTab(pIdx, passages.length);
+                tabsBar.appendChild(btn);
+            }
+
+            // Document card
+            if (container) {
+                const card = document.createElement('div');
+                card.id = `pg-preview-doc-${pIdx}`;
+                card.className = `space-y-3 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl ${pIdx > 0 && passages.length > 1 ? 'hidden' : ''}`;
+
+                let imgHtml = '';
+                if (pass.image_url) {
+                    imgHtml = `
+                        <div class="text-center mb-3">
+                            <img src="${pass.image_url}" alt="${pass.title || 'Document Image'}" class="max-w-full rounded-xl mx-auto border border-slate-200 dark:border-slate-800 shadow-sm object-contain" style="max-height: 480px;">
+                        </div>
+                    `;
+                }
+
+                let textHtml = '';
+                if (pass.content) {
+                    textHtml = `
+                        <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm whitespace-pre-line leading-relaxed text-slate-800 dark:text-slate-200 select-text">
+                            ${pass.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 mb-2">
+                        <div class="font-extrabold text-xs text-indigo-700 dark:text-indigo-400">
+                            ${pass.title || ('Document ' + (pIdx + 1))}
+                        </div>
+                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            ${(pass.document_type || 'article').toUpperCase()}
+                        </span>
+                    </div>
+                    ${imgHtml}
+                    ${textHtml}
+                `;
+                container.appendChild(card);
+            }
+        });
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+
+    function switchPassageGroupPreviewTab(activeIdx, totalDocs) {
+        for (let i = 0; i < totalDocs; i++) {
+            const btn = document.getElementById(`pg-preview-tab-btn-${i}`);
+            const doc = document.getElementById(`pg-preview-doc-${i}`);
+            if (i === activeIdx) {
+                if (btn) btn.className = 'px-3 py-1.5 rounded-lg text-xs font-black border bg-indigo-600 text-white border-indigo-600 shadow-sm transition-all';
+                if (doc) doc.classList.remove('hidden');
+            } else {
+                if (btn) btn.className = 'px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 transition-all';
+                if (doc) doc.classList.add('hidden');
+            }
+        }
+    }
+
+    function closePassageGroupPreviewModal(e = null) {
+        if (!e || e.target === document.getElementById('passage-group-preview-modal')) {
+            const modal = document.getElementById('passage-group-preview-modal');
             if (modal) {
                 modal.classList.add('hidden');
                 modal.style.display = 'none';
