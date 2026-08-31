@@ -276,6 +276,7 @@
                 @php
                     $isToeicTest = (is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic';
                     $questionsBySection = collect($validationResult['questions'] ?? [])->groupBy(fn($item) => (string) $item['section']->id);
+                    $globalQuestionNumberMap = collect($validationResult['questions'] ?? [])->mapWithKeys(fn($item) => [(string)$item['question']->id => (int)$item['number']]);
                 @endphp
 
                 @if($test->sections->isNotEmpty())
@@ -466,10 +467,14 @@
                                             <span>📝 Questions in this Section ({{ $secQCount }})</span>
                                         </div>
 
+                                        @php
+                                            $secAudioGroups = collect();
+                                        @endphp
                                         @if($secPartNumber && in_array((int)$secPartNumber, [3, 4]))
                                             @php
                                                 $secAudioGroups = \App\Modules\QuestionBank\Models\AudioGroup::where('test_id', (string)$test->id)
                                                     ->where('part_number', (int)$secPartNumber)
+                                                    ->orderBy('order')
                                                     ->with(['questions.choices', 'mediaAsset'])
                                                     ->get();
                                             @endphp
@@ -478,7 +483,10 @@
                                                     $agCompleteCount = $ag->complete_questions_count;
                                                     $agIsComplete = $ag->isComplete();
                                                     $agAudioUrl = $ag->getEffectiveAudioUrl();
-                                                    $agAudioTitle = $ag->mediaAsset?->title ?: basename($agAudioUrl ?? 'Shared Audio');
+                                                    $agAudioTitle = $ag->mediaAsset?->title ?: ($ag->title ?: basename($agAudioUrl ?? 'Shared Audio'));
+                                                    $agSortedQuestions = $ag->questions->sortBy(function($cq) use ($globalQuestionNumberMap) {
+                                                        return $globalQuestionNumberMap[(string)$cq->id] ?? ($cq->created_at?->timestamp ?? 0);
+                                                    })->values();
                                                     $agJson = [
                                                         'id'                  => $ag->id,
                                                         'title'               => $ag->title,
@@ -491,7 +499,7 @@
                                                         'audio_effective_url' => $agAudioUrl,
                                                         'complete_count'      => $agCompleteCount,
                                                         'is_complete'         => $agIsComplete,
-                                                        'questions'           => $ag->questions->sortBy('created_at')->values()->map(function($cq) {
+                                                        'questions'           => $agSortedQuestions->map(function($cq) {
                                                             $choices = $cq->choices->sortBy('order')->values();
                                                             $correctIdx = $choices->search(fn($c) => (bool)$c->is_correct);
                                                             return [
@@ -514,7 +522,7 @@
                                                                     <span>🎧</span> {{ $ag->title ?: ($ag->isTalk() ? 'Talk Audio Group' : 'Conversation Audio Group') }}
                                                                 </span>
                                                                 <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
-                                                                    {{ $ag->isTalk() ? 'TALK' : 'CONVERSATION' }}
+                                                                    Audio Group ({{ $ag->isTalk() ? 'Talk' : 'Conversation' }})
                                                                 </span>
                                                                 <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full {{ $agIsComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800' }}">
                                                                     Progress: {{ $agCompleteCount }} / 3 Complete
@@ -527,7 +535,7 @@
                                                             </div>
                                                             @if($agAudioUrl)
                                                             <div class="flex items-center gap-2 mt-1.5">
-                                                                <span class="text-xs text-slate-500 dark:text-slate-400">Shared Audio: <strong>{{ \Illuminate\Support\Str::limit($agAudioTitle, 35) }}</strong></span>
+                                                                <span class="text-xs text-slate-500 dark:text-slate-400">Shared Audio: {{ \Illuminate\Support\Str::limit($agAudioTitle, 35) }}</span>
                                                                 <button type="button" onclick="previewAssetModal('', '{{ addslashes($agAudioTitle) }}', 'audio', '{{ $agAudioUrl }}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-500">
                                                                     👁️ Preview Audio
                                                                 </button>
@@ -543,20 +551,44 @@
                                                         </div>
                                                     </div>
 
-                                                    {{-- Slot Overview Tree --}}
+                                                    {{-- Slot Overview Tree with Global Question Numbering --}}
                                                     <div class="space-y-1.5 pl-2 text-xs">
                                                         @for($s = 0; $s < 3; $s++)
                                                             @php
-                                                                $slotQ = $ag->questions->sortBy('created_at')->values()->get($s);
+                                                                $slotQ = $agSortedQuestions->get($s);
                                                                 $slotComplete = $slotQ && $slotQ->isCompleteChild();
+                                                                $slotGlobalNum = $slotQ ? ($globalQuestionNumberMap[(string)$slotQ->id] ?? null) : null;
+                                                                $slotDiffVal = $slotQ ? (is_object($slotQ->difficulty) ? $slotQ->difficulty->value : (string)($slotQ->difficulty ?? 'medium')) : null;
+                                                                $slotDiffBadgeColor = match($slotDiffVal) {
+                                                                    'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+                                                                    'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+                                                                    default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+                                                                };
                                                             @endphp
-                                                            <div class="flex items-center gap-2">
+                                                            <div class="flex items-center gap-2 flex-wrap">
                                                                 <span class="text-slate-400 font-mono">{{ $s === 2 ? '└──' : '├──' }}</span>
-                                                                @if($slotComplete)
-                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q#{{ $slotQ->testQuestions()->first()?->order ?? ($s + 1) }} ✓ Complete:</span>
+                                                                @if($slotComplete && $slotGlobalNum)
+                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q{{ $slotGlobalNum }} ✓ Complete:</span>
                                                                     <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt, 60) }}</span>
+                                                                    @if($slotDiffVal)
+                                                                        <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $slotDiffBadgeColor }}">
+                                                                            Auto: {{ ucfirst($slotDiffVal) }}
+                                                                        </span>
+                                                                    @endif
+                                                                @elseif($slotComplete)
+                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q#{{ $s + 1 }} ✓ Complete:</span>
+                                                                    <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt, 60) }}</span>
+                                                                    @if($slotDiffVal)
+                                                                        <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $slotDiffBadgeColor }}">
+                                                                            Auto: {{ ucfirst($slotDiffVal) }}
+                                                                        </span>
+                                                                    @endif
                                                                 @elseif($slotQ)
-                                                                    <span class="font-bold text-amber-700 dark:text-amber-300">Slot {{ $s + 1 }} ○ Incomplete:</span>
+                                                                    @if($slotGlobalNum)
+                                                                        <span class="font-bold text-amber-700 dark:text-amber-300">Q{{ $slotGlobalNum }} ○ Incomplete:</span>
+                                                                    @else
+                                                                        <span class="font-bold text-amber-700 dark:text-amber-300">Slot {{ $s + 1 }} ○ Incomplete:</span>
+                                                                    @endif
                                                                     <span class="text-slate-500 italic truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt ?: 'Missing choices or correct answer', 50) }}</span>
                                                                 @else
                                                                     <span class="font-bold text-slate-400">Slot {{ $s + 1 }} ○ Incomplete:</span>
@@ -569,7 +601,11 @@
                                             @endforeach
                                         @endif
 
-                                        @forelse($secQuestions as $qItem)
+                                        @php
+                                            $standaloneQuestions = $secQuestions->filter(fn($item) => empty($item['question']->audio_group_id));
+                                        @endphp
+
+                                        @forelse($standaloneQuestions as $qItem)
                                             @php
                                                 $q = $qItem['question'];
                                                 $hasWarning = !empty($qItem['warnings']);
@@ -579,11 +615,6 @@
                                                     <div class="flex-1 min-w-[260px]">
                                                         <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                                                             <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">Question #{{ $qItem['number'] }}</span>
-                                                            @if($q->audioGroup)
-                                                            <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded inline-flex items-center gap-1">
-                                                                🎧 Audio Group ({{ $q->audioGroup->isTalk() ? 'Talk' : 'Conversation' }})
-                                                            </span>
-                                                            @endif
                                                             @if($isMaster)
                                                             <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded">
                                                                 🏛️ Governed Master Question
@@ -622,21 +653,9 @@
                                                         @php
                                                             $qHasImg = !empty($q->image_url);
                                                             $qHasAudio = !empty($q->audio_url);
-                                                            $agAudioUrl = $q->audioGroup?->getEffectiveAudioUrl();
-                                                            $agTitle = $q->audioGroup?->title ?: ($q->audioGroup?->isTalk() ? 'Shared Talk Audio' : 'Shared Conversation Audio');
                                                         @endphp
                                                         <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 flex-wrap">
                                                             <span class="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">MEDIA:</span>
-                                                            @if($q->audioGroup && $agAudioUrl)
-                                                                <div class="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
-                                                                    <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Shared Audio: {{ \Illuminate\Support\Str::limit($agTitle, 28) }}</span>
-                                                                    <button type="button"
-                                                                            onclick="previewAssetModal('', '{{ addslashes($agTitle) }}', 'audio', '{{ $agAudioUrl }}')"
-                                                                            class="px-1.5 py-0.5 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded text-[11px] font-bold">
-                                                                        👁️ Preview
-                                                                    </button>
-                                                                </div>
-                                                            @endif
                                                             @if($qHasImg)
                                                                 <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/50 px-2 py-1 rounded-md">
                                                                     <img src="{{ $q->image_url }}" alt="Thumbnail" class="w-5 h-5 object-cover rounded border border-slate-300 dark:border-slate-700">
@@ -649,7 +668,7 @@
                                                                 </div>
                                                             @endif
 
-                                                            @if($qHasAudio && !$q->audioGroup)
+                                                            @if($qHasAudio)
                                                                 <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
                                                                     <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Audio ✓</span>
                                                                     <button type="button"
@@ -660,7 +679,7 @@
                                                                 </div>
                                                             @endif
 
-                                                            @if(!$qHasImg && !$qHasAudio && !$q->audioGroup)
+                                                            @if(!$qHasImg && !$qHasAudio)
                                                                 <span class="text-xs text-slate-500 dark:text-slate-400 italic">
                                                                     No question-level media attached.
                                                                 </span>
@@ -693,16 +712,18 @@
                                                 </div>
                                             </div>
                                         @empty
-                                            <div class="p-6 text-center bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
-                                                <div class="text-slate-400 font-bold text-xs">No questions assigned to this section yet.</div>
-                                                @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                                                <button type="button"
-                                                        onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
-                                                        class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
-                                                    <span>➕</span> + Add Question to this Section
-                                                </button>
-                                                @endif
-                                            </div>
+                                            @if($secAudioGroups->isEmpty())
+                                                <div class="p-6 text-center bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
+                                                    <div class="text-slate-400 font-bold text-xs">No questions assigned to this section yet.</div>
+                                                    @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
+                                                    <button type="button"
+                                                            onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
+                                                            class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
+                                                        <span>➕</span> + Add Question to this Section
+                                                    </button>
+                                                    @endif
+                                                </div>
+                                            @endif
                                         @endforelse
                                     </div>
                                 </div>
