@@ -589,7 +589,7 @@
                                             @endif
                                             @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
                                             <button type="button"
-                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}')"
+                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
                                                     class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 text-xs font-bold inline-flex items-center gap-1.5">
                                                 <span>📖</span> + Add Passage Group
                                             </button>
@@ -776,7 +776,83 @@
                                         @endif
 
                                         @php
-                                            $standaloneQuestions = $secQuestions->filter(fn($item) => empty($item['question']->audio_group_id));
+                                            $secPassageGroups = collect();
+                                        @endphp
+                                        @if($secPartNumber && in_array((int)$secPartNumber, [6, 7]))
+                                            @php
+                                                $secPassageGroups = \App\Modules\QuestionBank\Models\PassageGroup::where('test_id', (string)$test->id)
+                                                    ->where('part_number', (int)$secPartNumber)
+                                                    ->orderBy('order')
+                                                    ->with(['passages', 'questions.choices'])
+                                                    ->get();
+                                            @endphp
+                                            @foreach($secPassageGroups as $pg)
+                                                @php
+                                                    $pgPassages = $pg->passages;
+                                                    $pgFirstPassage = $pgPassages->first();
+                                                    $pgSortedQuestions = $pg->questions->sortBy(function($cq) use ($globalQuestionNumberMap) {
+                                                        return $globalQuestionNumberMap[(string)$cq->id] ?? ($cq->created_at?->timestamp ?? 0);
+                                                    })->values();
+                                                    $pgCompleteCount = $pgSortedQuestions->count();
+                                                @endphp
+                                                <div id="passage-group-card-{{ $pg->id }}" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+                                                    <div class="flex justify-between items-start flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                                        <div>
+                                                            <div class="flex items-center gap-2 flex-wrap">
+                                                                <span class="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                                    <span>📖</span> {{ $pg->title ?: ('Part ' . $pg->part_number . ' ' . ucfirst($pg->passage_type) . ' Passage Group') }}
+                                                                </span>
+                                                                <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
+                                                                    {{ ((int)$pg->part_number === 6) ? 'Text Completion Group' : 'Passage Group (' . ucfirst($pg->passage_type) . ')' }}
+                                                                </span>
+                                                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800">
+                                                                    Progress: {{ $pgCompleteCount }} / {{ ((int)$pg->part_number === 6) ? 4 : $pgCompleteCount }} Complete
+                                                                </span>
+                                                                <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">🟢 VALID</span>
+                                                            </div>
+                                                            @if($pgFirstPassage)
+                                                            <div class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 italic line-clamp-2">
+                                                                Passage: {{ \Illuminate\Support\Str::limit($pgFirstPassage->content, 120) }}
+                                                            </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Slot Overview Tree with Global Question Numbering --}}
+                                                    <div class="space-y-1.5 pl-2 text-xs">
+                                                        @foreach($pgSortedQuestions as $pqIdx => $pq)
+                                                            @php
+                                                                $pqGlobalNum = $globalQuestionNumberMap[(string)$pq->id] ?? null;
+                                                                $pqDiffVal = is_object($pq->difficulty) ? $pq->difficulty->value : (string)($pq->difficulty ?? 'medium');
+                                                                $pqDiffBadgeColor = match($pqDiffVal) {
+                                                                    'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+                                                                    'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+                                                                    default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+                                                                };
+                                                                $isLastPq = ($pqIdx === count($pgSortedQuestions) - 1);
+                                                            @endphp
+                                                            <div id="question-card-{{ $pq->id }}" class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
+                                                                <span class="text-slate-400 font-mono">{{ $isLastPq ? '└──' : '├──' }}</span>
+                                                                @if($pqGlobalNum)
+                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q{{ $pqGlobalNum }} ✓ Complete:</span>
+                                                                @else
+                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q#{{ $pqIdx + 1 }} ✓ Complete:</span>
+                                                                @endif
+                                                                <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ \Illuminate\Support\Str::limit($pq->prompt, 60) }}</span>
+                                                                @if($pqDiffVal)
+                                                                    <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $pqDiffBadgeColor }}">
+                                                                        Auto: {{ ucfirst($pqDiffVal) }}
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        @endif
+
+                                        @php
+                                            $standaloneQuestions = $secQuestions->filter(fn($item) => empty($item['question']->audio_group_id) && empty($item['question']->passage_group_id));
                                         @endphp
 
                                         @forelse($standaloneQuestions as $qItem)
@@ -1843,6 +1919,141 @@
                 <button type="submit" id="ag-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
                     <span id="ag-submit-icon">💾</span>
                     <span id="ag-submit-text">Save Draft Group</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal 2c: Create Assessment-Authored Shared Passage Group (Part 6 Text Completion) --}}
+<div id="create-passage-group-modal" class="hidden fixed inset-0 z-[10000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10000;" onclick="closeCreatePassageGroupModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4 overflow-y-auto" onclick="event.stopPropagation()">
+        {{-- Header --}}
+        <div class="flex justify-between items-start pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+                <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <span class="text-indigo-600 dark:text-indigo-400">📖</span>
+                    <span id="pg-modal-title">Create Text Completion Group</span>
+                </div>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <span id="pg-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold"></span>
+                    <span id="pg-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">READING • PART 6</span>
+                    <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">4 Child Questions</span>
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                    One text is shared by exactly 4 questions.
+                </div>
+            </div>
+            <button type="button" onclick="closeCreatePassageGroupModal()" aria-label="Close passage group modal" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <form id="create-passage-group-form" method="POST" action="{{ route('teacher.tests.create-passage-group', $test->id) }}" class="space-y-5">
+            @csrf
+            {{-- Locked Contextual Fields --}}
+            <input type="hidden" name="test_section_id" id="pg-section-id" value="" required>
+            <input type="hidden" name="part_number" id="pg-part-number" value="6" required>
+            <input type="hidden" name="passage_type" id="pg-passage-type" value="single" required>
+
+            {{-- 1. Passage Group Title & Stimulus Section --}}
+            <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <span>📄</span>
+                            <span>Text / Passage Stimulus</span>
+                            <span class="text-rose-500">*</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            This text is shared by all 4 questions in this group.
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="pg-group-title" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Group Title (Optional)
+                    </label>
+                    <input type="text" name="title" id="pg-group-title" placeholder="e.g. Training Course Announcement, Customer Email, Staff Memo..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+
+                <input type="hidden" name="passages[0][title]" value="Document 1">
+                <input type="hidden" name="passages[0][document_type]" value="article">
+                <input type="hidden" name="passages[0][order_in_group]" value="1">
+
+                <div>
+                    <label for="pg-passage-content" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Passage Text <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="passages[0][content]" id="pg-passage-content" rows="6" required placeholder="Enter the reading text stimulus (with blanks [131] to [134] for Part 6)..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                </div>
+            </div>
+
+            {{-- 2. Child Questions (Exactly 4 Questions) --}}
+            <div class="space-y-4">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                    <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <span>📝</span>
+                        <span>Child Questions (Exactly 4 Questions Required)</span>
+                    </div>
+                </div>
+
+                @for($i = 0; $i < 4; $i++)
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center">{{ $i + 1 }}</span>
+                            <span class="text-xs font-extrabold text-slate-900 dark:text-white">Question {{ $i + 1 }} of 4</span>
+                        </div>
+                    </div>
+
+                    {{-- Question Prompt / Target Blank --}}
+                    <div>
+                        <label for="pg-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Question {{ $i + 1 }} Prompt / Blank Stem <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea name="questions[{{ $i }}][prompt]" id="pg-q{{ $i }}-prompt" rows="2" required placeholder="e.g. Select the best word to complete blank [{{ 131 + $i }}]..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                    </div>
+
+                    {{-- Answer Choices (A, B, C, D) --}}
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Answer Choices (A–D) &amp; Correct Answer <span class="text-rose-500">*</span>
+                            </label>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Select radio for correct answer</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            @foreach(['A', 'B', 'C', 'D'] as $cIdx => $optLabel)
+                            <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
+                                <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="pg-q{{ $i }}-correct-{{ $cIdx }}" {{ $cIdx === 0 ? 'checked' : '' }} required class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
+                                <span class="text-xs font-black text-slate-700 dark:text-slate-300 w-4">{{ $optLabel }}</span>
+                                <input type="text" name="questions[{{ $i }}][choices][]" id="pg-q{{ $i }}-choice-{{ $cIdx }}" required placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Optional Explanation --}}
+                    <div>
+                        <label for="pg-q{{ $i }}-explanation" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Answer Explanation / Rationale (Optional)
+                        </label>
+                        <input type="text" name="questions[{{ $i }}][explanation]" id="pg-q{{ $i }}-explanation" placeholder="Explain why the correct answer is right..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+                @endfor
+            </div>
+
+            {{-- 3. Action Footer --}}
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeCreatePassageGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" id="pg-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
+                    <span>💾</span>
+                    <span>Save Passage Group</span>
                 </button>
             </div>
         </form>
@@ -3116,6 +3327,56 @@
         }
     }
 
+    function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '') {
+        const modal = document.getElementById('create-passage-group-modal');
+        if (!modal) return;
+
+        const partNum = parseInt(partNumber) || 6;
+        const secInput = document.getElementById('pg-section-id');
+        const partInput = document.getElementById('pg-part-number');
+        const titleLabel = document.getElementById('pg-target-section-title');
+        const modalTitle = document.getElementById('pg-modal-title');
+        const partBadge = document.getElementById('pg-part-badge');
+
+        if (secInput) secInput.value = sectionId;
+        if (partInput) partInput.value = partNum;
+        if (titleLabel) titleLabel.textContent = `Target Section: ${sectionTitle || (partNum === 6 ? 'Part 6: Text Completion' : 'Part 7: Reading Comprehension')}`;
+        if (modalTitle) modalTitle.textContent = partNum === 6 ? 'Create Text Completion Group' : 'Create Reading Passage Group';
+        if (partBadge) partBadge.textContent = partNum === 6 ? 'READING • PART 6' : 'READING • PART 7';
+
+        // Clear previous input fields
+        const groupTitleInput = document.getElementById('pg-group-title');
+        const passageContentInput = document.getElementById('pg-passage-content');
+        if (groupTitleInput) groupTitleInput.value = '';
+        if (passageContentInput) passageContentInput.value = '';
+
+        for (let i = 0; i < 4; i++) {
+            const promptEl = document.getElementById(`pg-q${i}-prompt`);
+            const explEl = document.getElementById(`pg-q${i}-explanation`);
+            if (promptEl) promptEl.value = '';
+            if (explEl) explEl.value = '';
+            for (let c = 0; c < 4; c++) {
+                const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
+                if (choiceEl) choiceEl.value = '';
+            }
+            const correct0 = document.getElementById(`pg-q${i}-correct-0`);
+            if (correct0) correct0.checked = true;
+        }
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+
+    function closeCreatePassageGroupModal(e = null) {
+        if (!e || e.target === document.getElementById('create-passage-group-modal')) {
+            const modal = document.getElementById('create-passage-group-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
+        }
+    }
+
     function removeAudioGroupAttachedMedia() {
         const mediaIdInput = document.getElementById('ag-media-asset-id');
         const audioInput = document.getElementById('ag-audio-url');
@@ -3849,6 +4110,8 @@
             closeAssetPreviewModal();
             closeTeacherRequestRevisionModal();
             closeQuestionMediaPicker();
+            closeCreateAudioGroupModal();
+            closeCreatePassageGroupModal();
         }
     });
 
