@@ -274,7 +274,7 @@
                                     }
                                 } else {
                                     // Standalone question
-                                    $isQComplete = empty($qWarnings) && $qModel->isCompleteChild();
+                                    $isQComplete = empty($qWarnings);
                                     if ($isQComplete) {
                                         $completeQCount++;
                                     } else {
@@ -349,6 +349,7 @@
                             </svg>
                             @if($partsNeedingAttentionCount > 0)
                                 <span>Submission Disabled ({{ $partsNeedingAttentionCount }} {{ \Illuminate\Support\Str::plural('Part', $partsNeedingAttentionCount) }} Need Attention)</span>
+                                <span class="sr-only">Submission Disabled (Validation Required)</span>
                             @else
                                 <span>Submission Disabled (Validation Required)</span>
                             @endif
@@ -1276,8 +1277,8 @@
             {{-- Choices Section with Explicit Visual Correct Answer Indicator --}}
             <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
                 <div class="flex justify-between items-center flex-wrap gap-2">
-                    <label class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 m-0">Multiple Choice Options &amp; Correct Answer</label>
-                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Select exactly one radio button as the correct answer.</span>
+                    <label id="create-q-choices-label" class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 m-0">Multiple Choice Options &amp; Correct Answer</label>
+                    <span id="create-q-choices-hint" class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Select exactly one radio button as the correct answer.</span>
                 </div>
 
                 <div id="create-q-validation-error" class="hidden bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 p-2.5 rounded-xl text-xs font-bold">
@@ -2519,6 +2520,8 @@
 
         const choiceRow3 = document.getElementById('create-choice-row-3');
         const choiceInput3 = choiceRow3 ? choiceRow3.querySelector('input[type="text"]') : null;
+        const choicesLabel = document.getElementById('create-q-choices-label');
+        const choicesHint = document.getElementById('create-q-choices-hint');
 
         if (part === 2) {
             if (choiceRow3) choiceRow3.style.display = 'none';
@@ -2526,8 +2529,29 @@
                 choiceInput3.value = '';
                 choiceInput3.removeAttribute('required');
             }
+            if (choicesLabel) choicesLabel.textContent = 'Responses & Correct Answer (Part 2 — Listening)';
+            if (choicesHint) choicesHint.textContent = 'Candidates hear the three responses in the audio and select A, B, or C. Response transcripts are optional authoring metadata and are not shown during the test.';
+            for (let i = 0; i < 3; i++) {
+                const row = document.getElementById(`create-choice-row-${i}`);
+                const inp = row ? row.querySelector('input[type="text"]') : null;
+                if (inp) {
+                    inp.placeholder = 'Optional response transcript...';
+                    inp.removeAttribute('required');
+                }
+            }
         } else {
             if (choiceRow3) choiceRow3.style.display = 'flex';
+            if (choicesLabel) choicesLabel.textContent = 'Multiple Choice Options & Correct Answer';
+            if (choicesHint) choicesHint.textContent = 'Select exactly one radio button as the correct answer.';
+            for (let i = 0; i < 4; i++) {
+                const row = document.getElementById(`create-choice-row-${i}`);
+                const inp = row ? row.querySelector('input[type="text"]') : null;
+                const lbl = String.fromCharCode(65 + i);
+                if (inp) {
+                    inp.placeholder = `Option ${lbl} text`;
+                    if (i < 2) inp.setAttribute('required', 'required');
+                }
+            }
         }
 
         updateCreateModalAutoDifficulty();

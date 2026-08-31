@@ -103,7 +103,7 @@ class ToeicQuestionValidator
 
         // 2. Prompt Validation
         $prompt = $data['prompt'] ?? ($question?->prompt ?? '');
-        if (empty(trim((string) $prompt))) {
+        if ($partNumber !== 2 && empty(trim((string) $prompt))) {
             $errors['prompt'] = "Part {$partNumber} requires a question prompt.";
         }
 
@@ -120,7 +120,7 @@ class ToeicQuestionValidator
         }
 
         // 4. Resolve Choices & Correct Answer
-        $choicesInfo = self::resolveChoicesInfo($data, $question);
+        $choicesInfo = self::resolveChoicesInfo($data, $question, $partNumber);
         $choiceCount = $choicesInfo['count'];
         $hasCorrect = $choicesInfo['has_correct'];
 
@@ -154,13 +154,24 @@ class ToeicQuestionValidator
 
             case 2:
                 // Part 2: Question-Response (25 Qs)
-                // audio REQUIRED, exactly 3 choices (A, B, C), 4th choice FORBIDDEN
+                // audio REQUIRED, exactly 3 choices (A, B, C), 4th choice FORBIDDEN, exactly 1 correct answer
                 if (!$hasAudio) {
                     $errors['audio_url'] = 'Part 2 requires an audio attachment.';
                 }
 
                 if ($choiceCount !== 3) {
                     $errors['choices'] = 'Part 2 requires exactly 3 answer choices (A, B, C). Fourth choice (D) is forbidden.';
+                }
+
+                if ($choicesInfo['correct_count'] > 1) {
+                    $errors['correct_choice'] = 'Part 2 requires exactly one correct answer choice.';
+                }
+
+                if (!empty($choicesInfo['labels']) && count($choicesInfo['labels']) === 3) {
+                    $expectedLabels = ['A', 'B', 'C'];
+                    if (array_values($choicesInfo['labels']) !== $expectedLabels) {
+                        $errors['choice_labels'] = 'Part 2 choices must be labeled A, B, and C.';
+                    }
                 }
                 break;
 
@@ -226,6 +237,7 @@ class ToeicQuestionValidator
         }
 
         return [
+            'valid'       => empty($errors),
             'is_valid'    => empty($errors),
             'errors'      => $errors,
             'section'     => $section,
@@ -256,9 +268,10 @@ class ToeicQuestionValidator
      *
      * @param array<string, mixed> $data
      * @param Question|null $question
-     * @return array{count: int, has_correct: bool}
+     * @param int|null $partNumber
+     * @return array{count: int, has_correct: bool, correct_count: int, labels: array<string>}
      */
-    protected static function resolveChoicesInfo(array $data, ?Question $question = null): array
+    protected static function resolveChoicesInfo(array $data, ?Question $question = null, ?int $partNumber = null): array
     {
         // 1. From request data array
         if (isset($data['choices']) && is_array($data['choices'])) {
@@ -268,10 +281,13 @@ class ToeicQuestionValidator
 
             $validCount = 0;
             $hasCorrect = false;
+            $correctCount = 0;
+            $labels = [];
 
             foreach ($rawChoices as $idx => $choice) {
                 $content = '';
                 $isCorrect = false;
+                $label = is_array($choice) ? ($choice['label'] ?? chr(65 + $idx)) : chr(65 + $idx);
 
                 if (is_array($choice)) {
                     $content = $choice['content'] ?? ($choice['choice_text'] ?? '');
@@ -288,39 +304,62 @@ class ToeicQuestionValidator
                     $isCorrect = true;
                 }
 
-                // Count if content is not empty, or if explicit choices array passed with labels
-                if (!empty(trim((string) $content)) || (is_array($choice) && !empty($choice['label']))) {
+                if ($partNumber === 2) {
                     $validCount++;
+                    $labels[] = strtoupper((string) $label);
                     if ($isCorrect) {
                         $hasCorrect = true;
+                        $correctCount++;
+                    }
+                } else {
+                    // Count if content is not empty, or if explicit choices array passed with labels
+                    if (!empty(trim((string) $content)) || (is_array($choice) && !empty($choice['label']))) {
+                        $validCount++;
+                        $labels[] = strtoupper((string) $label);
+                        if ($isCorrect) {
+                            $hasCorrect = true;
+                            $correctCount++;
+                        }
                     }
                 }
             }
 
             return [
-                'count'       => $validCount,
-                'has_correct' => $hasCorrect,
+                'count'         => $validCount,
+                'has_correct'   => $hasCorrect,
+                'correct_count' => $correctCount,
+                'labels'        => $labels,
             ];
         }
 
         // 2. From existing question model relations
         if ($question) {
             $choices = $question->choices()->get();
-            $count = $choices->filter(fn($c) => !empty(trim((string) ($c->content ?? $c->choice_text ?? ''))))->count();
-            if ($count === 0 && $choices->count() > 0) {
+            if ($partNumber === 2) {
                 $count = $choices->count();
+            } else {
+                $count = $choices->filter(fn($c) => !empty(trim((string) ($c->content ?? $c->choice_text ?? ''))))->count();
+                if ($count === 0 && $choices->count() > 0) {
+                    $count = $choices->count();
+                }
             }
             $hasCorrect = $choices->contains(fn($c) => (bool) $c->is_correct);
+            $correctCount = $choices->filter(fn($c) => (bool) $c->is_correct)->count();
+            $labels = $choices->map(fn($c) => strtoupper((string) $c->label))->values()->all();
 
             return [
-                'count'       => $count,
-                'has_correct' => $hasCorrect,
+                'count'         => $count,
+                'has_correct'   => $hasCorrect,
+                'correct_count' => $correctCount,
+                'labels'        => $labels,
             ];
         }
 
         return [
-            'count'       => 0,
-            'has_correct' => false,
+            'count'         => 0,
+            'has_correct'   => false,
+            'correct_count' => 0,
+            'labels'        => [],
         ];
     }
 

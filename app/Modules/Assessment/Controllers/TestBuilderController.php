@@ -576,14 +576,15 @@ class TestBuilderController extends Controller
         $hasCorrect = false;
         if (!empty($validated['choices'])) {
             foreach ($validated['choices'] as $idx => $choiceText) {
-                if (empty(trim($choiceText))) continue;
+                if ($partNumber === 2 && count($choices) >= 3) break;
+                if ($partNumber !== 2 && empty(trim((string)$choiceText))) continue;
                 $isCorrect = (!is_null($correctChoice) && $correctChoice !== '' && (string) $idx === (string) $correctChoice);
                 if ($isCorrect) {
                     $hasCorrect = true;
                 }
                 $choices[] = [
                     'label'      => chr(65 + count($choices)),
-                    'content'    => $choiceText,
+                    'content'    => $choiceText ?? '',
                     'is_correct' => $isCorrect,
                 ];
             }
@@ -1110,9 +1111,11 @@ class TestBuilderController extends Controller
             $validIdx = 0;
             $hasCorrect = false;
             $existingChoices = $question->choices()->get();
+            $isPart2 = ((int) ($question->part_number ?? $request->input('part_number')) === 2);
 
             foreach ($choicesData as $idx => $choiceText) {
-                if (empty(trim($choiceText))) continue;
+                if ($isPart2 && $validIdx >= 3) break;
+                if (!$isPart2 && empty(trim((string)$choiceText))) continue;
 
                 $isCorrect = (!is_null($correctChoiceIndex) && $correctChoiceIndex !== '' && (string) $idx === (string) $correctChoiceIndex);
                 if ($isCorrect) {
@@ -1124,15 +1127,15 @@ class TestBuilderController extends Controller
                 if ($choice) {
                     $choice->update([
                         'label'       => chr(65 + $validIdx),
-                        'content'     => $choiceText,
-                        'choice_text' => $choiceText,
+                        'content'     => $choiceText ?? '',
+                        'choice_text' => $choiceText ?? '',
                         'is_correct'  => $isCorrect,
                     ]);
                 } else {
                     $question->choices()->create([
                         'label'       => chr(65 + $validIdx),
-                        'content'     => $choiceText,
-                        'choice_text' => $choiceText,
+                        'content'     => $choiceText ?? '',
+                        'choice_text' => $choiceText ?? '',
                         'is_correct'  => $isCorrect,
                         'order'       => $validIdx + 1,
                     ]);
