@@ -204,23 +204,33 @@
             <div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
                     <div>
-                        <label style="font-size:.85rem;font-weight:700;color:#334155;margin:0;display:block;">Choices &amp; Correct Answer Selection</label>
-                        <span style="font-size:.72rem;color:#64748b;">Select exactly one radio button on the left to set the correct answer.</span>
+                        <label id="eq-choices-title" style="font-size:.85rem;font-weight:700;color:#334155;margin:0;display:block;">{{ ($curPart == 2) ? 'Responses & Correct Answer Selection' : 'Choices & Correct Answer Selection' }}</label>
+                        <span id="eq-choices-helper" style="font-size:.72rem;color:#64748b;">{{ ($curPart == 2) ? 'Candidates hear the three responses in the audio and select A, B, or C. Response transcripts are optional authoring metadata and are not shown during the test.' : 'Select exactly one radio button on the left to set the correct answer.' }}</span>
                     </div>
-                    <button type="button" onclick="addChoiceRow()" style="font-size:.75rem;font-weight:700;color:#4338ca;background:#eef2ff;border:1px solid #c7d2fe;padding:.25rem .65rem;border-radius:.4rem;cursor:pointer;">
+                    <button type="button" onclick="addChoiceRow()" id="eq-add-choice-btn" style="font-size:.75rem;font-weight:700;color:#4338ca;background:#eef2ff;border:1px solid #c7d2fe;padding:.25rem .65rem;border-radius:.4rem;cursor:pointer;display:{{ ($curPart == 2) ? 'none' : 'inline-block' }};">
                         + Add Choice
                     </button>
                 </div>
                 <div id="choices-container" style="display:flex;flex-direction:column;gap:.6rem;">
                     @php
-                        $choicesList = $question->choices && $question->choices->isNotEmpty()
-                            ? $question->choices
-                            : collect([
-                                (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
-                                (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
-                                (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
-                                (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
-                            ]);
+                        if ($curPart == 2) {
+                            $choicesList = $question->choices && $question->choices->isNotEmpty()
+                                ? $question->choices->take(3)
+                                : collect([
+                                    (object)['content' => '', 'choice_text' => '', 'is_correct' => true],
+                                    (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                                    (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                                ]);
+                        } else {
+                            $choicesList = $question->choices && $question->choices->isNotEmpty()
+                                ? $question->choices
+                                : collect([
+                                    (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                                    (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                                    (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                                    (object)['content' => '', 'choice_text' => '', 'is_correct' => false],
+                                ]);
+                        }
                     @endphp
                     @foreach($choicesList as $cIdx => $cObj)
                     @php
@@ -232,11 +242,11 @@
                     <div class="choice-row" id="edit-choice-row-{{ $cIdx }}" style="display:flex;align-items:center;gap:.75rem;background:{{ $isCorrectChoice ? '#ecfdf5' : '#f8fafc' }};padding:.65rem .85rem;border-radius:.6rem;border:1px solid {{ $isCorrectChoice ? '#10b981' : '#e2e8f0' }};transition:all .15s ease;">
                         <input type="radio" name="correct_choice" value="{{ $cIdx }}" id="edit-correct-{{ $cIdx }}" onchange="updateEditorCorrectChoice()" {{ $isCorrectChoice ? 'checked' : '' }} style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
                         <label for="edit-correct-{{ $cIdx }}" class="choice-label" style="font-weight:800;color:#4f46e5;font-size:.85rem;width:1.5rem;cursor:pointer;margin:0;">{{ chr(65 + $cIdx) }}.</label>
-                        <input type="text" name="choices[{{ $cIdx }}]" oninput="updateEditorAutoDifficulty()" value="{{ is_object($cObj) ? ($cObj->content ?? $cObj->choice_text) : '' }}" placeholder="Option {{ chr(65 + $cIdx) }} text" style="flex:1;padding:.5rem .75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.5rem;color:#0f172a;font-size:.88rem;">
+                        <input type="text" name="choices[{{ $cIdx }}]" oninput="updateEditorAutoDifficulty()" value="{{ is_object($cObj) ? ($cObj->content ?? $cObj->choice_text) : '' }}" placeholder="{{ ($curPart == 2) ? 'Optional response transcript...' : 'Option ' . chr(65 + $cIdx) . ' text' }}" style="flex:1;padding:.5rem .75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.5rem;color:#0f172a;font-size:.88rem;">
                         <span class="correct-indicator" id="edit-correct-badge-{{ $cIdx }}" style="display:{{ $isCorrectChoice ? 'inline-flex' : 'none' }};align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:.4rem;background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;font-size:.72rem;font-weight:800;letter-spacing:.03em;white-space:nowrap;">
                             ✓ CORRECT ANSWER
                         </span>
-                        <button type="button" onclick="removeChoiceRow(this)" class="btn-remove-choice" style="color:#e11d48;background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;line-height:1;" title="Remove choice">✕</button>
+                        <button type="button" onclick="removeChoiceRow(this)" class="btn-remove-choice" style="color:#e11d48;background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;line-height:1;display:{{ ($curPart == 2) ? 'none' : 'inline-block' }};" title="Remove choice">✕</button>
                     </div>
                     @endforeach
                 </div>
@@ -373,10 +383,14 @@
                     passageBox.style.display = (part === 6 || part === 7) ? 'block' : 'none';
                 }
 
-                const addChoiceBtn = document.querySelector('button[onclick="addChoiceRow()"]');
+                const addChoiceBtn = document.getElementById('eq-add-choice-btn') || document.querySelector('button[onclick="addChoiceRow()"]');
                 const choiceRows = document.querySelectorAll('#choices-container .choice-row');
+                const titleLabel = document.getElementById('eq-choices-title');
+                const helperSpan = document.getElementById('eq-choices-helper');
 
                 if (part === 2) {
+                    if (titleLabel) titleLabel.textContent = 'Responses & Correct Answer Selection';
+                    if (helperSpan) helperSpan.textContent = 'Candidates hear the three responses in the audio and select A, B, or C. Response transcripts are optional authoring metadata and are not shown during the test.';
                     if (addChoiceBtn) addChoiceBtn.style.display = 'none';
                     if (choiceRows.length > 3) {
                         for (let i = 3; i < choiceRows.length; i++) {
@@ -384,7 +398,12 @@
                         }
                     }
                     document.querySelectorAll('.btn-remove-choice').forEach(btn => btn.style.display = 'none');
+                    document.querySelectorAll('#choices-container input[type="text"]').forEach(input => {
+                        input.placeholder = 'Optional response transcript...';
+                    });
                 } else {
+                    if (titleLabel) titleLabel.textContent = 'Choices & Correct Answer Selection';
+                    if (helperSpan) helperSpan.textContent = 'Select exactly one radio button on the left to set the correct answer.';
                     if (addChoiceBtn) addChoiceBtn.style.display = 'inline-block';
                     document.querySelectorAll('.btn-remove-choice').forEach(btn => btn.style.display = 'inline-block');
                     const currentCount = document.querySelectorAll('#choices-container .choice-row').length;
@@ -393,6 +412,7 @@
                             addChoiceRow();
                         }
                     }
+                    reindexChoices();
                 }
 
                 updateEditorAutoDifficulty();
@@ -419,8 +439,8 @@
                     if (badge) {
                         badge.style.display = isSelected ? 'inline-flex' : 'none';
                     }
-                    row.style.borderColor = isSelected ? 'rgba(16,185,129,0.6)' : '#334155';
-                    row.style.background = isSelected ? 'rgba(16,185,129,0.06)' : '#1e293b';
+                    row.style.borderColor = isSelected ? '#10b981' : '#e2e8f0';
+                    row.style.background = isSelected ? '#ecfdf5' : '#f8fafc';
                 });
             }
 
@@ -443,6 +463,9 @@
 
             function reindexChoices() {
                 const rows = document.querySelectorAll('#choices-container .choice-row');
+                const partSelect = document.getElementById('eq-part-number');
+                const isPart2 = partSelect && parseInt(partSelect.value) === 2;
+
                 rows.forEach((row, idx) => {
                     const label = String.fromCharCode(65 + idx);
                     const radio = row.querySelector('input[type="radio"]');
@@ -463,13 +486,13 @@
                     }
                     if (textInput) {
                         textInput.name = `choices[${idx}]`;
-                        textInput.placeholder = `Option ${label} text`;
+                        textInput.placeholder = isPart2 ? 'Optional response transcript...' : `Option ${label} text`;
                     }
                     if (badge) {
                         badge.id = `edit-correct-badge-${idx}`;
                     }
                     if (removeBtn) {
-                        removeBtn.style.display = rows.length > 2 ? 'inline-block' : 'none';
+                        removeBtn.style.display = (isPart2 || rows.length <= 2) ? 'none' : 'inline-block';
                     }
                 });
                 updateEditorCorrectChoice();
@@ -480,19 +503,21 @@
                 const rows = container.querySelectorAll('.choice-row');
                 const idx = rows.length;
                 const label = String.fromCharCode(65 + idx);
+                const partSelect = document.getElementById('eq-part-number');
+                const isPart2 = partSelect && parseInt(partSelect.value) === 2;
 
                 const div = document.createElement('div');
                 div.className = 'choice-row';
                 div.id = `edit-choice-row-${idx}`;
-                div.style.cssText = 'display:flex;align-items:center;gap:.75rem;background:#1e293b;padding:.65rem .85rem;border-radius:.6rem;border:1px solid #334155;transition:all .15s ease;';
+                div.style.cssText = 'display:flex;align-items:center;gap:.75rem;background:#f8fafc;padding:.65rem .85rem;border-radius:.6rem;border:1px solid #e2e8f0;transition:all .15s ease;';
                 div.innerHTML = `
                     <input type="radio" name="correct_choice" value="${idx}" id="edit-correct-${idx}" onchange="updateEditorCorrectChoice()" style="accent-color:#10b981;width:1.1rem;height:1.1rem;cursor:pointer;">
-                    <label for="edit-correct-${idx}" class="choice-label" style="font-weight:800;color:#818cf8;font-size:.85rem;width:1.5rem;cursor:pointer;margin:0;">${label}.</label>
-                    <input type="text" name="choices[${idx}]" placeholder="Option ${label} text" style="flex:1;padding:.5rem .75rem;background:#0f172a;border:1px solid #334155;border-radius:.5rem;color:#fff;font-size:.88rem;">
-                    <span class="correct-indicator" id="edit-correct-badge-${idx}" style="display:none;align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:.4rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#34d399;font-size:.72rem;font-weight:800;letter-spacing:.03em;white-space:nowrap;">
+                    <label for="edit-correct-${idx}" class="choice-label" style="font-weight:800;color:#4f46e5;font-size:.85rem;width:1.5rem;cursor:pointer;margin:0;">${label}.</label>
+                    <input type="text" name="choices[${idx}]" oninput="updateEditorAutoDifficulty()" placeholder="${isPart2 ? 'Optional response transcript...' : 'Option ' + label + ' text'}" style="flex:1;padding:.5rem .75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.5rem;color:#0f172a;font-size:.88rem;">
+                    <span class="correct-indicator" id="edit-correct-badge-${idx}" style="display:none;align-items:center;gap:.3rem;padding:.3rem .65rem;border-radius:.4rem;background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;font-size:.72rem;font-weight:800;letter-spacing:.03em;white-space:nowrap;">
                         ✓ CORRECT ANSWER
                     </span>
-                    <button type="button" onclick="removeChoiceRow(this)" class="btn-remove-choice" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;line-height:1;" title="Remove choice">✕</button>
+                    <button type="button" onclick="removeChoiceRow(this)" class="btn-remove-choice" style="color:#e11d48;background:none;border:none;cursor:pointer;font-size:1.1rem;padding:0 .25rem;line-height:1;display:${isPart2 ? 'none' : 'inline-block'};" title="Remove choice">✕</button>
                 `;
                 container.appendChild(div);
                 reindexChoices();
@@ -512,11 +537,11 @@
             </script>
 
             <div>
-                <label style="display:block;font-size:.85rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem;">Explanation / Rationale</label>
-                <textarea name="explanation" rows="2" style="width:100%;padding:.75rem;background:#1e293b;border:1px solid #334155;border-radius:.6rem;color:#fff;font-size:.88rem;">{{ old('explanation', $question->explanation) }}</textarea>
+                <label style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Explanation / Rationale</label>
+                <textarea name="explanation" rows="2" style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.88rem;">{{ old('explanation', $question->explanation) }}</textarea>
             </div>
 
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;border-top:1px solid #1e293b;padding-top:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;border-top:1px solid #e2e8f0;padding-top:1.25rem;">
                 <a href="{{ route('teacher.tests.show', $test->id) }}" style="padding:.75rem 1.25rem;background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:.65rem;font-size:.85rem;font-weight:700;text-decoration:none;">
                     Cancel
                 </a>
