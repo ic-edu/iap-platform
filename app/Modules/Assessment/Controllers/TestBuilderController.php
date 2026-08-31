@@ -522,7 +522,8 @@ class TestBuilderController extends Controller
         }
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Master Question attached to section '{$section->title}'.");
+            ->with('status', "Master Question attached to section '{$section->title}'.")
+            ->with('expanded_section_id', $section->id);
     }
 
     /**
@@ -642,7 +643,8 @@ class TestBuilderController extends Controller
         ]);
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Assessment-authored question created and added to section '{$section->title}'.");
+            ->with('status', "Assessment-authored question created and added to section '{$section->title}'.")
+            ->with('expanded_section_id', $section->id);
     }
 
     /**
@@ -681,7 +683,8 @@ class TestBuilderController extends Controller
         $this->builderService->createAudioGroup($section, $validated);
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Part {$validated['part_number']} Shared Audio Group successfully created and attached to '{$section->title}'.");
+            ->with('status', "Part {$validated['part_number']} Shared Audio Group successfully created and attached to '{$section->title}'.")
+            ->with('expanded_section_id', $section->id);
     }
 
     /**
@@ -723,7 +726,8 @@ class TestBuilderController extends Controller
         $this->builderService->createPassageGroup($section, $validated);
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Part {$validated['part_number']} " . ucfirst($validated['passage_type']) . " Passage Group successfully created and attached to '{$section->title}'.");
+            ->with('status', "Part {$validated['part_number']} " . ucfirst($validated['passage_type']) . " Passage Group successfully created and attached to '{$section->title}'.")
+            ->with('expanded_section_id', $section->id);
     }
 
     /**
@@ -808,7 +812,8 @@ class TestBuilderController extends Controller
         $this->builderService->updateSection($section, $validated);
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Section '{$section->title}' updated successfully.");
+            ->with('status', "Section '{$section->title}' updated successfully.")
+            ->with('expanded_section_id', $section->id);
     }
 
     /**
@@ -876,7 +881,8 @@ class TestBuilderController extends Controller
         );
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', 'Media asset attached to section successfully.');
+            ->with('status', 'Media asset attached to section successfully.')
+            ->with('expanded_section_id', $section->id);
     }
 
     /**
@@ -901,7 +907,8 @@ class TestBuilderController extends Controller
         $this->builderService->detachMediaFromSection($section, $media->id);
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', 'Media asset detached from section.');
+            ->with('status', 'Media asset detached from section.')
+            ->with('expanded_section_id', $section->id);
     }
 
     /**

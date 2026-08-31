@@ -305,8 +305,8 @@
                                 }
                             @endphp
                             <div id="section-card-{{ $sec->id }}" class="section-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-                                <!-- Section Card Header & Metrics -->
-                                <div class="flex justify-between items-start flex-wrap gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                                <!-- Section Card Header & Metrics (Clickable row to toggle expansion) -->
+                                <div onclick="toggleSectionCollapse('{{ $sec->id }}')" class="flex justify-between items-start flex-wrap gap-3 cursor-pointer select-none" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSectionCollapse('{{ $sec->id }}');}">
                                     <div class="flex-1 min-w-[240px]">
                                         <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                                             <span class="text-base sm:text-lg font-black text-slate-900 dark:text-white">{{ $sec->title }}</span>
@@ -327,15 +327,20 @@
 
                                     <!-- Collapse / Expand Toggle Button -->
                                     <div class="flex items-center gap-2">
-                                        <button type="button" onclick="toggleSectionCollapse('{{ $sec->id }}')" id="btn-collapse-{{ $sec->id }}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors inline-flex items-center gap-1.5">
-                                            <span id="collapse-icon-{{ $sec->id }}" class="text-xs">▾</span>
-                                            <span id="collapse-label-{{ $sec->id }}">Collapse</span>
+                                        <button type="button"
+                                                onclick="event.stopPropagation(); toggleSectionCollapse('{{ $sec->id }}')"
+                                                id="btn-collapse-{{ $sec->id }}"
+                                                aria-expanded="false"
+                                                aria-controls="section-body-{{ $sec->id }}"
+                                                class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all inline-flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+                                            <span id="collapse-icon-{{ $sec->id }}" class="text-xs">▸</span>
+                                            <span id="collapse-label-{{ $sec->id }}">Expand</span>
                                         </button>
                                     </div>
                                 </div>
 
-                                <!-- Collapsible Section Body -->
-                                <div id="section-body-{{ $sec->id }}" class="space-y-5">
+                                <!-- Collapsible Section Body (Hidden by default) -->
+                                <div id="section-body-{{ $sec->id }}" class="hidden space-y-5 pt-4 border-t border-slate-100 dark:border-slate-800" style="display: none;">
                                     <!-- Directions & Instructions Strip -->
                                     <div class="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
                                         <div class="flex items-center justify-between gap-2 flex-wrap">
@@ -2553,23 +2558,28 @@
         if (secIdInput) secIdInput.value = selectEl.value;
     }
 
-    function toggleSectionCollapse(secId) {
+    function toggleSectionCollapse(secId, forceState = null) {
         const body = document.getElementById(`section-body-${secId}`);
         const icon = document.getElementById(`collapse-icon-${secId}`);
         const label = document.getElementById(`collapse-label-${secId}`);
+        const btn = document.getElementById(`btn-collapse-${secId}`);
         if (!body) return;
 
-        const isHidden = body.classList.contains('hidden');
-        if (isHidden) {
+        const isHidden = body.classList.contains('hidden') || body.style.display === 'none';
+        const shouldOpen = (forceState !== null) ? forceState : isHidden;
+
+        if (shouldOpen) {
             body.classList.remove('hidden');
             body.style.display = 'block';
             if (icon) icon.textContent = '▾';
             if (label) label.textContent = 'Collapse';
+            if (btn) btn.setAttribute('aria-expanded', 'true');
         } else {
             body.classList.add('hidden');
             body.style.display = 'none';
             if (icon) icon.textContent = '▸';
             if (label) label.textContent = 'Expand';
+            if (btn) btn.setAttribute('aria-expanded', 'false');
         }
     }
     function closeCreateAuthoredQuestionModal(e) {
@@ -3346,6 +3356,34 @@
             closeAssetPreviewModal();
             closeTeacherRequestRevisionModal();
             closeQuestionMediaPicker();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetSectionId = urlParams.get('section') || @json(session('expanded_section_id') ?? request('section'));
+        const hash = window.location.hash;
+
+        let autoExpandId = targetSectionId;
+        if (!autoExpandId && hash) {
+            if (hash.startsWith('#section-card-')) {
+                autoExpandId = hash.replace('#section-card-', '');
+            } else if (hash.startsWith('#section-body-')) {
+                autoExpandId = hash.replace('#section-body-', '');
+            } else if (hash.startsWith('#section-')) {
+                autoExpandId = hash.replace('#section-', '');
+            }
+        }
+
+        if (autoExpandId) {
+            const body = document.getElementById(`section-body-${autoExpandId}`);
+            if (body) {
+                toggleSectionCollapse(autoExpandId, true);
+                const card = document.getElementById(`section-card-${autoExpandId}`);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
         }
     });
 </script>
