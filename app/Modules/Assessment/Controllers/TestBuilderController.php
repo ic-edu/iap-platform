@@ -444,47 +444,20 @@ class TestBuilderController extends Controller
             'sections.testQuestions.question.choices',
             'sections.testQuestions.question.passage',
             'sections.testQuestions.question.passageGroup.passages',
-            'sections.testQuestions.question.audioGroup',
+            'sections.testQuestions.question.audioGroup.mediaAsset',
             'sections.testQuestions.question.mediaAsset',
             'sections.mediaAssets',
         ]);
 
         $validationResult = $this->validateAssessment($test);
-
-        $orderedQuestions = collect();
-        $sectionFirstQuestionIndex = [];
-        $questionSectionMap = [];
-
         $sections = $test->sections->sortBy('order')->values();
+        $deliveryData = \App\Modules\Assessment\Services\DeliveryUnitBuilder::build($test);
 
-        foreach ($sections as $secIndex => $section) {
-            $firstIdxForThisSection = $orderedQuestions->count();
-            $sectionFirstQuestionIndex[$section->id] = $firstIdxForThisSection;
-
-            $secQuestions = $section->testQuestions->sortBy('order')->map(function ($tq) use ($section) {
-                $q = $tq->question;
-                if ($q) {
-                    $q->section_model = $section;
-                    $q->test_question_order = $tq->order;
-                }
-                return $q;
-            })->filter()->values();
-
-            foreach ($secQuestions as $q) {
-                $idx = $orderedQuestions->count();
-                $questionSectionMap[$idx] = $section->id;
-                $orderedQuestions->push($q);
-            }
-        }
-
-        return view('teacher.assessment_preview', [
-            'test'                      => $test,
-            'sections'                  => $sections,
-            'questions'                 => $orderedQuestions,
-            'sectionFirstQuestionIndex' => $sectionFirstQuestionIndex,
-            'questionSectionMap'        => $questionSectionMap,
-            'validationResult'          => $validationResult,
-        ]);
+        return view('teacher.assessment_preview', array_merge([
+            'test'             => $test,
+            'sections'         => $sections,
+            'validationResult' => $validationResult,
+        ], $deliveryData));
     }
 
     /**
@@ -1105,7 +1078,7 @@ class TestBuilderController extends Controller
         if (isset($validated['explanation'])) $question->explanation = $validated['explanation'];
         if (isset($validated['passage_id'])) $question->passage_id = $validated['passage_id'];
         if (isset($validated['passage_text'])) $question->passage_text = $validated['passage_text'];
-        
+
         if ($request->has('image_url')) {
             $question->image_url = $request->input('image_url') ?: null;
         }

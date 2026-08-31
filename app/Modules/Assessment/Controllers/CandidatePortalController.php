@@ -188,7 +188,15 @@ class CandidatePortalController extends Controller
             return redirect()->route('candidate.review', $attempt);
         }
 
-        $attempt->loadMissing(['test.sections.testQuestions.question.choices', 'test.sections.mediaAssets', 'answers']);
+        $attempt->loadMissing([
+            'test.sections.testQuestions.question.choices',
+            'test.sections.testQuestions.question.passage',
+            'test.sections.testQuestions.question.passageGroup.passages',
+            'test.sections.testQuestions.question.audioGroup.mediaAsset',
+            'test.sections.testQuestions.question.mediaAsset',
+            'test.sections.mediaAssets',
+            'answers',
+        ]);
 
         $allQuestions = collect();
         $sections = $attempt->test ? $attempt->test->sections : collect();
@@ -211,10 +219,19 @@ class CandidatePortalController extends Controller
             ->pluck('question_id')
             ->toArray();
 
+        $deliveryData = \App\Modules\Assessment\Services\DeliveryUnitBuilder::build($attempt->test, $shuffledQuestions);
+
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.exam';
 
-        return view($viewName, compact('attempt', 'shuffledQuestions', 'remainingSeconds', 'sections', 'isRealTest', 'playedAudioQuestionIds'));
+        return view($viewName, array_merge([
+            'attempt'                => $attempt,
+            'shuffledQuestions'      => $shuffledQuestions,
+            'remainingSeconds'       => $remainingSeconds,
+            'sections'               => $sections,
+            'isRealTest'             => $isRealTest,
+            'playedAudioQuestionIds' => $playedAudioQuestionIds,
+        ], $deliveryData));
     }
 
     /**

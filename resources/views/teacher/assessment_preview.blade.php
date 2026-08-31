@@ -14,7 +14,7 @@
     <!-- Scripts and Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- Early Theme Initialization to prevent flash of wrong theme -->
+    <!-- Early Theme Initialization -->
     <script>
         (function() {
             var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
@@ -76,8 +76,9 @@
     </header>
 
     @php
-        $totalQuestionsCount = $questions->count();
+        $totalQuestionsCount = $totalQuestionsCount ?? $questions->count();
         $totalSectionsCount = $sections->count();
+        $totalUnitsCount = $totalUnitsCount ?? $deliveryUnits->count();
     @endphp
 
     <!-- Main Workspace Container -->
@@ -116,7 +117,7 @@
             </div>
         @else
             <div class="grid gap-6 lg:grid-cols-4 items-start">
-                <!-- Left Column: Assessment Overview, Section Intros & Question Cards (3 Cols) -->
+                <!-- Left Column: Assessment Overview, Section Intros & Delivery Units (3 Cols) -->
                 <div class="lg:col-span-3 space-y-6">
 
                     <!-- 0. PREVIEW ASSESSMENT OVERVIEW / PRE-TEST INSTRUCTIONS CARD -->
@@ -210,7 +211,7 @@
                     <!-- 1. DEDICATED SECTION DIRECTIONS SCREENS -->
                     @foreach($sections as $secIndex => $sec)
                         @php
-                            $firstQIdx = $sectionFirstQuestionIndex[$sec->id] ?? 0;
+                            $firstUnitIdx = $sectionFirstUnitIndex[$sec->id] ?? 0;
                             $secQuestionCount = $sec->testQuestions->count();
                         @endphp
                         <div id="section-intro-card-{{ $sec->id }}" class="section-intro-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 hidden">
@@ -297,7 +298,7 @@
                                 @endif
 
                                 @if($secQuestionCount > 0)
-                                    <button type="button" onclick="beginSectionQuestions({{ $firstQIdx }})" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-indigo-600/20 transition-all">
+                                    <button type="button" onclick="beginSectionQuestions({{ $firstUnitIdx }})" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-indigo-600/20 transition-all">
                                         <span>Begin {{ $sec->title }} &rarr;</span>
                                     </button>
                                 @endif
@@ -305,185 +306,335 @@
                         </div>
                     @endforeach
 
-                    <!-- 2. INDIVIDUAL QUESTION CARDS -->
-                    @foreach($questions as $index => $question)
+                    <!-- 2. DELIVERY UNIT CARDS (Single-Page Audio Groups & Standalone Questions) -->
+                    @foreach($deliveryUnits as $unitIndex => $unit)
                         @php
-                            $section = $question->section_model ?? null;
-                            $effectivePassages = $question->getEffectivePassages();
-                            $hasPassages = $effectivePassages->isNotEmpty();
-                            $passageGroup = $question->passageGroup;
-                            $partNum = (int) ($question->part_number ?? 0);
-                            $audioUrl = $question->getEffectiveAudioUrl();
-                            $imageUrl = method_exists($question, 'getEffectiveImageUrl') ? $question->getEffectiveImageUrl() : ($question->image_url ?: ($question->mediaAsset && ($question->mediaAsset->type === 'image' || str_starts_with($question->mediaAsset->mime_type ?? '', 'image/')) ? ($question->mediaAsset->publicUrl() ?? $question->mediaAsset->path) : null));
-                            $isToeicPart1 = ($partNum === 1);
-                            $isMissingPart1Media = $isToeicPart1 && (empty($imageUrl) || empty($audioUrl));
-
-                            $firstQIdxOfSection = $section ? ($sectionFirstQuestionIndex[$section->id] ?? 0) : 0;
-                            $nextIndex = $index + 1;
-                            $hasNextQuestion = $nextIndex < $totalQuestionsCount;
-                            $nextQuestionSectionId = $hasNextQuestion ? ($questionSectionMap[$nextIndex] ?? null) : null;
-                            $isLastQuestionOfSection = $section && $hasNextQuestion && ($nextQuestionSectionId !== $section->id);
+                            $unitType = $unit['type'];
+                            $section = $unit['section'];
+                            $isAudioGroup = ($unitType === 'audio_group');
+                            $groupTypeLabel = $unit['group_type'] === 'talk' ? 'Talk' : 'Conversation';
+                            $unitAudioUrl = $unit['audio_url'];
+                            $isFirstUnitOfSection = $unit['is_first_unit_of_section'];
+                            $isLastUnitOfSection = $unit['is_last_unit_of_section'];
+                            $nextSectionId = $unit['next_section_id'];
                         @endphp
 
-                        <div id="question-card-{{ $index }}" class="question-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm hidden">
-                            <!-- Question Header & Breadcrumbs -->
-                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5 mb-5 flex-wrap gap-2">
-                                <div class="flex items-center gap-2.5 flex-wrap">
-                                    <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                                        Question {{ $index + 1 }} of {{ $totalQuestionsCount }}
-                                    </span>
-                                    @if($section)
-                                        <span class="text-slate-400 dark:text-slate-600">•</span>
-                                        <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 underline underline-offset-2 transition-colors" title="View Section Directions">
-                                            Section: {{ $section->title }}
+                        <div id="delivery-unit-card-{{ $unitIndex }}" class="delivery-unit-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm hidden" data-unit-type="{{ $unitType }}" data-unit-index="{{ $unitIndex }}">
+
+                            @if($isAudioGroup)
+                                <!-- ========================================================================= -->
+                                <!-- AUDIO GROUP DELIVERY UNIT (Part 3 / Part 4 — One Audio + 3 Child Questions) -->
+                                <!-- ========================================================================= -->
+
+                                <!-- Group Header & Meta -->
+                                <div class="border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
+                                    <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="px-2.5 py-0.5 rounded-md text-[11px] font-black bg-indigo-100 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 uppercase tracking-wider">
+                                                PART {{ $unit['part_number'] }} — {{ strtoupper($groupTypeLabel) }}
+                                            </span>
+                                            <span class="text-slate-400 dark:text-slate-600">•</span>
+                                            <span class="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                                                {{ $unit['display_question_range'] }}
+                                            </span>
+                                            @if($section)
+                                                <span class="text-slate-400 dark:text-slate-600">•</span>
+                                                <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline transition-colors" title="View Section Directions">
+                                                    {{ $section->title }}
+                                                </button>
+                                            @endif
+                                        </div>
+
+                                        <span class="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 uppercase">
+                                            Shared Audio Group
+                                        </span>
+                                    </div>
+
+                                    @if(!empty($unit['title']))
+                                        <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1">
+                                            {{ $unit['title'] }}
+                                        </h3>
+                                    @endif
+                                </div>
+
+                                <!-- ONE Shared Audio Stimulus Player at Group Level -->
+                                <div class="mb-8 p-4 sm:p-5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 shadow-sm space-y-3">
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-lg">🎧</span>
+                                            <div>
+                                                <span class="text-xs font-black text-indigo-900 dark:text-indigo-200 uppercase tracking-wider block">
+                                                    Shared {{ $groupTypeLabel }} Audio (Part {{ $unit['part_number'] }})
+                                                </span>
+                                                <span class="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
+                                                    Listen to the {{ strtolower($groupTypeLabel) }} to answer {{ $unit['display_question_range'] }} below.
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <span class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                                            Preview Mode Player
+                                        </span>
+                                    </div>
+
+                                    @if(!empty($unitAudioUrl))
+                                        <audio controls class="w-full h-10 rounded-lg" src="{{ $unitAudioUrl }}" preload="metadata">
+                                            <source src="{{ $unitAudioUrl }}">
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    @else
+                                        <div class="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/50 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                                            <span>⚠️</span>
+                                            <span>Notice: Audio stimulus file has not yet been attached.</span>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- THREE Child Questions Rendered Vertically on the Same Page -->
+                                <div class="space-y-6">
+                                    @foreach($unit['questions'] as $cIdx => $question)
+                                        @php
+                                            $globalQIdx = $unit['question_indices'][$cIdx];
+                                        @endphp
+
+                                        <div id="unit-question-block-{{ $globalQIdx }}" class="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4 transition-all">
+                                            <!-- Child Question Header -->
+                                            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-wrap gap-2">
+                                                <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                                    Question {{ $globalQIdx + 1 }}
+                                                </span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 uppercase">
+                                                    Part {{ $unit['part_number'] }} Child Question
+                                                </span>
+                                            </div>
+
+                                            <!-- Stem Prompt -->
+                                            <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
+                                                {!! nl2br(e($question->prompt ?: '(No stem prompt)')) !!}
+                                            </div>
+
+                                            <!-- Candidate Choices (4 Choices, Independent Selection) -->
+                                            <div class="space-y-2.5 pt-1">
+                                                @foreach($question->choices as $choice)
+                                                    <label class="preview-choice-label flex items-center p-3 sm:p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer transition-all">
+                                                        <input type="radio"
+                                                               name="preview_choice_{{ $question->id }}"
+                                                               value="{{ $choice->id }}"
+                                                               onchange="selectPreviewChoice('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})"
+                                                               class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500">
+                                                        <span class="ml-3 text-xs sm:text-sm text-slate-900 dark:text-slate-200 font-semibold">
+                                                            <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <!-- Audio Group Navigation Controls -->
+                                <div class="flex justify-between items-center pt-6 mt-8 border-t border-slate-200 dark:border-slate-800 flex-wrap gap-3">
+                                    @if($isFirstUnitOfSection && $section)
+                                        <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors">
+                                            &larr; Section Directions
+                                        </button>
+                                    @else
+                                        <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex - 1 }})" {{ $unitIndex === 0 ? 'disabled' : '' }} class="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                            &larr; Previous Group
+                                        </button>
+                                    @endif
+
+                                    @if($isLastUnitOfSection && $nextSectionId)
+                                        <button type="button" onclick="showSectionIntro('{{ $nextSectionId }}')" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
+                                            Next Section &rarr;
+                                        </button>
+                                    @elseif($unitIndex === $totalUnitsCount - 1)
+                                        <button type="button" onclick="finishPreview()" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all">
+                                            Finish Preview &rarr;
+                                        </button>
+                                    @else
+                                        <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex + 1 }})" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
+                                            Next Group &rarr;
                                         </button>
                                     @endif
                                 </div>
-                                <span class="px-2.5 py-0.5 rounded text-[11px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 uppercase">
-                                    {{ is_object($question->question_type) ? $question->question_type->value : ($question->question_type ?? 'Multiple Choice') }}
-                                </span>
-                            </div>
 
-                            @if($isMissingPart1Media)
-                                <div class="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/50 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                    </svg>
-                                    <span>Notice: Question media is not yet attached.</span>
-                                </div>
-                            @endif
+                            @else
+                                <!-- ========================================================================= -->
+                                <!-- STANDALONE QUESTION DELIVERY UNIT (Part 1, Part 2, Part 5, 6, 7 or legacy) -->
+                                <!-- ========================================================================= -->
+                                @php
+                                    $question = $unit['questions']->first();
+                                    $globalQIdx = $unit['first_question_index'];
+                                    $effectivePassages = $question->getEffectivePassages();
+                                    $hasPassages = $effectivePassages->isNotEmpty();
+                                    $partNum = (int) ($question->part_number ?? 0);
+                                    $audioUrl = $question->getEffectiveAudioUrl();
+                                    $imageUrl = method_exists($question, 'getEffectiveImageUrl') ? $question->getEffectiveImageUrl() : ($question->image_url ?: ($question->mediaAsset && ($question->mediaAsset->type === 'image' || str_starts_with($question->mediaAsset->mime_type ?? '', 'image/')) ? ($question->mediaAsset->publicUrl() ?? $question->mediaAsset->path) : null));
+                                    $isToeicPart1 = ($partNum === 1);
+                                    $isMissingPart1Media = $isToeicPart1 && (empty($imageUrl) || empty($audioUrl));
+                                @endphp
 
-                            @if($hasPassages)
-                                <!-- Reading Dual-Pane Split Screen Layout -->
-                                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                                    <!-- Left Pane: Passages -->
-                                    <div class="lg:col-span-6 xl:col-span-7 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col max-h-[65vh] overflow-hidden">
-                                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-3 flex-wrap gap-2">
-                                            <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
-                                                📖 Reading Passage
+                                <div id="unit-question-block-{{ $globalQIdx }}">
+                                    <!-- Header & Breadcrumbs -->
+                                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5 mb-5 flex-wrap gap-2">
+                                        <div class="flex items-center gap-2.5 flex-wrap">
+                                            <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                                Question {{ $globalQIdx + 1 }} of {{ $totalQuestionsCount }}
                                             </span>
-                                            @if($effectivePassages->count() > 1)
-                                                <div class="flex items-center gap-1.5 flex-wrap">
-                                                    @foreach($effectivePassages as $pIdx => $pass)
-                                                        <button type="button" onclick="switchPassageTab('{{ $question->id }}', {{ $pIdx }})" id="passage-tab-{{ $question->id }}-{{ $pIdx }}" class="passage-tab-btn px-2.5 py-1 rounded text-xs font-bold border transition-all {{ $pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800' }}">
-                                                            {{ $pass->title ?: ('Doc ' . ($pIdx + 1)) }}
-                                                        </button>
-                                                    @endforeach
-                                                </div>
+                                            @if($section)
+                                                <span class="text-slate-400 dark:text-slate-600">•</span>
+                                                <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 underline underline-offset-2 transition-colors" title="View Section Directions">
+                                                    Section: {{ $section->title }}
+                                                </button>
                                             @endif
                                         </div>
-                                        <div class="overflow-y-auto pr-2 space-y-4 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed select-text">
-                                            @foreach($effectivePassages as $pIdx => $pass)
-                                                <div id="passage-content-{{ $question->id }}-{{ $pIdx }}" class="passage-doc-content {{ $pIdx > 0 ? 'hidden' : '' }}">
-                                                    @if($pass->title && $effectivePassages->count() === 1)
-                                                        <h4 class="font-bold text-sm text-indigo-700 dark:text-indigo-400 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1">{{ $pass->title }}</h4>
-                                                    @endif
-                                                    <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm whitespace-pre-line leading-relaxed">
-                                                        {!! nl2br(e($pass->content)) !!}
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
+                                        <span class="px-2.5 py-0.5 rounded text-[11px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 uppercase">
+                                            {{ is_object($question->question_type) ? $question->question_type->value : ($question->question_type ?? 'Multiple Choice') }}
+                                        </span>
                                     </div>
 
-                                    <!-- Right Pane: Stem Prompt & Options -->
-                                    <div class="lg:col-span-6 xl:col-span-5 flex flex-col justify-between space-y-6">
-                                        @if(!empty($imageUrl))
-                                            <div class="flex justify-center p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
-                                                <img src="{{ $imageUrl }}" alt="Question Image" class="max-h-56 object-contain rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                                            </div>
-                                        @endif
-
-                                        @if(!empty($audioUrl))
-                                            <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
-                                                <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
-                                                <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata">
-                                                    <source src="{{ $audioUrl }}">
-                                                    Your browser does not support the audio element.
-                                                </audio>
-                                            </div>
-                                        @endif
-
-                                        <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
-                                            {!! nl2br(e($question->prompt)) !!}
+                                    @if($isMissingPart1Media)
+                                        <div class="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/50 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                                            <svg class="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                            </svg>
+                                            <span>Notice: Question media is not yet attached.</span>
                                         </div>
+                                    @endif
 
-                                        {{-- Candidate Choices (No Answer Disclosure) --}}
-                                        <div class="space-y-3">
-                                            @foreach($question->choices as $choice)
-                                                <label class="preview-choice-label flex items-center p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer transition-all">
-                                                    <input type="radio" name="preview_choice_{{ $question->id }}" value="{{ $choice->id }}" onchange="selectPreviewChoice('{{ $question->id }}', '{{ $choice->id }}', {{ $index }})" class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500">
-                                                    <span class="ml-3 text-xs sm:text-sm text-slate-900 dark:text-slate-200 font-semibold">
-                                                        <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                    @if($hasPassages)
+                                        <!-- Reading Dual-Pane Split Screen Layout -->
+                                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                                            <!-- Left Pane: Passages -->
+                                            <div class="lg:col-span-6 xl:col-span-7 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col max-h-[65vh] overflow-hidden">
+                                                <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-3 flex-wrap gap-2">
+                                                    <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                                                        📖 Reading Passage
                                                     </span>
-                                                </label>
-                                            @endforeach
+                                                    @if($effectivePassages->count() > 1)
+                                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                                            @foreach($effectivePassages as $pIdx => $pass)
+                                                                <button type="button" onclick="switchPassageTab('{{ $question->id }}', {{ $pIdx }})" id="passage-tab-{{ $question->id }}-{{ $pIdx }}" class="passage-tab-btn px-2.5 py-1 rounded text-xs font-bold border transition-all {{ $pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800' }}">
+                                                                    {{ $pass->title ?: ('Doc ' . ($pIdx + 1)) }}
+                                                                </button>
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                                <div class="overflow-y-auto pr-2 space-y-4 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed select-text">
+                                                    @foreach($effectivePassages as $pIdx => $pass)
+                                                        <div id="passage-content-{{ $question->id }}-{{ $pIdx }}" class="passage-doc-content {{ $pIdx > 0 ? 'hidden' : '' }}">
+                                                            @if($pass->title && $effectivePassages->count() === 1)
+                                                                <h4 class="font-bold text-sm text-indigo-700 dark:text-indigo-400 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1">{{ $pass->title }}</h4>
+                                                            @endif
+                                                            <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm whitespace-pre-line leading-relaxed">
+                                                                {!! nl2br(e($pass->content)) !!}
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+
+                                            <!-- Right Pane: Stem Prompt & Options -->
+                                            <div class="lg:col-span-6 xl:col-span-5 flex flex-col justify-between space-y-6">
+                                                @if(!empty($imageUrl))
+                                                    <div class="flex justify-center p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
+                                                        <img src="{{ $imageUrl }}" alt="Question Image" class="max-h-56 object-contain rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                                    </div>
+                                                @endif
+
+                                                @if(!empty($audioUrl))
+                                                    <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
+                                                        <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
+                                                        <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata">
+                                                            <source src="{{ $audioUrl }}">
+                                                            Your browser does not support the audio element.
+                                                        </audio>
+                                                    </div>
+                                                @endif
+
+                                                <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
+                                                    {!! nl2br(e($question->prompt)) !!}
+                                                </div>
+
+                                                <div class="space-y-3">
+                                                    @foreach($question->choices as $choice)
+                                                        <label class="preview-choice-label flex items-center p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer transition-all">
+                                                            <input type="radio" name="preview_choice_{{ $question->id }}" value="{{ $choice->id }}" onchange="selectPreviewChoice('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})" class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500">
+                                                            <span class="ml-3 text-xs sm:text-sm text-slate-900 dark:text-slate-200 font-semibold">
+                                                                <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                                            </span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            @else
-                                <!-- Standard Single-Pane Layout (Listening / Prompt Items) -->
-                                <div class="space-y-6">
-                                    @if(!empty($imageUrl))
-                                        <div class="flex justify-center p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
-                                            <img src="{{ $imageUrl }}" alt="Question Image" class="max-h-72 object-contain rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                    @else
+                                        <!-- Standard Single-Pane Layout -->
+                                        <div class="space-y-6">
+                                            @if(!empty($imageUrl))
+                                                <div class="flex justify-center p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
+                                                    <img src="{{ $imageUrl }}" alt="Question Image" class="max-h-72 object-contain rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                                </div>
+                                            @endif
+
+                                            @if(!empty($audioUrl))
+                                                <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
+                                                    <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
+                                                    <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata">
+                                                        <source src="{{ $audioUrl }}">
+                                                        Your browser does not support the audio element.
+                                                    </audio>
+                                                </div>
+                                            @endif
+
+                                            <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
+                                                {!! nl2br(e($question->prompt ?: '(No stem prompt)')) !!}
+                                            </div>
+
+                                            <div class="space-y-3">
+                                                @foreach($question->choices as $choice)
+                                                    <label class="preview-choice-label flex items-center p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer transition-all">
+                                                        <input type="radio" name="preview_choice_{{ $question->id }}" value="{{ $choice->id }}" onchange="selectPreviewChoice('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})" class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500">
+                                                        <span class="ml-3 text-xs sm:text-sm text-slate-900 dark:text-slate-200 font-semibold">
+                                                            <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
                                         </div>
                                     @endif
 
-                                    @if(!empty($audioUrl))
-                                        <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
-                                            <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
-                                            <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata">
-                                                <source src="{{ $audioUrl }}">
-                                                Your browser does not support the audio element.
-                                            </audio>
-                                        </div>
-                                    @endif
+                                    <!-- Bottom Navigation Action Bar -->
+                                    <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-3">
+                                        @if($isFirstUnitOfSection && $section)
+                                            <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors">
+                                                &larr; Section Directions
+                                            </button>
+                                        @else
+                                            <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex - 1 }})" {{ $unitIndex === 0 ? 'disabled' : '' }} class="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                                &larr; Previous
+                                            </button>
+                                        @endif
 
-                                    <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
-                                        {!! nl2br(e($question->prompt ?: '(No stem prompt)')) !!}
-                                    </div>
-
-                                    {{-- Candidate Choices (No Answer Disclosure) --}}
-                                    <div class="space-y-3">
-                                        @foreach($question->choices as $choice)
-                                            <label class="preview-choice-label flex items-center p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer transition-all">
-                                                <input type="radio" name="preview_choice_{{ $question->id }}" value="{{ $choice->id }}" onchange="selectPreviewChoice('{{ $question->id }}', '{{ $choice->id }}', {{ $index }})" class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500">
-                                                <span class="ml-3 text-xs sm:text-sm text-slate-900 dark:text-slate-200 font-semibold">
-                                                    <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
-                                                </span>
-                                            </label>
-                                        @endforeach
+                                        @if($isLastUnitOfSection && $nextSectionId)
+                                            <button type="button" onclick="showSectionIntro('{{ $nextSectionId }}')" class="px-5 py-2.5 text-xs font-extrabold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
+                                                Next Section &rarr;
+                                            </button>
+                                        @elseif($unitIndex === $totalUnitsCount - 1)
+                                            <button type="button" onclick="finishPreview()" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all">
+                                                Finish Preview &rarr;
+                                            </button>
+                                        @else
+                                            <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex + 1 }})" class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
+                                                Next &rarr;
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
                             @endif
 
-                            <!-- Bottom Navigation Action Bar -->
-                            <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-3">
-                                @if($index === $firstQIdxOfSection && $section)
-                                    <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors">
-                                        &larr; Section Directions
-                                    </button>
-                                @else
-                                    <button type="button" onclick="navigateQuestion({{ $index - 1 }})" {{ $index === 0 ? 'disabled' : '' }} class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                                        &larr; Previous
-                                    </button>
-                                @endif
-
-                                @if($isLastQuestionOfSection && $nextQuestionSectionId)
-                                    <button type="button" onclick="showSectionIntro('{{ $nextQuestionSectionId }}')" class="px-5 py-2.5 text-xs font-extrabold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
-                                        Next Section &rarr;
-                                    </button>
-                                @elseif($index === $totalQuestionsCount - 1)
-                                    <button type="button" onclick="finishPreview()" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all">
-                                        Finish Preview &rarr;
-                                    </button>
-                                @else
-                                    <button type="button" onclick="navigateQuestion({{ $index + 1 }})" class="px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
-                                        Next &rarr;
-                                    </button>
-                                @endif
-                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -504,7 +655,8 @@
                             @foreach($questions as $pIdx => $q)
                                 <button type="button"
                                         id="palette-btn-{{ $pIdx }}"
-                                        onclick="navigateQuestion({{ $pIdx }})"
+                                        data-question-id="{{ $q->id }}"
+                                        onclick="handlePaletteQuestionClick({{ $pIdx }})"
                                         class="palette-item-btn flex items-center justify-center h-9 rounded-lg font-extrabold text-xs border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-500 transition-all"
                                         title="Jump to Question {{ $pIdx + 1 }}">
                                     {{ $pIdx + 1 }}
@@ -576,11 +728,17 @@
         </div>
     </div>
 
-    <!-- Candidate Preview Runtime JavaScript -->
+    <!-- Candidate Preview Runtime JavaScript Engine -->
     <script>
         const totalQuestions = {{ $totalQuestionsCount }};
+        const totalUnits = {{ $totalUnitsCount }};
+        const questionIndexToUnitIndex = @json($questionIndexToUnitIndex);
+        const questionIdToUnitIndex = @json($questionIdToUnitIndex);
+        const unitIndexToQuestionIndices = @json($unitIndexToQuestionIndices);
+        const sectionFirstUnitIndex = @json($sectionFirstUnitIndex);
         const firstSectionId = "{{ $sections->isNotEmpty() ? $sections->first()->id : '' }}";
-        let currentQuestionIndex = -2; // -2: overview, -1: section intro, 0..N-1: question
+
+        let currentUnitIndex = -2; // -2: overview, -1: section intro, 0..totalUnits-1: delivery unit
         const temporaryAnswers = {};
 
         // Non-Persistent Visual Countdown Timer
@@ -594,7 +752,7 @@
             const hrs = Math.floor(timerSeconds / 3600);
             const mins = Math.floor((timerSeconds % 3600) / 60);
             const secs = timerSeconds % 60;
-            timerEl.textContent = 
+            timerEl.textContent =
                 String(hrs).padStart(2, '0') + ':' +
                 String(mins).padStart(2, '0') + ':' +
                 String(secs).padStart(2, '0');
@@ -618,12 +776,12 @@
             const overviewCard = document.getElementById('preview-overview-card');
             if (overviewCard) overviewCard.classList.add('hidden');
             document.querySelectorAll('.section-intro-card').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.question-card').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.delivery-unit-card').forEach(el => el.classList.add('hidden'));
         }
 
         function showAssessmentOverview() {
             hideAllViews();
-            currentQuestionIndex = -2;
+            currentUnitIndex = -2;
             const overviewCard = document.getElementById('preview-overview-card');
             if (overviewCard) {
                 overviewCard.classList.remove('hidden');
@@ -637,14 +795,14 @@
             startTimer();
             if (firstSectionId) {
                 showSectionIntro(firstSectionId);
-            } else if (totalQuestions > 0) {
-                navigateQuestion(0);
+            } else if (totalUnits > 0) {
+                navigateDeliveryUnit(0);
             }
         }
 
         function showSectionIntro(sectionId) {
             hideAllViews();
-            currentQuestionIndex = -1;
+            currentUnitIndex = -1;
             const introCard = document.getElementById(`section-intro-card-${sectionId}`);
             if (introCard) {
                 introCard.classList.remove('hidden');
@@ -653,26 +811,42 @@
             updatePaletteHighlights();
         }
 
-        function beginSectionQuestions(firstQIdx) {
-            navigateQuestion(firstQIdx);
+        function beginSectionQuestions(firstUnitIdx) {
+            navigateDeliveryUnit(firstUnitIdx);
         }
 
-        function navigateQuestion(index) {
-            if (index < 0 || index >= totalQuestions) return;
+        function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
+            if (unitIdx < 0 || unitIdx >= totalUnits) return;
             if (!isPreviewStarted) {
                 isPreviewStarted = true;
                 startTimer();
             }
-            currentQuestionIndex = index;
+            currentUnitIndex = unitIdx;
             hideAllViews();
 
-            const card = document.getElementById(`question-card-${index}`);
+            const card = document.getElementById(`delivery-unit-card-${unitIdx}`);
             if (card) {
                 card.classList.remove('hidden');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (targetQIndex !== null) {
+                    const targetEl = document.getElementById(`unit-question-block-${targetQIndex}`);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.classList.add('ring-2', 'ring-indigo-500');
+                        setTimeout(() => targetEl.classList.remove('ring-2', 'ring-indigo-500'), 1500);
+                    }
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
             }
 
             updatePaletteHighlights();
+        }
+
+        function handlePaletteQuestionClick(qIndex) {
+            const unitIdx = questionIndexToUnitIndex[qIndex];
+            if (unitIdx !== undefined) {
+                navigateDeliveryUnit(unitIdx, qIndex);
+            }
         }
 
         function selectPreviewChoice(questionId, choiceId, qIndex) {
@@ -687,16 +861,19 @@
                 progressEl.textContent = `${answeredCount} / ${totalQuestions} Answered`;
             }
 
+            const currentUnitQIndices = (currentUnitIndex >= 0 && unitIndexToQuestionIndices[currentUnitIndex])
+                ? new Set(unitIndexToQuestionIndices[currentUnitIndex])
+                : new Set();
+
             for (let i = 0; i < totalQuestions; i++) {
                 const btn = document.getElementById(`palette-btn-${i}`);
                 if (!btn) continue;
 
-                const isCurrent = (i === currentQuestionIndex);
-                const qCard = document.getElementById(`question-card-${i}`);
-                const qIdMatch = qCard ? qCard.querySelector('input[type="radio"]')?.name?.replace('preview_choice_', '') : null;
-                const isAnswered = qIdMatch && temporaryAnswers[qIdMatch];
+                const qId = btn.getAttribute('data-question-id');
+                const isAnswered = qId && temporaryAnswers[qId];
+                const isCurrentUnit = currentUnitQIndices.has(i);
 
-                if (isCurrent) {
+                if (isCurrentUnit) {
                     btn.className = 'palette-item-btn flex items-center justify-center h-9 rounded-lg font-black text-xs border-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 shadow-sm';
                 } else if (isAnswered) {
                     btn.className = 'palette-item-btn flex items-center justify-center h-9 rounded-lg font-bold text-xs border border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300';
@@ -747,7 +924,7 @@
             showAssessmentOverview();
         }
 
-        // Initialize preview: show assessment overview, update countdown display but do NOT start timer yet
+        // Initialize preview: show assessment overview, update countdown display
         document.addEventListener('DOMContentLoaded', function() {
             updateCountdownDisplay();
             showAssessmentOverview();
@@ -758,12 +935,12 @@
             if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
 
             if (event.key === 'ArrowRight') {
-                if (currentQuestionIndex >= 0 && currentQuestionIndex < totalQuestions - 1) {
-                    navigateQuestion(currentQuestionIndex + 1);
+                if (currentUnitIndex >= 0 && currentUnitIndex < totalUnits - 1) {
+                    navigateDeliveryUnit(currentUnitIndex + 1);
                 }
             } else if (event.key === 'ArrowLeft') {
-                if (currentQuestionIndex > 0) {
-                    navigateQuestion(currentQuestionIndex - 1);
+                if (currentUnitIndex > 0) {
+                    navigateDeliveryUnit(currentUnitIndex - 1);
                 }
             } else if (event.key === 'Escape') {
                 const modal = document.getElementById('preview-complete-modal');
