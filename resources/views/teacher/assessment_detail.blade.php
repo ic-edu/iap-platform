@@ -405,16 +405,22 @@
                                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
                                     <div class="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                         <div class="flex items-center gap-2 flex-wrap">
+                                            @if($isToeicTest && in_array((int)$secPartNumber, [3, 4], true))
+                                            <button type="button"
+                                                    onclick="openCreateAudioGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
+                                                    class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                <span>🎧</span> + Add Audio Group
+                                            </button>
+                                            <button type="button"
+                                                    onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
+                                                    class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors">
+                                                <span>➕</span> + Add Question
+                                            </button>
+                                            @else
                                             <button type="button"
                                                     onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
                                                     class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5">
                                                 <span>➕</span> + Add Question
-                                            </button>
-                                            @if($isToeicTest && in_array((int)$secPartNumber, [3, 4], true))
-                                            <button type="button"
-                                                    onclick="openCreateAudioGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}')"
-                                                    class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 text-xs font-bold inline-flex items-center gap-1.5">
-                                                <span>🎧</span> + Add Audio Group
                                             </button>
                                             @endif
                                             @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
@@ -461,80 +467,97 @@
                                                 $isMaster = !empty($q->question_bank_id);
                                             @endphp
                                             <div class="bg-slate-50 dark:bg-slate-950/70 border {{ $hasWarning ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-800' }} rounded-xl p-4 shadow-sm flex justify-between items-center flex-wrap gap-3">
-                                                <div class="flex-1 min-w-[260px]">
-                                                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                                                        <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">Question #{{ $qItem['number'] }}</span>
-                                                        @if($isMaster)
-                                                        <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded">
-                                                            🏛️ Governed Master Question
-                                                        </span>
-                                                        @else
-                                                        <span class="text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/40 px-2 py-0.5 rounded">
-                                                            ✍️ Assessment-Authored
-                                                        </span>
-                                                        @endif
-                                                        @if($hasWarning)
-                                                        <span class="text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/60 px-2 py-0.5 rounded">
-                                                            🟡 {{ implode(' | ', $qItem['warnings']) }}
-                                                        </span>
-                                                        @else
-                                                        <span class="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded">
-                                                            🟢 Valid
-                                                        </span>
-                                                        @endif
-                                                        @php
-                                                            $diffVal = is_object($q->difficulty) ? $q->difficulty->value : (string) ($q->difficulty ?? 'medium');
-                                                            $diffBadgeColor = match($diffVal) {
-                                                                'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
-                                                                'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
-                                                                default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
-                                                            };
-                                                        @endphp
-                                                        <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $diffBadgeColor }}">
-                                                            ⚡ Auto: {{ ucfirst($diffVal) }}@if(!empty($q->difficulty_score)) ({{ $q->difficulty_score }})@endif
-                                                        </span>
-                                                    </div>
-                                                    <div class="text-sm font-bold text-slate-900 dark:text-white">
-                                                        {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
-                                                    </div>
-
-                                                    {{-- Question-level Media Status Display --}}
-                                                    @php
-                                                        $qHasImg = !empty($q->image_url);
-                                                        $qHasAudio = !empty($q->audio_url);
-                                                    @endphp
-                                                    <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 flex-wrap">
-                                                        <span class="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">MEDIA:</span>
-                                                        @if($qHasImg)
-                                                            <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/50 px-2 py-1 rounded-md">
-                                                                <img src="{{ $q->image_url }}" alt="Thumbnail" class="w-5 h-5 object-cover rounded border border-slate-300 dark:border-slate-700">
-                                                                <span class="text-xs font-bold text-sky-700 dark:text-sky-300">🖼 Image ✓</span>
-                                                                <button type="button"
-                                                                        onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')"
-                                                                        class="px-1.5 py-0.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded text-[11px] font-bold">
-                                                                    👁️ Preview
-                                                                </button>
-                                                            </div>
-                                                        @endif
-
-                                                        @if($qHasAudio)
-                                                            <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
-                                                                <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Audio ✓</span>
-                                                                <button type="button"
-                                                                        onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')"
-                                                                        class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded text-[11px] font-bold">
-                                                                    👁️ Preview
-                                                                </button>
-                                                            </div>
-                                                        @endif
-
-                                                        @if(!$qHasImg && !$qHasAudio)
-                                                            <span class="text-xs text-slate-500 dark:text-slate-400 italic">
-                                                                No question-level media attached.
+                                                    <div class="flex-1 min-w-[260px]">
+                                                        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                                            <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">Question #{{ $qItem['number'] }}</span>
+                                                            @if($q->audioGroup)
+                                                            <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded inline-flex items-center gap-1">
+                                                                🎧 Audio Group ({{ $q->audioGroup->isTalk() ? 'Talk' : 'Conversation' }})
                                                             </span>
-                                                        @endif
+                                                            @endif
+                                                            @if($isMaster)
+                                                            <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded">
+                                                                🏛️ Governed Master Question
+                                                            </span>
+                                                            @else
+                                                            <span class="text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/40 px-2 py-0.5 rounded">
+                                                                ✍️ Assessment-Authored
+                                                            </span>
+                                                            @endif
+                                                            @if($hasWarning)
+                                                            <span class="text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/60 px-2 py-0.5 rounded">
+                                                                🟡 {{ implode(' | ', $qItem['warnings']) }}
+                                                            </span>
+                                                            @else
+                                                            <span class="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded">
+                                                                🟢 Valid
+                                                            </span>
+                                                            @endif
+                                                            @php
+                                                                $diffVal = is_object($q->difficulty) ? $q->difficulty->value : (string) ($q->difficulty ?? 'medium');
+                                                                $diffBadgeColor = match($diffVal) {
+                                                                    'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+                                                                    'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+                                                                    default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+                                                                };
+                                                            @endphp
+                                                            <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $diffBadgeColor }}">
+                                                                ⚡ Auto: {{ ucfirst($diffVal) }}@if(!empty($q->difficulty_score)) ({{ $q->difficulty_score }})@endif
+                                                            </span>
+                                                        </div>
+                                                        <div class="text-sm font-bold text-slate-900 dark:text-white">
+                                                            {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
+                                                        </div>
+
+                                                        {{-- Question-level / Shared Media Status Display --}}
+                                                        @php
+                                                            $qHasImg = !empty($q->image_url);
+                                                            $qHasAudio = !empty($q->audio_url);
+                                                            $agAudioUrl = $q->audioGroup?->getEffectiveAudioUrl();
+                                                            $agTitle = $q->audioGroup?->title ?: ($q->audioGroup?->isTalk() ? 'Shared Talk Audio' : 'Shared Conversation Audio');
+                                                        @endphp
+                                                        <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 flex-wrap">
+                                                            <span class="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">MEDIA:</span>
+                                                            @if($q->audioGroup && $agAudioUrl)
+                                                                <div class="inline-flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
+                                                                    <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Shared Audio: {{ \Illuminate\Support\Str::limit($agTitle, 28) }}</span>
+                                                                    <button type="button"
+                                                                            onclick="previewAssetModal('', '{{ addslashes($agTitle) }}', 'audio', '{{ $agAudioUrl }}')"
+                                                                            class="px-1.5 py-0.5 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded text-[11px] font-bold">
+                                                                        👁️ Preview
+                                                                    </button>
+                                                                </div>
+                                                            @endif
+                                                            @if($qHasImg)
+                                                                <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/50 px-2 py-1 rounded-md">
+                                                                    <img src="{{ $q->image_url }}" alt="Thumbnail" class="w-5 h-5 object-cover rounded border border-slate-300 dark:border-slate-700">
+                                                                    <span class="text-xs font-bold text-sky-700 dark:text-sky-300">🖼 Image ✓</span>
+                                                                    <button type="button"
+                                                                            onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')"
+                                                                            class="px-1.5 py-0.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded text-[11px] font-bold">
+                                                                        👁️ Preview
+                                                                    </button>
+                                                                </div>
+                                                            @endif
+
+                                                            @if($qHasAudio && !$q->audioGroup)
+                                                                <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
+                                                                    <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Audio ✓</span>
+                                                                    <button type="button"
+                                                                            onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')"
+                                                                            class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded text-[11px] font-bold">
+                                                                        👁️ Preview
+                                                                    </button>
+                                                                </div>
+                                                            @endif
+
+                                                            @if(!$qHasImg && !$qHasAudio && !$q->audioGroup)
+                                                                <span class="text-xs text-slate-500 dark:text-slate-400 italic">
+                                                                    No question-level media attached.
+                                                                </span>
+                                                            @endif
+                                                        </div>
                                                     </div>
-                                                </div>
                                                 <div class="flex items-center gap-2 flex-wrap">
                                                     @if($isMaster)
                                                         <button type="button" onclick="openTeacherRequestRevisionModal('{{ $q->question_bank_id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50 text-xs font-bold inline-flex items-center gap-1">
@@ -1339,6 +1362,186 @@
 </div>
 
 @push('modals')
+{{-- Modal 2b: Create Assessment-Authored Shared Audio Group (Part 3 / Part 4) --}}
+<div id="create-audio-group-modal" class="hidden fixed inset-0 z-[10000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10000;" onclick="closeCreateAudioGroupModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4 overflow-y-auto" onclick="event.stopPropagation()">
+        {{-- Header --}}
+        <div class="flex justify-between items-start pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+                <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <span class="text-indigo-600 dark:text-indigo-400">🎧</span>
+                    <span id="ag-modal-title">Create Audio Question Group</span>
+                </div>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <span id="ag-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold"></span>
+                    <span id="ag-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">LISTENING • PART 3</span>
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                    1 shared audio stimulus + exactly 3 child questions.
+                </div>
+            </div>
+            <button type="button" onclick="closeCreateAudioGroupModal()" aria-label="Close audio group modal" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <form id="create-audio-group-form" method="POST" action="{{ route('teacher.tests.create-audio-group', $test->id) }}" onsubmit="return validateCreateAudioGroupForm(this)" class="space-y-5">
+            @csrf
+            {{-- Locked Contextual Fields --}}
+            <input type="hidden" name="test_section_id" id="ag-section-id" value="" required>
+            <input type="hidden" name="part_number" id="ag-part-number" value="3" required>
+            <input type="hidden" name="group_type" id="ag-group-type" value="conversation" required>
+            <input type="hidden" name="media_asset_id" id="ag-media-asset-id" value="">
+            <input type="hidden" name="audio_url" id="ag-audio-url" value="">
+
+            {{-- 1. Shared Audio Stimulus Section --}}
+            <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <span>🎧</span>
+                            <span>Shared Audio Stimulus</span>
+                            <span class="text-rose-500">*</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            This audio will be shared by all 3 questions in this group.
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Empty State (No audio chosen yet) --}}
+                <div id="ag-empty-audio-card" class="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2">
+                    <div class="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">No shared audio attached yet</div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Choose from My Media, Institutional Library, or upload new audio (MP3, M4A, WAV).</div>
+                    </div>
+                    <button type="button" onclick="openQuestionMediaPicker('audio-group', 'audio')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span>Select / Upload Shared Audio</span>
+                    </button>
+                </div>
+
+                {{-- Selected Audio Card (Hidden initially) --}}
+                <div id="ag-preview-audio-card" class="hidden bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/60 rounded-xl p-3 shadow-sm space-y-2">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 text-xl">
+                                🎵
+                            </div>
+                            <div class="min-w-0 text-left">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">SHARED AUDIO</span>
+                                </div>
+                                <div id="ag-preview-audio-title" class="text-xs font-extrabold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md mt-0.5"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" onclick="openQuestionMediaPicker('audio-group', 'audio')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+                                Change Audio
+                            </button>
+                            <button type="button" onclick="removeAudioGroupAttachedMedia()" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-lg border border-rose-200 dark:border-rose-900/40 transition-colors" title="Remove audio">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                    <div class="pt-1">
+                        <audio id="ag-preview-audio-player" controls class="w-full h-8" preload="metadata"></audio>
+                    </div>
+                </div>
+
+                {{-- Optional Group Title & Audio Script --}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                        <label for="ag-title" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Group Title (Optional)
+                        </label>
+                        <input type="text" name="title" id="ag-title" placeholder="e.g. Office Meeting Conversation, Airport Announcement" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label for="ag-audio-script" id="ag-script-label" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Conversation Script / Transcript (Optional)
+                        </label>
+                        <input type="text" name="audio_script" id="ag-audio-script" placeholder="Enter dialogue transcript or audio script..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            {{-- 2. Exactly 3 Child Question Panels --}}
+            <div class="space-y-4">
+                <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                    <span>Child Questions (Exactly 3 Questions Required)</span>
+                    <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 lowercase">Questions 1, 2, 3</span>
+                </div>
+
+                @for($i = 0; $i < 3; $i++)
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+                    {{-- Question Panel Header --}}
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-black px-2 py-0.5 rounded bg-indigo-600 text-white">QUESTION {{ $i + 1 }} OF 3</span>
+                            <span id="ag-q{{ $i }}-number-preview" class="text-xs font-bold text-indigo-600 dark:text-indigo-400"></span>
+                        </div>
+                        <div id="ag-q{{ $i }}-diff-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                            <span id="ag-q{{ $i }}-diff-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                            <span id="ag-q{{ $i }}-diff-text">Waiting for input</span>
+                        </div>
+                    </div>
+
+                    {{-- Question Prompt --}}
+                    <div>
+                        <label for="ag-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Question {{ $i + 1 }} Prompt / Stem <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea name="questions[{{ $i }}][prompt]" id="ag-q{{ $i }}-prompt" required rows="2" oninput="updateAudioGroupAutoDifficulty()" placeholder="e.g. What does the woman suggest the man do?" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                    </div>
+
+                    {{-- Answer Choices (A, B, C, D) --}}
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Answer Choices (A–D) &amp; Correct Answer <span class="text-rose-500">*</span>
+                            </label>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Select radio for correct answer</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            @foreach(['A', 'B', 'C', 'D'] as $cIdx => $optLabel)
+                            <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
+                                <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="ag-q{{ $i }}-correct-{{ $cIdx }}" {{ $cIdx === 0 ? 'checked' : '' }} onchange="updateAudioGroupAutoDifficulty()" class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
+                                <span class="text-xs font-black text-slate-700 dark:text-slate-300 w-4">{{ $optLabel }}</span>
+                                <input type="text" name="questions[{{ $i }}][choices][]" id="ag-q{{ $i }}-choice-{{ $cIdx }}" required oninput="updateAudioGroupAutoDifficulty()" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Optional Explanation --}}
+                    <div>
+                        <label for="ag-q{{ $i }}-explanation" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Answer Explanation / Rationale (Optional)
+                        </label>
+                        <input type="text" name="questions[{{ $i }}][explanation]" id="ag-q{{ $i }}-explanation" placeholder="Explain why the correct answer is right..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+                @endfor
+            </div>
+
+            {{-- 3. Action Footer --}}
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeCreateAudioGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" id="ag-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
+                    <span>💾</span>
+                    <span>Save Audio Group</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- Modal 6: General Asset Preview Modal (Root Portal Layer) --}}
 <div id="asset-preview-modal" class="hidden fixed inset-0 z-[10002] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10002;" onclick="closeAssetPreviewModal(event)">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
@@ -1815,6 +2018,27 @@
     }
 
     function selectQuestionMediaItem(id, title, type, url) {
+        if (currentQuestionMediaTargetMode === 'audio-group') {
+            const mediaIdInput = document.getElementById('ag-media-asset-id');
+            const audioInput = document.getElementById('ag-audio-url');
+            if (mediaIdInput) mediaIdInput.value = id;
+            if (audioInput) audioInput.value = url;
+            const prevCard = document.getElementById('ag-preview-audio-card');
+            const emptyCard = document.getElementById('ag-empty-audio-card');
+            const titleEl = document.getElementById('ag-preview-audio-title');
+            const player = document.getElementById('ag-preview-audio-player');
+
+            if (titleEl) titleEl.textContent = title;
+            if (player) player.src = url;
+            if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'block'; }
+            if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+            closeQuestionMediaPicker();
+            if (typeof updateAudioGroupAutoDifficulty === 'function') {
+                updateAudioGroupAutoDifficulty();
+            }
+            return;
+        }
+
         const prefix = (currentQuestionMediaTargetMode === 'edit') ? 'eq-' : 'q-';
         const mediaIdInput = document.getElementById(prefix + 'media-asset-id');
         const imgInput = document.getElementById(prefix + 'image-url');
@@ -2357,6 +2581,140 @@
             modal.classList.add('hidden');
             modal.style.display = 'none';
         }
+    }
+
+    function openCreateAudioGroupModal(sectionId, partNumber, sectionTitle = '') {
+        const modal = document.getElementById('create-audio-group-modal');
+        if (!modal) return;
+
+        const partNum = parseInt(partNumber) || 3;
+        const isTalk = partNum === 4;
+        const groupType = isTalk ? 'talk' : 'conversation';
+
+        // Locked context values
+        const secInput = document.getElementById('ag-section-id');
+        const partInput = document.getElementById('ag-part-number');
+        const typeInput = document.getElementById('ag-group-type');
+        if (secInput) secInput.value = sectionId;
+        if (partInput) partInput.value = partNum;
+        if (typeInput) typeInput.value = groupType;
+
+        // Context header and badge
+        const modalTitle = document.getElementById('ag-modal-title');
+        const targetSecTitle = document.getElementById('ag-target-section-title');
+        const partBadge = document.getElementById('ag-part-badge');
+        const scriptLabel = document.getElementById('ag-script-label');
+
+        if (modalTitle) modalTitle.textContent = isTalk ? 'Create Talk Group' : 'Create Conversation Group';
+        if (targetSecTitle) targetSecTitle.textContent = `Target Section: ${sectionTitle || (isTalk ? 'Part 4: Talks' : 'Part 3: Conversations')}`;
+        if (partBadge) partBadge.textContent = isTalk ? 'LISTENING • PART 4' : 'LISTENING • PART 3';
+        if (scriptLabel) scriptLabel.textContent = isTalk ? 'Talk Script / Transcript (Optional)' : 'Conversation Script / Transcript (Optional)';
+
+        // Clear previous values
+        const titleInput = document.getElementById('ag-title');
+        const scriptInput = document.getElementById('ag-audio-script');
+        if (titleInput) titleInput.value = '';
+        if (scriptInput) scriptInput.value = '';
+        removeAudioGroupAttachedMedia();
+
+        for (let i = 0; i < 3; i++) {
+            const promptEl = document.getElementById(`ag-q${i}-prompt`);
+            const explEl = document.getElementById(`ag-q${i}-explanation`);
+            if (promptEl) promptEl.value = '';
+            if (explEl) explEl.value = '';
+            for (let c = 0; c < 4; c++) {
+                const choiceEl = document.getElementById(`ag-q${i}-choice-${c}`);
+                if (choiceEl) choiceEl.value = '';
+            }
+            const correct0 = document.getElementById(`ag-q${i}-correct-0`);
+            if (correct0) correct0.checked = true;
+        }
+
+        updateAudioGroupAutoDifficulty();
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+
+    function closeCreateAudioGroupModal(e = null) {
+        if (!e || e.target === document.getElementById('create-audio-group-modal')) {
+            const modal = document.getElementById('create-audio-group-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
+            const player = document.getElementById('ag-preview-audio-player');
+            if (player) {
+                player.pause();
+            }
+        }
+    }
+
+    function removeAudioGroupAttachedMedia() {
+        const mediaIdInput = document.getElementById('ag-media-asset-id');
+        const audioInput = document.getElementById('ag-audio-url');
+        if (mediaIdInput) mediaIdInput.value = '';
+        if (audioInput) audioInput.value = '';
+        const prevCard = document.getElementById('ag-preview-audio-card');
+        const emptyCard = document.getElementById('ag-empty-audio-card');
+        const player = document.getElementById('ag-preview-audio-player');
+        if (player) { player.pause(); player.src = ''; }
+        if (prevCard) { prevCard.classList.add('hidden'); prevCard.style.display = 'none'; }
+        if (emptyCard) { emptyCard.classList.remove('hidden'); emptyCard.style.display = 'flex'; }
+        updateAudioGroupAutoDifficulty();
+    }
+
+    function updateAudioGroupAutoDifficulty() {
+        const hasAudio = !!document.getElementById('ag-media-asset-id')?.value || !!document.getElementById('ag-audio-url')?.value;
+
+        for (let i = 0; i < 3; i++) {
+            const prompt = (document.getElementById(`ag-q${i}-prompt`)?.value || '').trim();
+            const choices = Array.from(document.querySelectorAll(`input[name="questions[${i}][choices][]"]`))
+                .map(input => input.value.trim())
+                .filter(v => v.length > 0);
+
+            const badge = document.getElementById(`ag-q${i}-diff-badge`);
+            const dot = document.getElementById(`ag-q${i}-diff-dot`);
+            const text = document.getElementById(`ag-q${i}-diff-text`);
+
+            if (!badge || !text || !dot) continue;
+
+            if (!hasAudio && choices.length === 0 && !prompt) {
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+                dot.className = 'w-2 h-2 rounded-full bg-slate-400';
+                text.textContent = 'Waiting for input';
+            } else if (hasAudio && choices.length >= 4 && prompt.length > 5) {
+                let totalWords = choices.reduce((acc, c) => acc + c.split(/\s+/).filter(Boolean).length, 0);
+                let avg = choices.length > 0 ? totalWords / choices.length : 0;
+                let level = (avg >= 7 || prompt.split(/\s+/).length >= 15) ? 'Hard' : ((avg <= 4 && prompt.split(/\s+/).length <= 8) ? 'Easy' : 'Medium');
+
+                if (level === 'Easy') {
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
+                    dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                } else if (level === 'Hard') {
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800';
+                    dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+                } else {
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
+                    dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+                }
+                text.textContent = `Final — ${level}`;
+            } else {
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
+                dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+                text.textContent = 'Provisional — Medium';
+            }
+        }
+    }
+
+    function validateCreateAudioGroupForm(form) {
+        const mediaId = form.querySelector('#ag-media-asset-id')?.value;
+        const audioUrl = form.querySelector('#ag-audio-url')?.value;
+        if (!mediaId && !audioUrl) {
+            alert('⚠️ Please attach a shared audio file before saving this audio question group.');
+            return false;
+        }
+        return true;
     }
 
     function openAddSectionModal() {
