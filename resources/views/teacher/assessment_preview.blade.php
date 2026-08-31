@@ -409,9 +409,15 @@
                                             </div>
 
                                             <!-- Stem Prompt -->
-                                            <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
-                                                {!! nl2br(e($question->prompt ?: '(No stem prompt)')) !!}
-                                            </div>
+                                            @if($question->prompt)
+                                                <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
+                                                    {!! nl2br(e($question->prompt)) !!}
+                                                </div>
+                                            @elseif((int)$unit['part_number'] !== 6)
+                                                <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed text-slate-400">
+                                                    (No stem prompt)
+                                                </div>
+                                            @endif
 
                                             <!-- Candidate Choices (4 Choices, Independent Selection) -->
                                             <div class="space-y-2.5 pt-1">
@@ -593,9 +599,15 @@
                                                 </div>
                                             @endif
 
-                                            <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
-                                                {!! nl2br(e($question->prompt ?: '(No stem prompt)')) !!}
-                                            </div>
+                                            @if($question->prompt)
+                                                <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
+                                                    {!! nl2br(e($question->prompt)) !!}
+                                                </div>
+                                            @elseif($partNum !== 6 && $partNum !== 2)
+                                                <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed text-slate-400">
+                                                    (No stem prompt)
+                                                </div>
+                                            @endif
 
                                             <div class="space-y-3">
                                                 @foreach($question->choices as $choice)

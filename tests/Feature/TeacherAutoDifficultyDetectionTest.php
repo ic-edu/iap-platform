@@ -240,7 +240,11 @@ test('teacher update question recomputes auto difficulty', function () {
         ]
     );
 
-    $response->assertRedirect(route('teacher.tests.show', $this->test->id));
+    $response->assertRedirect(route('teacher.tests.show', [
+        'test'    => $this->test->id,
+        'section' => $this->listeningSection->id,
+        'focus'   => "question-card-{$question->id}",
+    ]));
 
     $question->refresh();
     $diffVal = is_object($question->difficulty) ? $question->difficulty->value : $question->difficulty;

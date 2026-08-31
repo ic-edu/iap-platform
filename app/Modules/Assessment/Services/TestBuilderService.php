@@ -498,7 +498,7 @@ class TestBuilderService
                 $question = Question::create([
                     'question_bank_id'       => null,
                     'passage_group_id'       => $passageGroup->id,
-                    'prompt'                 => $qData['prompt'],
+                    'prompt'                 => $qData['prompt'] ?? '',
                     'section'                => $sectionType,
                     'part_number'            => $partNumber,
                     'question_type'          => 'multiple_choice',

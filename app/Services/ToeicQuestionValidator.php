@@ -103,7 +103,7 @@ class ToeicQuestionValidator
 
         // 2. Prompt Validation
         $prompt = $data['prompt'] ?? ($question?->prompt ?? '');
-        if ($partNumber !== 2 && empty(trim((string) $prompt))) {
+        if (!in_array($partNumber, [2, 6], true) && empty(trim((string) $prompt))) {
             $errors['prompt'] = "Part {$partNumber} requires a question prompt.";
         }
 
