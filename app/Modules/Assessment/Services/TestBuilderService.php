@@ -404,6 +404,49 @@ class TestBuilderService
     }
 
     /**
+     * Delete an Assessment-authored Shared Audio Group and its child questions and placements atomically.
+     * Note: Referenced MediaAsset is preserved and never physically deleted.
+     */
+    public function deleteAudioGroup(Test $test, AudioGroup $audioGroup): bool
+    {
+        if ((string) $audioGroup->test_id !== (string) $test->id) {
+            abort(404, 'Audio group does not belong to this assessment.');
+        }
+
+        $editableStatuses = ['draft', 'needs_revision', 'revision_requested', 'rejected'];
+        if (!in_array($test->status, $editableStatuses, true) || $test->is_published) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => "Assessment is {$test->status} and locked from editing.",
+            ]);
+        }
+
+        return DB::transaction(function () use ($test, $audioGroup) {
+            $questions = $audioGroup->questions()->get();
+            $questionIds = $questions->pluck('id');
+
+            // Delete TestQuestion placements for these child questions in this test's sections
+            $sectionIds = $test->sections()->pluck('id');
+            TestQuestion::whereIn('test_section_id', $sectionIds)
+                ->whereIn('question_id', $questionIds)
+                ->delete();
+
+            // Clean up child questions and choices if they are assessment-authored
+            foreach ($questions as $question) {
+                if (is_null($question->question_bank_id)) {
+                    $question->choices()->delete();
+                    $question->delete();
+                } else {
+                    $question->update(['audio_group_id' => null]);
+                }
+            }
+
+            // Note: MediaAsset referenced by $audioGroup->media_asset_id remains untouched
+
+            return (bool) $audioGroup->delete();
+        });
+    }
+
+    /**
      * Create an Assessment-authored Shared Passage Group (Part 6 / Part 7) with passages and child questions.
      */
     public function createPassageGroup(TestSection $section, array $data): PassageGroup

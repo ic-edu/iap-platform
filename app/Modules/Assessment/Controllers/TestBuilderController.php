@@ -737,6 +737,51 @@ class TestBuilderController extends Controller
     }
 
     /**
+     * Remove an Assessment-authored Shared Audio Group from Assessment.
+     */
+    public function destroyAudioGroup(Request $request, Test $test, AudioGroup $audioGroup): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment test.');
+        }
+
+        if (!in_array($test->status, ['draft', 'rejected', 'needs_revision', 'revision_requested'], true) || $test->is_published) {
+            abort(403, "Assessment is {$test->status} and locked from editing.");
+        }
+
+        if ((string) $audioGroup->test_id !== (string) $test->id) {
+            abort(404, 'Audio group does not belong to this assessment.');
+        }
+
+        $partNumber = $audioGroup->part_number;
+        $originSection = $test->sections()->where('title', 'LIKE', "%Part {$partNumber}%")->orWhere('order', $partNumber)->first()
+            ?? $test->sections()->where('section_type', 'listening')->first();
+        $originSectionId = $originSection?->id;
+
+        $groupType = $audioGroup->isTalk() ? 'Talk' : 'Conversation';
+
+        try {
+            $this->builderService->deleteAudioGroup($test, $audioGroup);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('teacher.tests.show', $test->id)
+                ->withErrors($e->validator);
+        }
+
+        $redirect = redirect()->route('teacher.tests.show', array_filter([
+            'test'    => $test->id,
+            'section' => $originSectionId,
+        ]))->with('status', "Part {$partNumber} {$groupType} Group removed successfully.");
+
+        if ($originSectionId) {
+            $redirect->with('expanded_section_id', $originSectionId);
+        }
+
+        return $redirect;
+    }
+
+    /**
      * Create an Assessment-authored Shared Passage Group (Part 6 / Part 7) with passages and child questions.
      */
     public function createPassageGroup(Request $request, Test $test): RedirectResponse

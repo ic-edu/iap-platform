@@ -706,6 +706,22 @@
                                                                     class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-sm inline-flex items-center gap-1 transition-all">
                                                                 <span>✏️</span> Edit Group
                                                             </button>
+
+                                                            @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']) && !$test->is_published)
+                                                            @php
+                                                                $isTalk = $ag->isTalk();
+                                                                $groupTypeName = $isTalk ? 'Talk' : 'Conversation';
+                                                                $groupConfirmTitle = "Remove {$groupTypeName} Group?";
+                                                                $groupConfirmMsg = "This will remove the shared audio-group association, all questions belonging to this group, and their assessment placements. This action cannot be undone.";
+                                                            @endphp
+                                                            <form action="{{ route('teacher.tests.destroy-audio-group', ['test' => $test->id, 'audioGroup' => $ag->id]) }}" method="POST" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: '{{ $groupConfirmTitle }}', message: '{{ $groupConfirmMsg }}', confirmText: 'Remove Group', variant: 'danger', form: this });">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold inline-flex items-center gap-1 transition-all">
+                                                                    🗑 Remove Group
+                                                                </button>
+                                                            </form>
+                                                            @endif
                                                         </div>
                                                     </div>
 
