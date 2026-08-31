@@ -325,8 +325,7 @@ class TeacherAssessmentCandidatePreviewTest extends TestCase
         $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
 
         $response->assertStatus(200);
-        $response->assertSee('navigateQuestion(0)', false);
-        $response->assertSee('navigateQuestion(1)', false);
+        $response->assertSee('navigateDeliveryUnit', false);
     }
 
     public function test_15_preview_does_not_create_candidate_test_assignment(): void

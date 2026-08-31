@@ -235,7 +235,7 @@ class QuestionMediaAttachmentWorkflowTest extends TestCase
                 'audio_url' => $this->audioAsset->publicUrl(),
             ]);
 
-        $response->assertRedirect(route('teacher.tests.show', $this->test->id));
+        $response->assertRedirect(route('teacher.tests.show', ['test' => $this->test->id, 'section' => $this->section->id, 'focus' => "question-card-{$question->id}"]));
 
         $question->refresh();
         $this->assertEquals($newImageUrl, $question->image_url);
@@ -271,7 +271,7 @@ class QuestionMediaAttachmentWorkflowTest extends TestCase
                 'audio_url' => $newAudioUrl,
             ]);
 
-        $response->assertRedirect(route('teacher.tests.show', $this->test->id));
+        $response->assertRedirect(route('teacher.tests.show', ['test' => $this->test->id, 'section' => $this->section->id, 'focus' => "question-card-{$question->id}"]));
 
         $question->refresh();
         $this->assertEquals($this->photoAsset->publicUrl(), $question->image_url);
@@ -305,7 +305,7 @@ class QuestionMediaAttachmentWorkflowTest extends TestCase
                 'audio_url' => $this->audioAsset->publicUrl(),
             ]);
 
-        $response->assertRedirect(route('teacher.tests.show', $this->test->id));
+        $response->assertRedirect(route('teacher.tests.show', ['test' => $this->test->id, 'section' => $this->section->id, 'focus' => "question-card-{$question->id}"]));
 
         $question->refresh();
         $this->assertNull($question->image_url);
@@ -339,7 +339,7 @@ class QuestionMediaAttachmentWorkflowTest extends TestCase
                 'audio_url' => null,
             ]);
 
-        $response->assertRedirect(route('teacher.tests.show', $this->test->id));
+        $response->assertRedirect(route('teacher.tests.show', ['test' => $this->test->id, 'section' => $this->section->id, 'focus' => "question-card-{$question->id}"]));
 
         $question->refresh();
         $this->assertEquals($this->photoAsset->publicUrl(), $question->image_url);

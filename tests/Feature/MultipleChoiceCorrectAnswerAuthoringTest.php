@@ -268,7 +268,7 @@ class MultipleChoiceCorrectAnswerAuthoringTest extends TestCase
                 'correct_choice' => 2, // Switched to C
             ]);
 
-        $response->assertRedirect(route('teacher.tests.show', $this->test->id));
+        $response->assertRedirect(route('teacher.tests.show', ['test' => $this->test->id, 'section' => $this->section->id, 'focus' => "question-card-{$question->id}"]));
 
         $choiceA->refresh();
         $choiceB->refresh();

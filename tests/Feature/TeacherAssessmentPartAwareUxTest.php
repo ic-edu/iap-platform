@@ -169,8 +169,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.preview', $this->test->id));
         $response->assertOk();
-        // Question card 0 contains class 'hidden'
-        $response->assertSee('id="question-card-0" class="question-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm hidden"', false);
+        $response->assertSee('id="delivery-unit-card-0"', false);
         $response->assertSee('showAssessmentOverview();', false);
     }
 
@@ -209,7 +208,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.preview', $this->test->id));
         $response->assertOk();
         $response->assertSee('beginSectionQuestions(0)', false);
-        $response->assertSee('function beginSectionQuestions(firstQIdx) {', false);
+        $response->assertSee('function beginSectionQuestions(', false);
     }
 
     /** @test */
@@ -600,7 +599,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
 
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt->id));
         $response->assertOk();
-        $response->assertSee('playRealTestAudio', false);
+        $response->assertSee('playRealTestSingleAudio', false);
     }
 
     /** @test */

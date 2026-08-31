@@ -124,4 +124,13 @@ class PassageGroup extends Model
             default  => 1,
         };
     }
+
+    /**
+     * Check if passage group meets completeness criteria for TOEIC Reading.
+     */
+    public function isComplete(): bool
+    {
+        $res = \App\Services\ToeicQuestionValidator::checkPassageGroup($this);
+        return $res['is_valid'] ?? false;
+    }
 }

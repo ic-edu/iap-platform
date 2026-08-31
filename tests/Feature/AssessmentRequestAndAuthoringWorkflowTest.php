@@ -242,7 +242,7 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
             'correct_choice' => 0,
         ]);
 
-        $editResp->assertRedirect(route('teacher.tests.show', $test->id));
+        $editResp->assertRedirect(route('teacher.tests.show', ['test' => $test->id, 'section' => $section->id, 'focus' => "question-card-{$authoredQuestion->id}"]));
         $authoredQuestion->refresh();
         $diffValue = is_object($authoredQuestion->difficulty) ? $authoredQuestion->difficulty->value : $authoredQuestion->difficulty;
         $this->assertEquals('medium', $diffValue);

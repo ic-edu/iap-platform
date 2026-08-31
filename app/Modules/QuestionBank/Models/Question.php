@@ -237,7 +237,8 @@ class Question extends Model
      */
     public function isCompleteChild(): bool
     {
-        if (empty(trim((string) $this->prompt))) {
+        $partNumber = (int) ($this->part_number ?? 0);
+        if (!in_array($partNumber, [2, 6], true) && empty(trim((string) $this->prompt))) {
             return false;
         }
 
