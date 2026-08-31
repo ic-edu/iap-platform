@@ -253,7 +253,7 @@
                             <span>📋</span> Assessment Questions &amp; Sections — Progressive Revision Summary
                         </h3>
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                            Organize institutional master questions and authored items for this assessment.
+                            Sections &amp; Directions Structure — Organize institutional master questions and authored items for this assessment.
                         </p>
                     </div>
 
@@ -272,45 +272,94 @@
                     @endif
                 </div>
 
-                {{-- Assessment Sections & Directions Strip --}}
+                {{-- Part-Aware Section-Grouped Authoring Architecture --}}
+                @php
+                    $isToeicTest = (is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic';
+                    $questionsBySection = collect($validationResult['questions'] ?? [])->groupBy(fn($item) => (string) $item['section']->id);
+                @endphp
+
                 @if($test->sections->isNotEmpty())
-                <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 mb-6">
-                    <div class="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
-                        <span>📑</span> Sections &amp; Directions Structure
-                    </div>
-                    <div class="flex flex-col gap-3">
-                        @foreach($test->sections as $sec)
-                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
-                            <div class="flex justify-between items-start flex-wrap gap-3">
-                                <div class="flex-1 min-w-[240px]">
-                                    <div class="flex items-center gap-2 mb-1 flex-wrap">
-                                        <span class="text-sm font-black text-slate-900 dark:text-white">{{ $sec->title }}</span>
-                                        <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
-                                            {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'Reading') }}
-                                        </span>
-                                        <span class="text-xs text-slate-600 dark:text-slate-400 font-semibold">
-                                            • {{ $sec->testQuestions->count() }} question(s)
-                                        </span>
+                    <div class="space-y-6">
+                        @foreach($test->sections as $secIndex => $sec)
+                            @php
+                                $secQuestions = $questionsBySection->get((string)$sec->id) ?? collect();
+                                $secQCount = $secQuestions->count();
+                                $secFirstNum = $secQuestions->first()['number'] ?? null;
+                                $secLastNum = $secQuestions->last()['number'] ?? null;
+                                $rangeLabel = $secFirstNum ? ($secFirstNum === $secLastNum ? "Question #{$secFirstNum}" : "Questions {$secFirstNum}–{$secLastNum}") : "0 Questions";
+
+                                $firstQ = $sec->testQuestions->first()?->question;
+                                $secPartNumber = $firstQ?->part_number ?? ($isToeicTest ? ($sec->order ?? ($secIndex + 1)) : null);
+
+                                $secMCount = $sec->mediaAssets ? $sec->mediaAssets->count() : 0;
+                                $secEscTitle = addslashes($sec->title);
+
+                                if ($secQCount === 0 && $secMCount === 0) {
+                                    $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? This section contains no questions.";
+                                } elseif ($secQCount > 0 && $secMCount === 0) {
+                                    $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact.";
+                                } elseif ($secQCount === 0 && $secMCount > 0) {
+                                    $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? Any media attached to this section will be detached but will remain available in the Media Library.";
+                                } else {
+                                    $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact. Any media attached to this section will be detached but will remain available in the Media Library.";
+                                }
+                            @endphp
+                            <div id="section-card-{{ $sec->id }}" class="section-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                                <!-- Section Card Header & Metrics -->
+                                <div class="flex justify-between items-start flex-wrap gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                                    <div class="flex-1 min-w-[240px]">
+                                        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                            <span class="text-base sm:text-lg font-black text-slate-900 dark:text-white">{{ $sec->title }}</span>
+                                            <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
+                                                {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'Reading') }} SECTION
+                                            </span>
+                                            <span class="text-xs text-slate-600 dark:text-slate-400 font-bold">
+                                                • {{ $secQCount }} {{ \Illuminate\Support\Str::plural('question', $secQCount) }}
+                                                @if($secFirstNum)
+                                                    <span class="text-indigo-600 dark:text-indigo-400 font-extrabold">({{ $rangeLabel }})</span>
+                                                @endif
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                                            Section {{ $secIndex + 1 }} of {{ $test->sections->count() }}
+                                        </p>
                                     </div>
-                                    @if($sec->instructions)
-                                    <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border-l-4 border-indigo-600 text-xs text-slate-800 dark:text-slate-300 leading-relaxed font-medium mt-2">
-                                        {{ $sec->instructions }}
+
+                                    <!-- Collapse / Expand Toggle Button -->
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="toggleSectionCollapse('{{ $sec->id }}')" id="btn-collapse-{{ $sec->id }}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors inline-flex items-center gap-1.5">
+                                            <span id="collapse-icon-{{ $sec->id }}" class="text-xs">▾</span>
+                                            <span id="collapse-label-{{ $sec->id }}">Collapse</span>
+                                        </button>
                                     </div>
-                                    @else
-                                    <div class="text-xs text-slate-500 dark:text-slate-400 italic mt-1">
-                                        No section directions configured (optional).
+                                </div>
+
+                                <!-- Collapsible Section Body -->
+                                <div id="section-body-{{ $sec->id }}" class="space-y-5">
+                                    <!-- Directions & Instructions Strip -->
+                                    <div class="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                                            <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                <span>📋</span> Section Directions
+                                            </span>
+                                            <span class="text-[10px] text-slate-500 dark:text-slate-400 italic">
+                                                Presented to candidate at section boundary
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                                            {{ $sec->instructions ?: 'No section directions configured (optional).' }}
+                                        </div>
                                     </div>
-                                    @endif
 
                                     {{-- Attached Section Media Assets --}}
-                                    <div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                                        <div class="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                            <span>📂</span> Section Media Assets ({{ $sec->mediaAssets->count() }})
+                                    <div class="bg-slate-50 dark:bg-slate-950/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                                        <div class="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                            <span>📂</span> Section Media Assets ({{ $sec->mediaAssets ? $sec->mediaAssets->count() : 0 }})
                                         </div>
-                                        @if($sec->mediaAssets->isNotEmpty())
+                                        @if($sec->mediaAssets && $sec->mediaAssets->isNotEmpty())
                                         <div class="flex flex-col gap-2">
                                             @foreach($sec->mediaAssets as $media)
-                                            <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 flex justify-between items-center flex-wrap gap-2">
+                                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 flex justify-between items-center flex-wrap gap-2">
                                                 <div class="flex items-center gap-2.5 flex-1 min-w-[200px]">
                                                     <span class="text-lg">{{ $media->typeIcon() }}</span>
                                                     <div>
@@ -329,7 +378,7 @@
                                                 <div class="flex items-center gap-2">
                                                     <button type="button"
                                                             onclick="previewAssetModal('{{ $media->id }}', '{{ addslashes($media->title ?? $media->original_name) }}', '{{ $media->type }}', '{{ route('media.preview', $media->id) }}')"
-                                                            class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-[11px] font-bold hover:bg-slate-100 dark:hover:bg-slate-700">
+                                                            class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-[11px] font-bold">
                                                         👁️ Preview
                                                     </button>
                                                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
@@ -346,196 +395,203 @@
                                             @endforeach
                                         </div>
                                         @else
-                                        <div class="text-xs text-slate-500 dark:text-slate-400 italic">
-                                            No media assets attached to this section.
+                                        <div class="text-[11px] text-slate-400 dark:text-slate-500 italic py-1">
+                                            No media assets attached to this section directions yet. Click "Attach Media" to add listening prompts or reference images.
                                         </div>
                                         @endif
                                     </div>
-                                </div>
-                                @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                                @php
-                                    $secQCount = $sec->testQuestions->count();
-                                    $secMCount = $sec->mediaAssets->count();
-                                    $secEscTitle = addslashes($sec->title);
 
-                                    if ($secQCount === 0 && $secMCount === 0) {
-                                        $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? This section contains no questions.";
-                                    } elseif ($secQCount > 0 && $secMCount === 0) {
-                                        $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact.";
-                                    } elseif ($secQCount === 0 && $secMCount > 0) {
-                                        $secConfirmMsg = "Are you sure you want to remove section '{$secEscTitle}'? Any media attached to this section will be detached but will remain available in the Media Library.";
-                                    } else {
-                                        $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact. Any media attached to this section will be detached but will remain available in the Media Library.";
-                                    }
-                                @endphp
-                                <div class="flex gap-2 flex-wrap items-center">
-                                    <button type="button"
-                                            onclick="openAttachSectionMediaModal('{{ $sec->id }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
-                                            class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 text-xs font-bold inline-flex items-center gap-1.5">
-                                        📎 + Attach Media
-                                    </button>
-                                    <button type="button"
-                                            data-section-id="{{ $sec->id }}"
-                                            data-section-title="{{ $sec->title }}"
-                                            data-section-type="{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}"
-                                            data-section-instructions="{{ $sec->instructions ?? '' }}"
-                                            onclick="openEditSectionModal(this)"
-                                            class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1.5">
-                                        ✏️ Edit Section
-                                    </button>
-                                    <form method="POST" action="{{ route('teacher.tests.destroy-section', ['test' => $test->id, 'section' => $sec->id]) }}" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Section?', message: '{{ $secConfirmMsg }}', confirmText: 'Remove Section', variant: 'danger', form: this });">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold inline-flex items-center gap-1.5">
-                                            🗑 Remove Section
-                                        </button>
-                                    </form>
+                                    <!-- Contextual Section Action Bar -->
+                                    @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
+                                    <div class="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <button type="button"
+                                                    onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
+                                                    class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5">
+                                                <span>➕</span> + Add Question
+                                            </button>
+                                            @if($isToeicTest && in_array((int)$secPartNumber, [3, 4], true))
+                                            <button type="button"
+                                                    onclick="openCreateAudioGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}')"
+                                                    class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 text-xs font-bold inline-flex items-center gap-1.5">
+                                                <span>🎧</span> + Add Audio Group
+                                            </button>
+                                            @endif
+                                            @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
+                                            <button type="button"
+                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}')"
+                                                    class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 text-xs font-bold inline-flex items-center gap-1.5">
+                                                <span>📖</span> + Add Passage Group
+                                            </button>
+                                            @endif
+                                            <button type="button"
+                                                    onclick="openAttachSectionMediaModal('{{ $sec->id }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
+                                                    class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 text-xs font-bold inline-flex items-center gap-1.5">
+                                                📎 Attach Media
+                                            </button>
+                                            <button type="button"
+                                                    data-section-id="{{ $sec->id }}"
+                                                    data-section-title="{{ $sec->title }}"
+                                                    data-section-type="{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}"
+                                                    data-section-instructions="{{ $sec->instructions ?? '' }}"
+                                                    onclick="openEditSectionModal(this)"
+                                                    class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1.5">
+                                                ✏️ Edit Section
+                                            </button>
+                                        </div>
+                                        <form method="POST" action="{{ route('teacher.tests.destroy-section', ['test' => $test->id, 'section' => $sec->id]) }}" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Section?', message: '{{ $secConfirmMsg }}', confirmText: 'Remove Section', variant: 'danger', form: this });">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold inline-flex items-center gap-1.5">
+                                                🗑 Remove Section
+                                            </button>
+                                        </form>
+                                    </div>
+                                    @endif
+
+                                    <!-- Section Questions List -->
+                                    <div class="space-y-3 pt-2">
+                                        <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                                            <span>📝 Questions in this Section ({{ $secQCount }})</span>
+                                        </div>
+                                        @forelse($secQuestions as $qItem)
+                                            @php
+                                                $q = $qItem['question'];
+                                                $hasWarning = !empty($qItem['warnings']);
+                                                $isMaster = !empty($q->question_bank_id);
+                                            @endphp
+                                            <div class="bg-slate-50 dark:bg-slate-950/70 border {{ $hasWarning ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-800' }} rounded-xl p-4 shadow-sm flex justify-between items-center flex-wrap gap-3">
+                                                <div class="flex-1 min-w-[260px]">
+                                                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                                        <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">Question #{{ $qItem['number'] }}</span>
+                                                        @if($isMaster)
+                                                        <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded">
+                                                            🏛️ Governed Master Question
+                                                        </span>
+                                                        @else
+                                                        <span class="text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/40 px-2 py-0.5 rounded">
+                                                            ✍️ Assessment-Authored
+                                                        </span>
+                                                        @endif
+                                                        @if($hasWarning)
+                                                        <span class="text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/60 px-2 py-0.5 rounded">
+                                                            🟡 {{ implode(' | ', $qItem['warnings']) }}
+                                                        </span>
+                                                        @else
+                                                        <span class="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded">
+                                                            🟢 Valid
+                                                        </span>
+                                                        @endif
+                                                        @php
+                                                            $diffVal = is_object($q->difficulty) ? $q->difficulty->value : (string) ($q->difficulty ?? 'medium');
+                                                            $diffBadgeColor = match($diffVal) {
+                                                                'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+                                                                'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+                                                                default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+                                                            };
+                                                        @endphp
+                                                        <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $diffBadgeColor }}">
+                                                            ⚡ Auto: {{ ucfirst($diffVal) }}@if(!empty($q->difficulty_score)) ({{ $q->difficulty_score }})@endif
+                                                        </span>
+                                                    </div>
+                                                    <div class="text-sm font-bold text-slate-900 dark:text-white">
+                                                        {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
+                                                    </div>
+
+                                                    {{-- Question-level Media Status Display --}}
+                                                    @php
+                                                        $qHasImg = !empty($q->image_url);
+                                                        $qHasAudio = !empty($q->audio_url);
+                                                    @endphp
+                                                    <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 flex-wrap">
+                                                        <span class="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">MEDIA:</span>
+                                                        @if($qHasImg)
+                                                            <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/50 px-2 py-1 rounded-md">
+                                                                <img src="{{ $q->image_url }}" alt="Thumbnail" class="w-5 h-5 object-cover rounded border border-slate-300 dark:border-slate-700">
+                                                                <span class="text-xs font-bold text-sky-700 dark:text-sky-300">🖼 Image ✓</span>
+                                                                <button type="button"
+                                                                        onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')"
+                                                                        class="px-1.5 py-0.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded text-[11px] font-bold">
+                                                                    👁️ Preview
+                                                                </button>
+                                                            </div>
+                                                        @endif
+
+                                                        @if($qHasAudio)
+                                                            <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
+                                                                <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Audio ✓</span>
+                                                                <button type="button"
+                                                                        onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')"
+                                                                        class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded text-[11px] font-bold">
+                                                                    👁️ Preview
+                                                                </button>
+                                                            </div>
+                                                        @endif
+
+                                                        @if(!$qHasImg && !$qHasAudio)
+                                                            <span class="text-xs text-slate-500 dark:text-slate-400 italic">
+                                                                No question-level media attached.
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    @if($isMaster)
+                                                        <button type="button" onclick="openTeacherRequestRevisionModal('{{ $q->question_bank_id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50 text-xs font-bold inline-flex items-center gap-1">
+                                                            🛠 Request Master Revision
+                                                        </button>
+                                                        <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1">
+                                                            🔒 Governed Master
+                                                        </a>
+                                                    @else
+                                                        <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" class="px-3 py-1.5 rounded-xl {{ $hasWarning ? 'bg-amber-600 hover:bg-amber-500' : 'bg-indigo-600 hover:bg-indigo-500' }} text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
+                                                            {{ $hasWarning ? '✏️ Fix Issue' : '✏️ Edit Question' }}
+                                                        </a>
+                                                    @endif
+
+                                                    @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
+                                                    <form action="{{ route('teacher.tests.destroy-question', ['test' => $test->id, 'question' => $q->id]) }}" method="POST" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Question?', message: 'Remove this question from the assessment?', confirmText: 'Remove', variant: 'danger', form: this });">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold">
+                                                            🗑 Remove
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="p-6 text-center bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
+                                                <div class="text-slate-400 font-bold text-xs">No questions assigned to this section yet.</div>
+                                                @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
+                                                <button type="button"
+                                                        onclick="openCreateAuthoredQuestionModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', '{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}')"
+                                                        class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
+                                                    <span>➕</span> + Add Question to this Section
+                                                </button>
+                                                @endif
+                                            </div>
+                                        @endforelse
+                                    </div>
                                 </div>
-                                @endif
                             </div>
-                        </div>
                         @endforeach
                     </div>
-                </div>
-                @endif
-
-                @if(isset($validationResult) && count($validationResult['questions']) > 0)
-                <div class="flex flex-col gap-3">
-                    @php
-                        $revisionQuestions = in_array($test->status, ['needs_revision', 'revision_requested'])
-                            ? array_filter($validationResult['questions'], fn($item) => !empty($item['warnings']))
-                            : $validationResult['questions'];
-                        if (empty($revisionQuestions)) {
-                            $revisionQuestions = $validationResult['questions'];
-                        }
-                    @endphp
-                    @foreach($revisionQuestions as $qItem)
-                    @php
-                        $q = $qItem['question'];
-                        $hasWarning = !empty($qItem['warnings']);
-                        $isMaster = !empty($q->question_bank_id);
-                    @endphp
-                    <div class="bg-slate-50 dark:bg-slate-900 border {{ $hasWarning ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-800' }} rounded-xl p-4 shadow-sm flex justify-between items-center flex-wrap gap-3">
-                        <div class="flex-1 min-w-[260px]">
-                            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                                <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">Question #{{ $qItem['number'] }}</span>
-                                <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">Section: {{ $qItem['section']->title }}</span>
-                                @if($isMaster)
-                                <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded">
-                                    🏛️ Governed Master Question
-                                </span>
-                                @else
-                                <span class="text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/40 px-2 py-0.5 rounded">
-                                    ✍️ Assessment-Authored
-                                </span>
-                                @endif
-                                @if($hasWarning)
-                                <span class="text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800/60 px-2 py-0.5 rounded">
-                                    🟡 {{ implode(' | ', $qItem['warnings']) }}
-                                </span>
-                                @else
-                                <span class="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded">
-                                    🟢 Valid
-                                </span>
-                                @endif
-                                @php
-                                    $diffVal = is_object($q->difficulty) ? $q->difficulty->value : (string) ($q->difficulty ?? 'medium');
-                                    $diffBadgeColor = match($diffVal) {
-                                        'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
-                                        'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
-                                        default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
-                                    };
-                                @endphp
-                                <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $diffBadgeColor }}">
-                                    ⚡ Auto: {{ ucfirst($diffVal) }}@if(!empty($q->difficulty_score)) ({{ $q->difficulty_score }})@endif
-                                </span>
-                            </div>
-                            <div class="text-sm font-bold text-slate-900 dark:text-white">
-                                {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
-                            </div>
-
-                            {{-- Question-level Media Status Display --}}
-                            @php
-                                $qHasImg = !empty($q->image_url);
-                                $qHasAudio = !empty($q->audio_url);
-                            @endphp
-                            <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 flex-wrap">
-                                <span class="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">MEDIA:</span>
-                                @if($qHasImg)
-                                    <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-sky-200 dark:border-sky-800/50 px-2 py-1 rounded-md">
-                                        <img src="{{ $q->image_url }}" alt="Thumbnail" class="w-5 h-5 object-cover rounded border border-slate-300 dark:border-slate-700">
-                                        <span class="text-xs font-bold text-sky-700 dark:text-sky-300">🖼 Image ✓</span>
-                                        <button type="button"
-                                                onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')"
-                                                class="px-1.5 py-0.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded text-[11px] font-bold">
-                                            👁️ Preview
-                                        </button>
-                                    </div>
-                                @endif
-
-                                @if($qHasAudio)
-                                    <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-950 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
-                                        <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Audio ✓</span>
-                                        <button type="button"
-                                                onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')"
-                                                class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded text-[11px] font-bold">
-                                            👁️ Preview
-                                        </button>
-                                    </div>
-                                @endif
-
-                                @if(!$qHasImg && !$qHasAudio)
-                                    <span class="text-xs text-slate-500 dark:text-slate-400 italic">
-                                        No question-level media attached.
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            @if($isMaster)
-                                <button type="button" onclick="openTeacherRequestRevisionModal('{{ $q->question_bank_id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50 text-xs font-bold inline-flex items-center gap-1">
-                                    🛠 Request Master Revision
-                                </button>
-                                <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold inline-flex items-center gap-1">
-                                    🔒 Governed Master
-                                </a>
-                            @else
-                                <a href="{{ route('teacher.tests.edit-question', ['test' => $test->id, 'question' => $q->id]) }}" class="px-3 py-1.5 rounded-xl {{ $hasWarning ? 'bg-amber-600 hover:bg-amber-500' : 'bg-indigo-600 hover:bg-indigo-500' }} text-white text-xs font-bold shadow-sm inline-flex items-center gap-1">
-                                    {{ $hasWarning ? '✏️ Fix Issue' : '✏️ Edit Question' }}
-                                </a>
-                            @endif
-
-                            @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                            <form action="{{ route('teacher.tests.destroy-question', ['test' => $test->id, 'question' => $q->id]) }}" method="POST" class="inline" onsubmit="event.preventDefault(); iapConfirm({ title: 'Remove Question?', message: 'Remove this question from the assessment?', confirmText: 'Remove', variant: 'danger', form: this });">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold">
-                                    🗑 Remove
-                                </button>
-                            </form>
-                            @endif
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
                 @else
-                <div class="py-10 px-4 text-center bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 space-y-2">
-                    <div class="text-3xl">📝</div>
-                    <div class="font-bold text-slate-800 dark:text-slate-200 text-sm">No questions linked to this assessment yet</div>
-                    <p class="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
-                        Attach existing Master Questions from institutional Question Banks or author new custom questions for this test.
-                    </p>
-                    @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                    <div class="flex justify-center gap-2.5 pt-2">
-                        <button type="button" onclick="openAttachMasterModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20">
-                            🏛️ + Add from Question Bank
-                        </button>
-                        <button type="button" onclick="openCreateAuthoredQuestionModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20">
-                            ✏️ + Add New Question
-                        </button>
+                    <div class="py-10 px-4 text-center bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 space-y-2">
+                        <div class="text-3xl">📑</div>
+                        <div class="font-bold text-slate-800 dark:text-slate-200 text-sm">No sections created for this assessment yet</div>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
+                            Create your first assessment section (or part) to organize and author questions.
+                        </p>
+                        @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
+                        <div class="flex justify-center gap-2.5 pt-2">
+                            <button type="button" onclick="openAddSectionModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/20">
+                                📑 + Add Section
+                            </button>
+                        </div>
+                        @endif
                     </div>
-                    @endif
-                </div>
                 @endif
             </div>
         </div>
@@ -727,21 +783,50 @@
                 $isToeicTest = (is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic';
             @endphp
 
-            @if($isToeicTest)
-            <div class="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 p-4 rounded-xl space-y-1.5">
-                <label class="block text-xs font-extrabold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">🎯 TOEIC Part Selection <span class="text-rose-500">*</span></label>
-                <select name="part_number" id="create-q-part-number" onchange="onCreateModalToeicPartChange(this.value)" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-xl text-slate-900 dark:text-white text-xs font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    <option value="1">Part 1: Photographs (Listening — Image &amp; Audio Required, 4 Choices)</option>
-                    <option value="2">Part 2: Question-Response (Listening — Audio Required, Exactly 3 Choices)</option>
-                    <option value="3">Part 3: Conversations (Listening — Audio Required, 4 Choices)</option>
-                    <option value="4">Part 4: Talks (Listening — Audio Required, 4 Choices)</option>
-                    <option value="5">Part 5: Incomplete Sentences (Reading — Audio Forbidden, 4 Choices)</option>
-                    <option value="6">Part 6: Text Completion (Reading — Passage Required, 4 Choices)</option>
-                    <option value="7">Part 7: Reading Comprehension (Reading — Passage Required, 4 Choices)</option>
-                </select>
-                <input type="hidden" name="section" id="create-q-section" value="listening">
+            <!-- Contextual Section Banner (when opened from a specific Section Card) -->
+            <div id="create-q-context-banner" class="hidden p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 rounded-xl flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Adding Question To Section</span>
+                    <span id="create-q-context-title" class="text-xs font-black text-emerald-950 dark:text-emerald-100"></span>
+                </div>
+                <span id="create-q-context-badge" class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 uppercase"></span>
             </div>
 
+            <!-- Global Section / Part Selector (when opened from top global + Add New Question) -->
+            <div id="create-q-global-selector-container" class="space-y-4">
+                @if($isToeicTest)
+                <div class="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 p-4 rounded-xl space-y-1.5">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">🎯 Section / TOEIC Part Selection <span class="text-rose-500">*</span></label>
+                    <select id="create-q-unified-part-section" onchange="onGlobalUnifiedSectionChange(this)" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-xl text-slate-900 dark:text-white text-xs font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        @foreach($test->sections as $secIdx => $sec)
+                            @php
+                                $firstQ = $sec->testQuestions->first()?->question;
+                                $optPartNumber = $firstQ?->part_number ?? ($sec->order ?? ($secIdx + 1));
+                            @endphp
+                            <option value="{{ $sec->id }}" data-part="{{ $optPartNumber }}" data-title="{{ $sec->title }}" data-type="{{ is_object($sec->section_type) ? $sec->section_type->value : $sec->section_type }}">
+                                {{ $sec->title }} (Part {{ $optPartNumber }} • {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'Listening') }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                @else
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Target Section <span class="text-rose-500">*</span></label>
+                    <select id="create-q-generic-section-select" onchange="onGlobalGenericSectionChange(this)" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        @foreach($test->sections as $sec)
+                        <option value="{{ $sec->id }}">{{ $sec->title }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+            </div>
+
+            <!-- Hidden Foreign Key & Part State -->
+            <input type="hidden" name="test_section_id" id="create-q-section-id" value="{{ $test->sections->first()?->id }}">
+            <input type="hidden" name="part_number" id="create-q-part-number" value="1">
+            <input type="hidden" name="section" id="create-q-section" value="listening">
+
+            @if($isToeicTest)
             <div id="create-q-passage-container" class="hidden bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-1.5">
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">📖 Reading Passage Text <span class="text-rose-500">*</span></label>
                 <textarea name="passage_text" id="create-q-passage-text" rows="3" oninput="updateCreateModalAutoDifficulty()" placeholder="Enter reading passage text for Part 6 / 7..." class="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs"></textarea>
@@ -749,14 +834,6 @@
             @endif
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Target Section <span class="text-rose-500">*</span></label>
-                    <select name="test_section_id" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                        @foreach($test->sections as $sec)
-                        <option value="{{ $sec->id }}">{{ $sec->title }}</option>
-                        @endforeach
-                    </select>
-                </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Question Type <span class="text-rose-500">*</span></label>
                     <select name="question_type" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
@@ -768,6 +845,7 @@
                         @endif
                     </select>
                 </div>
+                <div></div>
             </div>
 
             <div>
@@ -1050,16 +1128,25 @@
 </div>
 
 {{-- Modal 5: Attach Section Media from Library or Direct Upload --}}
-<div id="attach-section-media-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeAttachSectionMediaModal(event)">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col p-6 sm:p-7 shadow-2xl space-y-4" onclick="event.stopPropagation()">
-        <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
+<div id="attach-section-media-modal" class="hidden fixed inset-0 z-[10001] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10001;" onclick="closeAttachSectionMediaModal(event)">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4 overflow-y-auto" onclick="event.stopPropagation()">
+        {{-- Header --}}
+        <div class="flex justify-between items-start pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
-                <div class="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>📎</span> Attach Media Asset to Section
+                <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                    </svg>
+                    <span>Attach Media Asset to Section</span>
                 </div>
-                <div id="asm-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 font-bold"></div>
+                <div id="asm-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 mt-1 font-bold"></div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                    Upload a new working file or choose from existing media library.
+                </div>
             </div>
-            <button type="button" onclick="closeAttachSectionMediaModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
+            <button type="button" onclick="closeAttachSectionMediaModal()" aria-label="Close section media modal" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
         </div>
 
         {{-- Top Navigation: Choose from Library vs Upload New Media --}}
@@ -1072,92 +1159,180 @@
             </button>
         </div>
 
-        {{-- Mode A: Direct Media Upload Panel --}}
-        <div id="asm-upload-panel" class="hidden bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
-            <div class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <span>🚀</span> Upload Media to Institutional Library
+        {{-- Mode A: Direct Media Upload Panel (Modernized Dropzone) --}}
+        <div id="asm-upload-panel" class="hidden space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        Upload New Media
+                    </div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                        New uploads are saved to My Media and can be selected immediately.
+                    </div>
+                </div>
+                <div id="asm-accepted-formats-label" class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+                    Max 10 MB
+                </div>
             </div>
 
-            <div id="asm-upload-feedback" class="hidden p-2.5 rounded-lg text-xs font-bold"></div>
+            {{-- Dropzone / Upload Area --}}
+            <div id="asm-dropzone" ondragover="handleSectionMediaDragOver(event)" ondragleave="handleSectionMediaDragLeave(event)" ondrop="handleSectionMediaDrop(event)" class="bg-slate-50 dark:bg-slate-950/80 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4 transition-all">
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Select Local File <span class="text-rose-500">*</span>
-                    </label>
-                    <input type="file" id="asm-upload-file" accept=".jpg,.jpeg,.png,.webp,.mp3,.wav,.m4a,.pdf,image/*,audio/*,application/pdf" class="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 text-xs">
+                {{-- Accessible Hidden Native Input --}}
+                <input type="file" id="asm-upload-file" accept="image/jpeg,image/png,image/webp,audio/mpeg,audio/mp3,audio/wav,audio/x-m4a,audio/m4a,application/pdf" onchange="handleSectionMediaFileSelect(this)" class="sr-only" aria-label="Select media file to upload">
+
+                {{-- State 1: No file selected --}}
+                <div id="asm-empty-upload-state" class="flex flex-col items-center justify-center py-2 space-y-2.5 text-center">
+                    <div class="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Select a file to upload or drag and drop here
+                        </div>
+                        <div id="asm-no-file-text" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                            No file selected
+                        </div>
+                        <div id="asm-accepted-formats-text" class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-mono">
+                            JPG, JPEG, PNG, WebP, MP3, M4A, WAV, PDF
+                        </div>
+                    </div>
+                    <div class="pt-1">
+                        <button type="button" id="asm-choose-file-btn" onclick="document.getElementById('asm-upload-file').click()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-sm inline-flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span>Choose File</span>
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+
+                {{-- State 2: Selected file state (Hidden initially) --}}
+                <div id="asm-selected-upload-state" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div id="asm-selected-icon-container" class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <div class="min-w-0 text-left">
+                                <div class="flex items-center gap-2">
+                                    <span id="asm-selected-type-badge" class="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">FILE</span>
+                                    <span id="asm-selected-filesize" class="text-[11px] text-slate-500 dark:text-slate-400 font-mono"></span>
+                                </div>
+                                <div id="asm-selected-filename" class="text-xs font-extrabold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md mt-0.5"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" onclick="document.getElementById('asm-upload-file').click()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+                                Change File
+                            </button>
+                            <button type="button" onclick="clearSectionMediaFileSelection()" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-lg border border-rose-200 dark:border-rose-900/40 transition-colors" title="Remove selected file">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Optional Media Title Field --}}
+                <div class="mt-3">
+                    <label for="asm-upload-title" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Media Title (Optional)
                     </label>
-                    <input type="text" id="asm-upload-title" placeholder="e.g. Part 1 Listening Directions Audio" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium">
+                    <input type="text" id="asm-upload-title" placeholder="e.g. Part 1 Listening Directions Audio" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                 </div>
-            </div>
 
-            <div class="flex justify-between items-center flex-wrap gap-2 pt-1">
-                <div class="text-[11px] text-slate-500 dark:text-slate-400">
-                    Supported: JPG, PNG, WebP, MP3, WAV, M4A, PDF (Max: 10 MB)
+                {{-- Action Row --}}
+                <div class="mt-3 flex justify-end items-center gap-2">
+                    <button type="button" id="asm-upload-btn" onclick="uploadSectionMediaFile()" disabled aria-disabled="true" class="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-extrabold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all inline-flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span>Upload &amp; Select Asset</span>
+                    </button>
                 </div>
-                <button type="button" id="asm-upload-btn" onclick="uploadSectionMediaFile()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5">
-                    <span>⬆️</span> Upload &amp; Select Asset
-                </button>
+
+                {{-- Inline Feedback / Error Box --}}
+                <div id="asm-upload-feedback" class="hidden p-2.5 rounded-xl text-xs font-bold text-left mt-2"></div>
             </div>
         </div>
 
-        <form id="attach-section-media-form" method="POST" action="" class="flex flex-col flex-1 min-h-0 space-y-3">
+        {{-- Mode B: Library Browser Panel --}}
+        <div id="asm-library-panel" class="flex flex-col flex-1 min-h-0 space-y-2.5">
+            {{-- Header & Source Selector Tabs: [ My Media ] [ Institutional Library ] --}}
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                    <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        Choose Existing Media
+                    </div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                        Browse your working drafts or approved institutional media.
+                    </div>
+                </div>
+
+                {{-- Source Selector Tabs --}}
+                <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700" role="tablist">
+                    <button type="button" id="asm-source-my-btn" onclick="setSectionMediaSource('my', event)" role="tab" aria-selected="true" class="px-3 py-1 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-sm transition-all">
+                        My Media
+                    </button>
+                    <button type="button" id="asm-source-inst-btn" onclick="setSectionMediaSource('institutional', event)" role="tab" aria-selected="false" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all">
+                        Institutional Library
+                    </button>
+                </div>
+            </div>
+
+            {{-- Media Filter Tabs & Search --}}
+            <div class="flex gap-2 flex-wrap items-center justify-between">
+                <div class="flex gap-1.5 flex-wrap">
+                    <button type="button" onclick="filterSectionMediaModal('all', event)" class="asm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm">All Media</button>
+                    <button type="button" onclick="filterSectionMediaModal('audio', event)" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold transition-colors">🎵 Audio Tracks</button>
+                    <button type="button" onclick="filterSectionMediaModal('image', event)" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold transition-colors">🖼️ Images</button>
+                    <button type="button" onclick="filterSectionMediaModal('passage', event)" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold transition-colors">📖 Passages</button>
+                    <button type="button" onclick="filterSectionMediaModal('pdf', event)" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold transition-colors">📄 PDFs</button>
+                </div>
+                <div class="relative min-w-[180px]">
+                    <input type="text" id="asm-search-input" onkeyup="searchSectionMediaModal(this.value)" placeholder="Search media by title..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+
+            {{-- Media Grid Container --}}
+            <div id="asm-media-list-container" class="flex-1 min-h-[180px] max-h-[240px] overflow-y-auto bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>
+            </div>
+        </div>
+
+        {{-- FORM: Section Media Attachment Form (Selected Badge + Caption + Order + Submit) --}}
+        <form id="attach-section-media-form" method="POST" action="" class="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
             @csrf
             <input type="hidden" id="asm-media-asset-id" name="media_asset_id" value="" required>
 
             {{-- Selected Media Badge --}}
             <div id="asm-selected-preview" class="hidden p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 rounded-xl items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <span id="asm-selected-icon" class="text-xl">📎</span>
-                    <div>
-                        <div id="asm-selected-title" class="text-xs font-bold text-indigo-950 dark:text-indigo-100"></div>
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span id="asm-selected-icon" class="text-xl shrink-0">📎</span>
+                    <div class="min-w-0 text-left">
+                        <div id="asm-selected-title" class="text-xs font-bold text-indigo-950 dark:text-indigo-100 truncate"></div>
                         <div id="asm-selected-meta" class="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium"></div>
                     </div>
                 </div>
-                <button type="button" onclick="clearSelectedSectionMedia()" class="px-2.5 py-1 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold">Clear</button>
+                <button type="button" onclick="clearSelectedSectionMedia()" class="px-2.5 py-1 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold shrink-0">Clear</button>
             </div>
 
             {{-- Section-Specific Caption and Order Inputs --}}
             <div class="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <label for="asm-caption" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Section Media Caption / Directions Label (Optional)
                     </label>
-                    <input type="text" id="asm-caption" name="caption" placeholder="e.g. Listening Directions Audio, Reference Photograph" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium">
+                    <input type="text" id="asm-caption" name="caption" placeholder="e.g. Listening Directions Audio, Reference Photograph" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Display Order</label>
-                    <input type="number" id="asm-order" name="order" min="1" placeholder="Auto (Next)" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium">
+                    <label for="asm-order" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Display Order</label>
+                    <input type="number" id="asm-order" name="order" min="1" placeholder="Auto (Next)" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                 </div>
             </div>
 
-            {{-- Mode B: Library Browser Panel --}}
-            <div id="asm-library-panel" class="flex flex-col flex-1 min-h-0 space-y-2.5">
-                {{-- Media Filter Tabs & Search --}}
-                <div class="flex gap-2 flex-wrap items-center justify-between">
-                    <div class="flex gap-1.5 flex-wrap">
-                        <button type="button" onclick="filterSectionMediaModal('all')" class="asm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm">All Media</button>
-                        <button type="button" onclick="filterSectionMediaModal('audio')" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">🎵 Audio Tracks</button>
-                        <button type="button" onclick="filterSectionMediaModal('image')" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">🖼️ Images</button>
-                        <button type="button" onclick="filterSectionMediaModal('passage')" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">📖 Passages</button>
-                        <button type="button" onclick="filterSectionMediaModal('pdf')" class="asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold">📄 PDFs</button>
-                    </div>
-                    <input type="text" id="asm-search-input" onkeyup="searchSectionMediaModal(this.value)" placeholder="Search media by title..." class="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs min-w-[180px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                </div>
-
-                {{-- Media Grid Container --}}
-                <div id="asm-media-list-container" class="flex-1 min-h-[200px] max-h-[260px] overflow-y-auto bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onclick="closeAttachSectionMediaModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
-                <button type="submit" id="asm-submit-btn" disabled class="px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all">Attach Selected Media</button>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" onclick="closeAttachSectionMediaModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">Cancel</button>
+                <button type="submit" id="asm-submit-btn" disabled aria-disabled="true" class="px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all">Attach Selected Media</button>
             </div>
         </form>
     </div>
@@ -2039,47 +2214,138 @@
         return true;
     }
 
-    function openCreateAuthoredQuestionModal() {
+    function openCreateAuthoredQuestionModal(sectionId, partNumber, sectionTitle, sectionType) {
         const modal = document.getElementById('create-authored-question-modal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-            // Reset correct radio selection
-            const checkedRadios = modal.querySelectorAll('input[name="correct_choice"]:checked');
-            checkedRadios.forEach(r => r.checked = false);
-            const errBox = document.getElementById('create-q-validation-error');
-            if (errBox) {
-                errBox.classList.add('hidden');
-                errBox.style.display = 'none';
+        if (!modal) return;
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+
+        // Reset correct radio selection
+        const checkedRadios = modal.querySelectorAll('input[name="correct_choice"]:checked');
+        checkedRadios.forEach(r => r.checked = false);
+        const errBox = document.getElementById('create-q-validation-error');
+        if (errBox) {
+            errBox.classList.add('hidden');
+            errBox.style.display = 'none';
+        }
+
+        // Reset media inputs
+        const imgInput = document.getElementById('q-image-url');
+        const audioInput = document.getElementById('q-audio-url');
+        const mediaIdInput = document.getElementById('q-media-asset-id');
+        if (imgInput) imgInput.value = '';
+        if (audioInput) audioInput.value = '';
+        if (mediaIdInput) mediaIdInput.value = '';
+
+        const prevImg = document.getElementById('q-preview-image-card');
+        const emptyImg = document.getElementById('q-empty-image-card');
+        const prevAudio = document.getElementById('q-preview-audio-card');
+        const emptyAudio = document.getElementById('q-empty-audio-card');
+        const audioPlayer = document.getElementById('q-preview-audio-player');
+
+        if (prevImg) { prevImg.classList.add('hidden'); prevImg.style.display = 'none'; }
+        if (emptyImg) { emptyImg.classList.remove('hidden'); emptyImg.style.display = 'flex'; }
+        if (prevAudio) { prevAudio.classList.add('hidden'); prevAudio.style.display = 'none'; }
+        if (emptyAudio) { emptyAudio.classList.remove('hidden'); emptyAudio.style.display = 'flex'; }
+        if (audioPlayer) audioPlayer.src = '';
+
+        const contextBanner = document.getElementById('create-q-context-banner');
+        const globalSelector = document.getElementById('create-q-global-selector-container');
+        const contextTitle = document.getElementById('create-q-context-title');
+        const contextBadge = document.getElementById('create-q-context-badge');
+        const secIdInput = document.getElementById('create-q-section-id');
+        const partInput = document.getElementById('create-q-part-number');
+        const secTypeInput = document.getElementById('create-q-section');
+
+        if (sectionId) {
+            // Contextual Section Mode
+            if (secIdInput) secIdInput.value = sectionId;
+            if (partInput && partNumber) partInput.value = partNumber;
+            if (secTypeInput && sectionType) secTypeInput.value = sectionType;
+
+            if (contextBanner) {
+                contextBanner.classList.remove('hidden');
+                contextBanner.style.display = 'flex';
             }
-
-            // Reset media inputs
-            const imgInput = document.getElementById('q-image-url');
-            const audioInput = document.getElementById('q-audio-url');
-            const mediaIdInput = document.getElementById('q-media-asset-id');
-            if (imgInput) imgInput.value = '';
-            if (audioInput) audioInput.value = '';
-            if (mediaIdInput) mediaIdInput.value = '';
-
-            const prevImg = document.getElementById('q-preview-image-card');
-            const emptyImg = document.getElementById('q-empty-image-card');
-            const prevAudio = document.getElementById('q-preview-audio-card');
-            const emptyAudio = document.getElementById('q-empty-audio-card');
-            const audioPlayer = document.getElementById('q-preview-audio-player');
-
-            if (prevImg) { prevImg.classList.add('hidden'); prevImg.style.display = 'none'; }
-            if (emptyImg) { emptyImg.classList.remove('hidden'); emptyImg.style.display = 'flex'; }
-            if (prevAudio) { prevAudio.classList.add('hidden'); prevAudio.style.display = 'none'; }
-            if (emptyAudio) { emptyAudio.classList.remove('hidden'); emptyAudio.style.display = 'flex'; }
-            if (audioPlayer) audioPlayer.src = '';
-
-            const partSelect = document.getElementById('create-q-part-number');
-            if (partSelect) {
-                onCreateModalToeicPartChange(partSelect.value);
+            if (globalSelector) {
+                globalSelector.classList.add('hidden');
+                globalSelector.style.display = 'none';
             }
+            if (contextTitle) contextTitle.textContent = sectionTitle || 'Selected Section';
+            if (contextBadge) contextBadge.textContent = (sectionType || 'SECTION') + (partNumber ? ` • Part ${partNumber}` : '');
 
-            updateCreateModalCorrectChoice();
-            updateCreateModalAutoDifficulty();
+            if (partNumber) {
+                onCreateModalToeicPartChange(partNumber);
+            }
+        } else {
+            // Global Modal Mode
+            if (contextBanner) {
+                contextBanner.classList.add('hidden');
+                contextBanner.style.display = 'none';
+            }
+            if (globalSelector) {
+                globalSelector.classList.remove('hidden');
+                globalSelector.style.display = 'block';
+            }
+            const unifiedSelect = document.getElementById('create-q-unified-part-section');
+            if (unifiedSelect) {
+                onGlobalUnifiedSectionChange(unifiedSelect);
+            } else {
+                const genericSelect = document.getElementById('create-q-generic-section-select');
+                if (genericSelect) {
+                    onGlobalGenericSectionChange(genericSelect);
+                }
+            }
+        }
+
+        updateCreateModalCorrectChoice();
+        updateCreateModalAutoDifficulty();
+    }
+
+    function onGlobalUnifiedSectionChange(selectEl) {
+        if (!selectEl) return;
+        const opt = selectEl.options[selectEl.selectedIndex];
+        if (!opt) return;
+
+        const secId = opt.value;
+        const partNum = opt.getAttribute('data-part') || '1';
+        const secType = opt.getAttribute('data-type') || 'listening';
+
+        const secIdInput = document.getElementById('create-q-section-id');
+        const partInput = document.getElementById('create-q-part-number');
+        const secTypeInput = document.getElementById('create-q-section');
+
+        if (secIdInput) secIdInput.value = secId;
+        if (partInput) partInput.value = partNum;
+        if (secTypeInput) secTypeInput.value = secType;
+
+        onCreateModalToeicPartChange(partNum);
+    }
+
+    function onGlobalGenericSectionChange(selectEl) {
+        if (!selectEl) return;
+        const secIdInput = document.getElementById('create-q-section-id');
+        if (secIdInput) secIdInput.value = selectEl.value;
+    }
+
+    function toggleSectionCollapse(secId) {
+        const body = document.getElementById(`section-body-${secId}`);
+        const icon = document.getElementById(`collapse-icon-${secId}`);
+        const label = document.getElementById(`collapse-label-${secId}`);
+        if (!body) return;
+
+        const isHidden = body.classList.contains('hidden');
+        if (isHidden) {
+            body.classList.remove('hidden');
+            body.style.display = 'block';
+            if (icon) icon.textContent = '▾';
+            if (label) label.textContent = 'Collapse';
+        } else {
+            body.classList.add('hidden');
+            body.style.display = 'none';
+            if (icon) icon.textContent = '▸';
+            if (label) label.textContent = 'Expand';
         }
     }
     function closeCreateAuthoredQuestionModal(e) {
@@ -2144,6 +2410,29 @@
         }
     }
 
+    let currentSectionMediaSource = 'my';
+    let currentSectionMediaType = 'all';
+
+    function setSectionMediaSource(source, e = null) {
+        currentSectionMediaSource = source;
+        const myBtn = document.getElementById('asm-source-my-btn');
+        const instBtn = document.getElementById('asm-source-inst-btn');
+        if (myBtn && instBtn) {
+            if (source === 'my') {
+                myBtn.className = 'px-3 py-1 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-sm transition-all';
+                myBtn.setAttribute('aria-selected', 'true');
+                instBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all';
+                instBtn.setAttribute('aria-selected', 'false');
+            } else {
+                instBtn.className = 'px-3 py-1 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-sm transition-all';
+                instBtn.setAttribute('aria-selected', 'true');
+                myBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all';
+                myBtn.setAttribute('aria-selected', 'false');
+            }
+        }
+        fetchSectionMediaLibrary(currentSectionMediaType);
+    }
+
     function openAttachSectionMediaModal(sectionId, title, sectionType) {
         currentAsmSectionId = sectionId;
         const form = document.getElementById('attach-section-media-form');
@@ -2155,10 +2444,13 @@
             titleEl.textContent = `Target Section: ${title} (${sectionType ? sectionType.toUpperCase() : 'GENERAL'})`;
         }
         clearSelectedSectionMedia();
-        document.getElementById('asm-caption').value = '';
-        document.getElementById('asm-order').value = '';
-        document.getElementById('asm-upload-file').value = '';
-        document.getElementById('asm-upload-title').value = '';
+        clearSectionMediaFileSelection();
+        const captionInput = document.getElementById('asm-caption');
+        if (captionInput) captionInput.value = '';
+        const orderInput = document.getElementById('asm-order');
+        if (orderInput) orderInput.value = '';
+        const titleInput = document.getElementById('asm-upload-title');
+        if (titleInput) titleInput.value = '';
         hideAsmUploadFeedback();
         switchAsmMode('library');
 
@@ -2166,6 +2458,16 @@
         if (modal) {
             modal.classList.remove('hidden');
             modal.style.display = 'flex';
+        }
+
+        currentSectionMediaSource = 'my';
+        const myBtn = document.getElementById('asm-source-my-btn');
+        const instBtn = document.getElementById('asm-source-inst-btn');
+        if (myBtn && instBtn) {
+            myBtn.className = 'px-3 py-1 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-sm transition-all';
+            myBtn.setAttribute('aria-selected', 'true');
+            instBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all';
+            instBtn.setAttribute('aria-selected', 'false');
         }
 
         fetchSectionMediaLibrary(sectionType);
@@ -2178,6 +2480,7 @@
                 modal.classList.add('hidden');
                 modal.style.display = 'none';
             }
+            clearSectionMediaFileSelection();
         }
     }
 
@@ -2185,20 +2488,139 @@
         const tabLib = document.getElementById('asm-tab-library');
         const tabUpload = document.getElementById('asm-tab-upload');
         const uploadPanel = document.getElementById('asm-upload-panel');
+        const libraryPanel = document.getElementById('asm-library-panel');
 
         if (mode === 'upload') {
-            tabUpload.className = 'flex-1 py-2 px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5';
-            tabLib.className = 'flex-1 py-2 px-3 bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5';
+            if (tabUpload) tabUpload.className = 'flex-1 py-2 px-3 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5';
+            if (tabLib) tabLib.className = 'flex-1 py-2 px-3 bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5';
             if (uploadPanel) {
                 uploadPanel.classList.remove('hidden');
                 uploadPanel.style.display = 'block';
             }
+            if (libraryPanel) {
+                libraryPanel.classList.add('hidden');
+                libraryPanel.style.display = 'none';
+            }
         } else {
-            tabLib.className = 'flex-1 py-2 px-3 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5';
-            tabUpload.className = 'flex-1 py-2 px-3 bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5';
+            if (tabLib) tabLib.className = 'flex-1 py-2 px-3 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5';
+            if (tabUpload) tabUpload.className = 'flex-1 py-2 px-3 bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5';
+            if (libraryPanel) {
+                libraryPanel.classList.remove('hidden');
+                libraryPanel.style.display = 'flex';
+            }
             if (uploadPanel) {
                 uploadPanel.classList.add('hidden');
                 uploadPanel.style.display = 'none';
+            }
+        }
+    }
+
+    function handleSectionMediaFileSelect(input) {
+        const file = input?.files?.[0];
+        const emptyState = document.getElementById('asm-empty-upload-state');
+        const selectedState = document.getElementById('asm-selected-upload-state');
+        const filenameEl = document.getElementById('asm-selected-filename');
+        const filesizeEl = document.getElementById('asm-selected-filesize');
+        const typeBadgeEl = document.getElementById('asm-selected-type-badge');
+        const uploadBtn = document.getElementById('asm-upload-btn');
+        hideAsmUploadFeedback();
+
+        if (!file) {
+            clearSectionMediaFileSelection();
+            return;
+        }
+
+        const sizeFormatted = file.size > 1048576
+            ? (file.size / 1048576).toFixed(1) + ' MB'
+            : (file.size / 1024).toFixed(1) + ' KB';
+
+        let typeName = 'FILE';
+        const mime = file.type || '';
+        const nameLower = file.name.toLowerCase();
+        if (mime.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(nameLower)) {
+            typeName = 'IMAGE';
+        } else if (mime.startsWith('audio/') || /\.(mp3|m4a|wav)$/i.test(nameLower)) {
+            typeName = 'AUDIO';
+        } else if (mime === 'application/pdf' || /\.pdf$/i.test(nameLower)) {
+            typeName = 'PDF';
+        }
+
+        if (filenameEl) filenameEl.textContent = file.name;
+        if (filesizeEl) filesizeEl.textContent = sizeFormatted;
+        if (typeBadgeEl) typeBadgeEl.textContent = typeName;
+
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.style.display = 'none';
+        }
+        if (selectedState) {
+            selectedState.classList.remove('hidden');
+            selectedState.style.display = 'block';
+        }
+
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.removeAttribute('aria-disabled');
+            uploadBtn.className = 'px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-md shadow-emerald-500/20 cursor-pointer transition-all inline-flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1';
+        }
+    }
+
+    function clearSectionMediaFileSelection() {
+        const input = document.getElementById('asm-upload-file');
+        if (input) input.value = '';
+
+        const emptyState = document.getElementById('asm-empty-upload-state');
+        const selectedState = document.getElementById('asm-selected-upload-state');
+        const uploadBtn = document.getElementById('asm-upload-btn');
+        hideAsmUploadFeedback();
+
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.style.display = 'flex';
+        }
+        if (selectedState) {
+            selectedState.classList.add('hidden');
+            selectedState.style.display = 'none';
+        }
+
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+            uploadBtn.setAttribute('aria-disabled', 'true');
+            uploadBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <span>Upload &amp; Select Asset</span>
+            `;
+            uploadBtn.className = 'px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-extrabold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all inline-flex items-center gap-1.5';
+        }
+    }
+
+    function handleSectionMediaDragOver(e) {
+        e.preventDefault();
+        const dropzone = document.getElementById('asm-dropzone');
+        if (dropzone) {
+            dropzone.classList.add('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-950/20');
+        }
+    }
+
+    function handleSectionMediaDragLeave(e) {
+        e.preventDefault();
+        const dropzone = document.getElementById('asm-dropzone');
+        if (dropzone) {
+            dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-950/20');
+        }
+    }
+
+    function handleSectionMediaDrop(e) {
+        e.preventDefault();
+        const dropzone = document.getElementById('asm-dropzone');
+        if (dropzone) {
+            dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/40', 'dark:bg-indigo-950/20');
+        }
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const input = document.getElementById('asm-upload-file');
+            if (input) {
+                input.files = e.dataTransfer.files;
+                handleSectionMediaFileSelect(input);
             }
         }
     }
@@ -2209,8 +2631,8 @@
             el.classList.remove('hidden');
             el.style.display = 'block';
             el.className = isSuccess
-                ? 'p-2.5 rounded-lg text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                : 'p-2.5 rounded-lg text-xs font-bold bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300';
+                ? 'p-2.5 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                : 'p-2.5 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300';
             el.textContent = message;
         }
     }
@@ -2230,13 +2652,13 @@
         const uploadBtn = document.getElementById('asm-upload-btn');
 
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            showAsmUploadFeedback('Please choose a file to upload.', false);
+            showAsmUploadFeedback('⚠️ Please select a file to upload first.', false);
             return;
         }
 
         const file = fileInput.files[0];
         if (file.size > 10 * 1024 * 1024) {
-            showAsmUploadFeedback('File size exceeds the 10 MB limit.', false);
+            showAsmUploadFeedback('⚠️ File size exceeds the 10 MB limit.', false);
             return;
         }
 
@@ -2248,8 +2670,14 @@
         formData.append('_token', '{{ csrf_token() }}');
 
         uploadBtn.disabled = true;
-        uploadBtn.classList.add('opacity-75', 'cursor-not-allowed');
-        uploadBtn.innerHTML = '⏳ Uploading...';
+        uploadBtn.setAttribute('aria-disabled', 'true');
+        uploadBtn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-1.5 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Uploading...</span>
+        `;
         hideAsmUploadFeedback();
 
         fetch('{{ route('admin.media.store') }}', {
@@ -2269,50 +2697,52 @@
             return data;
         })
         .then(data => {
-            const icon = data.type === 'audio' ? '🎵' : (data.type === 'image' ? '🖼️' : (data.type === 'pdf' ? '📄' : (data.type === 'passage' ? '📖' : '📎')));
-
-            const newAsset = {
-                id: data.id,
-                title: data.title || data.filename,
-                name: data.filename,
-                type: data.type,
-                size: data.size,
-                url: data.url
+            const assetData = data.asset || data;
+            const assetId = assetData.id || data.id;
+            const item = {
+                id: assetId,
+                title: assetData.title || assetData.filename || assetData.original_name,
+                name: assetData.filename || assetData.original_name,
+                type: assetData.type,
+                size: assetData.size,
+                url: assetData.url || (assetId ? `/media/${assetId}/preview` : '')
             };
-            sectionMediaLibrary.unshift(newAsset);
+            sectionMediaLibrary.unshift(item);
 
             renderSectionMediaGrid(sectionMediaLibrary);
-            selectSectionMediaItem(data.id, data.title || data.filename, data.type, icon);
+            const icon = item.type === 'audio' ? '🎵' : (item.type === 'image' ? '🖼️' : (item.type === 'pdf' ? '📄' : (item.type === 'passage' ? '📖' : '📎')));
+            selectSectionMediaItem(item.id, item.title, item.type, icon);
 
-            fileInput.value = '';
-            titleInput.value = '';
+            clearSectionMediaFileSelection();
+            if (titleInput) titleInput.value = '';
             switchAsmMode('library');
-            showAsmUploadFeedback(`✅ "${data.title || data.filename}" uploaded & selected!`, true);
+            showAsmUploadFeedback(`✅ "${item.title}" uploaded & selected!`, true);
         })
         .catch(err => {
             showAsmUploadFeedback(`⚠️ ${err.message}`, false);
         })
         .finally(() => {
             uploadBtn.disabled = false;
-            uploadBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-            uploadBtn.innerHTML = '<span>⬆️</span> Upload &amp; Select Asset';
+            uploadBtn.removeAttribute('aria-disabled');
+            uploadBtn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <span>Upload &amp; Select Asset</span>
+            `;
         });
     }
 
-    function fetchSectionMediaLibrary(preferredType) {
+    function fetchSectionMediaLibrary(preferredType = 'all') {
+        currentSectionMediaType = preferredType || 'all';
         const container = document.getElementById('asm-media-list-container');
-        if (sectionMediaLibrary.length > 0) {
-            renderSectionMediaGrid(sectionMediaLibrary, preferredType);
-            return;
-        }
-
+        if (!container) return;
         container.innerHTML = '<div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">Loading media library...</div>';
-        fetch('/admin/media/list')
+
+        fetch(`/admin/media/list?source=${currentSectionMediaSource}`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && Array.isArray(data.data)) {
                     sectionMediaLibrary = data.data;
-                    renderSectionMediaGrid(sectionMediaLibrary, preferredType);
+                    filterSectionMediaModal(currentSectionMediaType);
                 } else {
                     container.innerHTML = '<div class="col-span-full text-center text-rose-600 dark:text-rose-400 text-xs py-8">Failed to load media library.</div>';
                 }
@@ -2322,13 +2752,26 @@
             });
     }
 
-    function filterSectionMediaModal(type) {
+    function filterSectionMediaModal(type, e = null) {
+        currentSectionMediaType = type;
         const buttons = document.querySelectorAll('.asm-filter-btn');
         buttons.forEach(btn => {
-            btn.className = 'asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold';
+            btn.className = 'asm-filter-btn px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold transition-colors';
         });
-        if (event && event.target && event.target.classList.contains('asm-filter-btn')) {
-            event.target.className = 'asm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm';
+
+        if (e && e.target && e.target.classList.contains('asm-filter-btn')) {
+            e.target.className = 'asm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm';
+        } else {
+            buttons.forEach(btn => {
+                const text = btn.textContent.toLowerCase();
+                if ((type === 'all' && text.includes('all')) ||
+                    (type === 'image' && text.includes('image')) ||
+                    (type === 'audio' && text.includes('audio')) ||
+                    (type === 'passage' && text.includes('passage')) ||
+                    (type === 'pdf' && text.includes('pdf'))) {
+                    btn.className = 'asm-filter-btn px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-sm';
+                }
+            });
         }
 
         const query = (document.getElementById('asm-search-input')?.value || '').toLowerCase();
@@ -2345,14 +2788,18 @@
     function searchSectionMediaModal(query) {
         query = query.toLowerCase();
         let filtered = sectionMediaLibrary;
+        if (currentSectionMediaType !== 'all') {
+            filtered = filtered.filter(item => item.type === currentSectionMediaType);
+        }
         if (query) {
             filtered = filtered.filter(item => (item.title || item.name || '').toLowerCase().includes(query));
         }
         renderSectionMediaGrid(filtered);
     }
 
-    function renderSectionMediaGrid(items, preferredType) {
+    function renderSectionMediaGrid(items) {
         const container = document.getElementById('asm-media-list-container');
+        if (!container) return;
         if (!items || items.length === 0) {
             container.innerHTML = '<div class="col-span-full text-center text-slate-500 dark:text-slate-400 text-xs py-8">No media assets found in library.</div>';
             return;
@@ -2363,12 +2810,28 @@
             const card = document.createElement('div');
             card.className = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col justify-between gap-2.5';
 
-            const icon = media.type === 'audio' ? '🎵' : (media.type === 'image' ? '🖼️' : (media.type === 'pdf' ? '📄' : (media.type === 'passage' ? '📖' : '📎')));
+            let typeIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>';
+            let iconText = '📎';
+            if (media.type === 'audio') {
+                typeIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>';
+                iconText = '🎵';
+            } else if (media.type === 'image') {
+                typeIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+                iconText = '🖼️';
+            } else if (media.type === 'pdf') {
+                typeIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>';
+                iconText = '📄';
+            } else if (media.type === 'passage') {
+                iconText = '📖';
+            }
 
             card.innerHTML = `
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
-                        <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">${icon} ${media.type}</span>
+                        <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 inline-flex items-center gap-1">
+                            ${typeIconSvg}
+                            <span>${media.type}</span>
+                        </span>
                         <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">${media.size || ''}</span>
                     </div>
                     <div class="text-xs font-bold text-slate-900 dark:text-white truncate" title="${media.title || media.name}">
@@ -2376,8 +2839,8 @@
                     </div>
                 </div>
                 <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <button type="button" onclick="previewAssetModal('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-[11px] font-bold">👁️ Preview</button>
-                    <button type="button" onclick="selectSectionMediaItem('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${icon}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-sm">Select</button>
+                    <button type="button" onclick="previewAssetModal('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${media.url}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-[11px] font-bold">Preview</button>
+                    <button type="button" onclick="selectSectionMediaItem('${media.id}', '${(media.title || media.name || '').replace(/'/g, "\\'")}', '${media.type}', '${iconText}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-sm">Select</button>
                 </div>
             `;
             container.appendChild(card);
@@ -2396,8 +2859,11 @@
         }
 
         const submitBtn = document.getElementById('asm-submit-btn');
-        submitBtn.disabled = false;
-        submitBtn.className = 'px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20 cursor-pointer transition-all';
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.removeAttribute('aria-disabled');
+            submitBtn.className = 'px-5 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20 cursor-pointer transition-all';
+        }
     }
 
     function clearSelectedSectionMedia() {
@@ -2408,8 +2874,11 @@
             prev.style.display = 'none';
         }
         const submitBtn = document.getElementById('asm-submit-btn');
-        submitBtn.disabled = true;
-        submitBtn.className = 'px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.setAttribute('aria-disabled', 'true');
+            submitBtn.className = 'px-5 py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 cursor-not-allowed transition-all';
+        }
     }
 
     function previewAssetModal(id, title, type, url) {

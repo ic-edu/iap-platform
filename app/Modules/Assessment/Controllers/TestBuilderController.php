@@ -571,6 +571,14 @@ class TestBuilderController extends Controller
             ToeicQuestionValidator::validate($toeicData);
             $partNumber = (int) $request->input('part_number');
             $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
+
+            // Server-side Integrity Defense: Ensure Part Number matches target Section type
+            $targetSecType = is_object($section->section_type) ? $section->section_type->value : (string) $section->section_type;
+            if ($sectionType !== $targetSecType) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'part_number' => "Part {$partNumber} ({$sectionType}) cannot be assigned to '{$section->title}' ({$targetSecType} section).",
+                ]);
+            }
         } else {
             $partNumber = $validated['part_number'] ?? null;
             $sectionType = $validated['section'] ?? ($section->section_type->value ?? $section->section_type ?? 'reading');

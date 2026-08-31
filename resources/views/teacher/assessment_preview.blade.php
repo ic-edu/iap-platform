@@ -116,32 +116,102 @@
             </div>
         @else
             <div class="grid gap-6 lg:grid-cols-4 items-start">
-                <!-- Left Column: Section Intros & Question Cards (3 Cols) -->
+                <!-- Left Column: Assessment Overview, Section Intros & Question Cards (3 Cols) -->
                 <div class="lg:col-span-3 space-y-6">
 
-                    <!-- General Assessment Instructions Banner (if configured) -->
-                    @if(!empty($test->instructions))
-                    <div id="general-instructions-banner" class="bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 rounded-2xl p-5 shadow-sm space-y-2">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-xs font-extrabold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <!-- 0. PREVIEW ASSESSMENT OVERVIEW / PRE-TEST INSTRUCTIONS CARD -->
+                    <div id="preview-overview-card" class="preview-overview-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+                        <div class="border-b border-slate-100 dark:border-slate-800 pb-5">
+                            <div class="flex items-center gap-2.5 mb-2.5 flex-wrap">
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 uppercase tracking-wider">
+                                    {{ is_object($test->test_type) ? $test->test_type->label() : strtoupper($test->test_type ?? 'ASSESSMENT') }}
+                                </span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                    Pre-Assessment Briefing &amp; Instructions
+                                </span>
+                            </div>
+                            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-snug">
+                                {{ $test->title }}
+                            </h2>
+                        </div>
+
+                        <!-- Metrics Strip -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                            <div>
+                                <span class="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Duration</span>
+                                <span class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white mt-0.5 block">⏱ {{ $test->duration_minutes }} Minutes</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Pass Threshold</span>
+                                <span class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block">🎯 {{ $test->pass_score }} Points</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Sections</span>
+                                <span class="text-sm sm:text-base font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5 block">📑 {{ $totalSectionsCount }} Section(s)</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Questions</span>
+                                <span class="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-200 mt-0.5 block">📝 {{ $totalQuestionsCount }} Questions</span>
+                            </div>
+                        </div>
+
+                        <!-- General Instructions Body -->
+                        <div class="space-y-3">
+                            <h3 class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                                 <span>General Assessment Instructions</span>
-                            </span>
+                            </h3>
+                            <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                                {{ $test->instructions ?: 'Please read the instructions for each section carefully. You may navigate between questions and review your answers before completing your assessment.' }}
+                            </div>
                         </div>
-                        <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                            {{ $test->instructions }}
-                        </p>
+
+                        <!-- Section Breakdown -->
+                        @if($sections->isNotEmpty())
+                        <div class="space-y-3 pt-1">
+                            <h3 class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>📑</span> Assessment Section Breakdown
+                            </h3>
+                            <div class="grid gap-2.5 sm:grid-cols-2">
+                                @foreach($sections as $secIdx => $sec)
+                                @php
+                                    $secQCount = $sec->testQuestions->count();
+                                @endphp
+                                <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                    <div>
+                                        <div class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">{{ $sec->title }}</div>
+                                        <div class="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold capitalize mt-0.5">
+                                            {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'GENERAL') }} SECTION
+                                        </div>
+                                    </div>
+                                    <span class="text-xs text-slate-600 dark:text-slate-400 font-bold bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                                        {{ $secQCount }} Qs
+                                    </span>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+
+                        <!-- Important Notice & Begin Action Bar -->
+                        <div class="pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
+                                💡 Preview Mode: Clicking <strong class="text-slate-700 dark:text-slate-200">Begin Preview</strong> starts the visual timer and displays the first section directions.
+                            </p>
+
+                            <button type="button" onclick="startPreview()" id="btn-begin-preview" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm transition-all shadow-lg shadow-indigo-600/25 hover:scale-[1.02] active:scale-[0.98]">
+                                <span>🚀 Begin Preview</span>
+                            </button>
+                        </div>
                     </div>
-                    @endif
 
                     <!-- 1. DEDICATED SECTION DIRECTIONS SCREENS -->
                     @foreach($sections as $secIndex => $sec)
                         @php
                             $firstQIdx = $sectionFirstQuestionIndex[$sec->id] ?? 0;
-                            $secQuestions = $sectionQuestionsMap[$sec->id] ?? collect();
-                            $secQuestionCount = $secQuestions->count();
+                            $secQuestionCount = $sec->testQuestions->count();
                         @endphp
                         <div id="section-intro-card-{{ $sec->id }}" class="section-intro-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 hidden">
                             <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -221,7 +291,9 @@
                                         &larr; Previous Section
                                     </button>
                                 @else
-                                    <div></div>
+                                    <button type="button" onclick="showAssessmentOverview()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 transition-colors inline-flex items-center gap-1.5">
+                                        &larr; Overview
+                                    </button>
                                 @endif
 
                                 @if($secQuestionCount > 0)
@@ -245,6 +317,12 @@
                             $imageUrl = method_exists($question, 'getEffectiveImageUrl') ? $question->getEffectiveImageUrl() : ($question->image_url ?: ($question->mediaAsset && ($question->mediaAsset->type === 'image' || str_starts_with($question->mediaAsset->mime_type ?? '', 'image/')) ? ($question->mediaAsset->publicUrl() ?? $question->mediaAsset->path) : null));
                             $isToeicPart1 = ($partNum === 1);
                             $isMissingPart1Media = $isToeicPart1 && (empty($imageUrl) || empty($audioUrl));
+
+                            $firstQIdxOfSection = $section ? ($sectionFirstQuestionIndex[$section->id] ?? 0) : 0;
+                            $nextIndex = $index + 1;
+                            $hasNextQuestion = $nextIndex < $totalQuestionsCount;
+                            $nextQuestionSectionId = $hasNextQuestion ? ($questionSectionMap[$nextIndex] ?? null) : null;
+                            $isLastQuestionOfSection = $section && $hasNextQuestion && ($nextQuestionSectionId !== $section->id);
                         @endphp
 
                         <div id="question-card-{{ $index }}" class="question-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm hidden">
@@ -298,9 +376,9 @@
                                             @foreach($effectivePassages as $pIdx => $pass)
                                                 <div id="passage-content-{{ $question->id }}-{{ $pIdx }}" class="passage-doc-content {{ $pIdx > 0 ? 'hidden' : '' }}">
                                                     @if($pass->title && $effectivePassages->count() === 1)
-                                                        <h4 class="font-bold text-sm text-indigo-700 dark:text-indigo-300 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1">{{ $pass->title }}</h4>
+                                                        <h4 class="font-bold text-sm text-indigo-700 dark:text-indigo-400 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1">{{ $pass->title }}</h4>
                                                     @endif
-                                                    <div class="whitespace-pre-line leading-relaxed">
+                                                    <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm whitespace-pre-line leading-relaxed">
                                                         {!! nl2br(e($pass->content)) !!}
                                                     </div>
                                                 </div>
@@ -308,8 +386,14 @@
                                         </div>
                                     </div>
 
-                                    <!-- Right Pane: Stem Prompt & Choices -->
+                                    <!-- Right Pane: Stem Prompt & Options -->
                                     <div class="lg:col-span-6 xl:col-span-5 flex flex-col justify-between space-y-6">
+                                        @if(!empty($imageUrl))
+                                            <div class="flex justify-center p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
+                                                <img src="{{ $imageUrl }}" alt="Question Image" class="max-h-56 object-contain rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                            </div>
+                                        @endif
+
                                         @if(!empty($audioUrl))
                                             <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
                                                 <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
@@ -376,7 +460,7 @@
 
                             <!-- Bottom Navigation Action Bar -->
                             <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-3">
-                                @if($index === 0 && $section)
+                                @if($index === $firstQIdxOfSection && $section)
                                     <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors">
                                         &larr; Section Directions
                                     </button>
@@ -386,7 +470,11 @@
                                     </button>
                                 @endif
 
-                                @if($index === $totalQuestionsCount - 1)
+                                @if($isLastQuestionOfSection && $nextQuestionSectionId)
+                                    <button type="button" onclick="showSectionIntro('{{ $nextQuestionSectionId }}')" class="px-5 py-2.5 text-xs font-extrabold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
+                                        Next Section &rarr;
+                                    </button>
+                                @elseif($index === $totalQuestionsCount - 1)
                                     <button type="button" onclick="finishPreview()" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all">
                                         Finish Preview &rarr;
                                     </button>
@@ -424,10 +512,13 @@
                             @endforeach
                         </div>
 
-                        <!-- Section Jump Shortcuts -->
+                        <!-- Section & Overview Shortcuts -->
                         <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                            <span class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Sections</span>
+                            <span class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Assessment Navigation</span>
                             <div class="flex flex-col gap-1.5">
+                                <button type="button" onclick="showAssessmentOverview()" class="text-left px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition-colors">
+                                    📋 Assessment Overview
+                                </button>
                                 @foreach($sections as $sec)
                                     <button type="button" onclick="showSectionIntro('{{ $sec->id }}')" class="text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-indigo-400 dark:hover:border-indigo-600 truncate transition-colors">
                                         📁 {{ $sec->title }}
@@ -488,12 +579,15 @@
     <!-- Candidate Preview Runtime JavaScript -->
     <script>
         const totalQuestions = {{ $totalQuestionsCount }};
-        let currentQuestionIndex = 0;
+        const firstSectionId = "{{ $sections->isNotEmpty() ? $sections->first()->id : '' }}";
+        let currentQuestionIndex = -2; // -2: overview, -1: section intro, 0..N-1: question
         const temporaryAnswers = {};
 
         // Non-Persistent Visual Countdown Timer
         let timerSeconds = {{ (int) ($test->duration_minutes ?: 60) * 60 }};
         const timerEl = document.getElementById('preview-countdown-timer');
+        let timerInterval = null;
+        let isPreviewStarted = false;
 
         function updateCountdownDisplay() {
             if (!timerEl) return;
@@ -506,28 +600,57 @@
                 String(secs).padStart(2, '0');
         }
 
-        if (timerSeconds > 0) {
-            updateCountdownDisplay();
-            setInterval(function() {
-                if (timerSeconds > 0) {
-                    timerSeconds--;
-                    updateCountdownDisplay();
-                }
-            }, 1000);
+        function startTimer() {
+            if (timerInterval) return;
+            if (timerSeconds > 0) {
+                timerInterval = setInterval(function() {
+                    if (timerSeconds > 0) {
+                        timerSeconds--;
+                        updateCountdownDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                    }
+                }, 1000);
+            }
         }
 
         function hideAllViews() {
+            const overviewCard = document.getElementById('preview-overview-card');
+            if (overviewCard) overviewCard.classList.add('hidden');
             document.querySelectorAll('.section-intro-card').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.question-card').forEach(el => el.classList.add('hidden'));
         }
 
+        function showAssessmentOverview() {
+            hideAllViews();
+            currentQuestionIndex = -2;
+            const overviewCard = document.getElementById('preview-overview-card');
+            if (overviewCard) {
+                overviewCard.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            updatePaletteHighlights();
+        }
+
+        function startPreview() {
+            isPreviewStarted = true;
+            startTimer();
+            if (firstSectionId) {
+                showSectionIntro(firstSectionId);
+            } else if (totalQuestions > 0) {
+                navigateQuestion(0);
+            }
+        }
+
         function showSectionIntro(sectionId) {
             hideAllViews();
+            currentQuestionIndex = -1;
             const introCard = document.getElementById(`section-intro-card-${sectionId}`);
             if (introCard) {
                 introCard.classList.remove('hidden');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
+            updatePaletteHighlights();
         }
 
         function beginSectionQuestions(firstQIdx) {
@@ -536,6 +659,10 @@
 
         function navigateQuestion(index) {
             if (index < 0 || index >= totalQuestions) return;
+            if (!isPreviewStarted) {
+                isPreviewStarted = true;
+                startTimer();
+            }
             currentQuestionIndex = index;
             hideAllViews();
 
@@ -609,14 +736,21 @@
             document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
             const modal = document.getElementById('preview-complete-modal');
             if (modal) modal.classList.add('hidden');
-            navigateQuestion(0);
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            timerSeconds = {{ (int) ($test->duration_minutes ?: 60) * 60 }};
+            updateCountdownDisplay();
+            isPreviewStarted = false;
+            showAssessmentOverview();
         }
 
-        // Initialize first screen on load
+        // Initialize preview: show assessment overview, update countdown display but do NOT start timer yet
         document.addEventListener('DOMContentLoaded', function() {
-            if (totalQuestions > 0) {
-                navigateQuestion(0);
-            }
+            updateCountdownDisplay();
+            showAssessmentOverview();
         });
 
         // Keyboard navigation shortcuts
@@ -624,7 +758,7 @@
             if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
 
             if (event.key === 'ArrowRight') {
-                if (currentQuestionIndex < totalQuestions - 1) {
+                if (currentQuestionIndex >= 0 && currentQuestionIndex < totalQuestions - 1) {
                     navigateQuestion(currentQuestionIndex + 1);
                 }
             } else if (event.key === 'ArrowLeft') {
