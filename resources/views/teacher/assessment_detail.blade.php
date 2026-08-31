@@ -219,6 +219,113 @@
                         <span>Preview as Candidate</span>
                     </a>
 
+                @php
+                    $isToeicTest = (is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic';
+                    $questionsBySection = collect($validationResult['questions'] ?? [])->groupBy(fn($item) => (string) $item['section']->id);
+                    $globalQuestionNumberMap = collect($validationResult['questions'] ?? [])->mapWithKeys(fn($item) => [(string)$item['question']->id => (int)$item['number']]);
+
+                    // Pre-load all audio groups for the test once to avoid N+1 queries
+                    $allTestAudioGroups = \App\Modules\QuestionBank\Models\AudioGroup::where('test_id', (string)$test->id)
+                        ->with(['questions.choices', 'mediaAsset'])
+                        ->orderBy('order')
+                        ->get()
+                        ->groupBy(fn($ag) => (int)$ag->part_number);
+
+                    // Compute Section Validation Rollups
+                    $sectionRollups = [];
+                    $partsNeedingAttentionCount = 0;
+                    $totalAssessmentIssuesCount = 0;
+
+                    foreach ($test->sections as $sIdx => $sModel) {
+                        $sQuestions = $questionsBySection->get((string)$sModel->id) ?? collect();
+                        $sQCount = $sQuestions->count();
+                        $sFirstQ = $sModel->testQuestions->first()?->question;
+                        $sPartNum = $sFirstQ?->part_number ?? ($isToeicTest ? ($sModel->order ?? ($sIdx + 1)) : null);
+                        $sAudioGroups = ($sPartNum && in_array((int)$sPartNum, [3, 4], true))
+                            ? ($allTestAudioGroups->get((int)$sPartNum) ?? collect())
+                            : collect();
+
+                        $blockingIssues = [];
+                        $firstIssueId = null;
+                        $completeQCount = 0;
+
+                        if ($sQCount === 0 && $sAudioGroups->isEmpty()) {
+                            $status = 'not_started';
+                            $blockingIssues[] = "Section '{$sModel->title}' has no questions assigned.";
+                            $firstIssueId = "section-card-{$sModel->id}";
+                        } else {
+                            // 1. Evaluate Question-level completeness and warnings
+                            foreach ($sQuestions as $qItem) {
+                                $qModel = $qItem['question'];
+                                $qWarnings = $qItem['warnings'] ?? [];
+
+                                if (!empty($qModel->audio_group_id)) {
+                                    // Child question belongs to AudioGroup
+                                    $pureQWarnings = array_filter($qWarnings, fn($w) => !str_starts_with($w, 'Audio Group Finding:'));
+                                    if (!empty($pureQWarnings) || !$qModel->isCompleteChild()) {
+                                        $qNum = $qItem['number'];
+                                        $errText = !empty($pureQWarnings) ? implode('; ', $pureQWarnings) : 'Incomplete question details';
+                                        $blockingIssues[] = "Q#{$qNum}: {$errText}";
+                                        if (!$firstIssueId) {
+                                            $firstIssueId = "audio-group-card-{$qModel->audio_group_id}";
+                                        }
+                                    } else {
+                                        $completeQCount++;
+                                    }
+                                } else {
+                                    // Standalone question
+                                    $isQComplete = empty($qWarnings) && $qModel->isCompleteChild();
+                                    if ($isQComplete) {
+                                        $completeQCount++;
+                                    } else {
+                                        $qNum = $qItem['number'];
+                                        $errText = !empty($qWarnings) ? implode('; ', $qWarnings) : 'Incomplete question details';
+                                        $blockingIssues[] = "Q#{$qNum}: {$errText}";
+                                        if (!$firstIssueId) {
+                                            $firstIssueId = "question-card-{$qModel->id}";
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 2. Evaluate Audio Group completeness (for Part 3 / Part 4)
+                            if ($sAudioGroups->isNotEmpty()) {
+                                foreach ($sAudioGroups as $agModel) {
+                                    $agIsComp = $agModel->isComplete();
+                                    if (!$agIsComp) {
+                                        $agCompCount = $agModel->questions->filter(fn($cq) => $cq->isCompleteChild())->count();
+                                        $agTitle = $agModel->title ?: ($agModel->isTalk() ? 'Talk Audio Group' : 'Conversation Audio Group');
+                                        $blockingIssues[] = "Audio Group '{$agTitle}' ({$agCompCount}/3 complete): Requires 1 shared audio and exactly 3 complete questions.";
+                                        if (!$firstIssueId) {
+                                            $firstIssueId = "audio-group-card-{$agModel->id}";
+                                        }
+                                    }
+                                }
+                            }
+
+                            $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
+                        }
+
+                        $uniqueIssues = array_values(array_unique($blockingIssues));
+                        $issueCount = count($uniqueIssues);
+
+                        if ($status === 'needs_attention') {
+                            $partsNeedingAttentionCount++;
+                        }
+                        $totalAssessmentIssuesCount += $issueCount;
+
+                        $sectionRollups[(string)$sModel->id] = [
+                            'status'             => $status,
+                            'total_questions'    => $sQCount,
+                            'complete_questions' => $completeQCount,
+                            'issue_count'        => $issueCount,
+                            'issues'             => $uniqueIssues,
+                            'first_issue_id'     => $firstIssueId,
+                            'audio_groups_count' => $sAudioGroups->count(),
+                        ];
+                    }
+                @endphp
+
                     {{-- Resubmit Button --}}
                     @if(in_array($test->status, ['needs_revision', 'revision_requested', 'draft']))
                     <form id="resubmit-assessment-form" method="POST" action="{{ route('teacher.tests.resubmit', $test->id) }}" class="inline">
@@ -233,11 +340,18 @@
                             <span>{{ $test->status === 'draft' ? 'Submit for Review' : 'Resubmit for Review' }}</span>
                         </button>
                         @else
-                        <button type="button" disabled class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl cursor-not-allowed inline-flex items-center gap-2" title="Resolve all validation issues to enable submission.">
-                            <svg class="w-4 h-4 text-slate-400 dark:text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="button"
+                                onclick="focusFirstIssueSection()"
+                                class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-bold rounded-xl transition-colors inline-flex items-center gap-2 cursor-pointer"
+                                title="Resolve all validation issues to enable submission. Click to view sections needing attention.">
+                            <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
-                            <span>Submission Disabled (Validation Required)</span>
+                            @if($partsNeedingAttentionCount > 0)
+                                <span>Submission Disabled ({{ $partsNeedingAttentionCount }} {{ \Illuminate\Support\Str::plural('Part', $partsNeedingAttentionCount) }} Need Attention)</span>
+                            @else
+                                <span>Submission Disabled (Validation Required)</span>
+                            @endif
                         </button>
                         @endif
                     </form>
@@ -272,17 +386,18 @@
                     @endif
                 </div>
 
-                {{-- Part-Aware Section-Grouped Authoring Architecture --}}
-                @php
-                    $isToeicTest = (is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic';
-                    $questionsBySection = collect($validationResult['questions'] ?? [])->groupBy(fn($item) => (string) $item['section']->id);
-                    $globalQuestionNumberMap = collect($validationResult['questions'] ?? [])->mapWithKeys(fn($item) => [(string)$item['question']->id => (int)$item['number']]);
-                @endphp
-
                 @if($test->sections->isNotEmpty())
                     <div class="space-y-6">
                         @foreach($test->sections as $secIndex => $sec)
                             @php
+                                $secRollup = $sectionRollups[(string)$sec->id] ?? [
+                                    'status'             => 'not_started',
+                                    'total_questions'    => 0,
+                                    'complete_questions' => 0,
+                                    'issue_count'        => 0,
+                                    'issues'             => [],
+                                    'first_issue_id'     => null,
+                                ];
                                 $secQuestions = $questionsBySection->get((string)$sec->id) ?? collect();
                                 $secQCount = $secQuestions->count();
                                 $secFirstNum = $secQuestions->first()['number'] ?? null;
@@ -305,7 +420,7 @@
                                     $secConfirmMsg = "Section '{$secEscTitle}' contains {$secQCount} question(s). Removing this section will remove those questions from this Assessment section. The underlying Question content will remain intact. Any media attached to this section will be detached but will remain available in the Media Library.";
                                 }
                             @endphp
-                            <div id="section-card-{{ $sec->id }}" class="section-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                            <div id="section-card-{{ $sec->id }}" class="section-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4" data-section-id="{{ $sec->id }}" data-status="{{ $secRollup['status'] }}" data-first-issue-id="{{ $secRollup['first_issue_id'] }}">
                                 <!-- Section Card Header & Metrics (Clickable row to toggle expansion) -->
                                 <div onclick="toggleSectionCollapse('{{ $sec->id }}')" class="flex justify-between items-start flex-wrap gap-3 cursor-pointer select-none" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSectionCollapse('{{ $sec->id }}');}">
                                     <div class="flex-1 min-w-[240px]">
@@ -314,6 +429,11 @@
                                             <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
                                                 {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type ?? 'Reading') }} SECTION
                                             </span>
+                                            @if($secPartNumber)
+                                            <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                                PART {{ $secPartNumber }}
+                                            </span>
+                                            @endif
                                             <span class="text-xs text-slate-600 dark:text-slate-400 font-bold">
                                                 • {{ $secQCount }} {{ \Illuminate\Support\Str::plural('question', $secQCount) }}
                                                 @if($secFirstNum)
@@ -321,13 +441,50 @@
                                                 @endif
                                             </span>
                                         </div>
-                                        <p class="text-xs text-slate-500 dark:text-slate-400">
-                                            Section {{ $secIndex + 1 }} of {{ $test->sections->count() }}
-                                        </p>
+                                        <div class="flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+                                            <span>Section {{ $secIndex + 1 }} of {{ $test->sections->count() }}</span>
+                                            @if($secRollup['status'] === 'needs_attention')
+                                                <span class="text-amber-700 dark:text-amber-300 font-semibold">• {{ $secRollup['complete_questions'] }}/{{ $secRollup['total_questions'] }} Complete</span>
+                                                <span class="text-amber-700 dark:text-amber-300 font-bold">• {{ $secRollup['issue_count'] }} {{ \Illuminate\Support\Str::plural('Issue', $secRollup['issue_count']) }}</span>
+                                            @elseif($secRollup['status'] === 'ready')
+                                                <span class="text-emerald-700 dark:text-emerald-300 font-semibold">• {{ $secRollup['total_questions'] }}/{{ $secRollup['total_questions'] }} Complete</span>
+                                            @endif
+                                        </div>
                                     </div>
 
-                                    <!-- Collapse / Expand Toggle Button -->
-                                    <div class="flex items-center gap-2">
+                                    <!-- Section Validation Status Badge & Collapse Toggle -->
+                                    <div class="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                                        @if($secRollup['status'] === 'ready')
+                                            <div class="px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800 inline-flex items-center gap-1.5 shadow-sm" title="This section has passed all validation checks and is ready.">
+                                                <span>✓</span>
+                                                <span>READY</span>
+                                            </div>
+                                        @elseif($secRollup['status'] === 'needs_attention')
+                                            <button type="button"
+                                                    onclick="event.stopPropagation(); expandAndFocusFirstIssue('{{ $sec->id }}', '{{ $secRollup['first_issue_id'] }}')"
+                                                    class="px-2.5 py-1 rounded-lg text-xs font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 dark:text-amber-300 dark:border-amber-800 inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                                                    title="Click to expand and view {{ $secRollup['issue_count'] }} unresolved {{ \Illuminate\Support\Str::plural('issue', $secRollup['issue_count']) }}">
+                                                <span>⚠</span>
+                                                <span>NEEDS ATTENTION</span>
+                                                @if($secRollup['issue_count'] > 0)
+                                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 ml-0.5">
+                                                        {{ $secRollup['issue_count'] }}
+                                                    </span>
+                                                @endif
+                                            </button>
+                                        @else
+                                            <div class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 border border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 inline-flex items-center gap-1.5" title="This section contains no questions.">
+                                                <span>○</span>
+                                                <span>NOT STARTED</span>
+                                                @if($secRollup['issue_count'] > 0)
+                                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 ml-0.5">
+                                                        {{ $secRollup['issue_count'] }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @endif
+
+                                        <!-- Collapse / Expand Toggle Button -->
                                         <button type="button"
                                                 onclick="event.stopPropagation(); toggleSectionCollapse('{{ $sec->id }}')"
                                                 id="btn-collapse-{{ $sec->id }}"
@@ -514,7 +671,7 @@
                                                         })->toArray(),
                                                     ];
                                                 @endphp
-                                                <div class="bg-white dark:bg-slate-900 border {{ $agIsComplete ? 'border-slate-200 dark:border-slate-800' : 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20' }} rounded-xl p-4 shadow-sm space-y-3">
+                                                <div id="audio-group-card-{{ $ag->id }}" class="bg-white dark:bg-slate-900 border {{ $agIsComplete ? 'border-slate-200 dark:border-slate-800' : 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20' }} rounded-xl p-4 shadow-sm space-y-3">
                                                     <div class="flex justify-between items-start flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                                                         <div>
                                                             <div class="flex items-center gap-2 flex-wrap">
@@ -611,7 +768,7 @@
                                                 $hasWarning = !empty($qItem['warnings']);
                                                 $isMaster = !empty($q->question_bank_id);
                                             @endphp
-                                            <div class="bg-slate-50 dark:bg-slate-950/70 border {{ $hasWarning ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-800' }} rounded-xl p-4 shadow-sm flex justify-between items-center flex-wrap gap-3">
+                                            <div id="question-card-{{ $q->id }}" class="bg-slate-50 dark:bg-slate-950/70 border {{ $hasWarning ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-800' }} rounded-xl p-4 shadow-sm flex justify-between items-center flex-wrap gap-3">
                                                     <div class="flex-1 min-w-[260px]">
                                                         <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                                                             <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">Question #{{ $qItem['number'] }}</span>
@@ -2708,6 +2865,38 @@
             if (icon) icon.textContent = '▸';
             if (label) label.textContent = 'Expand';
             if (btn) btn.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    function expandAndFocusFirstIssue(secId, firstIssueId = null) {
+        toggleSectionCollapse(secId, true);
+        setTimeout(() => {
+            if (firstIssueId) {
+                const targetEl = document.getElementById(firstIssueId);
+                if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetEl.classList.add('ring-2', 'ring-amber-500', 'transition-all');
+                    setTimeout(() => {
+                        targetEl.classList.remove('ring-2', 'ring-amber-500');
+                    }, 2500);
+                    return;
+                }
+            }
+            const secCard = document.getElementById(`section-card-${secId}`);
+            if (secCard) {
+                secCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
+    }
+
+    function focusFirstIssueSection() {
+        const problematicCard = document.querySelector('.section-card[data-status="needs_attention"], .section-card[data-status="not_started"]');
+        if (problematicCard) {
+            const secId = problematicCard.getAttribute('data-section-id');
+            const firstIssueId = problematicCard.getAttribute('data-first-issue-id');
+            if (secId) {
+                expandAndFocusFirstIssue(secId, firstIssueId);
+            }
         }
     }
     function closeCreateAuthoredQuestionModal(e) {
