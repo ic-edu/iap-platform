@@ -65,6 +65,24 @@
     </div>
     @endif
 
+    @php
+        $validationErrors = ($errors->any()) ? $errors->all() : (session('errors') instanceof \Illuminate\Support\ViewErrorBag ? session('errors')->all() : (is_array(session('errors')) ? session('errors') : []));
+    @endphp
+
+    @if(!empty($validationErrors))
+    <div class="p-4 rounded-xl text-sm font-bold bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300 space-y-1.5 shadow-sm">
+        <div class="flex items-center gap-2 font-black text-rose-900 dark:text-rose-200">
+            <span>⚠️</span>
+            <span>Unable to save assessment item. Please correct the validation errors below:</span>
+        </div>
+        <ul class="list-disc list-inside text-xs font-semibold pl-2 space-y-0.5 text-rose-700 dark:text-rose-300">
+            @foreach($validationErrors as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     {{-- TASK 3: Validation Assistant Summary Box --}}
     @if(isset($validationResult))
     <div class="p-5 rounded-2xl mb-6 {{ $validationResult['is_valid'] ? 'bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100' : 'bg-rose-50 dark:bg-rose-950/25 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-100' }}">
@@ -3653,6 +3671,19 @@
     let currentPassagePartNum = 7;
     let currentPassageActiveDoc = 0;
 
+    function getAllowedDocumentCount() {
+        if (currentPassagePartNum === 6) return 1;
+        if (currentPassageSetType === 'double') return 2;
+        if (currentPassageSetType === 'triple') return 3;
+        return 1;
+    }
+
+    function getTargetQuestionCount() {
+        if (currentPassagePartNum === 6) return 4;
+        if (currentPassageSetType === 'double' || currentPassageSetType === 'triple') return 5;
+        return Math.max(2, Math.min(4, currentPassageChildQCount));
+    }
+
     function setPassageSetType(type) {
         currentPassageSetType = type;
         const typeInput = document.getElementById('pg-passage-type');
@@ -3677,7 +3708,6 @@
         const countBadge = document.getElementById('pg-count-badge');
         const helperText = document.getElementById('pg-helper-text');
         const tabsBar = document.getElementById('pg-doc-tabs-bar');
-        const tabBtn2 = document.getElementById('pg-doc-tab-btn-2');
         const questionsHeading = document.getElementById('pg-questions-heading');
         const addQBtn = document.getElementById('pg-add-question-btn');
 
@@ -3685,55 +3715,82 @@
             if (countBadge) countBadge.textContent = '2–4 Child Questions';
             if (helperText) helperText.textContent = 'Single passage followed by 2 to 4 reading comprehension questions.';
             if (tabsBar) tabsBar.classList.add('hidden');
-            switchPassageDocTab(0);
             if (questionsHeading) questionsHeading.textContent = 'Child Questions (2 to 4 Questions Allowed)';
             if (addQBtn) addQBtn.classList.remove('hidden');
 
             if (currentPassageChildQCount < 2) currentPassageChildQCount = 2;
             if (currentPassageChildQCount > 4) currentPassageChildQCount = 4;
-            updateChildQuestionsVisibility();
         } else if (type === 'double') {
             if (countBadge) countBadge.textContent = 'Exactly 5 Child Questions';
             if (helperText) helperText.textContent = 'Two related documents followed by exactly 5 reading comprehension questions.';
             if (tabsBar) tabsBar.classList.remove('hidden');
-            if (tabBtn2) tabBtn2.classList.add('hidden');
-            switchPassageDocTab(0);
             if (questionsHeading) questionsHeading.textContent = 'Child Questions (Exactly 5 Questions Required)';
             if (addQBtn) addQBtn.classList.add('hidden');
 
             currentPassageChildQCount = 5;
-            updateChildQuestionsVisibility();
         } else if (type === 'triple') {
             if (countBadge) countBadge.textContent = 'Exactly 5 Child Questions';
             if (helperText) helperText.textContent = 'Three related documents followed by exactly 5 reading comprehension questions.';
             if (tabsBar) tabsBar.classList.remove('hidden');
-            if (tabBtn2) tabBtn2.classList.remove('hidden');
-            switchPassageDocTab(0);
             if (questionsHeading) questionsHeading.textContent = 'Child Questions (Exactly 5 Questions Required)';
             if (addQBtn) addQBtn.classList.add('hidden');
 
             currentPassageChildQCount = 5;
-            updateChildQuestionsVisibility();
         }
+
+        if (currentPassageActiveDoc >= getAllowedDocumentCount()) {
+            currentPassageActiveDoc = 0;
+        }
+        switchPassageDocTab(currentPassageActiveDoc);
+        updateChildQuestionsVisibility();
+        syncPassageFormFieldsDisabledState();
     }
 
     function switchPassageDocTab(docIdx) {
+        const allowedDocs = getAllowedDocumentCount();
+        if (docIdx >= allowedDocs) docIdx = 0;
         currentPassageActiveDoc = docIdx;
+
+        const tabsBar = document.getElementById('pg-doc-tabs-bar');
+        if (tabsBar) {
+            if (allowedDocs > 1) {
+                tabsBar.classList.remove('hidden');
+            } else {
+                tabsBar.classList.add('hidden');
+            }
+        }
+
         for (let d = 0; d < 3; d++) {
             const panel = document.getElementById(`pg-doc-panel-${d}`);
             const tabBtn = document.getElementById(`pg-doc-tab-btn-${d}`);
-            if (d === docIdx) {
-                if (panel) panel.classList.remove('hidden');
+
+            if (d < allowedDocs) {
                 if (tabBtn) {
-                    tabBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-black border bg-indigo-600 text-white border-indigo-600 shadow-sm transition-all';
+                    tabBtn.classList.remove('hidden');
+                    if (d === docIdx) {
+                        tabBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-black border bg-indigo-600 text-white border-indigo-600 shadow-sm transition-all';
+                    } else {
+                        tabBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 transition-all';
+                    }
+                }
+                if (panel) {
+                    if (d === docIdx) {
+                        panel.classList.remove('hidden');
+                    } else {
+                        panel.classList.add('hidden');
+                    }
                 }
             } else {
-                if (panel) panel.classList.add('hidden');
                 if (tabBtn) {
-                    tabBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 transition-all';
+                    tabBtn.classList.add('hidden');
+                }
+                if (panel) {
+                    panel.classList.add('hidden');
                 }
             }
         }
+
+        syncPassageFormFieldsDisabledState();
     }
 
     function setPassageDocContentMode(docIdx, mode) {
@@ -3785,6 +3842,7 @@
         if (currentPassageSetType === 'single' && currentPassageChildQCount < 4) {
             currentPassageChildQCount++;
             updateChildQuestionsVisibility();
+            syncPassageFormFieldsDisabledState();
         }
     }
 
@@ -3831,21 +3889,61 @@
 
             currentPassageChildQCount--;
             updateChildQuestionsVisibility();
+            syncPassageFormFieldsDisabledState();
+        }
+    }
+
+    function syncPassageFormFieldsDisabledState() {
+        const allowedDocs = getAllowedDocumentCount();
+        const targetQCount = getTargetQuestionCount();
+
+        // Disable / Enable Document inputs
+        for (let d = 0; d < 3; d++) {
+            const panel = document.getElementById(`pg-doc-panel-${d}`);
+            const isDocActive = d < allowedDocs;
+            if (panel) {
+                const inputs = panel.querySelectorAll('input, textarea, select');
+                inputs.forEach(el => {
+                    el.disabled = !isDocActive;
+                });
+            }
+        }
+
+        // Disable / Enable Question inputs
+        for (let i = 0; i < 5; i++) {
+            const card = document.getElementById(`pg-q-card-${i}`);
+            const isQActive = i < targetQCount;
+            if (card) {
+                const inputs = card.querySelectorAll('input, textarea, select');
+                inputs.forEach(el => {
+                    el.disabled = !isQActive;
+                });
+            }
         }
     }
 
     function updateChildQuestionsVisibility() {
         const isPart6 = currentPassagePartNum === 6;
-        const targetCount = isPart6 ? 4 : currentPassageChildQCount;
+        const targetCount = getTargetQuestionCount();
 
         for (let i = 0; i < 5; i++) {
             const card = document.getElementById(`pg-q-card-${i}`);
+            const label = document.getElementById(`pg-q${i}-label`);
             const removeBtn = document.getElementById(`pg-q${i}-remove-btn`);
             const promptInput = document.getElementById(`pg-q${i}-prompt`);
             const choiceInputs = Array.from(document.querySelectorAll(`input[id^="pg-q${i}-choice-"]`));
 
             if (i < targetCount) {
                 if (card) card.classList.remove('hidden');
+                if (label) {
+                    if (isPart6) {
+                        label.textContent = `Question ${i + 1} of 4`;
+                    } else if (currentPassageSetType === 'single') {
+                        label.textContent = `Question ${i + 1} of ${targetCount}`;
+                    } else {
+                        label.textContent = `Question ${i + 1} of 5`;
+                    }
+                }
                 if (removeBtn) {
                     if (!isPart6 && currentPassageSetType === 'single' && targetCount > 2 && i >= 2) {
                         removeBtn.classList.remove('hidden');
@@ -3881,6 +3979,8 @@
                 addQBtn.classList.add('hidden');
             }
         }
+
+        syncPassageFormFieldsDisabledState();
     }
 
     function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '') {
@@ -5091,6 +5191,81 @@
                     card.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'nearest' });
                 }, 100);
             }
+        }
+
+        // Reopen Passage Group Modal on Validation Errors and Restore Old Input
+        @if(old('test_section_id') && (old('part_number') == 6 || old('part_number') == 7))
+        (function() {
+            const oldSecId = @json(old('test_section_id'));
+            const oldPartNum = parseInt(@json(old('part_number', 7))) || 7;
+            const oldSetType = @json(old('passage_type', 'single'));
+            const oldTitle = @json(old('title', ''));
+            const oldPassages = @json(old('passages', []));
+            const oldQuestions = @json(old('questions', []));
+
+            toggleSectionCollapse(oldSecId, true);
+            openCreatePassageGroupModal(oldSecId, oldPartNum);
+            setPassageSetType(oldSetType);
+
+            const titleInput = document.getElementById('pg-group-title');
+            if (titleInput && oldTitle) titleInput.value = oldTitle;
+
+            if (Array.isArray(oldPassages)) {
+                oldPassages.forEach((p, d) => {
+                    if (d >= 3 || !p) return;
+                    const titleEl = document.getElementById(`pg-doc-${d}-title`);
+                    const contentEl = document.getElementById(`pg-doc-${d}-content`) || document.getElementById('pg-passage-content');
+                    const typeEl = document.getElementById(`pg-doc-${d}-type`);
+                    const mediaIdEl = document.getElementById(`pg-doc-${d}-media-asset-id`);
+                    const imgUrlEl = document.getElementById(`pg-doc-${d}-image-url`);
+
+                    if (titleEl && p.title !== undefined) titleEl.value = p.title;
+                    if (contentEl && p.content !== undefined) contentEl.value = p.content;
+                    if (typeEl && p.document_type !== undefined) typeEl.value = p.document_type;
+                    if (mediaIdEl && p.media_asset_id !== undefined) mediaIdEl.value = p.media_asset_id;
+                    if (imgUrlEl && p.image_url !== undefined) imgUrlEl.value = p.image_url;
+
+                    if (p.content_mode) {
+                        setPassageDocContentMode(d, p.content_mode);
+                    } else if (p.image_url || p.media_asset_id) {
+                        setPassageDocContentMode(d, p.content ? 'text_image' : 'image');
+                    }
+                });
+            }
+
+            if (Array.isArray(oldQuestions)) {
+                if (oldPartNum === 7 && oldSetType === 'single') {
+                    currentPassageChildQCount = Math.max(2, Math.min(4, oldQuestions.length));
+                }
+                oldQuestions.forEach((q, i) => {
+                    if (i >= 5 || !q) return;
+                    const promptEl = document.getElementById(`pg-q${i}-prompt`);
+                    const explEl = document.getElementById(`pg-q${i}-explanation`);
+                    if (promptEl && q.prompt !== undefined) promptEl.value = q.prompt;
+                    if (explEl && q.explanation !== undefined) explEl.value = q.explanation;
+
+                    if (Array.isArray(q.choices)) {
+                        q.choices.forEach((choiceText, c) => {
+                            const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
+                            if (choiceEl) choiceEl.value = choiceText || '';
+                        });
+                    }
+
+                    if (q.correct_choice !== undefined) {
+                        const radio = document.getElementById(`pg-q${i}-correct-${q.correct_choice}`);
+                        if (radio) radio.checked = true;
+                    }
+                });
+                updateChildQuestionsVisibility();
+            }
+        })();
+        @endif
+
+        const pgForm = document.getElementById('create-passage-group-form');
+        if (pgForm) {
+            pgForm.addEventListener('submit', function() {
+                syncPassageFormFieldsDisabledState();
+            });
         }
     });
 </script>
