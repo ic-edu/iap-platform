@@ -483,7 +483,9 @@ class TestBuilderService
                     'order_in_group'   => $pIdx,
                     'document_type'    => $pData['document_type'] ?? 'article',
                     'title'            => $pData['title'] ?? ("Document {$pIdx}"),
-                    'content'          => $pData['content'],
+                    'content'          => $pData['content'] ?? '',
+                    'image_url'        => $pData['image_url'] ?? null,
+                    'media_asset_id'   => $pData['media_asset_id'] ?? null,
                 ]);
                 $pIdx++;
             }
@@ -569,6 +571,7 @@ class TestBuilderService
             $passagesData = $data['passages'] ?? [];
             $existingPassages = $passageGroup->passages()->orderBy('order_in_group', 'asc')->get()->keyBy('id');
             $pIdx = 1;
+            $keptPassageIds = [];
             foreach ($passagesData as $pData) {
                 $pId = $pData['id'] ?? null;
                 $matchedPassage = $pId ? $existingPassages->get($pId) : $existingPassages->values()->get($pIdx - 1);
@@ -578,26 +581,40 @@ class TestBuilderService
                         'order_in_group' => $pIdx,
                         'document_type'  => $pData['document_type'] ?? 'article',
                         'title'          => $pData['title'] ?? ("Document {$pIdx}"),
-                        'content'        => $pData['content'],
+                        'content'        => $pData['content'] ?? '',
+                        'image_url'      => $pData['image_url'] ?? null,
+                        'media_asset_id' => $pData['media_asset_id'] ?? null,
                     ]);
+                    $keptPassageIds[] = $matchedPassage->id;
                 } else {
-                    Passage::create([
+                    $newPassage = Passage::create([
                         'passage_group_id' => $passageGroup->id,
                         'question_bank_id' => null,
                         'test_id'          => $test?->id,
                         'order_in_group'   => $pIdx,
                         'document_type'    => $pData['document_type'] ?? 'article',
                         'title'            => $pData['title'] ?? ("Document {$pIdx}"),
-                        'content'          => $pData['content'],
+                        'content'          => $pData['content'] ?? '',
+                        'image_url'        => $pData['image_url'] ?? null,
+                        'media_asset_id'   => $pData['media_asset_id'] ?? null,
                     ]);
+                    $keptPassageIds[] = $newPassage->id;
                 }
                 $pIdx++;
+            }
+
+            // Clean up removed passages
+            foreach ($existingPassages as $exId => $exPass) {
+                if (!in_array($exId, $keptPassageIds, true)) {
+                    $exPass->delete();
+                }
             }
 
             // Update Questions
             $questionsData = $data['questions'] ?? [];
             $existingQuestions = $passageGroup->questions()->orderBy('id', 'asc')->get()->keyBy('id');
             $qIdx = 0;
+            $keptQuestionIds = [];
 
             foreach ($questionsData as $qData) {
                 $qId = $qData['id'] ?? null;
@@ -658,6 +675,7 @@ class TestBuilderService
                             ]);
                         }
                     }
+                    $keptQuestionIds[] = $matchedQuestion->id;
                 } else {
                     $newQuestion = Question::create([
                         'question_bank_id'       => null,
@@ -700,8 +718,18 @@ class TestBuilderService
                             'points'          => 1,
                         ]);
                     }
+                    $keptQuestionIds[] = $newQuestion->id;
                 }
                 $qIdx++;
+            }
+
+            // Clean up removed questions
+            foreach ($existingQuestions as $exId => $exQ) {
+                if (!in_array($exId, $keptQuestionIds, true)) {
+                    $exQ->testQuestions()->delete();
+                    $exQ->choices()->delete();
+                    $exQ->delete();
+                }
             }
 
             return $passageGroup->fresh(['passages', 'questions.choices']);

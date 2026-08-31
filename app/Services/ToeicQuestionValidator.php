@@ -616,13 +616,44 @@ class ToeicQuestionValidator
         }
 
         // Validate each passage content and ordering
-        $validDocTypes = ['email', 'memo', 'notice', 'advertisement', 'article', 'letter', 'chat', 'schedule', 'other'];
+        $validDocTypes = ['email', 'memo', 'notice', 'advertisement', 'article', 'letter', 'chat', 'schedule', 'form', 'invoice', 'webpage', 'message', 'other'];
         $pIdx = 1;
         foreach ($pList as $pItem) {
             $pData = is_array($pItem) ? $pItem : $pItem->toArray();
             $content = $pData['content'] ?? ($pData['passage_text'] ?? '');
-            if (empty(trim((string) $content))) {
-                $errors["passage_{$pIdx}_content"] = "Passage #{$pIdx} content cannot be empty.";
+            $hasText = !empty(trim((string) $content));
+            $hasImage = !empty($pData['image_url']) || !empty($pData['media_asset_id']);
+            $contentMode = $pData['content_mode'] ?? null;
+
+            if ($partNumber === 6) {
+                // Part 6 requires text
+                if (!$hasText) {
+                    $errors["passage_{$pIdx}_content"] = "Passage #{$pIdx} text content cannot be empty.";
+                }
+            } else {
+                // Part 7 supports Text, Image / Visual Document, or Text + Image
+                if ($contentMode === 'image') {
+                    if (!$hasImage) {
+                        $errors["passage_{$pIdx}_image"] = "Passage #{$pIdx} requires an attached visual document image.";
+                    }
+                } elseif ($contentMode === 'text') {
+                    if (!$hasText) {
+                        $errors["passage_{$pIdx}_content"] = "Passage #{$pIdx} text content cannot be empty.";
+                    }
+                } elseif ($contentMode === 'text_image') {
+                    if (!$hasText && !$hasImage) {
+                        $errors["passage_{$pIdx}_content"] = "Passage #{$pIdx} requires text content or an attached visual document.";
+                    } elseif (!$hasText) {
+                        $errors["passage_{$pIdx}_content"] = "Passage #{$pIdx} text content cannot be empty in Text + Image mode.";
+                    } elseif (!$hasImage) {
+                        $errors["passage_{$pIdx}_image"] = "Passage #{$pIdx} requires an attached visual document in Text + Image mode.";
+                    }
+                } else {
+                    // Default / fallback: must have at least one usable stimulus (text or image)
+                    if (!$hasText && !$hasImage) {
+                        $errors["passage_{$pIdx}_content"] = "Passage #{$pIdx} must contain text or an attached visual document.";
+                    }
+                }
             }
 
             $order = isset($pData['order_in_group']) ? (int) $pData['order_in_group'] : (isset($pData['order']) ? (int) $pData['order'] : $pIdx);
@@ -696,6 +727,7 @@ class ToeicQuestionValidator
 
         return [
             'is_valid'       => empty($errors),
+            'valid'          => empty($errors),
             'errors'         => $errors,
             'passage_type'   => $passageType,
             'part_number'    => $partNumber,

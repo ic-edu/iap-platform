@@ -534,12 +534,13 @@ class QuestionDifficultyDetectionService
             'missing_inputs' => [],
         ];
 
-        if (empty($passageText) && empty($data['passage_id']) && empty($data['passage_group_id'])) {
-            $factors['missing_inputs'][] = 'passage text';
+        $hasPassageStimulus = !empty($passageText) || !empty($data['passage_id']) || !empty($data['passage_group_id']) || !empty($data['image_url']) || !empty($data['media_asset_id']);
+        if (!$hasPassageStimulus) {
+            $factors['missing_inputs'][] = 'passage text / document';
         }
         if (count($choices) < 4) $factors['missing_inputs'][] = 'choices (4 required)';
 
-        if (empty($passageText) && empty($prompt) && empty($choices)) {
+        if (!$hasPassageStimulus && empty($prompt) && empty($choices)) {
             return [
                 'difficulty_level'   => 'medium',
                 'difficulty_score'   => 50,
@@ -548,7 +549,7 @@ class QuestionDifficultyDetectionService
             ];
         }
 
-        $status = (!empty($passageText) && !empty($prompt) && count($choices) === 4) ? 'final' : 'provisional';
+        $status = ($hasPassageStimulus && !empty($prompt) && count($choices) === 4) ? 'final' : 'provisional';
         $score = 50;
         $reasons = [];
 
