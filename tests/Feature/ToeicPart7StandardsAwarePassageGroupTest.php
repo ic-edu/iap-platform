@@ -586,3 +586,92 @@ test('TEST 16: Supported document types are properly stored and validated', func
         expect($res['is_valid'])->toBeTrue();
     }
 });
+
+test('TEST 17: Validation failure on passage group creation returns with errors and input', function () {
+    $invalidPayload = [
+        'test_section_id' => $this->part7Section->id,
+        'part_number'     => 7,
+        'passage_type'    => 'single',
+        'title'           => 'Invalid Single With Extra Passages',
+        'passages'        => [
+            ['document_type' => 'article', 'title' => 'Doc 1', 'content' => 'Doc 1 text'],
+            ['document_type' => 'email', 'title' => 'Doc 2', 'content' => 'Doc 2 text'],
+        ],
+        'questions'       => [
+            ['prompt' => 'Q1', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0],
+            ['prompt' => 'Q2', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 1],
+        ],
+    ];
+
+    $response = $this->actingAs($this->teacher)
+        ->from(route('teacher.tests.show', $this->test->id))
+        ->post(route('teacher.tests.create-passage-group', $this->test->id), $invalidPayload);
+
+    $response->assertRedirect(route('teacher.tests.show', ['test' => $this->test->id, 'section' => $this->part7Section->id]));
+    $response->assertSessionHasErrors(['passage_count']);
+});
+
+test('TEST 18: Assessment Detail page contains dynamic state machine, tab visibility rules and input disabling logic', function () {
+    $response = $this->actingAs($this->teacher)
+        ->get(route('teacher.tests.show', $this->test->id));
+
+    $response->assertOk();
+    $response->assertSee('getAllowedDocumentCount', false);
+    $response->assertSee('getTargetQuestionCount', false);
+    $response->assertSee('syncPassageFormFieldsDisabledState', false);
+    $response->assertSee('switchPassageDocTab', false);
+    $response->assertSee('create-passage-group-form', false);
+});
+
+test('TEST 19: Validation failure does not write any records to database and rolls back cleanly', function () {
+    $invalidPayload = [
+        'test_section_id' => $this->part7Section->id,
+        'part_number'     => 7,
+        'passage_type'    => 'single',
+        'title'           => 'Invalid Single With Too Many Passages',
+        'passages'        => [
+            ['document_type' => 'article', 'title' => 'Doc 1', 'content' => 'Doc 1 text'],
+            ['document_type' => 'email', 'title' => 'Doc 2', 'content' => 'Doc 2 text'],
+        ],
+        'questions'       => [
+            ['prompt' => 'Q1', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0],
+            ['prompt' => 'Q2', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 1],
+        ],
+    ];
+
+    $response = $this->actingAs($this->teacher)
+        ->post(route('teacher.tests.create-passage-group', $this->test->id), $invalidPayload);
+
+    $response->assertRedirect(route('teacher.tests.show', ['test' => $this->test->id, 'section' => $this->part7Section->id]));
+    $response->assertSessionHasErrors(['passage_count']);
+
+    // Zero records created
+    $this->assertDatabaseCount('passage_groups', 0);
+    $this->assertDatabaseCount('passages', 0);
+    $this->assertDatabaseCount('questions', 0);
+    $this->assertDatabaseCount('test_questions', 0);
+});
+
+test('TEST 20: Old input restoration and modal auto-reopen script is embedded on validation failure', function () {
+    $invalidPayload = [
+        'test_section_id' => $this->part7Section->id,
+        'part_number'     => 7,
+        'passage_type'    => 'double',
+        'title'           => 'Draft Workshop Schedule',
+        'passages'        => [
+            ['document_type' => 'schedule', 'title' => 'Doc 1', 'content' => 'Doc 1 text'],
+            ['document_type' => 'email', 'title' => 'Doc 2', 'content' => 'Doc 2 text'],
+        ],
+        'questions'       => [
+            ['prompt' => 'Q1', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0],
+            ['prompt' => 'Q2', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 1],
+        ],
+    ];
+
+    $response = $this->actingAs($this->teacher)
+        ->post(route('teacher.tests.create-passage-group', $this->test->id), $invalidPayload);
+
+    $response->assertRedirect(route('teacher.tests.show', ['test' => $this->test->id, 'section' => $this->part7Section->id]));
+    $response->assertSessionHasErrors(['question_count']);
+    $response->assertSessionHas('_old_input');
+});

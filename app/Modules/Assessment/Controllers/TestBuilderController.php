@@ -830,7 +830,14 @@ class TestBuilderController extends Controller
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
 
-        $this->builderService->createPassageGroup($section, $validated);
+        try {
+            $this->builderService->createPassageGroup($section, $validated);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('teacher.tests.show', array_filter([
+                'test'    => $test->id,
+                'section' => $section->id,
+            ]))->withErrors($e->validator ?: $e->errors())->withInput()->with('expanded_section_id', $section->id);
+        }
 
         return redirect()->route('teacher.tests.show', $test->id)
             ->with('status', "Part {$validated['part_number']} " . ucfirst($validated['passage_type']) . " Passage Group successfully created and attached to '{$section->title}'.")
@@ -881,7 +888,14 @@ class TestBuilderController extends Controller
             $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->first();
         }
 
-        $updatedGroup = $this->builderService->updatePassageGroup($passageGroup, $validated, $section);
+        try {
+            $updatedGroup = $this->builderService->updatePassageGroup($passageGroup, $validated, $section);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('teacher.tests.show', array_filter([
+                'test'    => $test->id,
+                'section' => $section?->id,
+            ]))->withErrors($e->validator ?: $e->errors())->withInput();
+        }
 
         $partNum = $updatedGroup->part_number;
         $groupTypeName = ((int) $partNum === 6) ? 'Text Completion' : 'Reading Passage';
