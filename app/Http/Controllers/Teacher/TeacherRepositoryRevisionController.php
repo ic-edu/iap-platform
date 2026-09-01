@@ -9,6 +9,7 @@ use App\Models\RepositoryActivityLog;
 use App\Models\RepositoryRevisionItem;
 use App\Models\RepositoryRevisionRequest;
 use App\Models\User;
+use App\Notifications\EnterpriseSystemNotification;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use App\Services\RepositoryQualityService;
@@ -17,6 +18,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -321,24 +323,13 @@ class TeacherRepositoryRevisionController extends Controller
 
             // Dispatch Repository Manager Notification for resubmission
             if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
-                $repoManagers = \App\Models\User::role(['repository-manager', 'super-admin'])->get();
-                foreach ($repoManagers as $rm) {
-                    \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                        'id'              => (string) \Illuminate\Support\Str::uuid(),
-                        'type'            => 'repository_resubmitted_for_approval',
-                        'notifiable_type' => 'App\Models\User',
-                        'notifiable_id'   => $rm->id,
-                        'data'            => json_encode([
-                            'title'        => 'Repository Resubmitted for Governance Approval',
-                            'message'      => "Repository '{$bank->title}' has been revised and resubmitted by " . (Auth::user()?->name ?? 'Teacher'),
-                            'repository'   => $bank->title,
-                            'submitted_by' => Auth::user()?->name ?? 'Teacher',
-                            'link'         => route('admin.repository-manager.question-bank-validate', $bank->id),
-                        ]),
-                        'created_at'      => now(),
-                        'updated_at'      => now(),
-                    ]);
-                }
+                $this->notifyRepositoryManagersOfRevision(
+                    $bank,
+                    Auth::user(),
+                    'Teacher Revision Resubmitted',
+                    (Auth::user()?->name ?? 'Teacher') . " resubmitted changes for repository '{$bank->title}'.",
+                    'REPOSITORY_RESUBMITTED'
+                );
             }
         }
 
@@ -378,22 +369,6 @@ class TeacherRepositoryRevisionController extends Controller
                 'action'        => 'irqa_passed',
                 'approval_note' => 'Automatic IRQA re-scan passed with zero remaining quality findings.',
             ]);
-
-            if (Schema::hasTable('notifications')) {
-                DB::table('notifications')->insert([
-                    'id'              => (string) \Illuminate\Support\Str::uuid(),
-                    'type'            => 'repository_resubmitted_irqa_passed',
-                    'notifiable_type' => 'App\Models\User',
-                    'notifiable_id'   => $revisionRequest->requested_by_id,
-                    'data'            => json_encode([
-                        'title'   => 'Repository IRQA Verification Passed',
-                        'message' => "Repository has passed automatic IRQA verification. Ready for governance review.",
-                        'link'    => route('admin.repository-manager.question-bank-validate', $bank->id),
-                    ]),
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
-                ]);
-            }
         } else {
             RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
@@ -403,22 +378,6 @@ class TeacherRepositoryRevisionController extends Controller
                 'action'        => 'irqa_failed',
                 'approval_note' => 'Automatic IRQA re-scan detected unresolved findings. Governance review required by Repository Manager.',
             ]);
-
-            if (Schema::hasTable('notifications')) {
-                DB::table('notifications')->insert([
-                    'id'              => (string) \Illuminate\Support\Str::uuid(),
-                    'type'            => 'repository_resubmitted_irqa_failed',
-                    'notifiable_type' => 'App\Models\User',
-                    'notifiable_id'   => $revisionRequest->requested_by_id,
-                    'data'            => json_encode([
-                        'title'   => 'Governance Review Required',
-                        'message' => "Automatic IRQA detected remaining findings. Governance review required.",
-                        'link'    => route('admin.repository-manager.question-bank-validate', $bank->id),
-                    ]),
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
-                ]);
-            }
         }
 
         if (Schema::hasTable('notifications')) {
@@ -577,7 +536,48 @@ class TeacherRepositoryRevisionController extends Controller
             'approval_note' => $validated['notes'],
         ]);
 
+        // Dispatch in-app notification to Repository Managers
+        $this->notifyRepositoryManagersOfRevision(
+            $bank,
+            $user,
+            'New Teacher Revision Request',
+            "{$user->name} requested a revision on repository '{$bank->title}'.",
+            'REPOSITORY_REVISION_REQUESTED'
+        );
+
         return redirect()->route('teacher.repository-revisions.show', $revisionRequest->id)
             ->with('success', 'Repository revision request created. You can now edit question draft.');
+    }
+
+    /**
+     * Dispatch in-app EnterpriseSystemNotification to Repository Managers on Question Bank revision events.
+     */
+    private function notifyRepositoryManagersOfRevision(
+        \App\Modules\QuestionBank\Models\QuestionBank $bank,
+        User $actor,
+        string $title,
+        string $message,
+        string $notifType
+    ): void {
+        $targetUrl = route('admin.repository-manager.question-bank-validate', $bank->id);
+        $repoManagers = User::role('repository-manager')->get();
+
+        foreach ($repoManagers as $manager) {
+            if (method_exists($manager, 'notify')) {
+                try {
+                    $manager->notify(new EnterpriseSystemNotification(
+                        title: $title,
+                        message: $message,
+                        type: $notifType,
+                        priority: 'HIGH',
+                        entityType: 'QuestionBank',
+                        entityId: (string) $bank->id,
+                        targetUrl: $targetUrl
+                    ));
+                } catch (\Throwable $e) {
+                    Log::warning("Failed to dispatch repository revision notification to RM #{$manager->id} for QuestionBank #{$bank->id}: " . $e->getMessage());
+                }
+            }
+        }
     }
 }
