@@ -322,7 +322,10 @@ class RepositoryQualityService
             ->get();
 
         foreach ($activeRevisionRequests as $revReq) {
-            $openItems = $revReq->items()->where('status', 'OPEN')->get();
+            $openItems = $revReq->items()
+                ->whereIn('status', ['OPEN', 'FIXED'])
+                ->where('finding_type', 'quality_warning')
+                ->get();
 
             foreach ($openItems as $item) {
                 $fbLower = strtolower(trim($item->feedback ?? ''));
