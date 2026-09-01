@@ -65,6 +65,8 @@ class NotificationController extends Controller
                 } elseif ($user->hasRole(['repository-manager', 'super-admin'])) {
                     if ($entityId && (str_contains(strtolower((string)$entityType), 'repository') || $entityType === 'QuestionBank')) {
                         $resolved = route('admin.repository-manager.question-bank-validate', $entityId);
+                    } elseif ($entityId && in_array(strtolower((string)$entityType), ['test', 'assessment'], true)) {
+                        $resolved = route('admin.repository-manager.assessment-review', $entityId);
                     } else {
                         $resolved = route('admin.repository-manager.dashboard');
                     }

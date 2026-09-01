@@ -262,7 +262,13 @@ class TestBuilderController extends Controller
                 ->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
         }
 
+        $previousStatus = $test->status;
+        $isFirstSubmission = ($previousStatus === 'draft');
+
         $test->update(['status' => 'pending_approval']);
+
+        $user = request()->user() ?? $test->creator;
+        $this->notifyRepositoryManagersOfSubmission($test, $user, $isFirstSubmission);
 
         return redirect()->route('admin.tests.index')
             ->with('status', "Assessment '{$test->title}' submitted for Super Admin approval.");
@@ -1416,6 +1422,9 @@ class TestBuilderController extends Controller
                 ->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
         }
 
+        $previousStatus = $test->status;
+        $isFirstSubmission = ($previousStatus === 'draft');
+
         $test->update([
             'status'       => 'pending_approval',
             'is_published' => false,
@@ -1429,8 +1438,49 @@ class TestBuilderController extends Controller
             'approval_note' => 'Assessment resubmitted for review.',
         ]);
 
+        $this->notifyRepositoryManagersOfSubmission($test, $user, $isFirstSubmission);
+
         return redirect()->route('teacher.tests.show', $test->id)
             ->with('status', "Assessment resubmitted successfully.");
+    }
+
+    /**
+     * Dispatch in-app EnterpriseSystemNotification to Repository Managers on assessment submission/resubmission.
+     */
+    private function notifyRepositoryManagersOfSubmission(Test $test, ?\App\Models\User $actor, bool $isFirstSubmission = true): void
+    {
+        $actorName = $actor?->name ?? 'Teacher';
+        $title = $isFirstSubmission
+            ? 'Assessment Submitted for Review'
+            : 'Assessment Resubmitted for Review';
+        $message = $isFirstSubmission
+            ? "{$actorName} submitted '{$test->title}' for Repository review."
+            : "{$actorName} resubmitted '{$test->title}' after revision.";
+        $notifType = $isFirstSubmission
+            ? 'ASSESSMENT_SUBMITTED'
+            : 'ASSESSMENT_RESUBMITTED';
+
+        $targetUrl = route('admin.repository-manager.assessment-review', $test->id);
+
+        $repoManagers = \App\Models\User::role('repository-manager')->get();
+
+        foreach ($repoManagers as $manager) {
+            if (method_exists($manager, 'notify')) {
+                try {
+                    $manager->notify(new \App\Notifications\EnterpriseSystemNotification(
+                        title: $title,
+                        message: $message,
+                        type: $notifType,
+                        priority: 'HIGH',
+                        entityType: 'Test',
+                        entityId: (string) $test->id,
+                        targetUrl: $targetUrl
+                    ));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Failed to dispatch assessment submission notification to RM #{$manager->id} for Test #{$test->id}: " . $e->getMessage());
+                }
+            }
+        }
     }
 
     /**
