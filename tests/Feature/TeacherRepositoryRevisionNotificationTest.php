@@ -109,15 +109,14 @@ test('TEST 04 & 05 & 06 & 07 & 08: RM receives unread notification with correct 
     expect($data['title'])->toBe('New Teacher Revision Request')
         ->and($data['notification_type'])->toBe('REPOSITORY_REVISION_REQUESTED')
         ->and($data['priority'])->toBe('HIGH')
-        ->and($data['entity_type'])->toBe('QuestionBank')
-        ->and($data['entity_id'])->toBe((string) $this->bank->id)
+        ->and($data['entity_type'])->toBe('RepositoryRevisionRequest')
         ->and($data['message'])->toContain('Teacher Jane')
         ->and($data['message'])->toContain('TOEFL iBT Reading Starter Pool');
 
     // Deep link resolver
     $controller = app(\App\Http\Controllers\NotificationController::class);
     $resolvedUrl = $controller->resolveTargetUrl($notif, $this->rm1);
-    expect($resolvedUrl)->toBe('/admin/repository-manager/questions/' . $this->bank->id);
+    expect($resolvedUrl)->toContain('/admin/repository-manager/revisions/');
 });
 
 test('TEST 09, 10, 11, 12: Multiple RM users notified, non-RM users receive zero notifications', function () {

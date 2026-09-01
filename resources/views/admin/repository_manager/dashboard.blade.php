@@ -142,7 +142,7 @@
         <div class="gov-card space-y-4">
             <div class="flex justify-between items-center">
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">📥 Teacher Revision Queue</h3>
-                <a href="{{ route('admin.repository-manager.questions-approval') }}" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View All Queue →</a>
+                <a href="{{ route('admin.repository-manager.revisions.index') }}" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View All Queue →</a>
             </div>
 
             @if($teacherSubmissionsQueue->count() > 0)
@@ -187,7 +187,7 @@
                                 @endif
                             </td>
                             <td class="px-3 py-3 text-right">
-                                <a href="{{ route('admin.repository-manager.question-bank-validate', $item->question_bank_id) }}" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[11px] font-bold shadow-sm transition-colors inline-block">
+                                <a href="{{ route('admin.repository-manager.revisions.review', $item->id) }}" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[11px] font-bold shadow-sm transition-colors inline-block">
                                     Review Workspace →
                                 </a>
                             </td>

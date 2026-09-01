@@ -355,6 +355,13 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
         Route::post('/questions/{questionBank}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectQuestionBank'])->name('admin.repository-manager.question-bank-reject');
         Route::get('/duplicates', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'duplicates'])->name('admin.repository-manager.duplicates');
 
+        // Dedicated Repository Revision Governance Routes
+        Route::get('/revisions', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'revisionsQueue'])->name('admin.repository-manager.revisions.index');
+        Route::get('/revisions/{revisionRequest}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'reviewRevision'])->name('admin.repository-manager.revisions.review');
+        Route::post('/revisions/{revisionRequest}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveRevision'])->name('admin.repository-manager.revisions.approve');
+        Route::post('/revisions/{revisionRequest}/request-changes', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionChanges'])->name('admin.repository-manager.revisions.request-changes');
+        Route::post('/revisions/{revisionRequest}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectRevision'])->name('admin.repository-manager.revisions.reject');
+
         // SPRINT 10.2 & Sprint 11.5 Continuous Improvement: Assessment Approval & Review Routes
         Route::get('/assessments', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentApprovalCenter'])->name('admin.repository-manager.assessment-approval');
         Route::get('/assessments/{test}/review', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentReview'])

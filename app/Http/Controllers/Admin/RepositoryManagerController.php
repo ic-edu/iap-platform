@@ -15,7 +15,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
-
+use App\Models\RepositoryRevisionRequest;
+use App\Models\RepositoryRevisionItem;
+use App\Notifications\EnterpriseSystemNotification;
+use App\Modules\QuestionBank\Models\Question;
+use App\Modules\QuestionBank\Models\QuestionChoice;
 use App\Services\AssessmentWorkflowService;
 
 class RepositoryManagerController extends Controller
@@ -1226,5 +1230,287 @@ class RepositoryManagerController extends Controller
         }
 
         return back()->with('status', 'Assessment submitted successfully for Repository Manager review.');
+    }
+
+    /**
+     * Dedicated Repository Revision Queue for Repository Managers (SPRINT R1).
+     */
+    public function revisionsQueue(Request $request): View
+    {
+        $statusFilter = $request->input('status', 'actionable');
+
+        $query = RepositoryRevisionRequest::with(['teacher', 'questionBank', 'items.question']);
+
+        if ($statusFilter === 'actionable') {
+            $query->whereIn('status', ['OPEN', 'RESUBMITTED']);
+        } elseif ($statusFilter === 'open') {
+            $query->where('status', 'OPEN');
+        } elseif ($statusFilter === 'resubmitted') {
+            $query->where('status', 'RESUBMITTED');
+        } elseif ($statusFilter === 'needs_revision') {
+            $query->where('status', 'IN_PROGRESS');
+        } elseif ($statusFilter === 'approved') {
+            $query->where('status', 'COMPLETED');
+        } elseif ($statusFilter === 'rejected') {
+            $query->where('status', 'REJECTED');
+        }
+
+        $revisions = $query->latest()->paginate(15)->withQueryString();
+
+        $metrics = [
+            'open_count'        => RepositoryRevisionRequest::where('status', 'OPEN')->count(),
+            'resubmitted_count' => RepositoryRevisionRequest::where('status', 'RESUBMITTED')->count(),
+            'needs_rev_count'   => RepositoryRevisionRequest::where('status', 'IN_PROGRESS')->count(),
+            'approved_count'    => RepositoryRevisionRequest::where('status', 'COMPLETED')->count(),
+        ];
+
+        return view('admin.repository_manager.revisions_queue', compact('revisions', 'statusFilter', 'metrics'));
+    }
+
+    /**
+     * Dedicated Repository Revision Review Workspace (SPRINT R1).
+     */
+    public function reviewRevision(RepositoryRevisionRequest $revisionRequest): View
+    {
+        $revisionRequest->load([
+            'questionBank.questions.choices',
+            'questionBank.questions.mediaAsset',
+            'teacher',
+            'requestedBy',
+            'items.question.choices',
+            'items.question.mediaAsset',
+        ]);
+
+        $questionBank = $revisionRequest->questionBank;
+
+        $logs = RepositoryActivityLog::where('resource_type', 'QuestionBank')
+            ->where('resource_id', $questionBank?->id)
+            ->orWhere(function ($q) use ($revisionRequest) {
+                $q->where('resource_type', 'Question')
+                    ->whereIn('resource_id', $revisionRequest->items->pluck('question_id')->filter());
+            })
+            ->with(['actor', 'reviewer'])
+            ->latest()
+            ->take(15)
+            ->get();
+
+        return view('admin.repository_manager.revision_review', compact('revisionRequest', 'questionBank', 'logs'));
+    }
+
+    /**
+     * RM Approves and atomically applies staged revision changes (SPRINT R1).
+     */
+    public function approveRevision(Request $request, RepositoryRevisionRequest $revisionRequest): RedirectResponse
+    {
+        if (!in_array($revisionRequest->status, ['OPEN', 'RESUBMITTED'], true)) {
+            return redirect()->back()->with('error', 'Only active or resubmitted revision requests can be approved.');
+        }
+
+        $user = $request->user();
+        $notes = $request->input('notes', 'Repository revision approved and applied to master repository.');
+
+        DB::transaction(function () use ($revisionRequest, $user, $notes) {
+            $bank = $revisionRequest->questionBank;
+
+            foreach ($revisionRequest->items as $item) {
+                if (!empty($item->proposed_data) && $item->question_id) {
+                    $question = Question::find($item->question_id);
+                    if ($question) {
+                        $p = $item->proposed_data;
+
+                        // Apply proposed core fields to Master Question
+                        $question->prompt        = $p['prompt'] ?? $question->prompt;
+                        $question->question_type = $p['question_type'] ?? $question->question_type;
+                        $question->explanation   = $p['explanation'] ?? $question->explanation;
+                        $question->difficulty    = $p['difficulty'] ?? $question->difficulty;
+                        $question->points        = $p['points'] ?? $question->points;
+                        if (isset($p['part_number'])) {
+                            $question->part_number = $p['part_number'];
+                        }
+                        if (isset($p['section'])) {
+                            $question->section = $p['section'];
+                        }
+                        if (array_key_exists('image_url', $p)) {
+                            $question->image_url = $p['image_url'];
+                        }
+                        if (array_key_exists('audio_url', $p)) {
+                            $question->audio_url = $p['audio_url'];
+                        }
+                        if (array_key_exists('passage_id', $p)) {
+                            $question->passage_id = $p['passage_id'];
+                        }
+                        if (array_key_exists('passage_text', $p)) {
+                            $question->passage_text = $p['passage_text'];
+                        }
+                        if (array_key_exists('audio_group_id', $p)) {
+                            $question->audio_group_id = $p['audio_group_id'];
+                        }
+                        if (array_key_exists('passage_group_id', $p)) {
+                            $question->passage_group_id = $p['passage_group_id'];
+                        }
+                        if (array_key_exists('media_asset_id', $p)) {
+                            $question->media_asset_id = $p['media_asset_id'];
+                        }
+                        $question->save();
+
+                        // Apply proposed choices
+                        if (!empty($p['choices']) && is_array($p['choices'])) {
+                            $existingChoices = $question->choices->keyBy('id');
+                            $updatedIds = [];
+
+                            foreach ($p['choices'] as $key => $c) {
+                                $choiceId = is_numeric($key) && $existingChoices->has($key) ? $key : ($c['id'] ?? null);
+                                if ($choiceId && $existingChoice = $existingChoices->get($choiceId)) {
+                                    $existingChoice->label      = $c['label'] ?? 'A';
+                                    $existingChoice->content    = $c['content'] ?? '';
+                                    $existingChoice->is_correct = !empty($c['is_correct']);
+                                    $existingChoice->save();
+                                    $updatedIds[] = $existingChoice->id;
+                                } else {
+                                    $newChoice = QuestionChoice::create([
+                                        'question_id' => $question->id,
+                                        'label'       => $c['label'] ?? 'A',
+                                        'content'     => $c['content'] ?? '',
+                                        'is_correct'  => !empty($c['is_correct']),
+                                    ]);
+                                    $updatedIds[] = $newChoice->id;
+                                }
+                            }
+                            $question->choices()->whereNotIn('id', $updatedIds)->delete();
+                        }
+
+                        // Category update if present
+                        if (!empty($p['category_id']) && $bank) {
+                            $bank->acl_category_id = $p['category_id'];
+                            $bank->save();
+                        }
+                    }
+                }
+                $item->status = 'VERIFIED';
+                $item->save();
+            }
+
+            // Mark Revision Request as COMPLETED
+            $revisionRequest->status = 'COMPLETED';
+            $revisionRequest->resolved_at = now();
+            $revisionRequest->save();
+
+            // Activity Log
+            RepositoryActivityLog::create([
+                'resource_type' => 'QuestionBank',
+                'resource_id'   => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'action'        => 'rm_revision_approved',
+                'approval_note' => $notes,
+            ]);
+
+            // Notify Teacher
+            $teacher = $revisionRequest->teacher;
+            if ($teacher) {
+                $teacher->notify(new EnterpriseSystemNotification(
+                    'Repository Revision Approved',
+                    "Your revision for repository '{$bank?->title}' has been approved and published to the live repository.",
+                    'REPOSITORY_REVISION_APPROVED',
+                    'NORMAL',
+                    route('teacher.repository-revisions.show', $revisionRequest->id)
+                ));
+            }
+        });
+
+        return redirect()->route('admin.repository-manager.revisions.index')
+            ->with('status', 'Repository revision approved and changes successfully applied to the published master repository.');
+    }
+
+    /**
+     * RM Requests further changes from Teacher (SPRINT R1).
+     */
+    public function requestRevisionChanges(Request $request, RepositoryRevisionRequest $revisionRequest): RedirectResponse
+    {
+        $request->validate([
+            'notes' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $user = $request->user();
+        $notes = $request->input('notes');
+
+        DB::transaction(function () use ($revisionRequest, $user, $notes) {
+            $bank = $revisionRequest->questionBank;
+
+            $revisionRequest->status = 'IN_PROGRESS';
+            $revisionRequest->notes = $notes;
+            $revisionRequest->save();
+
+            $revisionRequest->items()->update(['status' => 'OPEN']);
+
+            RepositoryActivityLog::create([
+                'resource_type' => 'QuestionBank',
+                'resource_id'   => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'action'        => 'rm_revision_changes_requested',
+                'approval_note' => $notes,
+            ]);
+
+            $teacher = $revisionRequest->teacher;
+            if ($teacher) {
+                $teacher->notify(new EnterpriseSystemNotification(
+                    'Revision Changes Requested',
+                    "Repository Manager requested changes on repository '{$bank?->title}': {$notes}",
+                    'REPOSITORY_REVISION_CHANGES_REQUESTED',
+                    'HIGH',
+                    route('teacher.repository-revisions.show', $revisionRequest->id)
+                ));
+            }
+        });
+
+        return redirect()->route('admin.repository-manager.revisions.index')
+            ->with('status', 'Changes requested from teacher for this repository revision.');
+    }
+
+    /**
+     * RM Rejects Revision Request (SPRINT R1).
+     */
+    public function rejectRevision(Request $request, RepositoryRevisionRequest $revisionRequest): RedirectResponse
+    {
+        $request->validate([
+            'notes' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $user = $request->user();
+        $notes = $request->input('notes');
+
+        DB::transaction(function () use ($revisionRequest, $user, $notes) {
+            $bank = $revisionRequest->questionBank;
+
+            $revisionRequest->status = 'REJECTED';
+            $revisionRequest->resolved_at = now();
+            $revisionRequest->save();
+
+            $revisionRequest->items()->update(['status' => 'DISMISSED']);
+
+            RepositoryActivityLog::create([
+                'resource_type' => 'QuestionBank',
+                'resource_id'   => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
+                'actor_id'      => $user->id,
+                'reviewer_id'   => $user->id,
+                'action'        => 'rm_revision_rejected',
+                'approval_note' => $notes,
+            ]);
+
+            $teacher = $revisionRequest->teacher;
+            if ($teacher) {
+                $teacher->notify(new EnterpriseSystemNotification(
+                    'Repository Revision Rejected',
+                    "Your revision for repository '{$bank?->title}' was rejected: {$notes}",
+                    'REPOSITORY_REVISION_REJECTED',
+                    'NORMAL',
+                    route('teacher.repository-revisions.show', $revisionRequest->id)
+                ));
+            }
+        });
+
+        return redirect()->route('admin.repository-manager.revisions.index')
+            ->with('status', 'Repository revision rejected.');
     }
 }
