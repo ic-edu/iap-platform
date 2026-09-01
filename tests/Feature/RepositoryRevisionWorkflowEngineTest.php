@@ -355,17 +355,15 @@ class RepositoryRevisionWorkflowEngineTest extends TestCase
             ]);
 
         $response->assertRedirect(route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id]));
-        $this->assertDatabaseHas('questions', [
-            'id'            => $this->question->id,
-            'question_type' => 'essay',
-            'prompt'        => 'Discuss the economic impacts of global trade.',
-        ]);
 
-        // Verify choices were deleted for essay
-        $this->assertEquals(0, $this->question->fresh()->choices()->count());
+        // Verify proposed changes are staged without prematurely mutating published master Question
+        $freshItem = $item->fresh();
+        $this->assertNotNull($freshItem->proposed_data);
+        $this->assertEquals('essay', $freshItem->proposed_data['question_type']);
+        $this->assertEquals('Discuss the economic impacts of global trade.', $freshItem->proposed_data['prompt']);
 
-        // Verify item is marked CLOSED
-        $this->assertEquals('CLOSED', $item->fresh()->status);
+        // Verify item is marked FIXED
+        $this->assertEquals('FIXED', $freshItem->status);
     }
 
     /**

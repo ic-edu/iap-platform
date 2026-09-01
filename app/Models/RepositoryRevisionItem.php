@@ -23,6 +23,13 @@ class RepositoryRevisionItem extends Model
         'feedback',
         'suggested_fix',
         'status',
+        'baseline_data',
+        'proposed_data',
+    ];
+
+    protected $casts = [
+        'baseline_data' => 'array',
+        'proposed_data' => 'array',
     ];
 
     public function revisionRequest(): BelongsTo

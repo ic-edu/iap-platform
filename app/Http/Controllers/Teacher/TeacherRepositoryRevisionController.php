@@ -82,15 +82,14 @@ class TeacherRepositoryRevisionController extends Controller
         }
 
         $bank = $revisionRequest->questionBank;
-        $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
-            || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
+        $isLocked = in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED', 'APPROVED'], true);
 
-        if ($isBankLocked) {
+        if ($isLocked) {
             return redirect()->route('admin.question-banks.show', [
                 $revisionRequest->question_bank_id,
                 'from'                => 'revision_task',
                 'revision_request_id' => $revisionRequest->id,
-            ])->with('info', 'Repository is locked while awaiting governance approval.');
+            ])->with('info', 'Repository revision is locked while awaiting governance approval.');
         }
 
         $revisionRequest->load(['questionBank', 'requestedBy', 'items']);
@@ -105,6 +104,42 @@ class TeacherRepositoryRevisionController extends Controller
                 'from'                => 'revision_task',
                 'revision_request_id' => $revisionRequest->id,
             ])->with('info', 'This finding is at the repository level. Please update repository details in the Question Bank workspace.');
+        }
+
+        // Snapshot baseline_data if not yet present
+        if (empty($item->baseline_data)) {
+            $item->baseline_data = [
+                'prompt' => $question->prompt,
+                'explanation' => $question->explanation,
+                'difficulty' => $question->difficulty,
+                'points' => $question->points,
+                'question_type' => is_object($question->question_type) ? $question->question_type->value : (string) ($question->question_type ?? 'multiple_choice'),
+                'media_asset_id' => $question->media_asset_id,
+                'part_number' => $question->part_number,
+                'section' => $question->section,
+                'choices' => $question->choices->map(fn($c) => [
+                    'id' => $c->id,
+                    'label' => $c->label,
+                    'content' => $c->content,
+                    'is_correct' => (bool) $c->is_correct,
+                ])->toArray(),
+            ];
+            $item->save();
+        }
+
+        // If proposed_data exists, overlay it onto question object for view rendering
+        if (!empty($item->proposed_data)) {
+            $prop = $item->proposed_data;
+            $question->prompt = $prop['prompt'] ?? $question->prompt;
+            $question->explanation = $prop['explanation'] ?? $question->explanation;
+            $question->difficulty = $prop['difficulty'] ?? $question->difficulty;
+            $question->points = $prop['points'] ?? $question->points;
+            $question->question_type = $prop['question_type'] ?? $question->question_type;
+            $question->part_number = $prop['part_number'] ?? $question->part_number;
+            $question->section = $prop['section'] ?? $question->section;
+            if (isset($prop['media_asset_id'])) {
+                $question->media_asset_id = $prop['media_asset_id'];
+            }
         }
 
         // Categories & Media assets for dropdown selection
@@ -135,7 +170,7 @@ class TeacherRepositoryRevisionController extends Controller
     }
 
     /**
-     * SPRINT RRUXO-REVISION-EDITOR-ENHANCEMENT: Full Save Question Workflow with Live Validation.
+     * SPRINT RRUXO-REVISION-EDITOR-ENHANCEMENT: Full Save Question Workflow with Staged Revision.
      */
     public function updateQuestion(Request $request, RepositoryRevisionRequest $revisionRequest, RepositoryRevisionItem $item): RedirectResponse
     {
@@ -144,10 +179,9 @@ class TeacherRepositoryRevisionController extends Controller
         }
 
         $bank = $revisionRequest->questionBank;
-        $isBankLocked = in_array($bank?->status, ['pending_approval', 'submitted', 'approved', 'published', 'pending_archive_approval', 'pending_restore_approval'], true)
-            || in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED'], true);
+        $isLocked = in_array($revisionRequest->status, ['RESUBMITTED', 'CLOSED', 'APPROVED'], true);
 
-        if ($isBankLocked) {
+        if ($isLocked) {
             return redirect()->route('admin.question-banks.show', [
                 $revisionRequest->question_bank_id,
                 'from'                => 'revision_task',
@@ -161,55 +195,35 @@ class TeacherRepositoryRevisionController extends Controller
             $toeicData = $request->all();
             ToeicQuestionValidator::validate($toeicData, $question);
             $partNumber = (int) $request->input('part_number');
-            $question->part_number = $partNumber;
-            $question->section = ToeicQuestionValidator::deriveSection($partNumber);
-        } elseif (empty($question->section)) {
-            $question->section = 'reading';
+            $section = ToeicQuestionValidator::deriveSection($partNumber);
+        } else {
+            $partNumber = $question->part_number;
+            $section = $question->section ?? 'reading';
         }
 
-        // 1. Update Question core fields
-        $question->prompt        = $request->input('prompt', $question->prompt);
-        $question->question_type = $request->input('question_type', $question->question_type ?? 'multiple_choice');
-        $question->explanation   = $request->input('explanation', $question->explanation);
-        $question->difficulty    = $request->input('difficulty', $question->difficulty);
-        $question->points        = $request->input('points', $question->points ?? 1);
-
-        if ($request->has('image_url')) {
-            $question->image_url = $request->input('image_url') ?: null;
-        }
-        if ($request->has('audio_url')) {
-            $question->audio_url = $request->input('audio_url') ?: null;
-        }
-        if ($request->has('passage_id')) {
-            $question->passage_id = $request->input('passage_id') ?: null;
-        }
-        if ($request->has('passage_text')) {
-            $question->passage_text = $request->input('passage_text') ?: null;
-        }
-        if ($request->has('audio_group_id')) {
-            $question->audio_group_id = $request->input('audio_group_id') ?: null;
-        }
-        if ($request->has('passage_group_id')) {
-            $question->passage_group_id = $request->input('passage_group_id') ?: null;
+        // Ensure baseline_data snapshot is recorded
+        if (empty($item->baseline_data) && $question) {
+            $item->baseline_data = [
+                'prompt' => $question->prompt,
+                'explanation' => $question->explanation,
+                'difficulty' => $question->difficulty,
+                'points' => $question->points,
+                'question_type' => is_object($question->question_type) ? $question->question_type->value : (string) ($question->question_type ?? 'multiple_choice'),
+                'media_asset_id' => $question->media_asset_id,
+                'part_number' => $question->part_number,
+                'section' => $question->section,
+                'choices' => $question->choices->map(fn($c) => [
+                    'id' => $c->id,
+                    'label' => $c->label,
+                    'content' => $c->content,
+                    'is_correct' => (bool) $c->is_correct,
+                ])->toArray(),
+            ];
         }
 
-        // Update Media Attachment
-        if ($request->has('remove_media') && $request->input('remove_media') == '1') {
-            $question->media_asset_id = null;
-        } elseif ($request->filled('media_asset_id')) {
-            $question->media_asset_id = $request->input('media_asset_id');
-        }
-
-        $question->save();
-
-        // 2. Update Question Bank Category if selected
-        if ($request->filled('category_id') && $bank) {
-            $bank->acl_category_id = $request->input('category_id');
-            $bank->save();
-        }
-
-        // 3. Update / Create Answer Choices & Correct Answer Selector
-        $qTypeVal = is_object($question->question_type) ? $question->question_type->value : (string) $question->question_type;
+        // Prepare staged proposed_data
+        $proposedChoices = [];
+        $qTypeVal = $request->input('question_type', is_object($question->question_type) ? $question->question_type->value : (string) ($question->question_type ?? 'multiple_choice'));
         $nonChoiceTypes = ['essay', 'speaking', 'writing', 'short_answer'];
         $isChoiceType = !in_array($qTypeVal, $nonChoiceTypes, true);
 
@@ -217,43 +231,116 @@ class TeacherRepositoryRevisionController extends Controller
             if ($request->has('choices')) {
                 $correctChoiceId = $request->input('correct_choice_id');
                 foreach ($request->input('choices', []) as $cId => $cData) {
-                    if (is_numeric($cId) || strlen($cId) > 10) {
-                        $choice = QuestionChoice::find($cId);
-                        if ($choice) {
-                            $choice->content    = $cData['content'] ?? $choice->content;
-                            $choice->label      = $cData['label'] ?? $choice->label;
-                            $choice->is_correct = ((string) $correctChoiceId === (string) $cId) || (isset($cData['is_correct']) && $cData['is_correct'] == '1');
-                            $choice->save();
-                        } elseif (!empty($cData['content'])) {
-                            QuestionChoice::create([
-                                'question_id' => $question->id,
-                                'label'       => $cData['label'] ?? chr(65 + (int)$cId),
-                                'content'     => $cData['content'],
-                                'is_correct'  => ((string) $correctChoiceId === (string) $cId) || (isset($cData['is_correct']) && $cData['is_correct'] == '1'),
-                            ]);
-                        }
+                    if (!empty($cData['content'])) {
+                        $proposedChoices[] = [
+                            'id' => $cId,
+                            'label' => $cData['label'] ?? 'A',
+                            'content' => $cData['content'],
+                            'is_correct' => ((string) $correctChoiceId === (string) $cId) || (isset($cData['is_correct']) && $cData['is_correct'] == '1'),
+                        ];
                     }
                 }
             }
-
-            // Handle Adding New Answer Choice
             if ($request->filled('new_choice_content')) {
-                QuestionChoice::create([
-                    'question_id' => $question->id,
-                    'label'       => $request->input('new_choice_label', 'A'),
-                    'content'     => $request->input('new_choice_content'),
-                    'is_correct'  => $request->has('new_choice_is_correct'),
-                ]);
+                $proposedChoices[] = [
+                    'id' => 'new_' . uniqid(),
+                    'label' => $request->input('new_choice_label', 'A'),
+                    'content' => $request->input('new_choice_content'),
+                    'is_correct' => $request->has('new_choice_is_correct'),
+                ];
             }
-        } else {
-            // Essay / Non-choice question: delete any legacy choice records so they do not produce invalid choice warnings
-            $question->choices()->delete();
         }
 
-        // 4. Run IRQA Validation Check and Reconcile Repository Revision Items
-        $qualityService = app(RepositoryQualityService::class);
-        $qualityService->reconcileRevisionItems($bank);
-        $item->refresh();
+        $mediaAssetId = $question->media_asset_id;
+        if ($request->has('remove_media') && $request->input('remove_media') == '1') {
+            $mediaAssetId = null;
+        } elseif ($request->filled('media_asset_id')) {
+            $mediaAssetId = $request->input('media_asset_id');
+        }
+
+        $proposedData = [
+            'prompt'        => $request->input('prompt', $question->prompt),
+            'question_type' => $qTypeVal,
+            'explanation'   => $request->input('explanation', $question->explanation),
+            'difficulty'    => $request->input('difficulty', $question->difficulty),
+            'points'        => (int) $request->input('points', $question->points ?? 1),
+            'part_number'   => $partNumber,
+            'section'       => $section,
+            'image_url'     => $request->input('image_url') ?: null,
+            'audio_url'     => $request->input('audio_url') ?: null,
+            'passage_id'    => $request->input('passage_id') ?: null,
+            'passage_text'  => $request->input('passage_text') ?: null,
+            'audio_group_id' => $request->input('audio_group_id') ?: null,
+            'passage_group_id' => $request->input('passage_group_id') ?: null,
+            'media_asset_id' => $mediaAssetId,
+            'category_id'   => $request->input('category_id'),
+            'choices'       => $proposedChoices,
+        ];
+
+        $isPublished = ($bank && $bank->status === 'published');
+
+        // Always save staged proposed_data and status on the revision item
+        $item->proposed_data = $proposedData;
+        $item->status = 'FIXED';
+        $item->save();
+
+        if (!$isPublished) {
+            // Initial intake / draft authoring: update draft question directly
+            $question->prompt        = $proposedData['prompt'];
+            $question->question_type = $proposedData['question_type'];
+            $question->explanation   = $proposedData['explanation'];
+            $question->difficulty    = $proposedData['difficulty'];
+            $question->points        = $proposedData['points'];
+            $question->part_number   = $proposedData['part_number'];
+            $question->section       = $proposedData['section'];
+            $question->image_url     = $proposedData['image_url'];
+            $question->audio_url     = $proposedData['audio_url'];
+            $question->passage_id    = $proposedData['passage_id'];
+            $question->passage_text  = $proposedData['passage_text'];
+            $question->audio_group_id = $proposedData['audio_group_id'];
+            $question->passage_group_id = $proposedData['passage_group_id'];
+            $question->media_asset_id = $proposedData['media_asset_id'];
+            $question->save();
+
+            // choices
+            if ($isChoiceType && !empty($proposedChoices)) {
+                $existingChoices = $question->choices->keyBy('id');
+                $updatedIds = [];
+
+                foreach ($proposedChoices as $key => $c) {
+                    $choiceId = is_numeric($key) && $existingChoices->has($key) ? $key : ($c['id'] ?? null);
+                    if ($choiceId && $existingChoice = $existingChoices->get($choiceId)) {
+                        $existingChoice->label      = $c['label'] ?? 'A';
+                        $existingChoice->content    = $c['content'] ?? '';
+                        $existingChoice->is_correct = !empty($c['is_correct']);
+                        $existingChoice->save();
+                        $updatedIds[] = $existingChoice->id;
+                    } else {
+                        $newChoice = QuestionChoice::create([
+                            'question_id' => $question->id,
+                            'label'       => $c['label'] ?? 'A',
+                            'content'     => $c['content'] ?? '',
+                            'is_correct'  => !empty($c['is_correct']),
+                        ]);
+                        $updatedIds[] = $newChoice->id;
+                    }
+                }
+
+                $question->choices()->whereNotIn('id', $updatedIds)->delete();
+            } elseif (!$isChoiceType) {
+                $question->choices()->delete();
+            }
+
+            if (!empty($proposedData['category_id']) && $bank) {
+                $bank->acl_category_id = $proposedData['category_id'];
+                $bank->save();
+            }
+
+            // Run IRQA Validation Check and Reconcile Repository Revision Items for draft
+            $qualityService = app(RepositoryQualityService::class);
+            $qualityService->reconcileRevisionItems($bank);
+            $item->refresh();
+        }
 
         RepositoryActivityLog::create([
             'resource_type' => 'Question',
@@ -261,16 +348,15 @@ class TeacherRepositoryRevisionController extends Controller
             'actor_id'      => Auth::id(),
             'reviewer_id'   => $revisionRequest->requested_by_id,
             'action'        => 'teacher_saved_revision',
-            'approval_note' => "Teacher saved full question revision for item #{$item->id}.",
+            'approval_note' => $isPublished ? "Teacher staged question revision for item #{$item->id}." : "Teacher updated draft question #{$question->id}.",
         ]);
 
-        if ($item->status === 'CLOSED') {
-            return redirect()->route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id])
-                ->with('success', '✔ Finding Fixed! Validation passed for this item. Complete remaining findings to resubmit.');
-        }
+        $successMsg = $isPublished
+            ? '✔ Proposed revision saved to staged draft! Master repository remains unchanged until Repository Manager approval.'
+            : '✔ Question updated successfully.';
 
         return redirect()->route('teacher.repository-revisions.edit-question', [$revisionRequest->id, $item->id])
-            ->with('info', 'Question saved. Please review the live validation checklist below to ensure all requirements are satisfied.');
+            ->with('success', $successMsg);
     }
 
     /**
@@ -306,8 +392,10 @@ class TeacherRepositoryRevisionController extends Controller
         $revisionRequest->save();
 
         if ($bank) {
-            $bank->status = 'pending_approval';
-            $bank->save();
+            if ($bank->status !== 'published') {
+                $bank->status = 'pending_approval';
+                $bank->save();
+            }
 
             // Guarantee NEW GovernanceApprovalTask creation upon resubmission (Idempotent)
             if (\Illuminate\Support\Facades\Schema::hasTable('governance_approval_tasks')) {
@@ -328,7 +416,8 @@ class TeacherRepositoryRevisionController extends Controller
                     Auth::user(),
                     'Teacher Revision Resubmitted',
                     (Auth::user()?->name ?? 'Teacher') . " resubmitted changes for repository '{$bank->title}'.",
-                    'REPOSITORY_RESUBMITTED'
+                    'REPOSITORY_RESUBMITTED',
+                    $revisionRequest
                 );
             }
         }
@@ -516,6 +605,26 @@ class TeacherRepositoryRevisionController extends Controller
 
         $question = !empty($validated['question_id']) ? Question::find($validated['question_id']) : null;
 
+        $baselineData = null;
+        if ($question) {
+            $baselineData = [
+                'prompt' => $question->prompt,
+                'explanation' => $question->explanation,
+                'difficulty' => $question->difficulty,
+                'points' => $question->points,
+                'question_type' => is_object($question->question_type) ? $question->question_type->value : (string) ($question->question_type ?? 'multiple_choice'),
+                'media_asset_id' => $question->media_asset_id,
+                'part_number' => $question->part_number,
+                'section' => $question->section,
+                'choices' => $question->choices->map(fn($c) => [
+                    'id' => $c->id,
+                    'label' => $c->label,
+                    'content' => $c->content,
+                    'is_correct' => (bool) $c->is_correct,
+                ])->toArray(),
+            ];
+        }
+
         RepositoryRevisionItem::create([
             'repository_revision_request_id' => $revisionRequest->id,
             'question_bank_id'               => $bank->id,
@@ -525,6 +634,7 @@ class TeacherRepositoryRevisionController extends Controller
             'severity'                       => 'medium',
             'suggested_fix'                  => 'Review question prompt/options as requested by teacher.',
             'status'                         => 'OPEN',
+            'baseline_data'                  => $baselineData,
         ]);
 
         RepositoryActivityLog::create([
@@ -542,7 +652,8 @@ class TeacherRepositoryRevisionController extends Controller
             $user,
             'New Teacher Revision Request',
             "{$user->name} requested a revision on repository '{$bank->title}'.",
-            'REPOSITORY_REVISION_REQUESTED'
+            'REPOSITORY_REVISION_REQUESTED',
+            $revisionRequest
         );
 
         return redirect()->route('teacher.repository-revisions.show', $revisionRequest->id)
@@ -557,9 +668,12 @@ class TeacherRepositoryRevisionController extends Controller
         User $actor,
         string $title,
         string $message,
-        string $notifType
+        string $notifType,
+        ?RepositoryRevisionRequest $revisionRequest = null
     ): void {
-        $targetUrl = route('admin.repository-manager.question-bank-validate', $bank->id);
+        $targetUrl = $revisionRequest
+            ? route('admin.repository-manager.revisions.review', $revisionRequest->id)
+            : route('admin.repository-manager.revisions.index');
         $repoManagers = User::role('repository-manager')->get();
 
         foreach ($repoManagers as $manager) {
@@ -570,8 +684,8 @@ class TeacherRepositoryRevisionController extends Controller
                         message: $message,
                         type: $notifType,
                         priority: 'HIGH',
-                        entityType: 'QuestionBank',
-                        entityId: (string) $bank->id,
+                        entityType: 'RepositoryRevisionRequest',
+                        entityId: $revisionRequest ? (string) $revisionRequest->id : (string) $bank->id,
                         targetUrl: $targetUrl
                     ));
                 } catch (\Throwable $e) {
