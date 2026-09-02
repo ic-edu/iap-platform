@@ -1000,11 +1000,10 @@ class RepositoryManagerController extends Controller
         }
 
         $note = $request->input('notes', 'Assessment approved by Repository Manager.');
-        $note = $request->input('notes', 'Assessment approved by Repository Manager.');
 
         $previousStatus = $test->status;
         $test->status = 'approved';
-        $test->is_published = true;
+        $test->is_published = false;
         $test->save();
 
         RepositoryActivityLog::create([
@@ -1039,7 +1038,7 @@ class RepositoryManagerController extends Controller
             try {
                 $test->creator->notify(new \App\Notifications\EnterpriseSystemNotification(
                     title: 'Assessment Approved',
-                    message: "Your Assessment Test '{$test->title}' was approved by Repository Manager {$user->name}. It is now available for institutional use.",
+                    message: "Your Assessment Test '{$test->title}' was approved by Repository Manager {$user->name} and is ready for publication.",
                     type: 'ASSESSMENT_APPROVED',
                     priority: 'HIGH',
                     entityType: 'test',
@@ -1051,8 +1050,8 @@ class RepositoryManagerController extends Controller
             }
         }
 
-        return redirect()->route('admin.repository-manager.assessment-approval')
-            ->with('success', "Assessment '{$test->title}' approved successfully and made live for institutional use.");
+        return redirect()->route('admin.repository-manager.assessment-review', $test->id)
+            ->with('success', "Assessment '{$test->title}' approved successfully and is ready for publication.");
     }
 
     /**

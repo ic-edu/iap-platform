@@ -136,11 +136,11 @@ class AssessmentWorkflowIntegrationTest extends TestCase
             'notes' => 'Meets academic quality guidelines.',
         ]);
 
-        $resApprove->assertRedirect(route('admin.repository-manager.assessment-approval'));
+        $resApprove->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
 
         $test->refresh();
         $this->assertEquals('approved', $test->status);
-        $this->assertTrue($test->is_published);
+        $this->assertFalse((bool) $test->is_published);
 
         $this->assertDatabaseHas('repository_activity_logs', [
             'resource_type' => 'Test',
@@ -275,23 +275,27 @@ class AssessmentWorkflowIntegrationTest extends TestCase
         $test->refresh();
         $this->assertEquals('pending', $test->status);
 
-        // 5. Repository Manager approves assessment -> status = approved, is_published = true
+        // 5. Repository Manager approves assessment -> status = approved, is_published = false (ready for publication)
         $this->actingAs($this->repoManager)
             ->post(route('admin.repository-manager.assessment-approve', $test->id), [
                 'notes' => 'E2E test approval.',
             ]);
 
         $test->refresh();
-        $this->assertEquals('approved', $test->status);
-        $this->assertTrue($test->is_published);
-
-        // Teacher Pending decreases, Teacher Approved increases, Repository Dashboard pending decreases
-        $this->assertEquals(0, $workflowService->getTeacherMetrics($this->teacher)['pending']);
-        $this->assertEquals(1, $workflowService->getTeacherMetrics($this->teacher)['approved']);
-        $this->assertEquals(0, $workflowService->getRepositoryManagerMetrics()['pendingAssessmentsCount']);
-
-        // Repository Manager sees non-clickable badge "Governance Complete"
+        // Repository Manager sees non-clickable badge "Governance Complete" in approved queue
         $resApprovedQueue = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval', ['status' => 'approved']));
         $resApprovedQueue->assertSee('Governance Complete');
+
+        // 6. Repository Manager publishes assessment -> status = published, is_published = true
+        $this->actingAs($this->repoManager)
+            ->post(route('admin.publications.assessments.publish', $test->id));
+
+        $test->refresh();
+        $this->assertEquals('published', $test->status);
+        $this->assertTrue((bool) $test->is_published);
+
+        // Teacher Pending decreases, Repository Dashboard pending decreases
+        $this->assertEquals(0, $workflowService->getTeacherMetrics($this->teacher)['pending']);
+        $this->assertEquals(0, $workflowService->getRepositoryManagerMetrics()['pendingAssessmentsCount']);
     }
 }

@@ -318,65 +318,100 @@
             <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
                 <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Governance Decision</h3>
 
-                {{-- BUSINESS RULE 5: Approve Form with Review by Exception Guard --}}
-                <form action="{{ route('admin.repository-manager.assessment-approve', $test->id) }}" method="POST" style="margin-bottom:1rem;">
-                    @csrf
-                    <div style="margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Approval Notes (Optional)</label>
-                        <input type="text" name="notes" placeholder="e.g. Assessment meets institutional quality standards." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                @if($test->status === 'approved' && !$test->is_published)
+                    {{-- APPROVED: Ready for Publication --}}
+                    <div style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:.75rem;padding:1.25rem;margin-bottom:1rem;text-align:center;">
+                        <div style="color:#34d399;font-weight:800;font-size:1rem;margin-bottom:.25rem;">✓ Governance Approved</div>
+                        <div style="color:#94a3b8;font-size:.82rem;margin-bottom:1rem;">Ready for Publication (Not Live)</div>
+                        <form action="{{ route('admin.publications.assessments.publish', $test->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" 
+                                    onclick="event.preventDefault(); iapConfirm({ title: 'Publish Assessment Live?', message: 'This will publish the Assessment live for candidate delivery and candidate assignments.', confirmText: 'Publish Assessment', variant: 'success', form: this.form });"
+                                    style="width:100%;padding:.75rem;background:#6366f1;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 4px 14px rgba(99,102,241,.4);">
+                                🚀 Publish Assessment
+                            </button>
+                        </form>
                     </div>
-                    
-                    <button id="btn-approve-assessment" 
-                            type="submit" 
-                            onclick="event.preventDefault(); iapConfirm({ title: 'Approve Assessment?', message: 'Are you sure you want to approve this assessment? Once approved, the assessment becomes governed/locked according to the assessment lifecycle.', confirmText: 'Approve Assessment', variant: 'success', form: this.form });"
-                            {{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '' : 'disabled' }} 
-                            style="width:100%;padding:.75rem;background:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#10b981' : '#1e293b' }};color:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#fff' : '#64748b' }};font-weight:800;border:1px solid {{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#10b981' : '#334155' }};border-radius:.6rem;cursor:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? 'pointer' : 'not-allowed' }};font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 4px 14px rgba(0,0,0,.2);">
-                        ✓ Approve Assessment
-                    </button>
-                    <div id="approve-guard-hint" style="font-size:.72rem;color:#f59e0b;margin-top:.4rem;text-align:center;display:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? 'none' : 'block' }};">
-                        All flagged questions must be resolved before approval.
+                @elseif($test->status === 'published' && $test->is_published)
+                    {{-- PUBLISHED: Live --}}
+                    <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:.75rem;padding:1.25rem;margin-bottom:1rem;text-align:center;">
+                        <div style="color:#818cf8;font-weight:800;font-size:1rem;margin-bottom:.25rem;">● Published / Live</div>
+                        <div style="color:#94a3b8;font-size:.82rem;margin-bottom:1rem;">Currently live for candidate delivery & assignments</div>
+                        <form action="{{ route('admin.publications.assessments.unpublish', $test->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" 
+                                    onclick="event.preventDefault(); iapConfirm({ title: 'Unpublish Assessment?', message: 'This Assessment will no longer be available for new candidate access or new assignments. Its governance approval will remain valid.', confirmText: 'Unpublish Assessment', variant: 'warning', form: this.form });"
+                                    style="width:100%;padding:.75rem;background:#f59e0b;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+                                ⏸️ Unpublish Assessment
+                            </button>
+                        </form>
                     </div>
-                </form>
+                @elseif(in_array($test->status, ['pending_approval', 'needs_revision']))
+                    {{-- BUSINESS RULE 5: Approve Form with Review by Exception Guard --}}
+                    <form action="{{ route('admin.repository-manager.assessment-approve', $test->id) }}" method="POST" style="margin-bottom:1rem;">
+                        @csrf
+                        <div style="margin-bottom:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Approval Notes (Optional)</label>
+                            <input type="text" name="notes" placeholder="e.g. Assessment meets institutional quality standards." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        </div>
+                        
+                        <button id="btn-approve-assessment" 
+                                type="submit" 
+                                onclick="event.preventDefault(); iapConfirm({ title: 'Approve Assessment?', message: 'Are you sure you want to approve this assessment? Once approved, the assessment is ready for publication.', confirmText: 'Approve Assessment', variant: 'success', form: this.form });"
+                                {{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '' : 'disabled' }} 
+                                style="width:100%;padding:.75rem;background:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#10b981' : '#1e293b' }};color:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#fff' : '#64748b' }};font-weight:800;border:1px solid {{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#10b981' : '#334155' }};border-radius:.6rem;cursor:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? 'pointer' : 'not-allowed' }};font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 4px 14px rgba(0,0,0,.2);">
+                            ✓ Approve Assessment
+                        </button>
+                        <div id="approve-guard-hint" style="font-size:.72rem;color:#f59e0b;margin-top:.4rem;text-align:center;display:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? 'none' : 'block' }};">
+                            All flagged questions must be resolved before approval.
+                        </div>
+                    </form>
 
-                <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
+                    <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
 
-                {{-- BUSINESS RULE 6: Return Assessment Revision Form with Flagged Badge --}}
-                <form action="{{ route('admin.repository-manager.assessment-revision', $test->id) }}" method="POST" style="margin-bottom:1rem;">
-                    @csrf
-                    <div style="margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Overall Revision Summary</label>
-                        <textarea name="notes" rows="3" placeholder="Provide overall review notes for teacher..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;"></textarea>
+                    {{-- BUSINESS RULE 6: Return Assessment Revision Form with Flagged Badge --}}
+                    <form action="{{ route('admin.repository-manager.assessment-revision', $test->id) }}" method="POST" style="margin-bottom:1rem;">
+                        @csrf
+                        <div style="margin-bottom:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Overall Revision Summary</label>
+                            <textarea name="notes" rows="3" placeholder="Provide overall review notes for teacher..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;"></textarea>
+                        </div>
+
+                        <button id="btn-request-revision" 
+                                type="submit" 
+                                onclick="event.preventDefault(); iapConfirm({ title: 'Request Assessment Revision?', message: 'This will return the Assessment to the Teacher for revision. The Teacher will need to address the review findings before resubmitting.', confirmText: 'Request Revision', variant: 'warning', form: this.form });"
+                                {{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '' : 'disabled' }} 
+                                style="width:100%;padding:.75rem;background:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#f59e0b' : '#1e293b' }};color:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#fff' : '#64748b' }};font-weight:800;border:1px solid {{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#f59e0b' : '#334155' }};border-radius:.6rem;cursor:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? 'pointer' : 'not-allowed' }};font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+                            ⚠️ Request Assessment Revision
+                        </button>
+                        <div id="revision-badge-container" style="font-size:.72rem;color:#94a3b8;margin-top:.4rem;text-align:center;">
+                            <span id="revision-badge-text" style="font-weight:700;color:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#fbbf24' : '#64748b' }};">
+                                {{ (isset($reviewProgress) && $reviewProgress['flagged'] > 0) ? $reviewProgress['flagged'] . ' Questions Flagged' : '0 Questions Flagged — No revisions needed' }}
+                            </span>
+                        </div>
+                    </form>
+
+                    <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
+
+                    {{-- Send to Archived Decision (Governance Rejection & Historical Archival) --}}
+                    <form action="{{ route('admin.repository-manager.assessment-archive', $test->id) }}" method="POST" id="form-send-to-archived">
+                        @csrf
+                        <div style="margin-bottom:.75rem;">
+                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Archive / Rejection Reason</label>
+                            <input type="text" name="notes" placeholder="Reason for archiving this submission..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        </div>
+                        <button type="submit" 
+                                onclick="event.preventDefault(); iapConfirm({ title: 'Send Assessment to Archived?', message: 'This will end the current assessment submission workflow and preserve the assessment as an archived historical record. It will no longer remain in the active governance workflow.', confirmText: 'Send to Archived', variant: 'warning', form: this.form });" 
+                                style="width:100%;padding:.65rem;background:#475569;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;gap:.35rem;">
+                            📦 Send to Archived
+                        </button>
+                    </form>
+                @else
+                    {{-- OTHER STATES (e.g. Needs Revision, Draft, Archived) --}}
+                    <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1rem;text-align:center;color:#94a3b8;font-size:.85rem;">
+                        Status: <strong style="color:#fff;text-transform:capitalize;">{{ str_replace('_', ' ', $test->status) }}</strong>
                     </div>
-
-                    <button id="btn-request-revision" 
-                            type="submit" 
-                            onclick="event.preventDefault(); iapConfirm({ title: 'Request Assessment Revision?', message: 'This will return the Assessment to the Teacher for revision. The Teacher will need to address the review findings before resubmitting.', confirmText: 'Request Revision', variant: 'warning', form: this.form });"
-                            {{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '' : 'disabled' }} 
-                            style="width:100%;padding:.75rem;background:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#f59e0b' : '#1e293b' }};color:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#fff' : '#64748b' }};font-weight:800;border:1px solid {{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#f59e0b' : '#334155' }};border-radius:.6rem;cursor:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? 'pointer' : 'not-allowed' }};font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
-                        ⚠️ Request Assessment Revision
-                    </button>
-                    <div id="revision-badge-container" style="font-size:.72rem;color:#94a3b8;margin-top:.4rem;text-align:center;">
-                        <span id="revision-badge-text" style="font-weight:700;color:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#fbbf24' : '#64748b' }};">
-                            {{ (isset($reviewProgress) && $reviewProgress['flagged'] > 0) ? $reviewProgress['flagged'] . ' Questions Flagged' : '0 Questions Flagged — No revisions needed' }}
-                        </span>
-                    </div>
-                </form>
-
-                <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
-
-                {{-- Send to Archived Decision (Governance Rejection & Historical Archival) --}}
-                <form action="{{ route('admin.repository-manager.assessment-archive', $test->id) }}" method="POST" id="form-send-to-archived">
-                    @csrf
-                    <div style="margin-bottom:.75rem;">
-                        <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Archive / Rejection Reason</label>
-                        <input type="text" name="notes" placeholder="Reason for archiving this submission..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
-                    </div>
-                    <button type="submit" 
-                            onclick="event.preventDefault(); iapConfirm({ title: 'Send Assessment to Archived?', message: 'This will end the current assessment submission workflow and preserve the assessment as an archived historical record. It will no longer remain in the active governance workflow.', confirmText: 'Send to Archived', variant: 'warning', form: this.form });" 
-                            style="width:100%;padding:.65rem;background:#475569;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;gap:.35rem;">
-                        📦 Send to Archived
-                    </button>
-                </form>
+                @endif
             </div>
 
             {{-- Audit Logs Widget --}}

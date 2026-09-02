@@ -129,7 +129,23 @@ class Test extends Model
     }
 
     /**
-     * Check if test is approved.
+     * Scope a query to only include canonically published tests.
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published')->where('is_published', true);
+    }
+
+    /**
+     * Check if test is canonically published.
+     */
+    public function isPublished(): bool
+    {
+        return $this->status === 'published' && (bool) $this->is_published;
+    }
+
+    /**
+     * Check if test is approved (governance approved, not operationally live).
      */
     public function isApproved(): bool
     {

@@ -82,7 +82,7 @@ class RepositorySmartReviewEngineTest extends TestCase
         $approveRes->assertRedirect();
         
         $this->assertEquals('approved', $test->fresh()->status);
-        $this->assertTrue($test->fresh()->is_published);
+        $this->assertFalse((bool) $test->fresh()->is_published);
     }
 
     /**

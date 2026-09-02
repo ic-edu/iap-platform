@@ -387,10 +387,10 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
             'notes' => 'Meets institutional quality standards.',
         ]);
 
-        $response->assertRedirect(route('admin.repository-manager.assessment-approval'));
+        $response->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
         $test->refresh();
         $this->assertEquals('approved', $test->status);
-        $this->assertTrue($test->is_published);
+        $this->assertFalse((bool) $test->is_published);
     }
 
     /** 16 & 18. RM can Request Revision -> status becomes NEEDS_REVISION. */
@@ -888,7 +888,7 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
             'duration_minutes' => 120,
             'pass_score'       => 500,
             'instructions'     => 'Mandatory candidate examination guidelines before starting.',
-            'status'           => 'approved',
+            'status'           => 'published',
             'is_published'     => true,
             'created_by'       => $this->rm->id,
         ]);

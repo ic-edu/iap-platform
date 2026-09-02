@@ -178,11 +178,11 @@ class RepositoryReviewDecisionLayerTest extends TestCase
                 'notes' => 'Institutional quality approved',
             ]);
 
-        $approveRes->assertRedirect(route('admin.repository-manager.assessment-approval'));
+        $approveRes->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
         $approveRes->assertSessionHas('success');
         $test->refresh();
         $this->assertEquals('approved', $test->status);
-        $this->assertTrue((bool) $test->is_published);
+        $this->assertFalse((bool) $test->is_published);
     }
 
     /**
