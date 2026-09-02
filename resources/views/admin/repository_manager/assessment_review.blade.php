@@ -9,79 +9,80 @@
         position: static !important;
     }
 }
+#btn-back-to-top {
+    transition: opacity .3s ease, transform .2s ease;
+}
 #btn-back-to-top:hover {
-    background: #1e1b4b !important;
-    border-color: #818cf8 !important;
     transform: translateY(-2px);
-    box-shadow: 0 12px 30px -5px rgba(99,102,241,.7) !important;
+    box-shadow: 0 12px 30px -5px rgba(99,102,241,.5) !important;
 }
 </style>
 @endpush
 
 @section('content')
-<div style="padding: 1.5rem 0;">
+<div class="py-6 space-y-6">
     {{-- Header --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <div class="flex justify-between items-center flex-wrap gap-4">
         <div>
-            <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin:0 0 .3rem;">⚡ Repository Smart Review Engine</h1>
-            <p style="font-size:.88rem;color:#94a3b8;margin:0;">Review by Exception: All questions are implicitly <strong>Default OK</strong>. Interact only with questions requiring attention.</p>
+            <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white mb-1">⚡ Repository Smart Review Engine</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Review by Exception: All questions are implicitly <strong class="text-slate-700 dark:text-slate-200">Default OK</strong>. Interact only with questions requiring attention.</p>
         </div>
         <div>
-            <a href="{{ route('admin.repository-manager.assessment-approval') }}" style="padding:.6rem 1.1rem;background:#1e293b;border:1px solid #334155;color:#fff;border-radius:.6rem;font-size:.82rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">
+            <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm">
                 ← Back
             </a>
         </div>
     </div>
 
     {{-- Floating Back to Top Button (TASK 1, 2, 3, 4) --}}
-    <button id="btn-back-to-top" type="button" title="Back to Top" onclick="window.scrollTo({top:0, behavior:'smooth'})" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;width:3rem;height:3rem;border-radius:9999px;background:#0f172a;border:1px solid #6366f1;color:#fff;font-size:1.25rem;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 25px -5px rgba(99,102,241,.5);opacity:0;pointer-events:none;transition:opacity .3s ease, transform .2s ease;">
+    <button id="btn-back-to-top" type="button" title="Back to Top" onclick="window.scrollTo({top:0, behavior:'smooth'})" class="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-white dark:bg-slate-900 border border-indigo-500 dark:border-indigo-400 text-slate-700 dark:text-white text-lg font-black flex items-center justify-center cursor-pointer shadow-lg shadow-indigo-500/20 opacity-0 pointer-events-none transition-all">
         ↑
     </button>
 
-    {{-- Toast Notification Container (Positioned above Back to Top button to prevent overlap) --}}
-    <div id="smart-review-toast" style="position:fixed;bottom:5.25rem;right:1.5rem;z-index:99999;background:#10b981;color:#fff;padding:.75rem 1.25rem;border-radius:.75rem;font-size:.85rem;font-weight:800;box-shadow:0 20px 25px -5px rgba(0,0,0,.5);display:none;align-items:center;gap:.5rem;transition:opacity .3s ease;">
+    {{-- Toast Notification Container --}}
+    <div id="smart-review-toast" class="fixed bottom-20 right-6 z-50 bg-emerald-600 text-white px-5 py-3 rounded-xl text-xs font-extrabold shadow-xl shadow-emerald-950/40 hidden items-center gap-2 transition-opacity duration-300">
         ✨ <span id="toast-message">Review saved.</span>
     </div>
 
     @if(session('success'))
-    <div style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+    <div class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl text-xs sm:text-sm font-bold">
         ✅ {{ session('success') }}
     </div>
     @endif
 
     @if(session('warning'))
-    <div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fbbf24;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+    <div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400 p-4 rounded-xl text-xs sm:text-sm font-bold">
         ⚠️ {{ session('warning') }}
     </div>
     @endif
 
     @if(session('error'))
-    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+    <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 text-rose-700 dark:text-rose-400 p-4 rounded-xl text-xs sm:text-sm font-bold">
         🚫 {{ session('error') }}
     </div>
     @endif
 
     {{-- Review by Exception Summary Banner --}}
     @if(isset($reviewProgress))
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.35rem;margin-bottom:1.5rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+        <div class="flex justify-between items-center flex-wrap gap-4">
             <div>
-                <div style="font-size:.78rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15rem;">
+                <div class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
                     ⚡ Review by Exception Mode
                 </div>
-                <div style="font-size:1.1rem;font-weight:800;color:#fff;">
+                <div class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
                     Total Assessment Questions: {{ $reviewProgress['total'] }}
                 </div>
             </div>
-            <div style="display:flex;gap:.75rem;font-size:.82rem;flex-wrap:wrap;">
-                <div style="background:#1e293b;padding:.4rem .75rem;border-radius:.5rem;border:1px solid #334155;color:#34d399;font-weight:700;">
+            <div class="flex gap-2.5 text-xs flex-wrap">
+                <div class="bg-emerald-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400 font-bold inline-flex items-center gap-1.5">
                     🟢 Default OK: <span id="summary-default-ok-count">{{ $reviewProgress['default_ok'] }}</span>
                 </div>
-                <div style="background:#1e293b;padding:.4rem .75rem;border-radius:.5rem;border:1px solid #334155;color:#fbbf24;font-weight:700;">
+                <div class="bg-amber-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400 font-bold inline-flex items-center gap-1.5">
                     🟡 Flagged Revisions: <span id="summary-flagged-count">{{ $reviewProgress['flagged'] }}</span>
                 </div>
                 @if(($reviewProgress['critical'] ?? 0) > 0)
-                <div style="background:#1e293b;padding:.4rem .75rem;border-radius:.5rem;border:1px solid #334155;color:#f87171;font-weight:700;">
+                <div class="bg-rose-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800/40 text-rose-700 dark:text-rose-400 font-bold inline-flex items-center gap-1.5">
                     🔴 Critical Blockers: <span id="summary-critical-count">{{ $reviewProgress['critical'] }}</span>
                 </div>
                 @endif
@@ -91,96 +92,109 @@
     @endif
 
     @if(isset($reviewProgress) && $reviewProgress['total'] === 0)
-    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1rem 1.25rem;border-radius:.75rem;font-size:.88rem;font-weight:700;margin-bottom:1.5rem;">
+    <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 text-rose-700 dark:text-rose-400 p-4 rounded-xl text-xs sm:text-sm font-bold">
         ⚠️ Incomplete Assessment: Contains 0 questions. This assessment cannot be approved and must be returned/rejected for authoring.
     </div>
     @endif
 
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start;">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {{-- Left: Assessment Details & Question Cards with Smart Review Panel --}}
-        <div style="display:flex;flex-direction:column;gap:1.25rem;">
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div class="flex justify-between items-start flex-wrap gap-3 mb-4">
                     <div>
-                        <span style="font-size:.72rem;font-weight:800;color:#818cf8;text-transform:uppercase;letter-spacing:.06em;background:#1e293b;padding:.2rem .65rem;border-radius:.4rem;border:1px solid #334155;">
+                        <span class="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider bg-indigo-50 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-indigo-200 dark:border-slate-700 inline-block">
                             {{ is_object($test->test_type) ? $test->test_type->value : $test->test_type }}
                         </span>
-                        <h2 style="font-size:1.4rem;font-weight:900;color:#fff;margin:.5rem 0 .25rem;">{{ $test->title }}</h2>
-                        <div style="font-size:.82rem;color:#94a3b8;">Author: <strong style="color:#cbd5e1;">{{ $test->creator?->name ?? 'System' }}</strong> ({{ $test->creator?->email }})</div>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white mt-2 mb-1">{{ $test->title }}</h2>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">Author: <strong class="text-slate-700 dark:text-slate-300">{{ $test->creator?->name ?? 'System' }}</strong> ({{ $test->creator?->email }})</div>
                     </div>
                     <div>
                         @if(in_array($test->status, ['pending', 'pending_approval']))
-                            <span style="background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.3);padding:.35rem .85rem;border-radius:.5rem;font-size:.8rem;font-weight:800;">
+                            <span class="px-3 py-1 rounded-lg text-xs font-extrabold uppercase bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                                 ⏳ Pending Review
                             </span>
                         @elseif($test->status === 'approved')
-                            <span style="background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.3);padding:.35rem .85rem;border-radius:.5rem;font-size:.8rem;font-weight:800;">
-                                ✓ Approved & Active
+                            <span class="px-3 py-1 rounded-lg text-xs font-extrabold uppercase bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                                ✓ Approved &amp; Active
                             </span>
                         @else
-                            <span style="background:rgba(251,113,133,.12);color:#fb7185;border:1px solid rgba(251,113,133,.3);padding:.35rem .85rem;border-radius:.5rem;font-size:.8rem;font-weight:800;">
+                            <span class="px-3 py-1 rounded-lg text-xs font-extrabold uppercase bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
                                 ⚠️ Needs Revision
                             </span>
                         @endif
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:1rem;background:#1e293b;padding:1rem;border-radius:.75rem;margin-top:1rem;">
+                <div class="grid grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 mt-4">
                     <div>
-                        <div style="font-size:.7rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Duration</div>
-                        <div style="font-size:1.1rem;font-weight:800;color:#fff;margin-top:.2rem;">⏱ {{ $test->duration_minutes }} Mins</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Duration</div>
+                        <div class="text-base font-extrabold text-slate-900 dark:text-white mt-0.5">⏱ {{ $test->duration_minutes }} Mins</div>
                     </div>
                     <div>
-                        <div style="font-size:.7rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Pass Score</div>
-                        <div style="font-size:1.1rem;font-weight:800;color:#fff;margin-top:.2rem;">🎯 {{ $test->pass_score }} pts</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Pass Score</div>
+                        <div class="text-base font-extrabold text-slate-900 dark:text-white mt-0.5">🎯 {{ $test->pass_score }} pts</div>
                     </div>
                     <div>
-                        <div style="font-size:.7rem;color:#94a3b8;font-weight:700;text-transform:uppercase;">Sections</div>
-                        <div style="font-size:1.1rem;font-weight:800;color:#fff;margin-top:.2rem;">📚 {{ $test->sections->count() }} Sections</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Sections</div>
+                        <div class="text-base font-extrabold text-slate-900 dark:text-white mt-0.5">📚 {{ $test->sections->count() }} Sections</div>
                     </div>
                 </div>
             </div>
 
             {{-- Sections Breakdown & Question Cards --}}
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
-                <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Question Inspection & Annotation Workspace</h3>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                <h3 class="text-base font-extrabold text-slate-900 dark:text-white mb-4">Question Inspection &amp; Annotation Workspace</h3>
 
                 @if($test->sections->isEmpty())
-                    <div style="color:#64748b;font-size:.85rem;text-align:center;padding:2rem;">No test sections created yet.</div>
+                    <div class="text-slate-400 dark:text-slate-500 text-xs text-center py-8">No test sections created yet.</div>
                 @else
                     @php $qIdxGlobal = 1; @endphp
                     @foreach($test->sections as $sec)
-                    <div style="background:#1e293b;border:1px solid #334155;border-radius:.85rem;padding:1.1rem;margin-bottom:1.25rem;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-                            <div style="font-weight:800;color:#fff;font-size:1rem;">Section {{ $sec->order }}: {{ $sec->title ?? 'Section' }}</div>
-                            <span style="font-size:.78rem;color:#a5b4fc;font-weight:700;background:rgba(99,102,241,.15);padding:.2rem .6rem;border-radius:.4rem;">
+                    <div class="bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 sm:p-5 mb-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base">Section {{ $sec->order }}: {{ $sec->title ?? 'Section' }}</div>
+                            <span class="text-xs text-indigo-700 dark:text-indigo-300 font-bold bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 px-2.5 py-1 rounded-md">
                                 {{ $sec->testQuestions->count() }} Questions
                             </span>
                         </div>
 
                         @if($sec->testQuestions->isNotEmpty())
-                            <div style="display:flex;flex-direction:column;gap:1.25rem;margin-top:1rem;">
+                            <div class="flex flex-col gap-4 mt-3">
                                 @foreach($sec->testQuestions as $idx => $tq)
                                     @php
                                         $q = $tq->question;
                                         $qRev = $questionReviews[$q?->id] ?? null;
                                         $isFlagged = $qRev && in_array($qRev->status, ['needs_revision', 'critical_issue']);
                                         $qStatus = $isFlagged ? $qRev->status : 'default_ok';
+
+                                        $cardBorderClass = $qStatus === 'critical_issue'
+                                            ? 'border-rose-400 dark:border-rose-500/60 ring-1 ring-rose-400/40'
+                                            : ($qStatus === 'needs_revision'
+                                                ? 'border-amber-400 dark:border-amber-500/60 ring-1 ring-amber-400/40'
+                                                : 'border-slate-200 dark:border-slate-700');
                                     @endphp
                                     @if($q)
-                                    <div id="question-card-{{ $q->id }}" class="question-card" data-question-id="{{ $q->id }}" style="background:#0f172a;border:1px solid {{ $qStatus === 'critical_issue' ? 'rgba(239,68,68,.5)' : ($qStatus === 'needs_revision' ? 'rgba(245,158,11,.5)' : '#334155') }};border-radius:.75rem;padding:1.1rem;transition:border-color .2s ease;">
-                                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.5rem;">
+                                    <div id="question-card-{{ $q->id }}" class="question-card bg-white dark:bg-slate-900 rounded-xl p-4 border {{ $cardBorderClass }} transition-colors shadow-sm" data-question-id="{{ $q->id }}">
+                                        <div class="flex justify-between items-start gap-3 mb-2">
                                             <div>
-                                                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">
-                                                    <span style="font-size:.75rem;font-weight:800;color:#cbd5e1;background:#334155;padding:.15rem .55rem;border-radius:.3rem;">
+                                                <div class="flex items-center flex-wrap gap-2 mb-1.5">
+                                                    <span class="text-xs font-extrabold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md">
                                                         Q#{{ $qIdxGlobal }}
                                                     </span>
-                                                    <span style="font-size:.7rem;color:#94a3b8;background:#1e293b;padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">{{ $q->question_type }}</span>
+                                                    <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase">{{ $q->question_type }}</span>
                                                     @php $diffVal = is_object($q->difficulty) ? $q->difficulty->value : $q->difficulty; @endphp
-                                                    <span style="font-size:.7rem;color:#a78bfa;background:rgba(167,139,250,.12);padding:.15rem .45rem;border-radius:.3rem;text-transform:uppercase;">{{ $diffVal ?? 'easy' }}</span>
+                                                    <span class="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/40 px-2 py-0.5 rounded-md uppercase">{{ $diffVal ?? 'easy' }}</span>
 
                                                     {{-- Status Badge (BUSINESS RULE 4: 🟢 Default OK, 🟡 Needs Revision, 🔴 Critical) --}}
-                                                    <span id="badge-status-{{ $q->id }}" style="font-size:.72rem;font-weight:800;{{ $qStatus === 'critical_issue' ? 'color:#f87171;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);' : ($qStatus === 'needs_revision' ? 'color:#fbbf24;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);' : 'color:#34d399;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);') }}padding:.15rem .55rem;border-radius:.3rem;">
+                                                    @php
+                                                        $badgeClass = $qStatus === 'critical_issue'
+                                                            ? 'text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 px-2.5 py-0.5 rounded-md'
+                                                            : ($qStatus === 'needs_revision'
+                                                                ? 'text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 px-2.5 py-0.5 rounded-md'
+                                                                : 'text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 px-2.5 py-0.5 rounded-md');
+                                                    @endphp
+                                                    <span id="badge-status-{{ $q->id }}" class="{{ $badgeClass }}">
                                                         @if($qStatus === 'critical_issue')
                                                             🔴 Critical Issue ({{ ucfirst($qRev->field ?? 'General') }})
                                                         @elseif($qStatus === 'needs_revision')
@@ -191,13 +205,14 @@
                                                     </span>
                                                 </div>
 
-                                                <div style="font-weight:700;color:#fff;font-size:.9rem;line-height:1.4;">
+                                                <div class="font-bold text-slate-900 dark:text-white text-sm leading-relaxed">
                                                     {{ $q->prompt ?? '(Empty Prompt Stem)' }}
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <button type="button" id="btn-toggle-flag-{{ $q->id }}" onclick="toggleInlineFlag('{{ $q->id }}')" style="padding:.35rem .75rem;background:{{ $isFlagged ? '#ef4444' : '#1e293b' }};color:#fff;border:1px solid {{ $isFlagged ? '#ef4444' : '#334155' }};border-radius:.4rem;font-size:.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+                                                <button type="button" id="btn-toggle-flag-{{ $q->id }}" onclick="toggleInlineFlag('{{ $q->id }}')"
+                                                    class="{{ $isFlagged ? 'px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm' : 'px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5' }}">
                                                     {{ $isFlagged ? '✖ Flagged (Click to Edit)' : '⚠️ Flag Revision' }}
                                                 </button>
                                             </div>
@@ -205,9 +220,9 @@
 
                                         {{-- Choices Inspection --}}
                                         @if($q->choices && $q->choices->isNotEmpty())
-                                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.75rem;">
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
                                                 @foreach($q->choices as $cIdx => $choice)
-                                                    <div style="font-size:.78rem;padding:.45rem .7rem;background:#1e293b;border:1px solid {{ $choice->is_correct ? '#10b981' : '#334155' }};border-radius:.4rem;color:{{ $choice->is_correct ? '#34d399' : '#cbd5e1' }};font-weight:{{ $choice->is_correct ? '800' : '400' }};">
+                                                    <div class="text-xs p-2.5 rounded-lg border transition-colors {{ $choice->is_correct ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-bold' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium' }}">
                                                         {{ chr(65 + $cIdx) }}. {{ $choice->content ?? $choice->choice_text }} {{ $choice->is_correct ? '✓ (Correct)' : '' }}
                                                     </div>
                                                 @endforeach
@@ -216,31 +231,31 @@
 
                                         {{-- Rationale --}}
                                         @if($q->explanation)
-                                            <div style="font-size:.78rem;color:#94a3b8;margin-top:.65rem;background:#1e293b;padding:.5rem .75rem;border-radius:.4rem;border-left:3px solid #818cf8;">
-                                                <strong>Rationale:</strong> {{ $q->explanation }}
+                                            <div class="text-xs text-slate-600 dark:text-slate-400 mt-2.5 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border-l-4 border-indigo-500 dark:border-indigo-400">
+                                                <strong class="text-slate-700 dark:text-slate-300">Rationale:</strong> {{ $q->explanation }}
                                             </div>
                                         @endif
 
                                         {{-- Displayed Feedback Comment if Flagged --}}
-                                        <div id="feedback-display-{{ $q->id }}" style="display:{{ $isFlagged && $qRev?->comment ? 'block' : 'none' }};font-size:.78rem;color:{{ $qStatus === 'critical_issue' ? '#f87171' : '#fbbf24' }};margin-top:.65rem;background:rgba(15,23,42,.6);padding:.5rem .75rem;border-radius:.4rem;border:1px solid {{ $qStatus === 'critical_issue' ? 'rgba(239,68,68,.3)' : 'rgba(245,158,11,.3)' }};">
-                                            💬 <strong>Reviewer Feedback (<span id="feedback-field-{{ $q->id }}">{{ ucfirst($qRev?->field ?? 'general') }}</span>):</strong> "<span id="feedback-text-{{ $q->id }}">{{ $qRev?->comment }}</span>"
+                                        <div id="feedback-display-{{ $q->id }}" class="text-xs mt-2.5 p-2.5 rounded-lg border {{ $isFlagged && $qRev?->comment ? 'block' : 'hidden' }} {{ $qStatus === 'critical_issue' ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/40' : 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/40' }}">
+                                            💬 <strong class="text-slate-800 dark:text-slate-200">Reviewer Feedback (<span id="feedback-field-{{ $q->id }}">{{ ucfirst($qRev?->field ?? 'general') }}</span>):</strong> "<span id="feedback-text-{{ $q->id }}">{{ $qRev?->comment }}</span>"
                                         </div>
 
                                         {{-- Inline Expandable Annotation Panel (BUSINESS RULES 2 & 3 & UX NO RELOAD) --}}
-                                        <div id="inline-rev-panel-{{ $q->id }}" style="display:{{ $isFlagged ? 'block' : 'none' }};margin-top:1rem;padding:1rem;background:#1e293b;border:1px solid #334155;border-radius:.65rem;">
-                                            <div style="font-size:.78rem;font-weight:800;color:#cbd5e1;margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;align-items:center;">
+                                        <div id="inline-rev-panel-{{ $q->id }}" class="mt-3 p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl {{ $isFlagged ? '' : 'hidden' }}">
+                                            <div class="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3 flex justify-between items-center">
                                                 <span>📋 Question Revision Annotation</span>
-                                                <button type="button" onclick="clearQuestionFlag('{{ $q->id }}')" style="font-size:.72rem;color:#34d399;background:none;border:none;cursor:pointer;font-weight:700;text-decoration:underline;">
-                                                    ✓ Clear Flag & Mark OK
+                                                <button type="button" onclick="clearQuestionFlag('{{ $q->id }}')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer bg-transparent border-0">
+                                                    ✓ Clear Flag &amp; Mark OK
                                                 </button>
                                             </div>
 
-                                            <form id="form-annotation-{{ $q->id }}" onsubmit="submitQuestionAnnotation(event, '{{ $q->id }}')" style="display:flex;flex-direction:column;gap:.75rem;">
+                                            <form id="form-annotation-{{ $q->id }}" onsubmit="submitQuestionAnnotation(event, '{{ $q->id }}')" class="flex flex-col gap-3">
                                                 @csrf
-                                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     <div>
-                                                        <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">Target Field *</label>
-                                                        <select name="field" required style="width:100%;padding:.45rem;background:#0f172a;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                                                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Target Field *</label>
+                                                        <select name="field" required class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                                                             <option value="stem" {{ ($qRev?->field === 'stem') ? 'selected' : '' }}>Stem / Prompt Text</option>
                                                             <option value="choices" {{ ($qRev?->field === 'choices') ? 'selected' : '' }}>Choices / Options</option>
                                                             <option value="correct_answer" {{ ($qRev?->field === 'correct_answer') ? 'selected' : '' }}>Correct Answer Selection</option>
@@ -251,8 +266,8 @@
                                                     </div>
 
                                                     <div>
-                                                        <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">Severity</label>
-                                                        <select name="severity" style="width:100%;padding:.45rem;background:#0f172a;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">
+                                                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Severity</label>
+                                                        <select name="severity" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                                                             <option value="warning" {{ ($qRev?->severity === 'warning') ? 'selected' : '' }}>Warning (Requires Fix)</option>
                                                             <option value="critical" {{ ($qRev?->severity === 'critical' || $qStatus === 'critical_issue') ? 'selected' : '' }}>Critical Blocker</option>
                                                         </select>
@@ -260,13 +275,13 @@
                                                 </div>
 
                                                 <div>
-                                                    <label style="display:block;font-size:.75rem;font-weight:700;color:#cbd5e1;margin-bottom:.25rem;">Reviewer Annotation Comment *</label>
-                                                    <textarea name="comment" rows="2" required placeholder="Describe the specific correction required for the author..." style="width:100%;padding:.5rem;background:#0f172a;border:1px solid #334155;border-radius:.4rem;color:#fff;font-size:.8rem;">{{ $qRev?->comment }}</textarea>
+                                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Reviewer Annotation Comment *</label>
+                                                    <textarea name="comment" rows="2" required placeholder="Describe the specific correction required for the author..." class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">{{ $qRev?->comment }}</textarea>
                                                 </div>
 
-                                                <div style="display:flex;justify-content:flex-end;gap:.5rem;">
-                                                    <button type="button" onclick="document.getElementById('inline-rev-panel-{{ $q->id }}').style.display='none';" style="padding:.45rem .85rem;background:#334155;color:#fff;border:none;border-radius:.4rem;font-size:.78rem;font-weight:700;cursor:pointer;">Close</button>
-                                                    <button type="submit" style="padding:.45rem 1rem;background:#f59e0b;color:#fff;border:none;border-radius:.4rem;font-size:.78rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+                                                <div class="flex justify-end gap-2">
+                                                    <button type="button" onclick="document.getElementById('inline-rev-panel-{{ $q->id }}').classList.add('hidden');" class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer">Close</button>
+                                                    <button type="submit" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-extrabold transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-sm">
                                                         💾 Save Question Review
                                                     </button>
                                                 </div>
@@ -285,16 +300,16 @@
         </div>
 
         {{-- Right: Question Navigator, Governance Decision Form & Audit Log (Sticky Sidebar TASK 5) --}}
-        <div class="sticky-governance-sidebar" style="display:flex;flex-direction:column;gap:1.25rem;position:sticky;top:1.5rem;">
-            
+        <div class="sticky-governance-sidebar flex flex-col gap-6" style="position:sticky;top:1.5rem;">
+
             {{-- BUSINESS RULE 4: Question Navigator Sidebar Widget --}}
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.25rem;">
-                <div style="font-size:.85rem;font-weight:800;color:#fff;margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+                <div class="text-sm font-extrabold text-slate-900 dark:text-white mb-3 flex items-center justify-between">
                     <span>🧭 Question Navigator</span>
-                    <span style="font-size:.72rem;color:#94a3b8;font-weight:600;">Jump to question</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">Jump to question</span>
                 </div>
-                
-                <div style="display:flex;flex-wrap:wrap;gap:.45rem;max-height:180px;overflow-y:auto;padding-right:.25rem;">
+
+                <div class="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pr-1">
                     @php $navQIdx = 1; @endphp
                     @foreach($test->sections as $sec)
                         @foreach($sec->testQuestions as $tq)
@@ -303,9 +318,13 @@
                                 $qNavRev = $questionReviews[$tq->question->id] ?? null;
                                 $qNavStatus = ($qNavRev && in_array($qNavRev->status, ['needs_revision', 'critical_issue'])) ? $qNavRev->status : 'default_ok';
                                 $badgeSymbol = $qNavStatus === 'critical_issue' ? '🔴' : ($qNavStatus === 'needs_revision' ? '🟡' : '🟢');
-                                $bgBorder = $qNavStatus === 'critical_issue' ? 'background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;' : ($qNavStatus === 'needs_revision' ? 'background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);color:#fbbf24;' : 'background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;');
+                                $pillClass = $qNavStatus === 'critical_issue'
+                                    ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/50'
+                                    : ($qNavStatus === 'needs_revision'
+                                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50');
                             @endphp
-                            <a id="nav-pill-{{ $tq->question->id }}" href="#question-card-{{ $tq->question->id }}" onclick="document.getElementById('question-card-{{ $tq->question->id }}').scrollIntoView({behavior:'smooth'});return false;" style="padding:.3rem .6rem;border-radius:.4rem;font-size:.75rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;{{ $bgBorder }}">
+                            <a id="nav-pill-{{ $tq->question->id }}" href="#question-card-{{ $tq->question->id }}" onclick="document.getElementById('question-card-{{ $tq->question->id }}').scrollIntoView({behavior:'smooth'});return false;" class="px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 transition-colors {{ $pillClass }}">
                                 <span id="nav-pill-symbol-{{ $tq->question->id }}">{{ $badgeSymbol }}</span> Q{{ $navQIdx }}
                             </a>
                             @php $navQIdx++; @endphp
@@ -315,116 +334,123 @@
                 </div>
             </div>
 
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.75rem;">
-                <h3 style="font-size:1.05rem;font-weight:800;color:#fff;margin:0 0 1rem;">Governance Decision</h3>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                <h3 class="text-base font-extrabold text-slate-900 dark:text-white mb-4">Governance Decision</h3>
 
                 @if($test->status === 'approved' && !$test->is_published)
                     {{-- APPROVED: Ready for Publication --}}
-                    <div style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:.75rem;padding:1.25rem;margin-bottom:1rem;text-align:center;">
-                        <div style="color:#34d399;font-weight:800;font-size:1rem;margin-bottom:.25rem;">✓ Governance Approved</div>
-                        <div style="color:#94a3b8;font-size:.82rem;margin-bottom:1rem;">Ready for Publication (Not Live)</div>
+                    <div class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-5 mb-4 text-center">
+                        <div class="text-emerald-700 dark:text-emerald-400 font-extrabold text-base mb-1">✓ Governance Approved</div>
+                        <div class="text-slate-500 dark:text-slate-400 text-xs mb-4">Ready for Publication (Not Live)</div>
                         <form action="{{ route('admin.publications.assessments.publish', $test->id) }}" method="POST">
                             @csrf
-                            <button type="submit" 
+                            <button type="submit"
                                     onclick="event.preventDefault(); iapConfirm({ title: 'Publish Assessment Live?', message: 'This will publish the Assessment live for candidate delivery and candidate assignments.', confirmText: 'Publish Assessment', variant: 'success', form: this.form });"
-                                    style="width:100%;padding:.75rem;background:#6366f1;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 4px 14px rgba(99,102,241,.4);">
+                                    class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition-all">
                                 🚀 Publish Assessment
                             </button>
                         </form>
                     </div>
                 @elseif($test->status === 'published' && $test->is_published)
                     {{-- PUBLISHED: Live --}}
-                    <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:.75rem;padding:1.25rem;margin-bottom:1rem;text-align:center;">
-                        <div style="color:#818cf8;font-weight:800;font-size:1rem;margin-bottom:.25rem;">● Published / Live</div>
-                        <div style="color:#94a3b8;font-size:.82rem;margin-bottom:1rem;">Currently live for candidate delivery & assignments</div>
+                    <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 rounded-xl p-5 mb-4 text-center">
+                        <div class="text-indigo-700 dark:text-indigo-400 font-extrabold text-base mb-1">● Published / Live</div>
+                        <div class="text-slate-500 dark:text-slate-400 text-xs mb-4">Currently live for candidate delivery &amp; assignments</div>
                         <form action="{{ route('admin.publications.assessments.unpublish', $test->id) }}" method="POST">
                             @csrf
-                            <button type="submit" 
+                            <button type="submit"
                                     onclick="event.preventDefault(); iapConfirm({ title: 'Unpublish Assessment?', message: 'This Assessment will no longer be available for new candidate access or new assignments. Its governance approval will remain valid.', confirmText: 'Unpublish Assessment', variant: 'warning', form: this.form });"
-                                    style="width:100%;padding:.75rem;background:#f59e0b;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+                                    class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-amber-600/20 transition-all">
                                 ⏸️ Unpublish Assessment
                             </button>
                         </form>
                     </div>
                 @elseif(in_array($test->status, ['pending_approval', 'needs_revision']))
                     {{-- BUSINESS RULE 5: Approve Form with Review by Exception Guard --}}
-                    <form action="{{ route('admin.repository-manager.assessment-approve', $test->id) }}" method="POST" style="margin-bottom:1rem;">
+                    <form action="{{ route('admin.repository-manager.assessment-approve', $test->id) }}" method="POST" class="mb-4">
                         @csrf
-                        <div style="margin-bottom:.75rem;">
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Approval Notes (Optional)</label>
-                            <input type="text" name="notes" placeholder="e.g. Assessment meets institutional quality standards." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        <div class="mb-3">
+                            <label class="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Approval Notes (Optional)</label>
+                            <input type="text" name="notes" placeholder="e.g. Assessment meets institutional quality standards." class="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                         </div>
-                        
-                        <button id="btn-approve-assessment" 
-                                type="submit" 
+
+                        @php
+                            $approveAllowed = (isset($reviewProgress) && $reviewProgress['is_allowed']);
+                        @endphp
+                        <button id="btn-approve-assessment"
+                                type="submit"
                                 onclick="event.preventDefault(); iapConfirm({ title: 'Approve Assessment?', message: 'Are you sure you want to approve this assessment? Once approved, the assessment is ready for publication.', confirmText: 'Approve Assessment', variant: 'success', form: this.form });"
-                                {{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '' : 'disabled' }} 
-                                style="width:100%;padding:.75rem;background:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#10b981' : '#1e293b' }};color:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#fff' : '#64748b' }};font-weight:800;border:1px solid {{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? '#10b981' : '#334155' }};border-radius:.6rem;cursor:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? 'pointer' : 'not-allowed' }};font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 4px 14px rgba(0,0,0,.2);">
+                                {{ $approveAllowed ? '' : 'disabled' }}
+                                class="{{ $approveAllowed ? 'w-full p-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all' : 'w-full p-3 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-extrabold border border-slate-200 dark:border-slate-700 rounded-xl text-xs cursor-not-allowed flex items-center justify-center gap-2 transition-all' }}">
                             ✓ Approve Assessment
                         </button>
-                        <div id="approve-guard-hint" style="font-size:.72rem;color:#f59e0b;margin-top:.4rem;text-align:center;display:{{ (isset($reviewProgress) && $reviewProgress['is_allowed']) ? 'none' : 'block' }};">
+                        <div id="approve-guard-hint" class="text-[11px] text-amber-600 dark:text-amber-400 text-center mt-1.5 font-semibold {{ $approveAllowed ? 'hidden' : '' }}">
                             All flagged questions must be resolved before approval.
                         </div>
                     </form>
 
-                    <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
+                    <hr class="border-t border-slate-200 dark:border-slate-800 my-4">
 
                     {{-- BUSINESS RULE 6: Return Assessment Revision Form with Flagged Badge --}}
-                    <form action="{{ route('admin.repository-manager.assessment-revision', $test->id) }}" method="POST" style="margin-bottom:1rem;">
+                    <form action="{{ route('admin.repository-manager.assessment-revision', $test->id) }}" method="POST" class="mb-4">
                         @csrf
-                        <div style="margin-bottom:.75rem;">
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Overall Revision Summary</label>
-                            <textarea name="notes" rows="3" placeholder="Provide overall review notes for teacher..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;"></textarea>
+                        <div class="mb-3">
+                            <label class="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Overall Revision Summary</label>
+                            <textarea name="notes" rows="3" placeholder="Provide overall review notes for teacher..." class="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"></textarea>
                         </div>
 
-                        <button id="btn-request-revision" 
-                                type="submit" 
+                        @php
+                            $revAllowed = (isset($reviewProgress) && $reviewProgress['is_revision_allowed']);
+                            $flaggedCount = $reviewProgress['flagged'] ?? 0;
+                        @endphp
+                        <button id="btn-request-revision"
+                                type="submit"
                                 onclick="event.preventDefault(); iapConfirm({ title: 'Request Assessment Revision?', message: 'This will return the Assessment to the Teacher for revision. The Teacher will need to address the review findings before resubmitting.', confirmText: 'Request Revision', variant: 'warning', form: this.form });"
-                                {{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '' : 'disabled' }} 
-                                style="width:100%;padding:.75rem;background:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#f59e0b' : '#1e293b' }};color:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#fff' : '#64748b' }};font-weight:800;border:1px solid {{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#f59e0b' : '#334155' }};border-radius:.6rem;cursor:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? 'pointer' : 'not-allowed' }};font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+                                {{ $revAllowed ? '' : 'disabled' }}
+                                class="{{ $revAllowed ? 'w-full p-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-amber-600/20 transition-all' : 'w-full p-3 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-extrabold border border-slate-200 dark:border-slate-700 rounded-xl text-xs cursor-not-allowed flex items-center justify-center gap-2 transition-all' }}">
                             ⚠️ Request Assessment Revision
                         </button>
-                        <div id="revision-badge-container" style="font-size:.72rem;color:#94a3b8;margin-top:.4rem;text-align:center;">
-                            <span id="revision-badge-text" style="font-weight:700;color:{{ (isset($reviewProgress) && $reviewProgress['is_revision_allowed']) ? '#fbbf24' : '#64748b' }};">
-                                {{ (isset($reviewProgress) && $reviewProgress['flagged'] > 0) ? $reviewProgress['flagged'] . ' Questions Flagged' : '0 Questions Flagged — No revisions needed' }}
+                        <div id="revision-badge-container" class="mt-1.5 text-center">
+                            <span id="revision-badge-text" class="text-[11px] font-bold block {{ $revAllowed ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500' }}">
+                                {{ (isset($reviewProgress) && $flaggedCount > 0) ? $flaggedCount . ' Questions Flagged' : '0 Questions Flagged — No revisions needed' }}
                             </span>
                         </div>
                     </form>
 
-                    <hr style="border:none;border-top:1px solid #1e293b;margin:1.25rem 0;">
+                    <hr class="border-t border-slate-200 dark:border-slate-800 my-4">
 
                     {{-- Send to Archived Decision (Governance Rejection & Historical Archival) --}}
                     <form action="{{ route('admin.repository-manager.assessment-archive', $test->id) }}" method="POST" id="form-send-to-archived">
                         @csrf
-                        <div style="margin-bottom:.75rem;">
-                            <label style="font-size:.75rem;font-weight:700;color:#94a3b8;display:block;margin-bottom:.3rem;">Archive / Rejection Reason</label>
-                            <input type="text" name="notes" placeholder="Reason for archiving this submission..." style="width:100%;background:#1e293b;border:1px solid #334155;color:#fff;padding:.6rem;border-radius:.5rem;font-size:.82rem;">
+                        <div class="mb-3">
+                            <label class="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Archive / Rejection Reason</label>
+                            <input type="text" name="notes" placeholder="Reason for archiving this submission..." class="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                         </div>
-                        <button type="submit" 
-                                onclick="event.preventDefault(); iapConfirm({ title: 'Send Assessment to Archived?', message: 'This will end the current assessment submission workflow and preserve the assessment as an archived historical record. It will no longer remain in the active governance workflow.', confirmText: 'Send to Archived', variant: 'warning', form: this.form });" 
-                                style="width:100%;padding:.65rem;background:#475569;color:#fff;font-weight:800;border:none;border-radius:.6rem;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;gap:.35rem;">
+                        <button type="submit"
+                                onclick="event.preventDefault(); iapConfirm({ title: 'Send Assessment to Archived?', message: 'This will end the current assessment submission workflow and preserve the assessment as an archived historical record. It will no longer remain in the active governance workflow.', confirmText: 'Send to Archived', variant: 'warning', form: this.form });"
+                                class="w-full p-2.5 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors shadow-sm">
                             📦 Send to Archived
                         </button>
                     </form>
                 @else
                     {{-- OTHER STATES (e.g. Needs Revision, Draft, Archived) --}}
-                    <div style="background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1rem;text-align:center;color:#94a3b8;font-size:.85rem;">
-                        Status: <strong style="color:#fff;text-transform:capitalize;">{{ str_replace('_', ' ', $test->status) }}</strong>
+                    <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center text-xs text-slate-600 dark:text-slate-300 font-medium">
+                        Status: <strong class="text-slate-900 dark:text-white capitalize">{{ str_replace('_', ' ', $test->status) }}</strong>
                     </div>
                 @endif
             </div>
 
             {{-- Audit Logs Widget --}}
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:1.25rem;padding:1.5rem;">
-                <h4 style="font-size:.9rem;font-weight:800;color:#fff;margin:0 0 1rem;">📜 Activity Audit History</h4>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                <h4 class="text-sm font-extrabold text-slate-900 dark:text-white mb-3">📜 Activity Audit History</h4>
                 @if($logs->isEmpty())
-                    <div style="font-size:.78rem;color:#64748b;">No prior activity logged.</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 text-center py-2">No prior activity logged.</div>
                 @else
                     @foreach($logs as $l)
-                    <div style="border-bottom:1px solid #1e293b;padding:.6rem 0;font-size:.78rem;">
-                        <div style="font-weight:700;color:#e2e8f0;">{{ ucfirst($l->action) }}</div>
-                        <div style="color:#94a3b8;font-size:.72rem;">{{ $l->approval_note }}</div>
-                        <div style="color:#64748b;font-size:.68rem;margin-top:.15rem;">By {{ $l->reviewer?->name ?? $l->actor?->name ?? 'System' }} • {{ $l->created_at?->diffForHumans() }}</div>
+                    <div class="border-b border-slate-100 dark:border-slate-800/80 py-2.5 last:border-b-0 text-xs">
+                        <div class="font-bold text-slate-800 dark:text-slate-200">{{ ucfirst($l->action) }}</div>
+                        <div class="text-slate-600 dark:text-slate-400 text-[11px] mt-0.5">{{ $l->approval_note }}</div>
+                        <div class="text-slate-400 dark:text-slate-500 text-[10px] mt-1">By {{ $l->reviewer?->name ?? $l->actor?->name ?? 'System' }} • {{ $l->created_at?->diffForHumans() }}</div>
                     </div>
                     @endforeach
                 @endif
@@ -440,18 +466,22 @@ function showToast(message) {
     const msgEl = document.getElementById('toast-message');
     if (!toast || !msgEl) return;
     msgEl.textContent = message;
-    toast.style.display = 'flex';
+    toast.classList.remove('hidden');
+    toast.classList.add('flex');
     toast.style.opacity = '1';
     setTimeout(() => {
         toast.style.opacity = '0';
-        setTimeout(() => { toast.style.display = 'none'; }, 300);
+        setTimeout(() => {
+            toast.classList.remove('flex');
+            toast.classList.add('hidden');
+        }, 300);
     }, 2500);
 }
 
 function toggleInlineFlag(questionId) {
     const panel = document.getElementById('inline-rev-panel-' + questionId);
     if (!panel) return;
-    panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
+    panel.classList.toggle('hidden');
 }
 
 async function submitQuestionAnnotation(e, questionId) {
@@ -513,20 +543,31 @@ function updateQuestionUI(questionId, data) {
     // 1. Update Card Border
     const card = document.getElementById('question-card-' + questionId);
     if (card) {
-        card.style.borderColor = isCritical ? 'rgba(239,68,68,.5)' : (isFlagged ? 'rgba(245,158,11,.5)' : '#334155');
+        card.classList.remove('border-rose-400', 'dark:border-rose-500/60', 'ring-1', 'ring-rose-400/40', 'border-amber-400', 'dark:border-amber-500/60', 'ring-amber-400/40', 'border-slate-200', 'dark:border-slate-700');
+        if (isCritical) {
+            card.classList.add('border-rose-400', 'dark:border-rose-500/60', 'ring-1', 'ring-rose-400/40');
+        } else if (isFlagged) {
+            card.classList.add('border-amber-400', 'dark:border-amber-500/60', 'ring-1', 'ring-amber-400/40');
+        } else {
+            card.classList.add('border-slate-200', 'dark:border-slate-700');
+        }
+        card.style.borderColor = '';
     }
 
     // 2. Update Badge Status
     const badge = document.getElementById('badge-status-' + questionId);
     if (badge) {
+        badge.style.color = '';
+        badge.style.background = '';
+        badge.style.border = '';
         if (isCritical) {
-            badge.style.color = '#f87171'; badge.style.background = 'rgba(239,68,68,.15)'; badge.style.border = '1px solid rgba(239,68,68,.3)';
+            badge.className = 'text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 px-2.5 py-0.5 rounded-md';
             badge.textContent = '🔴 Critical Issue (' + capitalize(data.field || 'general') + ')';
         } else if (isFlagged) {
-            badge.style.color = '#fbbf24'; badge.style.background = 'rgba(245,158,11,.15)'; badge.style.border = '1px solid rgba(245,158,11,.3)';
+            badge.className = 'text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 px-2.5 py-0.5 rounded-md';
             badge.textContent = '🟡 Needs Revision (' + capitalize(data.field || 'general') + ')';
         } else {
-            badge.style.color = '#34d399'; badge.style.background = 'rgba(52,211,153,.15)'; badge.style.border = '1px solid rgba(52,211,153,.3)';
+            badge.className = 'text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 px-2.5 py-0.5 rounded-md';
             badge.textContent = '🟢 Default OK';
         }
     }
@@ -534,9 +575,15 @@ function updateQuestionUI(questionId, data) {
     // 3. Update Toggle Button
     const btnToggle = document.getElementById('btn-toggle-flag-' + questionId);
     if (btnToggle) {
-        btnToggle.style.background = isFlagged ? '#ef4444' : '#1e293b';
-        btnToggle.style.borderColor = isFlagged ? '#ef4444' : '#334155';
-        btnToggle.textContent = isFlagged ? '✖ Flagged (Click to Edit)' : '⚠️ Flag Revision';
+        btnToggle.style.background = '';
+        btnToggle.style.borderColor = '';
+        if (isFlagged) {
+            btnToggle.className = 'px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm';
+            btnToggle.textContent = '✖ Flagged (Click to Edit)';
+        } else {
+            btnToggle.className = 'px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5';
+            btnToggle.textContent = '⚠️ Flag Revision';
+        }
     }
 
     // 4. Update Display Feedback Note
@@ -544,23 +591,30 @@ function updateQuestionUI(questionId, data) {
     const feedbackField = document.getElementById('feedback-field-' + questionId);
     const feedbackText = document.getElementById('feedback-text-' + questionId);
     if (feedbackBox && isFlagged) {
-        feedbackBox.style.display = 'block';
+        feedbackBox.classList.remove('hidden');
+        feedbackBox.className = 'text-xs mt-2.5 p-2.5 rounded-lg border ' + (isCritical ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/40' : 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/40');
         if (feedbackField) feedbackField.textContent = capitalize(data.field || 'general');
         if (feedbackText) feedbackText.textContent = data.comment || '';
     } else if (feedbackBox) {
-        feedbackBox.style.display = 'none';
+        feedbackBox.classList.add('hidden');
     }
 
     // 5. Update Navigator Pill
     const navPill = document.getElementById('nav-pill-' + questionId);
     const navSymbol = document.getElementById('nav-pill-symbol-' + questionId);
     if (navPill && navSymbol) {
+        navPill.style.background = '';
+        navPill.style.border = '';
+        navPill.style.color = '';
         if (isCritical) {
-            navSymbol.textContent = '🔴'; navPill.style.background = 'rgba(239,68,68,.15)'; navPill.style.border = '1px solid rgba(239,68,68,.4)'; navPill.style.color = '#f87171';
+            navSymbol.textContent = '🔴';
+            navPill.className = 'px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 transition-colors bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/50';
         } else if (isFlagged) {
-            navSymbol.textContent = '🟡'; navPill.style.background = 'rgba(245,158,11,.15)'; navPill.style.border = '1px solid rgba(245,158,11,.4)'; navPill.style.color = '#fbbf24';
+            navSymbol.textContent = '🟡';
+            navPill.className = 'px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 transition-colors bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50';
         } else {
-            navSymbol.textContent = '🟢'; navPill.style.background = 'rgba(52,211,153,.15)'; navPill.style.border = '1px solid rgba(52,211,153,.4)'; navPill.style.color = '#34d399';
+            navSymbol.textContent = '🟢';
+            navPill.className = 'px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 transition-colors bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50';
         }
     }
 
@@ -575,24 +629,36 @@ function updateQuestionUI(questionId, data) {
     const approveHint = document.getElementById('approve-guard-hint');
     if (btnApprove) {
         btnApprove.disabled = !data.is_allowed;
-        btnApprove.style.background = data.is_allowed ? '#10b981' : '#1e293b';
-        btnApprove.style.borderColor = data.is_allowed ? '#10b981' : '#334155';
-        btnApprove.style.color = data.is_allowed ? '#fff' : '#64748b';
-        btnApprove.style.cursor = data.is_allowed ? 'pointer' : 'not-allowed';
+        btnApprove.style.background = '';
+        btnApprove.style.borderColor = '';
+        btnApprove.style.color = '';
+        btnApprove.className = data.is_allowed
+            ? 'w-full p-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all'
+            : 'w-full p-3 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-extrabold border border-slate-200 dark:border-slate-700 rounded-xl text-xs cursor-not-allowed flex items-center justify-center gap-2 transition-all';
     }
-    if (approveHint) approveHint.style.display = data.is_allowed ? 'none' : 'block';
+    if (approveHint) {
+        if (data.is_allowed) {
+            approveHint.classList.add('hidden');
+        } else {
+            approveHint.classList.remove('hidden');
+        }
+    }
 
     const btnRevision = document.getElementById('btn-request-revision');
     const revisionBadgeText = document.getElementById('revision-badge-text');
     if (btnRevision) {
         btnRevision.disabled = !data.is_revision_allowed;
-        btnRevision.style.background = data.is_revision_allowed ? '#f59e0b' : '#1e293b';
-        btnRevision.style.borderColor = data.is_revision_allowed ? '#f59e0b' : '#334155';
-        btnRevision.style.color = data.is_revision_allowed ? '#fff' : '#64748b';
-        btnRevision.style.cursor = data.is_revision_allowed ? 'pointer' : 'not-allowed';
+        btnRevision.style.background = '';
+        btnRevision.style.borderColor = '';
+        btnRevision.style.color = '';
+        btnRevision.className = data.is_revision_allowed
+            ? 'w-full p-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-amber-600/20 transition-all'
+            : 'w-full p-3 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-extrabold border border-slate-200 dark:border-slate-700 rounded-xl text-xs cursor-not-allowed flex items-center justify-center gap-2 transition-all';
     }
     if (revisionBadgeText) {
-        revisionBadgeText.style.color = data.is_revision_allowed ? '#fbbf24' : '#64748b';
+        revisionBadgeText.className = data.is_revision_allowed
+            ? 'text-[11px] font-bold block text-amber-600 dark:text-amber-400'
+            : 'text-[11px] font-bold block text-slate-400 dark:text-slate-500';
         revisionBadgeText.textContent = data.is_revision_allowed ? (data.flagged_count + ' Questions Flagged') : '0 Questions Flagged — No revisions needed';
     }
 }
