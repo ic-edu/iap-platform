@@ -76,12 +76,14 @@ class AssessmentWorkflowService
             ->count();
         $needsRevisionCount       = Test::whereIn('status', ['needs_revision', 'revision_requested'])->count();
         $totalApproved            = Test::where('status', 'approved')->count();
+        $readyForPublicationCount = Test::where('status', 'approved')->where('is_published', false)->count();
 
         return [
             'pendingAssessmentsCount'  => $pendingAssessmentsCount,
             'approvedAssessmentsToday' => $approvedAssessmentsToday,
             'needsRevisionCount'       => $needsRevisionCount,
             'totalApproved'            => $totalApproved,
+            'readyForPublicationCount' => $readyForPublicationCount,
         ];
     }
 
@@ -116,7 +118,7 @@ class AssessmentWorkflowService
             default                              => $targetStatus,
         };
 
-        $isPublished = ($targetStatus === 'approved');
+        $isPublished = ($targetStatus === 'published');
 
         $test->update([
             'status'       => $targetStatus,

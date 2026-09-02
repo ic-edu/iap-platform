@@ -19,9 +19,13 @@
                     <span class="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         ⏳ Pending Approval
                     </span>
-                @elseif($test->status === 'approved' || $test->is_published)
+                @elseif($test->status === 'published' && $test->is_published)
                     <span class="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/50 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
                         🟢 Published & Live
+                    </span>
+                @elseif($test->status === 'approved' && !$test->is_published)
+                    <span class="bg-sky-100 dark:bg-sky-950/50 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700/50 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
+                        ✅ Approved
                     </span>
                 @else
                     <span class="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 px-2.5 py-0.5 rounded-md text-[11px] font-bold">
@@ -1178,9 +1182,21 @@
                         <div class="absolute -left-[1.35rem] top-1 w-2.5 h-2.5 rounded-full {{ $item['status'] === 'active' ? 'bg-amber-500 ring-4 ring-amber-100 dark:ring-amber-950/60' : ($item['status'] === 'completed' ? 'bg-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950/60' : 'bg-slate-300 dark:bg-slate-700') }}"></div>
                         <div class="text-xs font-bold {{ $item['status'] === 'active' ? 'text-amber-700 dark:text-amber-400' : ($item['status'] === 'completed' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400') }}">
                             {{ $item['step'] }}
+                            @if($item['status'] === 'completed')
+                                <span class="text-emerald-600 dark:text-emerald-400 ml-1">✅</span>
+                            @elseif($item['status'] === 'active')
+                                <span class="text-amber-600 dark:text-amber-400 ml-1">⚡</span>
+                            @elseif($item['status'] === 'pending')
+                                <span class="text-slate-400 ml-1">⏳</span>
+                            @endif
                         </div>
-                        @if($item['date'])
+                        @if(!empty($item['note']))
                         <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            {{ $item['note'] }}
+                        </div>
+                        @endif
+                        @if($item['date'])
+                        <div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
                             {{ $item['date'] }}
                         </div>
                         @endif

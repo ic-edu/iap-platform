@@ -72,6 +72,7 @@ class RepositoryManagerController extends Controller
         $pendingAssessmentsCount  = $assessmentMetrics['pendingAssessmentsCount'];
         $approvedAssessmentsToday = $assessmentMetrics['approvedAssessmentsToday'];
         $needsRevisionCount       = $assessmentMetrics['needsRevisionCount'];
+        $readyForPublicationCount = $assessmentMetrics['readyForPublicationCount'] ?? Test::where('status', 'approved')->where('is_published', false)->count();
 
         // TASK 5: Real Duplicate Count & Dynamic Health Metrics from RepositoryQualityService
         $qualityService  = app(\App\Services\RepositoryQualityService::class);
@@ -161,7 +162,8 @@ class RepositoryManagerController extends Controller
             'teacherSubmissionsQueue',
             'teacherPerformanceSummary',
             'recentlyUpdatedRepositories',
-            'openApprovalTasks'
+            'openApprovalTasks',
+            'readyForPublicationCount'
         ));
     }
 
@@ -803,6 +805,12 @@ class RepositoryManagerController extends Controller
         if ($status !== 'all') {
             if ($status === 'pending') {
                 $query->whereIn('status', ['pending', 'pending_approval']);
+            } elseif ($status === 'ready_for_publication') {
+                $query->where('status', 'approved')->where('is_published', false);
+            } elseif ($status === 'published') {
+                $query->where(function ($q) {
+                    $q->where('status', 'published')->orWhere('is_published', true);
+                });
             } else {
                 $query->where('status', $status);
             }
@@ -811,6 +819,10 @@ class RepositoryManagerController extends Controller
         $assessments = $query->latest()->paginate(15);
         $pendingCount = Test::whereIn('status', ['pending', 'pending_approval'])->count();
         $approvedCount = Test::where('status', 'approved')->count();
+        $readyForPublicationCount = Test::where('status', 'approved')->where('is_published', false)->count();
+        $publishedCount = Test::where(function ($q) {
+            $q->where('status', 'published')->orWhere('is_published', true);
+        })->count();
         $needsRevisionCount = Test::whereIn('status', ['needs_revision', 'revision_requested', 'rejected'])->count();
 
         return view('admin.repository_manager.assessment_approval', compact(
@@ -818,6 +830,8 @@ class RepositoryManagerController extends Controller
             'status',
             'pendingCount',
             'approvedCount',
+            'readyForPublicationCount',
+            'publishedCount',
             'needsRevisionCount'
         ));
     }

@@ -41,15 +41,24 @@
             <div class="text-[10px] text-slate-400 font-bold">Governance Queue →</div>
         </a>
 
-        {{-- Card 2: Assessment Approval --}}
-        <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="gov-card p-4 flex flex-col justify-between hover:border-sky-500 transition-all no-underline group" style="min-height: 120px;">
+        {{-- Card 2: Assessment Approval & Publication --}}
+        <div class="gov-card p-4 flex flex-col justify-between hover:border-sky-500 transition-all group" style="min-height: 120px;">
             <div class="flex justify-between items-center">
-                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-sky-600 dark:group-hover:text-sky-400">Assessment Approval</span>
+                <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hover:text-sky-600 dark:hover:text-sky-400 no-underline">Assessment Approval</a>
                 <span class="text-lg">📋</span>
             </div>
-            <div class="text-2xl font-black text-sky-600 dark:text-sky-400 my-1">{{ $pendingAssessmentsCount }}</div>
-            <div class="text-[10px] text-slate-400 font-bold">Assessment Queue →</div>
-        </a>
+            <div class="my-1">
+                <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-2xl font-black text-sky-600 dark:text-sky-400 no-underline hover:opacity-80">
+                    {{ $pendingAssessmentsCount }}
+                </a>
+            </div>
+            <div class="flex justify-between items-center text-[10px] pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold no-underline">Queue →</a>
+                <a href="{{ route('admin.publications.assessments') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-bold no-underline" title="View Assessments ready for publication">
+                    Ready to Publish ({{ $readyForPublicationCount ?? 0 }}) →
+                </a>
+            </div>
+        </div>
 
         {{-- Card 3: Pending Media Reviews --}}
         <a href="{{ route('admin.repository-manager.media-approval') }}" class="gov-card p-4 flex flex-col justify-between hover:border-purple-500 transition-all no-underline group" style="min-height: 120px;">

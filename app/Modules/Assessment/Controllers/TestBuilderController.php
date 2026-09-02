@@ -365,32 +365,88 @@ class TestBuilderController extends Controller
             ->latest()
             ->first();
 
-        $workflowTimeline = [
-            [
-                'step' => 'Draft Created',
-                'status' => 'completed',
-                'date' => $test->created_at?->format('M d, Y H:i'),
-            ],
-            [
-                'step' => 'Submitted for Approval',
-                'status' => in_array($test->status, ['pending', 'pending_approval', 'needs_revision', 'revision_requested', 'approved', 'published']) ? 'completed' : 'pending',
-                'date' => null,
-            ],
-            [
-                'step' => 'Repository Review',
-                'status' => in_array($test->status, ['needs_revision', 'revision_requested', 'approved', 'published']) ? 'completed' : 'pending',
-                'date' => $latestFeedbackLog?->created_at?->format('M d, Y H:i'),
-            ],
-            [
-                'step' => 'Needs Revision',
-                'status' => in_array($test->status, ['needs_revision', 'revision_requested']) ? 'active' : (in_array($test->status, ['approved', 'published']) ? 'completed' : 'pending'),
-                'date' => $latestFeedbackLog?->created_at?->format('M d, Y H:i'),
-            ],
-            [
-                'step' => 'Approved & Live',
-                'status' => in_array($test->status, ['approved', 'published']) ? 'completed' : 'pending',
-                'date' => null,
-            ],
+        $testLogs = \App\Models\RepositoryActivityLog::where('resource_type', 'Test')
+            ->where('resource_id', (string) $test->id)
+            ->with(['reviewer', 'actor'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $submissionLog = $testLogs->firstWhere('action', 'submitted') ?? $testLogs->firstWhere('action', 'submission');
+        $revisionLog   = $testLogs->filter(fn($l) => in_array($l->action, ['revision_requested', 'rejected']))->last();
+        $approvalLog   = $testLogs->firstWhere('action', 'approved');
+        $publishLog    = $testLogs->filter(fn($l) => in_array($l->action, ['published', 'PUBLISH']))->last();
+        $unpublishLog  = $testLogs->filter(fn($l) => in_array($l->action, ['unpublished', 'UNPUBLISH']))->last();
+
+        $hadRevision = $revisionLog !== null || in_array($test->status, ['needs_revision', 'revision_requested']);
+        $isApproved = in_array($test->status, ['approved', 'published']) || $approvalLog !== null;
+        $isPublished = $test->is_published && $test->status === 'published';
+
+        $workflowTimeline = [];
+
+        // 1. Draft Created
+        $workflowTimeline[] = [
+            'step'   => 'Draft Created',
+            'status' => 'completed',
+            'date'   => $test->created_at?->format('M d, Y H:i'),
+            'note'   => null,
+        ];
+
+        // 2. Submitted for Approval
+        $workflowTimeline[] = [
+            'step'   => 'Submitted for Approval',
+            'status' => ($test->status !== 'draft') ? 'completed' : 'pending',
+            'date'   => $submissionLog?->created_at?->format('M d, Y H:i') ?? ($test->status !== 'draft' ? $test->created_at?->format('M d, Y H:i') : null),
+            'note'   => null,
+        ];
+
+        // 3. Repository Review
+        $reviewStatus = 'pending';
+        if (in_array($test->status, ['needs_revision', 'revision_requested', 'approved', 'published']) || $approvalLog !== null || $revisionLog !== null) {
+            $reviewStatus = 'completed';
+        } elseif (in_array($test->status, ['pending', 'pending_approval'])) {
+            $reviewStatus = 'active';
+        }
+        $workflowTimeline[] = [
+            'step'   => 'Repository Review',
+            'status' => $reviewStatus,
+            'date'   => $approvalLog?->created_at?->format('M d, Y H:i') ?? ($revisionLog?->created_at?->format('M d, Y H:i') ?? null),
+            'note'   => null,
+        ];
+
+        // 4. Needs Revision (ONLY if applicable in lifecycle/history)
+        if ($hadRevision) {
+            $workflowTimeline[] = [
+                'step'   => 'Needs Revision',
+                'status' => in_array($test->status, ['needs_revision', 'revision_requested']) ? 'active' : 'completed',
+                'date'   => $revisionLog?->created_at?->format('M d, Y H:i'),
+                'note'   => $revisionLog?->approval_note,
+            ];
+        }
+
+        // 5. Approved
+        $workflowTimeline[] = [
+            'step'   => 'Approved',
+            'status' => $isApproved ? 'completed' : 'pending',
+            'date'   => $approvalLog?->created_at?->format('M d, Y H:i'),
+            'note'   => $isApproved ? 'Governance accepted, ready for publication.' : null,
+        ];
+
+        // 6. Published
+        $publishStatus = 'pending';
+        $publishNote = 'Pending / not yet published';
+        if ($isPublished) {
+            $publishStatus = 'completed';
+            $publishNote = 'Live and available to candidates';
+        } elseif ($unpublishLog !== null || ($test->status === 'approved' && !$test->is_published && $publishLog !== null)) {
+            $publishStatus = 'pending';
+            $publishNote = 'Currently unpublished / not live';
+        }
+
+        $workflowTimeline[] = [
+            'step'   => 'Published',
+            'status' => $publishStatus,
+            'date'   => $isPublished ? $publishLog?->created_at?->format('M d, Y H:i') : null,
+            'note'   => $publishNote,
         ];
 
         $validationResult = $this->validateAssessment($test);

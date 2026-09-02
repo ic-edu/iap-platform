@@ -10,7 +10,10 @@
             <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">📋 Assessment Approval Queue</h1>
             <p class="text-xs text-slate-500 dark:text-slate-400">Review, validate, and approve submitted Assessment Tests from Teachers for institutional deployment.</p>
         </div>
-        <div>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('admin.publications.assessments') }}" class="gov-btn-primary px-3.5 py-2 text-xs font-bold inline-flex items-center gap-1.5 shadow-sm">
+                🚀 Publication Queue ({{ $readyForPublicationCount ?? 0 }}) →
+            </a>
             <a href="{{ route('admin.repository-manager.dashboard') }}" class="gov-btn-secondary px-3.5 py-2 text-xs font-bold inline-flex items-center gap-1.5">
                 ← Back
             </a>
@@ -25,10 +28,10 @@
             <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Awaiting Repository Review</div>
         </a>
 
-        <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'approved']) }}" class="gov-card p-5 block {{ $status === 'approved' ? 'ring-2 ring-emerald-500' : '' }}">
-            <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Approved Tests</div>
-            <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">{{ $approvedCount }}</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Live in Academic Repository</div>
+        <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'ready_for_publication']) }}" class="gov-card p-5 block {{ $status === 'ready_for_publication' || $status === 'approved' ? 'ring-2 ring-emerald-500' : '' }}">
+            <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Ready for Publication</div>
+            <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">{{ $readyForPublicationCount ?? $approvedCount }}</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Approved (Not Yet Live)</div>
         </a>
 
         <a href="{{ route('admin.repository-manager.assessment-approval', ['status' => 'needs_revision']) }}" class="gov-card p-5 block {{ $status === 'needs_revision' ? 'ring-2 ring-rose-500' : '' }}">
@@ -86,9 +89,13 @@
                                 <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                     ⏳ Pending Approval
                                 </span>
-                            @elseif($item->status === 'approved')
+                            @elseif($item->is_published || $item->status === 'published')
                                 <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                    ✓ Approved
+                                    🟢 Published / Live
+                                </span>
+                            @elseif($item->status === 'approved')
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                                    ✓ Approved (Not Live)
                                 </span>
                             @else
                                 <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
@@ -108,10 +115,32 @@
                                 <span class="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-lg text-xs font-bold inline-flex items-center gap-1">
                                     📝 Awaiting Teacher Resubmission
                                 </span>
-                            @elseif($item->status === 'approved')
-                                <span class="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-bold inline-flex items-center gap-1">
-                                    ✓ Governance Complete
-                                </span>
+                            @elseif($item->status === 'approved' && !$item->is_published)
+                                <div class="flex items-center justify-end gap-2">
+                                    <a href="{{ route('admin.repository-manager.assessment-review', $item->id) }}" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1">
+                                        Review
+                                    </a>
+                                    <form action="{{ route('admin.publications.assessments.publish', $item->id) }}" method="POST" class="inline"
+                                          onsubmit="event.preventDefault(); iapConfirm({ title: 'Publish Assessment Live?', message: 'Publish \'{{ addslashes($item->title) }}\' live? Candidates will be able to access this assessment.', confirmText: 'Publish Assessment', variant: 'success', form: this });">
+                                        @csrf
+                                        <button type="submit" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-sm">
+                                            🚀 Publish
+                                        </button>
+                                    </form>
+                                </div>
+                            @elseif($item->is_published || $item->status === 'published')
+                                <div class="flex items-center justify-end gap-2">
+                                    <a href="{{ route('admin.repository-manager.assessment-review', $item->id) }}" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1">
+                                        Review
+                                    </a>
+                                    <form action="{{ route('admin.publications.assessments.unpublish', $item->id) }}" method="POST" class="inline"
+                                          onsubmit="event.preventDefault(); iapConfirm({ title: 'Unpublish Assessment?', message: 'Unpublish \'{{ addslashes($item->title) }}\'? Candidates will lose access.', confirmText: 'Unpublish Assessment', variant: 'warning', form: this });">
+                                        @csrf
+                                        <button type="submit" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1 shadow-sm">
+                                            ⏸ Unpublish
+                                        </button>
+                                    </form>
+                                </div>
                             @else
                                 <span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold">
                                     {{ ucfirst($item->status) }}

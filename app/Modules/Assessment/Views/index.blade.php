@@ -443,13 +443,13 @@ html[data-theme="dark"] .tb-form-input, html[data-theme="dark"] .tb-form-select 
         @if(($publishedTests ?? 0) > 0)
         <a href="{{ route('admin.tests.index', ['status' => 'published']) }}" class="tb-kpi tb-kpi--emerald">
             <div class="tb-kpi__count">{{ $publishedTests }}</div>
-            <div class="tb-kpi__label">Approved &amp; Live</div>
+            <div class="tb-kpi__label">Published</div>
             <div class="tb-kpi__desc">Active for candidates</div>
         </a>
         @else
         <a href="javascript:void(0)" onclick="openTbNothingModal()" class="tb-kpi tb-kpi--emerald">
             <div class="tb-kpi__count">0</div>
-            <div class="tb-kpi__label">Approved &amp; Live</div>
+            <div class="tb-kpi__label">Published</div>
             <div class="tb-kpi__desc">No live assessments</div>
         </a>
         @endif

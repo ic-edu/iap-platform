@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\QuestionBankArchiveRequest;
+use App\Models\RepositoryActivityLog;
 use App\Models\User;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\QuestionBank\Models\QuestionBank;
@@ -139,6 +140,15 @@ class PublicationOperationController extends Controller
             $test
         );
 
+        RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $actor->id,
+            'reviewer_id'   => $actor->id,
+            'action'        => 'published',
+            'approval_note' => "Assessment published live by {$actor->name}.",
+        ]);
+
         // Notify Teacher Author (ADMIN-OPS-001 Section 8)
         if ($test->creator) {
             try {
@@ -183,6 +193,15 @@ class PublicationOperationController extends Controller
             "Unpublished Assessment Test '{$test->title}'",
             $test
         );
+
+        RepositoryActivityLog::create([
+            'resource_type' => 'Test',
+            'resource_id'   => (string) $test->id,
+            'actor_id'      => $actor->id,
+            'reviewer_id'   => $actor->id,
+            'action'        => 'unpublished',
+            'approval_note' => "Assessment unpublished by {$actor->name}. Reverted to approved status.",
+        ]);
 
         return redirect()->back()->with('status', "Assessment Test '{$test->title}' unpublished.");
     }

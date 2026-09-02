@@ -340,8 +340,11 @@
                 @if($test->status === 'approved' && !$test->is_published)
                     {{-- APPROVED: Ready for Publication --}}
                     <div class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-5 mb-4 text-center">
-                        <div class="text-emerald-700 dark:text-emerald-400 font-extrabold text-base mb-1">✓ Governance Approved</div>
-                        <div class="text-slate-500 dark:text-slate-400 text-xs mb-4">Ready for Publication (Not Live)</div>
+                        <div class="text-emerald-700 dark:text-emerald-400 font-extrabold text-base mb-1">✓ ASSESSMENT APPROVED</div>
+                        <div class="text-slate-600 dark:text-slate-300 text-xs font-semibold mb-2">Governance review completed (Governance Approved).</div>
+                        <div class="text-slate-500 dark:text-slate-400 text-xs mb-4">
+                            Publication Status: <strong class="text-amber-600 dark:text-amber-400 font-bold uppercase">NOT PUBLISHED</strong>
+                        </div>
                         <form action="{{ route('admin.publications.assessments.publish', $test->id) }}" method="POST">
                             @csrf
                             <button type="submit"
@@ -354,7 +357,7 @@
                 @elseif($test->status === 'published' && $test->is_published)
                     {{-- PUBLISHED: Live --}}
                     <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 rounded-xl p-5 mb-4 text-center">
-                        <div class="text-indigo-700 dark:text-indigo-400 font-extrabold text-base mb-1">● Published / Live</div>
+                        <div class="text-indigo-700 dark:text-indigo-400 font-extrabold text-base mb-1">● PUBLISHED / LIVE</div>
                         <div class="text-slate-500 dark:text-slate-400 text-xs mb-4">Currently live for candidate delivery &amp; assignments</div>
                         <form action="{{ route('admin.publications.assessments.unpublish', $test->id) }}" method="POST">
                             @csrf
