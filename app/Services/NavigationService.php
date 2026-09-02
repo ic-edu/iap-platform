@@ -19,7 +19,39 @@ class NavigationService
      *     active_pattern: string,
      *     badge: string|null
      * }>
+    /**
+     * Resolve the canonical dashboard route for an authenticated user based on role precedence.
      */
+    public static function getDashboardRouteForUser(?\App\Models\User $user = null): string
+    {
+        $user = $user ?? Auth::user();
+        if (! $user) {
+            return route('login');
+        }
+
+        if ($user->hasRole('super-admin')) {
+            return route('super-admin.dashboard');
+        }
+
+        if ($user->hasRole('repository-manager')) {
+            return route('admin.repository-manager.dashboard');
+        }
+
+        if ($user->hasRole('admin')) {
+            return route('admin.dashboard');
+        }
+
+        if ($user->hasRole('teacher')) {
+            return route('teacher.dashboard');
+        }
+
+        if ($user->hasRole('finance')) {
+            return route('finance.dashboard');
+        }
+
+        return route('candidate.portal');
+    }
+
     public static function getMenuItems(): array
     {
         $user = Auth::user();

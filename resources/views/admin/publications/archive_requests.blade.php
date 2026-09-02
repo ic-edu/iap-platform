@@ -9,7 +9,7 @@
         <div class="page-header__inner">
             <div>
                 <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.4rem;">
-                    <a href="{{ route('admin.dashboard') }}" class="breadcrumb-link">← Dashboard</a>
+                    <a href="{{ \App\Services\NavigationService::getDashboardRouteForUser() }}" class="breadcrumb-link">← Dashboard</a>
                     <span class="breadcrumb-sep">/</span>
                     <span class="breadcrumb-current">Archive Requests</span>
                 </div>

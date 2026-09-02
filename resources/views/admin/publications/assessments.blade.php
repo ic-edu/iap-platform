@@ -9,7 +9,7 @@
         <div class="page-header__inner">
             <div>
                 <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.4rem;">
-                    <a href="{{ route('admin.dashboard') }}" class="breadcrumb-link">← Dashboard</a>
+                    <a href="{{ \App\Services\NavigationService::getDashboardRouteForUser() }}" class="breadcrumb-link">← Dashboard</a>
                     <span class="breadcrumb-sep">/</span>
                     <span class="breadcrumb-current">Assessment Publication Queue</span>
                 </div>
@@ -47,7 +47,7 @@
     <div class="empty-state">
         <div class="empty-state__icon">📋</div>
         <h3>No Assessments Found</h3>
-        <p>No assessments match the current filter. When Super Admin approves an Assessment, it will appear here ready for publication.</p>
+        <p>No assessments match the current filter. Approved assessments will appear here when they are ready for publication.</p>
     </div>
     @else
     <div class="table-card">

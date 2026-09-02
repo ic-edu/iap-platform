@@ -53,7 +53,7 @@
                 </a>
             </div>
             <div class="flex justify-between items-center text-[10px] pt-1.5 border-t border-slate-100 dark:border-slate-800">
-                <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold no-underline">Queue →</a>
+                <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold no-underline">Assessment Queue →</a>
                 <a href="{{ route('admin.publications.assessments') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-bold no-underline" title="View Assessments ready for publication">
                     Ready to Publish ({{ $readyForPublicationCount ?? 0 }}) →
                 </a>

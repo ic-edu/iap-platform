@@ -10,7 +10,7 @@
         <div class="page-header__inner">
             <div>
                 <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.4rem;">
-                    <a href="{{ route('admin.dashboard') }}" class="breadcrumb-link">← Dashboard</a>
+                    <a href="{{ \App\Services\NavigationService::getDashboardRouteForUser() }}" class="breadcrumb-link">← Dashboard</a>
                     <span class="breadcrumb-sep">/</span>
                     <span class="breadcrumb-current">Question Bank Publication Queue</span>
                 </div>
@@ -51,7 +51,7 @@
     <div class="empty-state">
         <div class="empty-state__icon">📂</div>
         <h3>No Question Banks Found</h3>
-        <p>No question banks match the current filter. When a Teacher submits a Question Bank and Super Admin approves it, it will appear here.</p>
+        <p>No question banks match the current filter. Approved question banks will appear here when they are ready for publication.</p>
     </div>
     @else
     <div class="table-card">

@@ -120,7 +120,7 @@ class PublicationOperationController extends Controller
         }
 
         if ($test->status !== 'approved' || $test->is_published) {
-            abort(403, 'Cannot publish: Assessment Test must be approved by Super Admin or Repository Manager first and not already published.');
+            abort(403, 'Cannot publish: Assessment Test must be approved before publication and not already published.');
         }
 
         $test->update([

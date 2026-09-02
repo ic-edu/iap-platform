@@ -85,15 +85,7 @@
 <div class="al-workspace">
 
     @php
-        if (Auth::user()?->hasRole('teacher')) {
-            $alBackUrl = route('teacher.dashboard');
-        } elseif (Auth::user()?->hasRole('repository-manager')) {
-            $alBackUrl = route('admin.repository-manager.dashboard');
-        } elseif (Auth::user()?->hasRole('super-admin')) {
-            $alBackUrl = route('super-admin.dashboard');
-        } else {
-            $alBackUrl = route('admin.dashboard');
-        }
+        $alBackUrl = \App\Services\NavigationService::getDashboardRouteForUser();
     @endphp
 
     <div style="display:flex;gap:1rem;align-items:center;margin-bottom:.5rem;">

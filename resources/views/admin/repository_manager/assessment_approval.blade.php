@@ -95,7 +95,7 @@
                                 </span>
                             @elseif($item->status === 'approved')
                                 <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                                    ✓ Approved (Not Live)
+                                    ✓ Approved (Governance Complete)
                                 </span>
                             @else
                                 <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">

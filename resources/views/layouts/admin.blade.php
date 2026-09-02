@@ -112,13 +112,11 @@
                     <!-- Topbar Action Button (Role-Aware Dashboard Navigation) -->
                     @php
                         $user = Auth::user();
-                        $dashboardRoute = route('dashboard');
+                        $dashboardRoute = \App\Services\NavigationService::getDashboardRouteForUser($user);
                         $dashboardTitle = 'Dashboard';
                         if ($user?->hasRole('super-admin')) {
-                            $dashboardRoute = route('super-admin.dashboard');
                             $dashboardTitle = 'Super Admin Dashboard';
                         } elseif ($user?->hasRole('repository-manager')) {
-                            $dashboardRoute = route('admin.repository-manager.dashboard');
                             $dashboardTitle = 'Repository Manager Dashboard';
                         } elseif ($user?->hasRole('teacher')) {
                             $dashboardRoute = route('teacher.dashboard');

@@ -19,9 +19,12 @@ class AdminOperationalDashboardController extends Controller
      * Display Admin Operational Dashboard (/admin/dashboard).
      * Operational Admin Workspace: Candidate Management, Assessment Assignments, Payment Eligibility.
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|\Illuminate\Http\RedirectResponse
     {
         $user = $request->user();
+        if ($user && $user->hasRole('repository-manager') && ! $user->hasRole(['admin', 'super-admin'])) {
+            return redirect()->route('admin.repository-manager.dashboard');
+        }
 
         // 1. Total Registered Candidates
         $totalCandidates = User::role('student')->count();

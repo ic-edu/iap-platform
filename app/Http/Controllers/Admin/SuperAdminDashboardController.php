@@ -72,8 +72,13 @@ class SuperAdminDashboardController extends Controller
      * Display Admin Operational Landing Dashboard (/admin/dashboard).
      * Operational Admin Workspace: Candidate Operations, Assessment Assignments, Payment Eligibility.
      */
-    public function adminIndex(Request $request): View
+    public function adminIndex(Request $request): View|\Illuminate\Http\RedirectResponse
     {
+        $user = $request->user();
+        if ($user && $user->hasRole('repository-manager') && ! $user->hasRole(['admin', 'super-admin'])) {
+            return redirect()->route('admin.repository-manager.dashboard');
+        }
+
         return app(AdminOperationalDashboardController::class)->index($request);
     }
 
