@@ -83,7 +83,7 @@ class CandidateCommerceCheckoutTest extends \Tests\TestCase
         $this->teacher->assignRole('teacher');
 
         // Build Published Mock Test
-        $this->publishedTest = $this->createMockTest('TOEIC Mock Test — SMK Perhotelan (UAT)', 'approved', true);
+        $this->publishedTest = $this->createMockTest('TOEIC Mock Test — SMK Perhotelan (UAT)', 'published', true);
 
         // Build Draft Mock Test (unpublished)
         $this->draftTest = $this->createMockTest('Draft Unfinished Mock Test', 'draft', false);

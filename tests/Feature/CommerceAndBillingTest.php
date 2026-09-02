@@ -184,7 +184,7 @@ test('payment confirmation automatically activates course enrollment and test as
 
     $courseCat = CourseCategory::create(['name' => 'Auto Cat', 'slug' => 'auto-cat']);
     $course = Course::create(['title' => 'Auto Course', 'slug' => 'auto-course', 'code' => 'AC1', 'category_id' => $courseCat->id, 'is_published' => true]);
-    $test = Test::create(['title' => 'Auto Test', 'slug' => 'auto-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'is_published' => true, 'created_by' => $teacher->id]);
+    $test = Test::create(['title' => 'Auto Test', 'slug' => 'auto-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'is_published' => true, 'created_by' => $teacher->id]);
 
     $prodCat = ProductCategory::create(['name' => 'Prod Cat', 'slug' => 'prod-cat']);
     $product = Product::create([

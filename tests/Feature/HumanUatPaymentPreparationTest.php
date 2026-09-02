@@ -93,7 +93,7 @@ class HumanUatPaymentPreparationTest extends \Tests\TestCase
             'pass_score'       => 0,
             'created_by'       => $this->rm->id,
             'assigned_to'      => $this->teacher->id,
-            'status'           => 'approved',
+            'status'           => 'published',
             'is_published'     => true,
         ]);
 
@@ -155,7 +155,7 @@ class HumanUatPaymentPreparationTest extends \Tests\TestCase
         $this->assertNotNull($test);
         $this->assertTrue($test->isRealTest());
         $this->assertTrue((bool) $test->is_published);
-        $this->assertEquals('approved', $test->status);
+        $this->assertEquals('published', $test->status);
 
         $test->load('sections.testQuestions');
         $this->assertEquals(3, $test->sections->sum(fn($s) => $s->testQuestions->count()));

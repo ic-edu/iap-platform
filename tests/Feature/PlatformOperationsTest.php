@@ -90,7 +90,7 @@ test('assignment engine assigns and revokes test assignments', function () {
     Event::fake([TestAssigned::class, AssignmentRevoked::class]);
     $engine = new AssignmentEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Assign Test', 'slug' => 'assign-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Assign Test', 'slug' => 'assign-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'status' => 'published', 'is_published' => true, 'created_by' => $user->id]);
 
     $attempt = $engine->assignToUser($test, $user);
     expect($attempt->user_id)->toBe($user->id);
@@ -110,7 +110,7 @@ test('assignment engine assigns test to enrolled course students', function () {
     $course = Course::create(['title' => 'Course Target', 'slug' => 'course-target', 'code' => 'CT', 'category_id' => $cat->id, 'level' => CourseLevel::Beginner, 'is_published' => true]);
     $enrollEngine->enrollStudent($course, $student);
 
-    $test = Test::create(['title' => 'Course Exam', 'slug' => 'course-exam', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $teacher->id]);
+    $test = Test::create(['title' => 'Course Exam', 'slug' => 'course-exam', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'status' => 'published', 'is_published' => true, 'created_by' => $teacher->id]);
 
     $attempts = $engine->assignToCourse($test, $course->id);
     expect(count($attempts))->toBe(1);
@@ -125,7 +125,7 @@ test('scheduling engine validates candidate test access', function () {
     $validation = $engine->validateCandidateAccess($draftTest, $user);
     expect($validation['can_access'])->toBeFalse();
 
-    $pubTest = Test::create(['title' => 'Pub Test', 'slug' => 'pub-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'is_published' => true, 'created_by' => $user->id]);
+    $pubTest = Test::create(['title' => 'Pub Test', 'slug' => 'pub-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'is_published' => true, 'created_by' => $user->id]);
     $validation2 = $engine->validateCandidateAccess($pubTest, $user);
     expect($validation2['can_access'])->toBeTrue();
 });
@@ -133,7 +133,7 @@ test('scheduling engine validates candidate test access', function () {
 test('scheduling engine blocks access when max attempts reached', function () {
     $engine = new SchedulingEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Max Test', 'slug' => 'max-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'is_published' => true, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Max Test', 'slug' => 'max-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'is_published' => true, 'created_by' => $user->id]);
 
     for ($i = 0; $i < 3; $i++) {
         Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::Submitted]);
@@ -147,7 +147,7 @@ test('scheduling engine blocks access when max attempts reached', function () {
 test('scheduling engine allows access when attempt count is below maximum', function () {
     $engine = new SchedulingEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Allowed Test', 'slug' => 'allowed-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'is_published' => true, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Allowed Test', 'slug' => 'allowed-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'is_published' => true, 'created_by' => $user->id]);
 
     Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::Submitted]);
 
@@ -158,7 +158,7 @@ test('scheduling engine allows access when attempt count is below maximum', func
 test('calendar service retrieves upcoming assessment events', function () {
     $service = new CalendarService;
     $user = User::factory()->create();
-    Test::create(['title' => 'Cal Test', 'slug' => 'cal-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'is_published' => true, 'created_by' => $user->id]);
+    Test::create(['title' => 'Cal Test', 'slug' => 'cal-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'is_published' => true, 'created_by' => $user->id]);
 
     $events = $service->getUpcomingEvents($user);
     expect(count($events))->toBeGreaterThanOrEqual(1);

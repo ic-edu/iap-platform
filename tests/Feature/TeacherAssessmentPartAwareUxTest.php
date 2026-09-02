@@ -60,7 +60,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
             'duration_minutes' => 120,
             'pass_score'       => 750,
             'status'           => 'draft',
-            'is_published'     => true,
+            'is_published'     => false,
             'instructions'     => 'General Assessment Instructions for Candidates.',
             'created_by'       => $this->teacher->id,
             'assigned_to'      => $this->teacher->id,
@@ -544,6 +544,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
     /** @test */
     public function test_33_simulator_instructions_flow_unchanged()
     {
+        $this->test->update(['status' => 'published', 'is_published' => true]);
         $response = $this->actingAs($this->student)->get(route('candidate.tests.instructions', $this->test->id));
         $response->assertOk();
         $response->assertSee('General Assessment Instructions for Candidates.', false);
@@ -553,6 +554,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
     /** @test */
     public function test_34_simulator_section_directions_unchanged()
     {
+        $this->test->update(['status' => 'published', 'is_published' => true]);
         $attemptEngine = app(AttemptEngine::class);
         $attempt = $attemptEngine->startAttempt($this->test, $this->student);
 
@@ -564,7 +566,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
     /** @test */
     public function test_35_real_test_instructions_flow_unchanged()
     {
-        $this->test->update(['assessment_mode' => 'real_test']);
+        $this->test->update(['assessment_mode' => 'real_test', 'status' => 'published', 'is_published' => true]);
 
         CandidateTestAssignment::create([
             'test_id' => $this->test->id,
@@ -580,7 +582,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
     /** @test */
     public function test_36_real_test_timer_semantics_unchanged()
     {
-        $this->test->update(['assessment_mode' => 'real_test']);
+        $this->test->update(['assessment_mode' => 'real_test', 'status' => 'published', 'is_published' => true]);
         $attemptEngine = app(AttemptEngine::class);
         $attempt = $attemptEngine->startAttempt($this->test, $this->student);
 
@@ -593,7 +595,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
     /** @test */
     public function test_37_real_test_audio_restrictions_unchanged()
     {
-        $this->test->update(['assessment_mode' => 'real_test']);
+        $this->test->update(['assessment_mode' => 'real_test', 'status' => 'published', 'is_published' => true]);
         $attemptEngine = app(AttemptEngine::class);
         $attempt = $attemptEngine->startAttempt($this->test, $this->student);
 

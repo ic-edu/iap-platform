@@ -32,7 +32,7 @@ class CommerceController extends Controller
             ->paginate(10, ['*'], 'products_page');
 
         $categories = ProductCategory::orderBy('name')->get();
-        $tests = Test::where('is_published', true)->orderBy('title')->get();
+        $tests = Test::published()->orderBy('title')->get();
         $assessmentFamilies = AssessmentFamily::cases();
 
         $totalProductsCount = Product::count();

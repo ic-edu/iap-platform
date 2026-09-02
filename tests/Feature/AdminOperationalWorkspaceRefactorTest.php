@@ -63,7 +63,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
             'duration_minutes' => 60,
             'pass_score'       => 400,
             'is_published'     => true,
-            'status'           => 'approved',
+            'status'           => 'published',
             'created_by'       => $this->teacher->id,
         ]);
 
@@ -75,7 +75,7 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
             'duration_minutes' => 120,
             'pass_score'       => 600,
             'is_published'     => true,
-            'status'           => 'approved',
+            'status'           => 'published',
             'created_by'       => $this->rm->id,
         ]);
     }

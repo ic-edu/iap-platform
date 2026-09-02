@@ -398,7 +398,7 @@ test('candidate portal dashboard shows ongoing attempt alert', function () {
     $user = User::factory()->create();
     $user->assignRole('student');
 
-    $test = Test::create(['title' => 'Active Exam', 'slug' => 'active-exam', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'is_published' => true, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Active Exam', 'slug' => 'active-exam', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'is_published' => true, 'created_by' => $user->id]);
     Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'started_at' => now(), 'status' => AttemptStatus::InProgress]);
 
     $response = $this->actingAs($user)->get(route('candidate.portal'));
@@ -428,6 +428,7 @@ test('candidate can start a test and access cbt exam interface', function () {
         'test_type' => TestType::General,
         'duration_minutes' => 60,
         'pass_score' => 70,
+        'status' => 'published',
         'is_published' => true,
         'created_by' => $user->id,
     ]);

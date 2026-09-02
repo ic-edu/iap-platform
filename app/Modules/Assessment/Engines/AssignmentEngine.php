@@ -153,12 +153,10 @@ class AssignmentEngine
             throw new InvalidArgumentException("User '{$user->name}' does not have a candidate role.");
         }
 
-        // For Real Test / Mock Test: Validate published state
-        if ($test->isRealTest()) {
-            $isPublished = $test->is_published || in_array($test->status, ['published', 'approved'], true);
-            if (!$isPublished || in_array($test->status, ['draft', 'pending', 'pending_approval', 'needs_revision'], true)) {
-                throw new InvalidArgumentException("Cannot assign unpublished Mock Test '{$test->title}'. Assessment must be approved and published first.");
-            }
+        // Validate canonical published state
+        if (!$test->isPublished()) {
+            $label = $test->isRealTest() ? 'Mock Test' : 'Assessment';
+            throw new InvalidArgumentException("Cannot assign unpublished {$label} '{$test->title}'. {$label} must be published first.");
         }
 
         // For Real Test: Validate paid payment transaction
@@ -202,6 +200,10 @@ class AssignmentEngine
      */
     public function isEligibleToStart(Test $test, User $user): bool
     {
+        if (!$test->isPublished()) {
+            return false;
+        }
+
         if ($test->isSimulator()) {
             return true;
         }

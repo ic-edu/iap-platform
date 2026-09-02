@@ -412,7 +412,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // TEST 8: RM approval transitions to approved + published
+    // TEST 8: RM approval transitions to approved (ready for publication)
     // ═══════════════════════════════════════════════════════════════════════════
 
     public function test_08_rm_approval_transitions_to_approved_and_published(): void
@@ -428,7 +428,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
 
         $test->refresh();
         $this->assertEquals('approved', $test->status);
-        $this->assertTrue((bool) $test->is_published);
+        $this->assertFalse((bool) $test->is_published);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -437,7 +437,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
 
     public function test_09_published_assessment_appears_in_ra_mock_test_catalog(): void
     {
-        $test = $this->buildUatAssessmentWithQuestions(status: 'approved', isPublished: true);
+        $test = $this->buildUatAssessmentWithQuestions(status: 'published', isPublished: true);
 
         $response = $this->actingAs($this->ra)->get(route('admin.tests.index'));
         $response->assertStatus(200);
@@ -445,7 +445,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
 
         $this->assertTrue($test->isRealTest());
         $this->assertTrue((bool) $test->is_published);
-        $this->assertEquals('approved', $test->status);
+        $this->assertEquals('published', $test->status);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -454,7 +454,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
 
     public function test_10_published_mock_test_does_not_appear_in_simulator_catalog(): void
     {
-        $mockTest = $this->buildUatAssessmentWithQuestions(status: 'approved', isPublished: true);
+        $mockTest = $this->buildUatAssessmentWithQuestions(status: 'published', isPublished: true);
 
         $this->assertTrue($mockTest->isRealTest());
         $this->assertFalse($mockTest->isSimulator());
@@ -470,7 +470,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
 
     public function test_11_ra_can_assign_published_mock_test_to_paid_candidate(): void
     {
-        $test    = $this->buildUatAssessmentWithQuestions(status: 'approved', isPublished: true);
+        $test    = $this->buildUatAssessmentWithQuestions(status: 'published', isPublished: true);
         $payment = $this->createPaidEligibility($this->candidate, $test);
 
         $response = $this->actingAs($this->ra)->post(
@@ -499,7 +499,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
 
     public function test_12_free_candidate_cannot_receive_mock_test(): void
     {
-        $test = $this->buildUatAssessmentWithQuestions(status: 'approved', isPublished: true);
+        $test = $this->buildUatAssessmentWithQuestions(status: 'published', isPublished: true);
         // No payment created for freeCandidate
 
         $engine = app(AssignmentEngine::class);
@@ -516,7 +516,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
 
     public function test_13_candidate_can_access_assigned_mock_test(): void
     {
-        $test    = $this->buildUatAssessmentWithQuestions(status: 'approved', isPublished: true);
+        $test    = $this->buildUatAssessmentWithQuestions(status: 'published', isPublished: true);
         $payment = $this->createPaidEligibility($this->candidate, $test);
 
         $engine = app(AssignmentEngine::class);
@@ -585,7 +585,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
 
     public function test_16_content_reset_dry_run_identifies_assessment_without_modifying(): void
     {
-        $test = $this->buildUatAssessmentWithQuestions(status: 'approved', isPublished: true);
+        $test = $this->buildUatAssessmentWithQuestions(status: 'published', isPublished: true);
 
         $preTestCount     = Test::withTrashed()->count();
         $preQuestionCount = Question::count();
@@ -689,13 +689,19 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
         $test->refresh();
         $this->assertEquals('pending', $test->status);
 
-        // 6. RM approves → status = approved + is_published = true
+        // 6. RM approves → status = approved, is_published = false
         $this->actingAs($this->rm)->post(
             route('admin.repository-manager.assessment-approve', $test->id),
             ['notes' => 'Approved for institutional use.']
         );
         $test->refresh();
         $this->assertEquals('approved', $test->status);
+        $this->assertFalse((bool) $test->is_published);
+
+        // 6b. RM publishes → status = published, is_published = true
+        $this->actingAs($this->rm)->post(route('admin.publications.assessments.publish', $test->id));
+        $test->refresh();
+        $this->assertEquals('published', $test->status);
         $this->assertTrue((bool) $test->is_published);
 
         // 7. Catalog separation

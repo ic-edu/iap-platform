@@ -118,8 +118,8 @@ class PublicationOperationController extends Controller
             abort(403, 'Publishing Assessment Tests is strictly reserved for Repository Managers.');
         }
 
-        if ($test->status !== 'approved') {
-            abort(403, 'Cannot publish: Assessment Test must be approved by Super Admin or Repository Manager first.');
+        if ($test->status !== 'approved' || $test->is_published) {
+            abort(403, 'Cannot publish: Assessment Test must be approved by Super Admin or Repository Manager first and not already published.');
         }
 
         $test->update([
@@ -144,7 +144,7 @@ class PublicationOperationController extends Controller
             try {
                 $test->creator->notify(new EnterpriseSystemNotification(
                     title: 'Assessment Published',
-                    message: "Your Assessment Test '{$test->title}' has been published live by Repository Manager {$actor->name}.",
+                    message: "Your Assessment Test '{$test->title}' has been published and is now available for authorized institutional use.",
                     type: 'ASSESSMENT_PUBLISHED',
                     priority: 'HIGH',
                     entityType: 'assessment',
@@ -156,7 +156,7 @@ class PublicationOperationController extends Controller
             }
         }
 
-        return redirect()->route('admin.publications.assessments')->with('status', "Assessment Test '{$test->title}' published live successfully.");
+        return redirect()->back()->with('status', "Assessment Test '{$test->title}' published live successfully.");
     }
 
     /**
@@ -167,6 +167,10 @@ class PublicationOperationController extends Controller
         $actor = $request->user();
         if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
             abort(403, 'Unpublishing Assessment Tests is strictly reserved for Repository Managers.');
+        }
+
+        if ($test->status !== 'published' || !$test->is_published) {
+            abort(403, 'Cannot unpublish: Assessment Test must be currently published.');
         }
 
         $test->update([
@@ -180,7 +184,7 @@ class PublicationOperationController extends Controller
             $test
         );
 
-        return redirect()->route('admin.publications.assessments')->with('status', "Assessment Test '{$test->title}' unpublished.");
+        return redirect()->back()->with('status', "Assessment Test '{$test->title}' unpublished.");
     }
 
     /**

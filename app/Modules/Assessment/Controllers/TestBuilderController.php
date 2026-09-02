@@ -284,8 +284,8 @@ class TestBuilderController extends Controller
             abort(403, 'Operational Admins and Teachers cannot publish assessments. Assessment publishing is strictly reserved for Repository Managers.');
         }
 
-        if ($test->status !== 'approved') {
-            abort(403, 'Only approved assessments can be published.');
+        if ($test->status !== 'approved' || $test->is_published) {
+            abort(403, 'Only approved and unpublished assessments can be published.');
         }
 
         $test->update(['status' => 'published', 'is_published' => true]);

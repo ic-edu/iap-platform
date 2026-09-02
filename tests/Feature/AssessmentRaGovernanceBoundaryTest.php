@@ -355,8 +355,7 @@ class AssessmentRaGovernanceBoundaryTest extends TestCase
      */
     public function test_17_ra_retains_eligible_candidate_assignment_capability(): void
     {
-        $test = $this->createGovernedTest('real_test', 'approved');
-        $test->update(['is_published' => true]);
+        $test = $this->createGovernedTest('real_test', 'published');
 
         // Create paid transaction for student
         $order = Order::create([
@@ -446,10 +445,10 @@ class AssessmentRaGovernanceBoundaryTest extends TestCase
             'notes' => 'Approved by Repository Manager',
         ]);
 
-        $response->assertRedirect(route('admin.repository-manager.assessment-approval'));
+        $response->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
         $test->refresh();
         $this->assertEquals('approved', $test->status);
-        $this->assertTrue((bool) $test->is_published);
+        $this->assertFalse((bool) $test->is_published);
     }
 
     /**

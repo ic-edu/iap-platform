@@ -30,7 +30,7 @@ class CandidatePortalController extends Controller
     {
         $userId = (int) $request->user()?->id;
 
-        $availableTestsCount = Test::where('is_published', true)
+        $availableTestsCount = Test::published()
             ->where(function ($query) use ($userId) {
                 $query->where('assessment_mode', 'simulator')
                     ->orWhere(function ($q) use ($userId) {
@@ -84,7 +84,7 @@ class CandidatePortalController extends Controller
         $user = $request->user();
         $userId = (int) $user?->id;
 
-        $tests = Test::where('is_published', true)
+        $tests = Test::published()
             ->where(function ($query) use ($userId) {
                 $query->where('assessment_mode', 'simulator')
                     ->orWhere(function ($q) use ($userId) {
