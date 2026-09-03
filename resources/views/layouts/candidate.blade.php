@@ -51,7 +51,10 @@
                 </div>
 
                 <div class="flex items-center gap-5 text-sm font-medium">
-                    <a href="{{ route('candidate.portal') }}" class="{{ request()->routeIs('candidate.portal') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} transition-colors">Portal Dashboard</a>
+                    <a href="{{ route('candidate.portal') }}"
+                       class="{{ request()->routeIs('candidate.portal') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} hover:underline hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 rounded-lg px-2 py-1 transition-all inline-block cursor-pointer">
+                        Portal Dashboard
+                    </a>
                 </div>
 
                 <!-- User Profile Dropdown Container -->

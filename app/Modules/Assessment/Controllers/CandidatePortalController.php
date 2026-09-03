@@ -109,7 +109,13 @@ class CandidatePortalController extends Controller
     public function myAttempts(Request $request): View
     {
         $userId = (int) $request->user()?->id;
-        $attempts = Attempt::where('user_id', $userId)->with(['test', 'certificate'])->latest()->paginate(10);
+        $query = Attempt::where('user_id', $userId)->with(['test', 'certificate']);
+
+        if ($request->input('filter') === 'completed' || $request->input('status') === 'completed') {
+            $query->whereIn('status', ['submitted', 'expired']);
+        }
+
+        $attempts = $query->latest()->paginate(10)->withQueryString();
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.my_attempts';

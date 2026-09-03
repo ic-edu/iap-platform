@@ -122,13 +122,13 @@ class CandidatePortalInformationArchitectureTest extends TestCase
         $response->assertSee('Start or resume test');
     }
 
-    public function test_04_available_tests_kpi_is_non_clickable_when_count_equals_zero(): void
+    public function test_04_available_tests_kpi_remains_clickable_when_count_equals_zero(): void
     {
         $response = $this->actingAs($this->candidate)->get(route('candidate.portal'));
 
         $response->assertStatus(200);
-        $response->assertSee('No tests currently available');
-        $response->assertSee('aria-disabled="true"', false);
+        $response->assertSee(route('candidate.available-tests'));
+        $response->assertDontSee('aria-disabled="true"', false);
     }
 
     public function test_05_available_simulations_dashboard_cta_is_removed(): void
