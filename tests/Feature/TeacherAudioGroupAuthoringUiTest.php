@@ -621,11 +621,11 @@ class TeacherAudioGroupAuthoringUiTest extends TestCase
         $group = AudioGroup::where('test_id', $this->test->id)->first();
         $question = $group->questions->first();
 
-        $this->assertEquals('media/conv1.mp3', $question->getEffectiveAudioUrl());
+        $this->assertEquals(route('media.preview', $group->media_asset_id), $question->getEffectiveAudioUrl());
 
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.preview', $this->test->id));
         $response->assertOk();
-        $response->assertSee('media/conv1.mp3', false);
+        $response->assertSee(route('media.preview', $group->media_asset_id), false);
     }
 
     /** @test */
