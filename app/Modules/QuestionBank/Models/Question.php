@@ -41,6 +41,8 @@ class Question extends Model
     protected $fillable = [
         'question_bank_id',
         'media_asset_id',
+        'image_media_asset_id',
+        'audio_media_asset_id',
         'passage_group_id',
         'passage_id',
         'passage_text',
@@ -146,7 +148,99 @@ class Question extends Model
     }
 
     /**
-     * Resolve effective audio URL, checking group first then mediaAsset then legacy audio_url.
+     * Get associated dedicated image media asset (e.g. Part 1 Photograph).
+     *
+     * @return BelongsTo<\App\Models\MediaAsset, $this>
+     */
+    public function imageMediaAsset(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MediaAsset::class, 'image_media_asset_id');
+    }
+
+    /**
+     * Get associated dedicated audio media asset (e.g. Part 1/2 Audio Prompt).
+     *
+     * @return BelongsTo<\App\Models\MediaAsset, $this>
+     */
+    public function audioMediaAsset(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MediaAsset::class, 'audio_media_asset_id');
+    }
+
+    /**
+     * Get effective image MediaAsset, checking dedicated image_media_asset_id first,
+     * then URL extraction, then legacy media_asset_id if type=image.
+     */
+    public function getEffectiveImageMedia(): ?\App\Models\MediaAsset
+    {
+        if ($this->imageMediaAsset) {
+            $type = $this->imageMediaAsset->type ?? '';
+            $mime = $this->imageMediaAsset->mime_type ?? '';
+            if ($type === 'image' || str_starts_with($mime, 'image/')) {
+                return $this->imageMediaAsset;
+            }
+        }
+
+        if (!empty($this->image_url) && preg_match('#/media/([0-9a-z]+)#i', $this->image_url, $m)) {
+            $asset = \App\Models\MediaAsset::find($m[1]);
+            if ($asset && ($asset->type === 'image' || str_starts_with($asset->mime_type ?? '', 'image/'))) {
+                return $asset;
+            }
+        }
+
+        if ($this->mediaAsset) {
+            $type = $this->mediaAsset->type ?? '';
+            $mime = $this->mediaAsset->mime_type ?? '';
+            if ($type === 'image' || str_starts_with($mime, 'image/')) {
+                return $this->mediaAsset;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get effective audio MediaAsset, checking AudioGroup first,
+     * then dedicated audio_media_asset_id, then URL extraction, then legacy media_asset_id if type=audio.
+     */
+    public function getEffectiveAudioMedia(): ?\App\Models\MediaAsset
+    {
+        if ($this->audioGroup && $this->audioGroup->mediaAsset) {
+            $type = $this->audioGroup->mediaAsset->type ?? '';
+            $mime = $this->audioGroup->mediaAsset->mime_type ?? '';
+            if ($type === 'audio' || str_starts_with($mime, 'audio/')) {
+                return $this->audioGroup->mediaAsset;
+            }
+        }
+
+        if ($this->audioMediaAsset) {
+            $type = $this->audioMediaAsset->type ?? '';
+            $mime = $this->audioMediaAsset->mime_type ?? '';
+            if ($type === 'audio' || str_starts_with($mime, 'audio/')) {
+                return $this->audioMediaAsset;
+            }
+        }
+
+        if (!empty($this->audio_url) && preg_match('#/media/([0-9a-z]+)#i', $this->audio_url, $m)) {
+            $asset = \App\Models\MediaAsset::find($m[1]);
+            if ($asset && ($asset->type === 'audio' || str_starts_with($asset->mime_type ?? '', 'audio/'))) {
+                return $asset;
+            }
+        }
+
+        if ($this->mediaAsset) {
+            $type = $this->mediaAsset->type ?? '';
+            $mime = $this->mediaAsset->mime_type ?? '';
+            if ($type === 'audio' || str_starts_with($mime, 'audio/')) {
+                return $this->mediaAsset;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve effective audio URL, checking group first then audio MediaAsset then legacy audio_url.
      */
     public function getEffectiveAudioUrl(): ?string
     {
@@ -157,12 +251,9 @@ class Question extends Model
             }
         }
 
-        if ($this->mediaAsset) {
-            $type = $this->mediaAsset->type ?? '';
-            $mime = $this->mediaAsset->mime_type ?? '';
-            if ($type === 'audio' || str_starts_with($mime, 'audio/')) {
-                return $this->mediaAsset->publicUrl() ?: $this->mediaAsset->path;
-            }
+        $media = $this->getEffectiveAudioMedia();
+        if ($media) {
+            return route('media.preview', $media->id);
         }
 
         if (!empty($this->audio_url)) {
@@ -173,16 +264,13 @@ class Question extends Model
     }
 
     /**
-     * Resolve effective image URL, checking attached media asset first then legacy image_url.
+     * Resolve effective image URL, checking attached image MediaAsset first then legacy image_url.
      */
     public function getEffectiveImageUrl(): ?string
     {
-        if ($this->mediaAsset) {
-            $type = $this->mediaAsset->type ?? '';
-            $mime = $this->mediaAsset->mime_type ?? '';
-            if ($type === 'image' || str_starts_with($mime, 'image/')) {
-                return $this->mediaAsset->publicUrl() ?: $this->mediaAsset->path;
-            }
+        $media = $this->getEffectiveImageMedia();
+        if ($media) {
+            return route('media.preview', $media->id);
         }
 
         if (!empty($this->image_url)) {
@@ -193,7 +281,7 @@ class Question extends Model
     }
 
     /**
-     * Get associated institutional media asset.
+     * Get associated institutional media asset (legacy compatibility).
      *
      * @return BelongsTo<\App\Models\MediaAsset, $this>
      */

@@ -54,8 +54,12 @@ class Passage extends Model
             $type = $this->mediaAsset->type ?? '';
             $mime = $this->mediaAsset->mime_type ?? '';
             if ($type === 'image' || str_starts_with($mime, 'image/')) {
-                return $this->mediaAsset->publicUrl() ?: $this->mediaAsset->path;
+                return route('media.preview', $this->mediaAsset->id);
             }
+        }
+
+        if (!empty($this->image_url) && preg_match('#/media/([0-9a-z]+)#i', $this->image_url, $m)) {
+            return route('media.preview', $m[1]);
         }
 
         if (!empty($this->image_url)) {

@@ -106,16 +106,20 @@ class AudioGroup extends Model
     }
 
     /**
-     * Resolve effective audio URL (from direct URL or media asset).
+     * Resolve effective audio URL (from media asset or direct URL).
      */
     public function getEffectiveAudioUrl(): ?string
     {
-        if (!empty($this->audio_url)) {
-            return $this->audio_url;
+        if ($this->mediaAsset) {
+            return route('media.preview', $this->mediaAsset->id);
         }
 
-        if ($this->mediaAsset) {
-            return $this->mediaAsset->path;
+        if (!empty($this->audio_url) && preg_match('#/media/([0-9a-z]+)#i', $this->audio_url, $m)) {
+            return route('media.preview', $m[1]);
+        }
+
+        if (!empty($this->audio_url)) {
+            return $this->audio_url;
         }
 
         return null;

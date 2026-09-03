@@ -383,9 +383,19 @@ class ToeicQuestionValidator
      */
     protected static function resolveMediaInfo(array $data, ?Question $question = null): array
     {
-        $hasImage = !empty($data['image_url']);
-        $hasAudio = !empty($data['audio_url']);
+        $hasImage = !empty($data['image_url']) || !empty($data['image_media_asset_id']);
+        $hasAudio = !empty($data['audio_url']) || !empty($data['audio_media_asset_id']);
         $hasPassage = !empty($data['passage_id']) || !empty(trim((string) ($data['passage_text'] ?? '')));
+
+        // Check explicit image_media_asset_id
+        if (!empty($data['image_media_asset_id'])) {
+            $hasImage = true;
+        }
+
+        // Check explicit audio_media_asset_id
+        if (!empty($data['audio_media_asset_id'])) {
+            $hasAudio = true;
+        }
 
         // Check if question references a shared AudioGroup
         $audioGroupId = $data['audio_group_id'] ?? ($question?->audio_group_id ?? null);
@@ -421,10 +431,10 @@ class ToeicQuestionValidator
 
         // Fallback to existing question model
         if ($question) {
-            if (!$hasImage && !empty($question->image_url)) {
+            if (!$hasImage && (!empty($question->image_url) || !empty($question->image_media_asset_id))) {
                 $hasImage = true;
             }
-            if (!$hasAudio && !empty($question->audio_url)) {
+            if (!$hasAudio && (!empty($question->audio_url) || !empty($question->audio_media_asset_id))) {
                 $hasAudio = true;
             }
             if (!$hasAudio && $question->audioGroup && (!empty($question->audioGroup->audio_url) || !empty($question->audioGroup->media_asset_id))) {
@@ -435,6 +445,12 @@ class ToeicQuestionValidator
             }
             if (!$hasPassage && $question->passageGroup && $question->passageGroup->passages()->exists()) {
                 $hasPassage = true;
+            }
+            if ($question->imageMediaAsset) {
+                $hasImage = true;
+            }
+            if ($question->audioMediaAsset) {
+                $hasAudio = true;
             }
             if ($question->mediaAsset) {
                 if ($question->mediaAsset->type === 'image') {
