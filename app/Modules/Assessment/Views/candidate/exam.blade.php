@@ -62,7 +62,17 @@
 
     <!-- Top CBT Status Header Bar -->
     <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 sticky top-0 z-50 flex items-center justify-between flex-wrap gap-3 shadow-sm">
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-3">
+            @if(!$isRealTest)
+                <button type="button"
+                        id="btn-simulator-back-to-dashboard"
+                        onclick="confirmExitSimulator()"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition-all inline-flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                        title="Return to Candidate Dashboard">
+                    <span>&larr; Back to Dashboard</span>
+                </button>
+            @endif
+
             <div>
                 <div class="flex items-center gap-2">
                     <span class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold uppercase tracking-wider">CBT Examination Session</span>
@@ -80,7 +90,7 @@
             </div>
         </div>
 
-        <!-- Live Server-Time Timer Countdown & Final Submit -->
+        <!-- Live Server-Time Timer Countdown -->
         <div class="flex items-center gap-3">
             @if($isRealTest)
                 <button type="button" onclick="enterFullscreen()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-300 dark:border-slate-700 transition-colors">
@@ -92,20 +102,12 @@
                 <span class="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Time Remaining</span>
                 <span id="countdown-timer" class="text-base sm:text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">--:--:--</span>
             </div>
-
-            <form id="form-final-submit" method="POST" action="{{ route('candidate.exam.submit', $attempt) }}">
-                @csrf
-                <button type="submit"
-                        id="btn-final-submit"
-                        onclick="event.preventDefault(); if (answeredQuestionIds.size === totalQuestions) { iapConfirm({ title: 'Finalize and Submit Test?', message: 'Are you sure you want to finalize and submit your test answers?', confirmText: 'Final Submit', variant: 'success', form: this.form }); }"
-                        {{ $isAllInitiallyAnswered ? '' : 'disabled' }}
-                        class="px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md"
-                        style="background: {{ $isAllInitiallyAnswered ? '#10b981' : '#94a3b8' }}; color: #ffffff; border: 1px solid {{ $isAllInitiallyAnswered ? '#10b981' : '#cbd5e1' }}; cursor: {{ $isAllInitiallyAnswered ? 'pointer' : 'not-allowed' }};">
-                    {{ $isAllInitiallyAnswered ? 'Final Submit →' : 'Final Submit (' . $answeredQuestionIds->count() . '/' . $totalQuestionsCount . ')' }}
-                </button>
-            </form>
         </div>
     </header>
+
+    <form id="form-final-submit" method="POST" action="{{ route('candidate.exam.submit', $attempt) }}" class="hidden">
+        @csrf
+    </form>
 
     @if (session('error'))
         <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4">
@@ -356,12 +358,23 @@
 
                             @if($isLastUnitOfSection && $nextSectionId)
                                 <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'section', '{{ $nextSectionId }}')"
-                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30">
+                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 cursor-pointer">
                                     Next Section &rarr;
                                 </button>
+                            @elseif($unitIndex === $totalUnitsCount - 1)
+                                <div id="final-unit-action-container-audio-{{ $unitIndex }}" class="flex items-center gap-2">
+                                    <button type="button" id="btn-review-unanswered-audio-{{ $unitIndex }}" onclick="reviewFirstUnanswered()"
+                                            class="btn-review-unanswered {{ $isAllInitiallyAnswered ? 'hidden' : 'inline-flex' }} px-5 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-md shadow-amber-600/30 items-center gap-1.5 cursor-pointer">
+                                        <span>Review Unanswered (<span class="unanswered-count-text">{{ $totalQuestionsCount - count($answeredQuestionIds) }}</span>)</span>
+                                    </button>
+                                    <button type="button" id="btn-final-review-submit-audio-{{ $unitIndex }}" onclick="triggerFinalSubmitModal()"
+                                            class="btn-final-review-submit {{ $isAllInitiallyAnswered ? 'inline-flex' : 'hidden' }} px-5 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-600/30 items-center gap-1.5 cursor-pointer">
+                                        <span>Final Review &amp; Submit &rarr;</span>
+                                    </button>
+                                </div>
                             @else
-                                <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'unit', {{ $unitIndex + 1 }})" {{ $unitIndex === $totalUnitsCount - 1 && $isRealTest ? 'disabled' : '' }}
-                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
+                                <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'unit', {{ $unitIndex + 1 }})"
+                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 cursor-pointer">
                                     Next (N) &rarr;
                                 </button>
                             @endif
@@ -523,12 +536,23 @@
 
                             @if($isLastUnitOfSection && $nextSectionId)
                                 <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'section', '{{ $nextSectionId }}')"
-                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30">
+                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 cursor-pointer">
                                     Next Section &rarr;
                                 </button>
+                            @elseif($unitIndex === $totalUnitsCount - 1)
+                                <div id="final-unit-action-container-passage-{{ $unitIndex }}" class="flex items-center gap-2">
+                                    <button type="button" id="btn-review-unanswered-passage-{{ $unitIndex }}" onclick="reviewFirstUnanswered()"
+                                            class="btn-review-unanswered {{ $isAllInitiallyAnswered ? 'hidden' : 'inline-flex' }} px-5 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-md shadow-amber-600/30 items-center gap-1.5 cursor-pointer">
+                                        <span>Review Unanswered (<span class="unanswered-count-text">{{ $totalQuestionsCount - count($answeredQuestionIds) }}</span>)</span>
+                                    </button>
+                                    <button type="button" id="btn-final-review-submit-passage-{{ $unitIndex }}" onclick="triggerFinalSubmitModal()"
+                                            class="btn-final-review-submit {{ $isAllInitiallyAnswered ? 'inline-flex' : 'hidden' }} px-5 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-600/30 items-center gap-1.5 cursor-pointer">
+                                        <span>Final Review &amp; Submit &rarr;</span>
+                                    </button>
+                                </div>
                             @else
-                                <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'unit', {{ $unitIndex + 1 }})" {{ $unitIndex === $totalUnitsCount - 1 && $isRealTest ? 'disabled' : '' }}
-                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
+                                <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'unit', {{ $unitIndex + 1 }})"
+                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 cursor-pointer">
                                     Next (N) &rarr;
                                 </button>
                             @endif
@@ -680,12 +704,23 @@
 
                                 @if($isLastUnitOfSection && $nextSectionId)
                                     <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'section', '{{ $nextSectionId }}')"
-                                            class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30">
+                                            class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 cursor-pointer">
                                         Next Section &rarr;
                                     </button>
+                                @elseif($unitIndex === $totalUnitsCount - 1)
+                                    <div id="final-unit-action-container-single-{{ $unitIndex }}" class="flex items-center gap-2">
+                                        <button type="button" id="btn-review-unanswered-single-{{ $unitIndex }}" onclick="reviewFirstUnanswered()"
+                                                class="btn-review-unanswered {{ $isAllInitiallyAnswered ? 'hidden' : 'inline-flex' }} px-5 py-2.5 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-md shadow-amber-600/30 items-center gap-1.5 cursor-pointer">
+                                            <span>Review Unanswered (<span class="unanswered-count-text">{{ $totalQuestionsCount - count($answeredQuestionIds) }}</span>)</span>
+                                        </button>
+                                        <button type="button" id="btn-final-review-submit-single-{{ $unitIndex }}" onclick="triggerFinalSubmitModal()"
+                                                class="btn-final-review-submit {{ $isAllInitiallyAnswered ? 'inline-flex' : 'hidden' }} px-5 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-600/30 items-center gap-1.5 cursor-pointer">
+                                            <span>Final Review &amp; Submit &rarr;</span>
+                                        </button>
+                                    </div>
                                 @else
-                                    <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'unit', {{ $unitIndex + 1 }})" {{ $unitIndex === $totalUnitsCount - 1 && $isRealTest ? 'disabled' : '' }}
-                                            class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
+                                    <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'unit', {{ $unitIndex + 1 }})"
+                                            class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 cursor-pointer">
                                         Next (N) &rarr;
                                     </button>
                                 @endif
@@ -742,6 +777,13 @@
                 @else
                     <p><kbd class="px-1 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">N</kbd> Next • <kbd class="px-1 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">F</kbd> Flag</p>
                 @endif
+            </div>
+
+            <div id="palette-completion-container" class="{{ $isAllInitiallyAnswered ? 'block' : 'hidden' }} mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button type="button" id="btn-palette-final-submit" onclick="triggerFinalSubmitModal()"
+                        class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition-all shadow-md shadow-emerald-600/30 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>✓ Final Review &amp; Submit</span>
+                </button>
             </div>
         </div>
     </div>
@@ -833,27 +875,97 @@
         timerInterval = setInterval(updateTimerDisplay, 1000);
         updateTimerDisplay();
 
-        // Final Submit Button State Updater
-        function updateFinalSubmitButton() {
-            const btn = document.getElementById('btn-final-submit');
-            if (!btn) return;
+        // Exit Simulator Confirmation
+        function confirmExitSimulator() {
+            iapConfirm({
+                title: 'Return to Dashboard?',
+                message: 'Your saved Simulator progress will be preserved. You can resume the test later.',
+                confirmText: 'Back to Dashboard',
+                cancelText: 'Stay in Test',
+                variant: 'info',
+                onConfirm: () => {
+                    window.location.href = "{{ route('candidate.portal') }}";
+                }
+            });
+        }
 
-            const isAllAnswered = (answeredQuestionIds.size === totalQuestions && totalQuestions > 0);
-            if (isAllAnswered) {
-                btn.disabled = false;
-                btn.style.background = '#10b981';
-                btn.style.borderColor = '#10b981';
-                btn.style.color = '#ffffff';
-                btn.style.cursor = 'pointer';
-                btn.innerHTML = 'Final Submit &rarr;';
-            } else {
-                btn.disabled = true;
-                btn.style.background = '#94a3b8';
-                btn.style.borderColor = '#cbd5e1';
-                btn.style.color = '#ffffff';
-                btn.style.cursor = 'not-allowed';
-                btn.innerHTML = `Final Submit (${answeredQuestionIds.size}/${totalQuestions})`;
+        // Trigger Final Submit Confirmation Modal
+        function triggerFinalSubmitModal() {
+            if (answeredQuestionIds.size < totalQuestions) {
+                const unansweredCount = totalQuestions - answeredQuestionIds.size;
+                iapAlert({
+                    title: 'Unanswered Questions Remaining',
+                    message: `You still have ${unansweredCount} unanswered question(s). Please answer all questions before submitting.`,
+                    variant: 'warning',
+                    okText: 'Review Questions',
+                    onOk: () => reviewFirstUnanswered()
+                });
+                return;
             }
+
+            iapConfirm({
+                title: 'Final Submit Assessment?',
+                message: `You have answered all ${totalQuestions} questions. Once submitted, your answers can no longer be changed. Are you sure you want to finalize and submit?`,
+                confirmText: 'Submit Assessment',
+                cancelText: 'Cancel',
+                variant: 'success',
+                form: document.getElementById('form-final-submit')
+            });
+        }
+
+        // Review First Unanswered Question
+        function reviewFirstUnanswered() {
+            for (let i = 0; i < totalQuestions; i++) {
+                const qId = questionIds[i];
+                if (!answeredQuestionIds.has(qId)) {
+                    const targetUnitIdx = questionIndexToUnitIndex[i];
+                    if (targetUnitIdx !== undefined) {
+                        navigateDeliveryUnit(targetUnitIdx, i);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Final Submit & Palette Completion State Updater
+        function updateFinalSubmitState() {
+            const isAllAnswered = (answeredQuestionIds.size === totalQuestions && totalQuestions > 0);
+            const unansweredCount = Math.max(0, totalQuestions - answeredQuestionIds.size);
+
+            const paletteContainer = document.getElementById('palette-completion-container');
+            if (paletteContainer) {
+                if (isAllAnswered) {
+                    paletteContainer.classList.remove('hidden');
+                    paletteContainer.classList.add('block');
+                } else {
+                    paletteContainer.classList.add('hidden');
+                    paletteContainer.classList.remove('block');
+                }
+            }
+
+            document.querySelectorAll('.btn-review-unanswered').forEach(btn => {
+                if (isAllAnswered) {
+                    btn.classList.add('hidden');
+                    btn.classList.remove('inline-flex');
+                } else {
+                    btn.classList.remove('hidden');
+                    btn.classList.add('inline-flex');
+                }
+            });
+
+            document.querySelectorAll('.unanswered-count-text').forEach(el => {
+                el.textContent = unansweredCount;
+            });
+
+            document.querySelectorAll('.btn-final-review-submit').forEach(btn => {
+                if (isAllAnswered) {
+                    btn.classList.remove('hidden');
+                    btn.classList.add('inline-flex');
+                } else {
+                    btn.classList.add('hidden');
+                    btn.classList.remove('inline-flex');
+                }
+            });
         }
 
         // Palette State & Highlighting Engine
@@ -898,7 +1010,7 @@
                 counter.textContent = `${answeredQuestionIds.size}/${totalQuestions}`;
             }
 
-            updateFinalSubmitButton();
+            updateFinalSubmitState();
         }
 
         // Show Dedicated Section Introduction Screen

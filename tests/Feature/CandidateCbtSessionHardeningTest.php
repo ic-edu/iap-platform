@@ -125,7 +125,7 @@ class CandidateCbtSessionHardeningTest extends TestCase
     }
 
     /**
-     * TEST 2: Final Submit button is initially disabled when 0/3 questions are answered.
+     * TEST 2: Permanent Final Submit button is removed from header when 0/3 questions are answered.
      */
     public function test_final_submit_button_is_disabled_when_zero_of_three_questions_answered(): void
     {
@@ -139,13 +139,13 @@ class CandidateCbtSessionHardeningTest extends TestCase
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
         $response->assertStatus(200);
 
-        $response->assertSee('id="btn-final-submit"', false);
-        $response->assertSee('disabled', false);
-        $response->assertSee('Final Submit (0/3)', false);
+        $response->assertDontSee('id="btn-final-submit"', false);
+        $response->assertSee('btn-review-unanswered');
+        $response->assertSee('Review Unanswered');
     }
 
     /**
-     * TEST 3: Final Submit button remains disabled when partially answered (1/3 or 2/3).
+     * TEST 3: Action bar shows Review Unanswered when partially answered (1/3 or 2/3).
      */
     public function test_final_submit_button_is_disabled_when_partially_answered(): void
     {
@@ -165,12 +165,13 @@ class CandidateCbtSessionHardeningTest extends TestCase
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
         $response->assertStatus(200);
 
-        $response->assertSee('disabled', false);
-        $response->assertSee('Final Submit (1/3)', false);
+        $response->assertDontSee('id="btn-final-submit"', false);
+        $response->assertSee('btn-review-unanswered');
+        $response->assertSee('Review Unanswered');
     }
 
     /**
-     * TEST 4: Final Submit button is enabled when all 3/3 questions are answered.
+     * TEST 4: Final Review & Submit is exposed when all 3/3 questions are answered.
      */
     public function test_final_submit_button_is_enabled_when_all_questions_answered(): void
     {
@@ -188,7 +189,8 @@ class CandidateCbtSessionHardeningTest extends TestCase
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
         $response->assertStatus(200);
 
-        $response->assertSee('Final Submit &rarr;', false);
+        $response->assertSee('btn-final-review-submit');
+        $response->assertSee('Final Review &amp; Submit', false);
     }
 
     /**
