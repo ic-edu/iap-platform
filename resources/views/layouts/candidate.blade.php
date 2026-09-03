@@ -52,8 +52,12 @@
 
                 <div class="flex items-center gap-5 text-sm font-medium">
                     <a href="{{ route('candidate.portal') }}"
-                       class="{{ request()->routeIs('candidate.portal') ? 'text-indigo-400 font-bold' : 'text-slate-300 hover:text-white' }} hover:underline hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 rounded-lg px-2 py-1 transition-all inline-block cursor-pointer">
-                        Portal Dashboard
+                       aria-label="Dashboard"
+                       title="Dashboard"
+                       class="{{ request()->routeIs('candidate.portal') ? 'text-indigo-400 bg-slate-800/80' : 'text-slate-300 hover:text-white hover:bg-slate-800/50' }} p-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-colors inline-flex items-center justify-center cursor-pointer">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
                     </a>
                 </div>
 

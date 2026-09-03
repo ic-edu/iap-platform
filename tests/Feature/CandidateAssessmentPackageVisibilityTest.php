@@ -234,7 +234,7 @@ class CandidateAssessmentPackageVisibilityTest extends TestCase
         $response = $this->actingAs($this->candidate)->get(route('candidate.portal'));
 
         $response->assertStatus(200);
-        $response->assertSee('Portal Dashboard');
+        $response->assertSee('aria-label="Dashboard"', false);
         $response->assertSee('PAYMENT');
     }
 

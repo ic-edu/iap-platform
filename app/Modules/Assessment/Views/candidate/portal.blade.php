@@ -8,11 +8,11 @@
     <div class="grid gap-5 sm:grid-cols-4 mb-8">
         {{-- 1. Available Tests KPI --}}
         <a href="{{ route('candidate.available-tests') }}"
-           class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/60 dark:hover:border-indigo-500/60 rounded-2xl shadow-sm hover:shadow-md dark:hover:shadow-indigo-950/40 hover:scale-[1.015] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-all duration-200 group block cursor-pointer"
+           class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/60 dark:hover:border-indigo-500/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-colors duration-150 group block cursor-pointer"
            aria-label="Available Tests: {{ $availableTestsCount }}">
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Available Tests</span>
-                <svg class="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
             </div>
@@ -22,11 +22,11 @@
 
         {{-- 2. My Total Attempts KPI --}}
         <a href="{{ route('candidate.my-attempts') }}"
-           class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/60 dark:hover:border-indigo-500/60 rounded-2xl shadow-sm hover:shadow-md dark:hover:shadow-indigo-950/40 hover:scale-[1.015] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-all duration-200 group block cursor-pointer"
+           class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/60 dark:hover:border-indigo-500/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-colors duration-150 group block cursor-pointer"
            aria-label="My Total Attempts: {{ $myAttemptsCount }}">
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">My Total Attempts</span>
-                <svg class="w-4 h-4 text-slate-400 group-hover:text-indigo-500 group-hover:scale-110 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             </div>
@@ -36,11 +36,11 @@
 
         {{-- 3. Completed Tests KPI --}}
         <a href="{{ route('candidate.my-attempts', ['filter' => 'completed']) }}"
-           class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 rounded-2xl shadow-sm hover:shadow-md dark:hover:shadow-emerald-950/40 hover:scale-[1.015] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-all duration-200 group block cursor-pointer"
+           class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-colors duration-150 group block cursor-pointer"
            aria-label="Completed Tests: {{ $completedAttemptsCount }}">
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Completed Tests</span>
-                <svg class="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             </div>
@@ -50,11 +50,11 @@
 
         {{-- 4. My Certificates KPI --}}
         <a href="{{ route('candidate.my-certificates') }}"
-           class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500/60 dark:hover:border-amber-500/60 rounded-2xl shadow-sm hover:shadow-md dark:hover:shadow-amber-950/40 hover:scale-[1.015] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-all duration-200 group block cursor-pointer"
+           class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500/60 dark:hover:border-amber-500/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-colors duration-150 group block cursor-pointer"
            aria-label="My Certificates: {{ $issuedCertificatesCount ?? 0 }}">
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">My Certificates</span>
-                <svg class="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
             </div>

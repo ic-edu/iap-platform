@@ -342,8 +342,7 @@ class CandidateCbtSubmitAndDashboardInteractionTest extends TestCase
 
         // Top nav link
         $response->assertSee(route('candidate.portal'));
-        $response->assertSee('Portal Dashboard');
-        $response->assertSee('hover:scale-[1.02]');
+        $response->assertSee('aria-label="Dashboard"', false);
 
         // 1. Available Tests KPI
         $response->assertSee(route('candidate.available-tests'));

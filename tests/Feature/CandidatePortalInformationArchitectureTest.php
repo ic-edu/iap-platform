@@ -83,11 +83,11 @@ class CandidatePortalInformationArchitectureTest extends TestCase
         $response = $this->actingAs($this->candidate)->get(route('candidate.portal'));
 
         $response->assertStatus(200);
-        $response->assertSee('Portal Dashboard');
+        $response->assertSee('aria-label="Dashboard"', false);
         
         $html = $response->getContent();
         
-        $this->assertStringContainsString('Portal Dashboard', $html);
+        $this->assertStringContainsString('aria-label="Dashboard"', $html);
         $this->assertStringNotContainsString('🛍️ Store', $html);
         $this->assertStringNotContainsString('🎓 Certificates</a>', $html);
     }
