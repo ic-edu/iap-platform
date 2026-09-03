@@ -104,6 +104,8 @@ class TestBuilderService
         $question = \App\Modules\QuestionBank\Models\Question::create([
             'question_bank_id'       => null,
             'media_asset_id'         => $data['media_asset_id'] ?? null,
+            'image_media_asset_id'   => $data['image_media_asset_id'] ?? null,
+            'audio_media_asset_id'   => $data['audio_media_asset_id'] ?? null,
             'image_url'              => $data['image_url'] ?? null,
             'audio_url'              => $data['audio_url'] ?? null,
             'passage_id'             => $data['passage_id'] ?? null,

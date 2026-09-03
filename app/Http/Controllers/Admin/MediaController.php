@@ -60,9 +60,16 @@ class MediaController extends Controller
 
         // Filter by unused status (PART 1)
         if ($request->input('filter') === 'unused') {
-            $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')->filter()->toArray();
+            $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')
+                ->merge(\DB::table('questions')->whereNotNull('image_media_asset_id')->pluck('image_media_asset_id'))
+                ->merge(\DB::table('questions')->whereNotNull('audio_media_asset_id')->pluck('audio_media_asset_id'))
+                ->merge(\DB::table('audio_groups')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
+                ->merge(\DB::table('passages')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
+                ->merge(\DB::table('test_section_media')->pluck('media_asset_id'))
+                ->filter()->unique()->toArray();
             $usedUrls = \DB::table('questions')->whereNotNull('image_url')->pluck('image_url')
                 ->merge(\DB::table('questions')->whereNotNull('audio_url')->pluck('audio_url'))
+                ->merge(\DB::table('audio_groups')->whereNotNull('audio_url')->pluck('audio_url'))
                 ->filter()->toArray();
 
             $query->whereNotIn('id', $usedMediaIds)
@@ -105,9 +112,16 @@ class MediaController extends Controller
             ->orWhereNotNull('audio_url')
             ->pluck('image_url')
             ->merge(\DB::table('questions')->pluck('audio_url'))
+            ->merge(\DB::table('audio_groups')->pluck('audio_url'))
             ->filter()
             ->toArray();
-        $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')->toArray();
+        $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')
+            ->merge(\DB::table('questions')->whereNotNull('image_media_asset_id')->pluck('image_media_asset_id'))
+            ->merge(\DB::table('questions')->whereNotNull('audio_media_asset_id')->pluck('audio_media_asset_id'))
+            ->merge(\DB::table('audio_groups')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
+            ->merge(\DB::table('passages')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
+            ->merge(\DB::table('test_section_media')->pluck('media_asset_id'))
+            ->filter()->unique()->toArray();
 
         $unusedCount = $allAssets->filter(function ($m) use ($usedMediaUrls, $usedMediaIds) {
             return !in_array($m->id, $usedMediaIds) && !in_array($m->path, $usedMediaUrls) && !in_array($m->publicUrl(), $usedMediaUrls);
@@ -623,6 +637,8 @@ class MediaController extends Controller
         $questions = \Illuminate\Support\Facades\Schema::hasTable('questions')
             ? \App\Modules\QuestionBank\Models\Question::with('questionBank')
                 ->where('media_asset_id', $media->id)
+                ->orWhere('image_media_asset_id', $media->id)
+                ->orWhere('audio_media_asset_id', $media->id)
                 ->orWhere('audio_url', $url)
                 ->orWhere('audio_url', $media->path)
                 ->orWhere('image_url', $url)
@@ -919,6 +935,8 @@ class MediaController extends Controller
         $questions = \Illuminate\Support\Facades\Schema::hasTable('questions')
             ? \App\Modules\QuestionBank\Models\Question::with('questionBank')
                 ->where('media_asset_id', $media->id)
+                ->orWhere('image_media_asset_id', $media->id)
+                ->orWhere('audio_media_asset_id', $media->id)
                 ->orWhere('audio_url', $url)
                 ->orWhere('audio_url', $media->path)
                 ->orWhere('image_url', $url)
@@ -968,6 +986,8 @@ class MediaController extends Controller
         $linkedQuestions = \Illuminate\Support\Facades\Schema::hasTable('questions')
             ? \App\Modules\QuestionBank\Models\Question::with('questionBank')
                 ->where('media_asset_id', $media->id)
+                ->orWhere('image_media_asset_id', $media->id)
+                ->orWhere('audio_media_asset_id', $media->id)
                 ->get()
             : collect([]);
 
@@ -1211,11 +1231,19 @@ class MediaController extends Controller
             if ($status !== 'all') {
                 if ($status === 'in_use') {
                     $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')
+                        ->merge(\DB::table('questions')->whereNotNull('image_media_asset_id')->pluck('image_media_asset_id'))
+                        ->merge(\DB::table('questions')->whereNotNull('audio_media_asset_id')->pluck('audio_media_asset_id'))
+                        ->merge(\DB::table('audio_groups')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
+                        ->merge(\DB::table('passages')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
                         ->merge(\DB::table('test_section_media')->pluck('media_asset_id'))
                         ->filter()->unique()->toArray();
                     $query->whereIn('id', $usedMediaIds);
                 } elseif ($status === 'unused') {
                     $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')
+                        ->merge(\DB::table('questions')->whereNotNull('image_media_asset_id')->pluck('image_media_asset_id'))
+                        ->merge(\DB::table('questions')->whereNotNull('audio_media_asset_id')->pluck('audio_media_asset_id'))
+                        ->merge(\DB::table('audio_groups')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
+                        ->merge(\DB::table('passages')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
                         ->merge(\DB::table('test_section_media')->pluck('media_asset_id'))
                         ->filter()->unique()->toArray();
                     $query->whereNotIn('id', $usedMediaIds);
@@ -1248,6 +1276,10 @@ class MediaController extends Controller
 
         // Used in assessment count
         $usedMediaIds = \DB::table('questions')->whereNotNull('media_asset_id')->pluck('media_asset_id')
+            ->merge(\DB::table('questions')->whereNotNull('image_media_asset_id')->pluck('image_media_asset_id'))
+            ->merge(\DB::table('questions')->whereNotNull('audio_media_asset_id')->pluck('audio_media_asset_id'))
+            ->merge(\DB::table('audio_groups')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
+            ->merge(\DB::table('passages')->whereNotNull('media_asset_id')->pluck('media_asset_id'))
             ->merge(\DB::table('test_section_media')->pluck('media_asset_id'))
             ->filter()->unique()->toArray();
         $usedCount = $allTeacherAssets->whereIn('id', $usedMediaIds)->count();

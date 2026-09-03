@@ -755,7 +755,7 @@
                                                             @if($agAudioUrl)
                                                             <div class="flex items-center gap-2 mt-1.5">
                                                                 <span class="text-xs text-slate-500 dark:text-slate-400">Shared Audio: {{ \Illuminate\Support\Str::limit($agAudioTitle, 35) }}</span>
-                                                                <button type="button" onclick="previewAssetModal('', '{{ addslashes($agAudioTitle) }}', 'audio', '{{ $agAudioUrl }}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-500">
+                                                                <button type="button" onclick="previewAssetModal('{{ $ag->media_asset_id ?? '' }}', '{{ addslashes($agAudioTitle) }}', 'audio', '{{ $agAudioUrl }}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-500">
                                                                     👁️ Preview Audio
                                                                 </button>
                                                             </div>
@@ -1022,17 +1022,23 @@
 
                                                         {{-- Question-level / Shared Media Status Display --}}
                                                         @php
-                                                            $qHasImg = !empty($q->image_url);
-                                                            $qHasAudio = !empty($q->audio_url);
+                                                            $qImgMedia = $q->getEffectiveImageMedia();
+                                                            $qAudMedia = $q->getEffectiveAudioMedia();
+                                                            $qEffectiveImgUrl = $q->getEffectiveImageUrl();
+                                                            $qEffectiveAudUrl = $q->getEffectiveAudioUrl();
+                                                            $qHasImg = !empty($qImgMedia) || !empty($qEffectiveImgUrl);
+                                                            $qHasAudio = !empty($qAudMedia) || !empty($qEffectiveAudUrl);
+                                                            $qImgTitle = $qImgMedia?->title ?: ($qImgMedia?->original_name ?: basename($qEffectiveImgUrl ?? 'image'));
+                                                            $qAudTitle = $qAudMedia?->title ?: ($qAudMedia?->original_name ?: basename($qEffectiveAudUrl ?? 'audio'));
                                                         @endphp
                                                         <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 flex-wrap">
                                                             <span class="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">MEDIA:</span>
                                                             @if($qHasImg)
                                                                 <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/50 px-2 py-1 rounded-md">
-                                                                    <img src="{{ $q->image_url }}" alt="Thumbnail" class="w-5 h-5 object-cover rounded border border-slate-300 dark:border-slate-700">
+                                                                    <img src="{{ $qEffectiveImgUrl }}" alt="Thumbnail" class="w-5 h-5 object-cover rounded border border-slate-300 dark:border-slate-700">
                                                                     <span class="text-xs font-bold text-sky-700 dark:text-sky-300">🖼 Image ✓</span>
                                                                     <button type="button"
-                                                                            onclick="previewAssetModal('', '{{ addslashes(basename($q->image_url)) }}', 'image', '{{ $q->image_url }}')"
+                                                                            onclick="previewAssetModal('{{ $qImgMedia?->id ?? '' }}', '{{ addslashes($qImgTitle) }}', 'image', '{{ $qEffectiveImgUrl }}')"
                                                                             class="px-1.5 py-0.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded text-[11px] font-bold">
                                                                         👁️ Preview
                                                                     </button>
@@ -1043,7 +1049,7 @@
                                                                 <div class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/50 px-2 py-1 rounded-md">
                                                                     <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300">🎧 Audio ✓</span>
                                                                     <button type="button"
-                                                                            onclick="previewAssetModal('', '{{ addslashes(basename($q->audio_url)) }}', 'audio', '{{ $q->audio_url }}')"
+                                                                            onclick="previewAssetModal('{{ $qAudMedia?->id ?? '' }}', '{{ addslashes($qAudTitle) }}', 'audio', '{{ $qEffectiveAudUrl }}')"
                                                                             class="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded text-[11px] font-bold">
                                                                         👁️ Preview
                                                                     </button>

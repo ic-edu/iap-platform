@@ -119,22 +119,30 @@
                 </div>
 
                 <input type="hidden" id="eq-media-asset-id" name="media_asset_id" value="{{ old('media_asset_id', $question->media_asset_id) }}">
+                <input type="hidden" id="eq-image-media-asset-id" name="image_media_asset_id" value="{{ old('image_media_asset_id', $question->image_media_asset_id) }}">
+                <input type="hidden" id="eq-audio-media-asset-id" name="audio_media_asset_id" value="{{ old('audio_media_asset_id', $question->audio_media_asset_id) }}">
                 <input type="hidden" id="eq-image-url" name="image_url" value="{{ old('image_url', $question->image_url) }}">
                 <input type="hidden" id="eq-audio-url" name="audio_url" value="{{ old('audio_url', $question->audio_url) }}">
 
                 @php
-                    $hasImg = !empty($question->image_url);
-                    $hasAudio = !empty($question->audio_url);
+                    $qImgMedia = $question->getEffectiveImageMedia();
+                    $qAudMedia = $question->getEffectiveAudioMedia();
+                    $qEffectiveImgUrl = $question->getEffectiveImageUrl();
+                    $qEffectiveAudUrl = $question->getEffectiveAudioUrl();
+                    $hasImg = !empty($qImgMedia) || !empty($qEffectiveImgUrl);
+                    $hasAudio = !empty($qAudMedia) || !empty($qEffectiveAudUrl);
+                    $imgTitle = $qImgMedia?->title ?: ($qImgMedia?->original_name ?: 'Photograph');
+                    $audioTitle = $qAudMedia?->title ?: ($qAudMedia?->original_name ?: 'Audio Statement');
                 @endphp
 
                 <div id="eq-attached-media-container" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.6rem;">
                     {{-- Image preview card --}}
                     <div id="eq-preview-image-card" style="display:{{ $hasImg ? 'flex' : 'none' }};background:#ffffff;border:1px solid #e2e8f0;border-radius:.5rem;padding:.6rem;align-items:center;justify-content:space-between;">
                         <div style="display:flex;align-items:center;gap:.75rem;">
-                            <img id="eq-preview-image-thumb" src="{{ $question->image_url ?? '' }}" alt="Thumbnail" style="width:52px;height:52px;object-fit:cover;border-radius:.35rem;border:1px solid #cbd5e1;">
+                            <img id="eq-preview-image-thumb" src="{{ $qEffectiveImgUrl ?? '' }}" alt="Thumbnail" style="width:52px;height:52px;object-fit:cover;border-radius:.35rem;border:1px solid #cbd5e1;">
                             <div>
                                 <span style="font-size:.78rem;font-weight:700;color:#0369a1;display:block;">🖼️ Attached Image (Photograph)</span>
-                                <span id="eq-preview-image-title" style="font-size:.72rem;color:#475569;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">{{ $question->image_url }}</span>
+                                <span id="eq-preview-image-title" style="font-size:.72rem;color:#475569;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">{{ $imgTitle }}</span>
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.4rem;">
@@ -170,8 +178,8 @@
                             <span style="font-size:1.5rem;">🎧</span>
                             <div style="flex:1;">
                                 <span style="font-size:.78rem;font-weight:700;color:#4338ca;display:block;">🎵 Attached Audio Prompt</span>
-                                <span id="eq-preview-audio-title" style="font-size:.72rem;color:#475569;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-bottom:.3rem;">{{ $question->audio_url }}</span>
-                                <audio id="eq-preview-audio-player" controls style="height:28px;width:100%;max-width:300px;" src="{{ $question->audio_url ?? '' }}"></audio>
+                                <span id="eq-preview-audio-title" style="font-size:.72rem;color:#475569;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-bottom:.3rem;">{{ $audioTitle }}</span>
+                                <audio id="eq-preview-audio-player" controls style="height:28px;width:100%;max-width:300px;" src="{{ $qEffectiveAudUrl ?? '' }}"></audio>
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;gap:.4rem;">
@@ -1165,17 +1173,17 @@ function uploadQuestionMediaFile() {
 
 function applySelectedQuestionMedia(item) {
     const mediaIdInput = document.getElementById('eq-media-asset-id');
+    const imageMediaIdInput = document.getElementById('eq-image-media-asset-id');
+    const audioMediaIdInput = document.getElementById('eq-audio-media-asset-id');
     const imgInput = document.getElementById('eq-image-url');
     const audioInput = document.getElementById('eq-audio-url');
     const noMediaMsg = document.getElementById('eq-no-media-msg');
     const emptyImg = document.getElementById('eq-empty-image-card');
     const emptyAudio = document.getElementById('eq-empty-audio-card');
 
-    if (!mediaIdInput.value) {
-        mediaIdInput.value = item.id;
-    }
-
     if (item.type === 'image') {
+        if (imageMediaIdInput) imageMediaIdInput.value = item.id;
+        if (!mediaIdInput.value) mediaIdInput.value = item.id;
         imgInput.value = item.url;
         const card = document.getElementById('eq-preview-image-card');
         const thumb = document.getElementById('eq-preview-image-thumb');
@@ -1185,6 +1193,8 @@ function applySelectedQuestionMedia(item) {
         if (thumb) thumb.src = item.url;
         if (title) title.innerText = item.title || item.name || 'Photograph';
     } else if (item.type === 'audio') {
+        if (audioMediaIdInput) audioMediaIdInput.value = item.id;
+        if (!mediaIdInput.value) mediaIdInput.value = item.id;
         audioInput.value = item.url;
         const card = document.getElementById('eq-preview-audio-card');
         const player = document.getElementById('eq-preview-audio-player');
@@ -1196,6 +1206,7 @@ function applySelectedQuestionMedia(item) {
     } else {
         if (item.url) imgInput.value = item.url;
         mediaIdInput.value = item.id;
+        if (imageMediaIdInput) imageMediaIdInput.value = item.id;
         const card = document.getElementById('eq-preview-image-card');
         const title = document.getElementById('eq-preview-image-title');
         if (card) card.style.display = 'flex';
@@ -1212,6 +1223,8 @@ function applySelectedQuestionMedia(item) {
 
 function removeQuestionAttachedMedia(type) {
     const mediaIdInput = document.getElementById('eq-media-asset-id');
+    const imageMediaIdInput = document.getElementById('eq-image-media-asset-id');
+    const audioMediaIdInput = document.getElementById('eq-audio-media-asset-id');
     const imgInput = document.getElementById('eq-image-url');
     const audioInput = document.getElementById('eq-audio-url');
     const noMediaMsg = document.getElementById('eq-no-media-msg');
@@ -1220,11 +1233,13 @@ function removeQuestionAttachedMedia(type) {
 
     if (type === 'image') {
         imgInput.value = '';
+        if (imageMediaIdInput) imageMediaIdInput.value = '';
         const card = document.getElementById('eq-preview-image-card');
         if (card) card.style.display = 'none';
         if (emptyImg) emptyImg.style.display = 'flex';
     } else if (type === 'audio') {
         audioInput.value = '';
+        if (audioMediaIdInput) audioMediaIdInput.value = '';
         const card = document.getElementById('eq-preview-audio-card');
         const player = document.getElementById('eq-preview-audio-player');
         if (card) card.style.display = 'none';
@@ -1232,7 +1247,7 @@ function removeQuestionAttachedMedia(type) {
         if (emptyAudio) emptyAudio.style.display = 'flex';
     }
 
-    if (!imgInput.value && !audioInput.value) {
+    if (!imgInput.value && !audioInput.value && (!imageMediaIdInput || !imageMediaIdInput.value) && (!audioMediaIdInput || !audioMediaIdInput.value)) {
         mediaIdInput.value = '';
         if (noMediaMsg) noMediaMsg.style.display = 'block';
     }
@@ -1246,28 +1261,34 @@ function previewAssetModal(id, title, type, url) {
     document.getElementById('apm-title').textContent = `${type.toUpperCase()}: ${title}`;
     const contentEl = document.getElementById('apm-content');
 
+    const effectiveUrl = id ? `/media/${id}/preview` : url;
+
     if (type === 'image') {
-        contentEl.innerHTML = `<img src="${url}" alt="${title}" style="max-width:100%;max-height:450px;border-radius:.6rem;object-fit:contain;">`;
+        contentEl.innerHTML = `<img src="${effectiveUrl}" alt="${title}" style="max-width:100%;max-height:450px;border-radius:.6rem;object-fit:contain;">`;
     } else if (type === 'audio') {
         contentEl.innerHTML = `
             <div style="width:100%;text-align:center;padding:1.5rem;background:#090d16;border-radius:.75rem;">
                 <div style="font-size:3rem;margin-bottom:.5rem;">🎵</div>
-                <audio controls controlsList="nodownload noplaybackrate" src="${url}" preload="metadata" style="width:100%;max-width:480px;accent-color:#6366f1;"></audio>
+                <audio controls controlsList="nodownload noplaybackrate" src="${effectiveUrl}" preload="metadata" style="width:100%;max-width:480px;accent-color:#6366f1;"></audio>
             </div>`;
     } else if (type === 'pdf') {
-        contentEl.innerHTML = `<iframe src="${url}#toolbar=0" style="width:100%;height:450px;border:none;border-radius:.6rem;background:#fff;"></iframe>`;
+        contentEl.innerHTML = `<iframe src="${effectiveUrl}#toolbar=0" style="width:100%;height:450px;border:none;border-radius:.6rem;background:#fff;"></iframe>`;
     } else {
         contentEl.innerHTML = `<div style="padding:1.5rem;color:#cbd5e1;font-size:.85rem;line-height:1.6;white-space:pre-wrap;background:#090d16;border-radius:.6rem;width:100%;">Reading / text passage preview...</div>`;
     }
 
     const modal = document.getElementById('asset-preview-modal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
 }
 
 function closeAssetPreviewModal(e) {
     if (!e || e.target === document.getElementById('asset-preview-modal')) {
         const modal = document.getElementById('asset-preview-modal');
         if (modal) {
+            modal.classList.add('hidden');
             modal.style.display = 'none';
             document.getElementById('apm-content').innerHTML = '';
         }
@@ -1275,10 +1296,13 @@ function closeAssetPreviewModal(e) {
 }
 
 function previewQuestionModalMedia(type) {
+    const imgMediaId = document.getElementById('eq-image-media-asset-id')?.value;
+    const audMediaId = document.getElementById('eq-audio-media-asset-id')?.value;
     const url = document.getElementById('eq-' + type + '-url')?.value;
     const title = document.getElementById('eq-preview-' + type + '-title')?.innerText || (type === 'image' ? 'Photograph' : 'Audio Prompt');
-    if (url) {
-        previewAssetModal('', title, type, url);
+    const id = (type === 'image') ? imgMediaId : audMediaId;
+    if (url || id) {
+        previewAssetModal(id || '', title, type, url);
     }
 }
 

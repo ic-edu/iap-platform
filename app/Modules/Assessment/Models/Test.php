@@ -169,6 +169,21 @@ class Test extends Model
     }
 
     /**
+     * Check if test belongs to a standardized examination framework (e.g. TOEIC, TOEFL, IELTS).
+     */
+    public function isStandardizedTest(): bool
+    {
+        $type = is_object($this->test_type) ? $this->test_type->value : (string) $this->test_type;
+        $normalizedType = strtolower(trim($type));
+
+        if (in_array($normalizedType, ['toeic', 'toefl', 'ielts'], true)) {
+            return true;
+        }
+
+        return \App\Services\ToeicQuestionValidator::isToeic($this);
+    }
+
+    /**
      * Get creator of test.
      *
      * @return BelongsTo<User, $this>

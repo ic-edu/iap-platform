@@ -1,14 +1,39 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>CBT Exam Session — {{ $attempt->test?->title }}</title>
+
+    <!-- Early Theme Initialization to prevent flash of wrong theme -->
+    <script>
+        (function() {
+            var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}';
+            function resolveTheme(pref) {
+                if (pref === 'system') {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                return pref === 'light' ? 'light' : 'dark';
+            }
+            var activeTheme = resolveTheme(preference);
+            var root = document.documentElement;
+            root.setAttribute('data-theme', activeTheme);
+            root.setAttribute('data-preference', preference);
+            if (activeTheme === 'dark') {
+                root.classList.add('dark');
+                root.classList.remove('light');
+            } else {
+                root.classList.add('light');
+                root.classList.remove('dark');
+            }
+        })();
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased bg-slate-950 text-slate-100 min-h-screen flex flex-col select-none">
+<body class="font-sans antialiased bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col select-none transition-colors">
     @php
         $existingAnswers = $attempt->answers->keyBy('question_id');
         $answeredQuestionIds = $existingAnswers->filter(fn($a) => !is_null($a->selected_choice_id))->keys()->values();
@@ -22,10 +47,10 @@
     <!-- Fullscreen Warning Overlay for Real Test Mode -->
     @if($isRealTest)
         <div id="fullscreen-warning-overlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center hidden">
-            <div class="max-w-md w-full p-8 rounded-2xl bg-slate-900 border border-rose-500/40 shadow-2xl space-y-4">
+            <div class="max-w-md w-full p-8 rounded-2xl bg-white dark:bg-slate-900 border border-rose-500/40 shadow-2xl space-y-4">
                 <span class="text-4xl">⚠️</span>
-                <h2 class="text-xl font-black text-white">Secure Fullscreen Exited</h2>
-                <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <h2 class="text-xl font-black text-slate-900 dark:text-white">Secure Fullscreen Exited</h2>
+                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     You have exited secure fullscreen mode. For official exam integrity, this incident has been logged. Please return to fullscreen mode immediately to continue your assessment.
                 </p>
                 <button type="button" onclick="enterFullscreen()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all">
@@ -36,36 +61,36 @@
     @endif
 
     <!-- Top CBT Status Header Bar -->
-    <header class="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3 sticky top-0 z-50 flex items-center justify-between flex-wrap gap-3">
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 sticky top-0 z-50 flex items-center justify-between flex-wrap gap-3 shadow-sm">
         <div class="flex items-center gap-2.5">
             <div>
                 <div class="flex items-center gap-2">
-                    <span class="text-xs text-indigo-400 font-semibold uppercase tracking-wider">CBT Examination Session</span>
+                    <span class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold uppercase tracking-wider">CBT Examination Session</span>
                     @if($isRealTest)
-                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wide">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-500/30 uppercase tracking-wide">
                             SECURE MOCK TEST
                         </span>
                     @else
-                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wide">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-500/30 uppercase tracking-wide">
                             TEST SIMULATOR
                         </span>
                     @endif
                 </div>
-                <h1 class="text-sm sm:text-base font-bold text-white leading-snug">{{ $attempt->test?->title }}</h1>
+                <h1 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">{{ $attempt->test?->title }}</h1>
             </div>
         </div>
 
         <!-- Live Server-Time Timer Countdown & Final Submit -->
         <div class="flex items-center gap-3">
             @if($isRealTest)
-                <button type="button" onclick="enterFullscreen()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors">
+                <button type="button" onclick="enterFullscreen()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-300 dark:border-slate-700 transition-colors">
                     <span>⛶</span> Fullscreen
                 </button>
             @endif
 
-            <div class="bg-slate-950 border border-slate-800 px-3 sm:px-4 py-1.5 rounded-lg text-center shadow-inner">
-                <span class="text-[10px] text-slate-400 block uppercase font-medium">Time Remaining</span>
-                <span id="countdown-timer" class="text-base sm:text-lg font-mono font-bold text-emerald-400">--:--:--</span>
+            <div class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 sm:px-4 py-1.5 rounded-lg text-center shadow-inner">
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Time Remaining</span>
+                <span id="countdown-timer" class="text-base sm:text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">--:--:--</span>
             </div>
 
             <form id="form-final-submit" method="POST" action="{{ route('candidate.exam.submit', $attempt) }}">
@@ -75,7 +100,7 @@
                         onclick="event.preventDefault(); if (answeredQuestionIds.size === totalQuestions) { iapConfirm({ title: 'Finalize and Submit Test?', message: 'Are you sure you want to finalize and submit your test answers?', confirmText: 'Final Submit', variant: 'success', form: this.form }); }"
                         {{ $isAllInitiallyAnswered ? '' : 'disabled' }}
                         class="px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md"
-                        style="background: {{ $isAllInitiallyAnswered ? '#10b981' : '#1e293b' }}; color: {{ $isAllInitiallyAnswered ? '#ffffff' : '#64748b' }}; border: 1px solid {{ $isAllInitiallyAnswered ? '#10b981' : '#334155' }}; cursor: {{ $isAllInitiallyAnswered ? 'pointer' : 'not-allowed' }};">
+                        style="background: {{ $isAllInitiallyAnswered ? '#10b981' : '#94a3b8' }}; color: #ffffff; border: 1px solid {{ $isAllInitiallyAnswered ? '#10b981' : '#cbd5e1' }}; cursor: {{ $isAllInitiallyAnswered ? 'pointer' : 'not-allowed' }};">
                     {{ $isAllInitiallyAnswered ? 'Final Submit →' : 'Final Submit (' . $answeredQuestionIds->count() . '/' . $totalQuestionsCount . ')' }}
                 </button>
             </form>
@@ -84,7 +109,7 @@
 
     @if (session('error'))
         <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4">
-            <div class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs sm:text-sm font-semibold flex items-center gap-2">
+            <div class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs sm:text-sm font-semibold flex items-center gap-2">
                 <span>⚠️</span>
                 <span>{{ session('error') }}</span>
             </div>
@@ -103,27 +128,27 @@
                         $firstUnitIdx = $sectionFirstUnitIndex[$sec->id] ?? 0;
                         $btnLabel = 'Begin ' . $sec->title;
                     @endphp
-                    <div id="section-intro-card-{{ $sec->id }}" class="section-intro-card bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-lg space-y-6 hidden">
-                        <div class="border-b border-slate-800 pb-4">
+                    <div id="section-intro-card-{{ $sec->id }}" class="section-intro-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm dark:shadow-lg space-y-6 hidden">
+                        <div class="border-b border-slate-200 dark:border-slate-800 pb-4">
                             <div class="flex items-center gap-2.5 mb-2">
-                                <span class="px-3 py-1 text-xs font-extrabold rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
-                                    {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper($sec->section_type) }} SECTION
+                                <span class="px-3 py-1 text-xs font-extrabold rounded-lg bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                                    {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper((string) $sec->section_type) }} SECTION
                                 </span>
-                                <span class="text-xs text-slate-400 font-medium">
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
                                     Section {{ $secIndex + 1 }} of {{ $sections->count() }}
                                 </span>
                             </div>
-                            <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">
+                            <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                                 {{ $sec->title }}
                             </h2>
                         </div>
 
                         <!-- Directions Text -->
                         <div class="space-y-3">
-                            <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <h3 class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
                                 <span>📌</span> Section Directions
                             </h3>
-                            <div class="p-5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+                            <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-line">
                                 {{ $sec->instructions ?: 'Please read the questions carefully and select the best answer option.' }}
                             </div>
                         </div>
@@ -131,14 +156,14 @@
                         <!-- Section Media Assets / Examples (if any) -->
                         @if($sec->mediaAssets && $sec->mediaAssets->isNotEmpty())
                             <div class="space-y-3 pt-2">
-                                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                     <span>🎧</span> Section Reference / Example Media
                                 </h3>
                                 <div class="space-y-4">
                                     @foreach($sec->mediaAssets as $sectionMedia)
-                                        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-200">
+                                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200">
                                             @if($sectionMedia->pivot?->caption)
-                                                <div class="flex items-center gap-1.5 mb-2 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                                                <div class="flex items-center gap-1.5 mb-2 text-xs font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">
                                                     <span>{{ $sectionMedia->typeIcon() }}</span>
                                                     <span>{{ $sectionMedia->pivot->caption }}</span>
                                                 </div>
@@ -151,12 +176,12 @@
                         @endif
 
                         <!-- Action Bar to Advance into Section Questions -->
-                        <div class="pt-6 border-t border-slate-800 flex items-center justify-between flex-wrap gap-3">
+                        <div class="pt-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3">
                             @if(!$isRealTest && $secIndex > 0 && isset($sections[$secIndex - 1]))
                                 @php
                                     $prevLastUnitIdx = ($sectionFirstUnitIndex[$sec->id] ?? 1) - 1;
                                 @endphp
-                                <button type="button" onclick="navigateDeliveryUnit({{ $prevLastUnitIdx }})" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors">
+                                <button type="button" onclick="navigateDeliveryUnit({{ $prevLastUnitIdx }})" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors">
                                     &larr; Previous Section
                                 </button>
                             @else
@@ -171,119 +196,123 @@
                 @endforeach
             @endif
 
-            <!-- 2. DELIVERY UNIT CARDS (Single-Page Audio Groups & Standalone Questions) -->
+            <!-- 2. DELIVERY UNIT CARDS -->
             @forelse ($deliveryUnits as $unitIndex => $unit)
                 @php
                     $unitType = $unit['type'];
                     $section = $unit['section'];
                     $isAudioGroup = ($unitType === 'audio_group');
-                    $groupTypeLabel = $unit['group_type'] === 'talk' ? 'Talk' : 'Conversation';
-                    $unitAudioUrl = $unit['audio_url'];
+                    $isPassageGroup = ($unitType === 'passage_group');
+                    $groupTypeLabel = ($unit['group_type'] ?? '') === 'talk' ? 'Talk' : 'Conversation';
                     $isFirstUnitOfSection = $unit['is_first_unit_of_section'];
                     $isLastUnitOfSection = $unit['is_last_unit_of_section'];
                     $nextSectionId = $unit['next_section_id'];
                 @endphp
 
-                <div id="delivery-unit-card-{{ $unitIndex }}" class="delivery-unit-card bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm hidden" data-unit-type="{{ $unitType }}" data-unit-index="{{ $unitIndex }}">
+                <div id="delivery-unit-card-{{ $unitIndex }}" class="delivery-unit-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm hidden" data-unit-type="{{ $unitType }}" data-unit-index="{{ $unitIndex }}">
 
                     @if($isAudioGroup)
                         <!-- ========================================================================= -->
-                        <!-- AUDIO GROUP DELIVERY UNIT (Part 3 / Part 4 — One Audio + 3 Child Questions) -->
+                        <!-- AUDIO GROUP DELIVERY UNIT (Part 3 / Part 4 — One Audio + Child Questions) -->
                         <!-- ========================================================================= -->
                         @php
                             $primaryQuestion = $unit['questions']->first();
                             $isGroupAudioPlayed = $unit['questions']->contains(fn($q) => $playedAudioSet->contains($q->id));
+                            $audioStreamUrl = route('candidate.exam.audio-stream', [$attempt, $primaryQuestion]);
                         @endphp
 
                         <!-- Header with Part & Range -->
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-3.5 mb-5 flex-wrap gap-2">
+                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3.5 mb-5 flex-wrap gap-2">
                             <div class="flex items-center gap-2 flex-wrap">
-                                <span class="text-xs font-black text-indigo-400 uppercase tracking-wider">
+                                <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                                     PART {{ $unit['part_number'] }} — {{ strtoupper($groupTypeLabel) }} • {{ $unit['display_question_range'] }}
                                 </span>
                                 @if($section && !$isRealTest)
-                                    <span class="text-slate-600">•</span>
-                                    <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors">
+                                    <span class="text-slate-400 dark:text-slate-600">•</span>
+                                    <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline underline-offset-2 transition-colors">
                                         {{ $section->title }} (View Directions)
                                     </button>
                                 @elseif($section)
-                                    <span class="text-slate-600">•</span>
-                                    <span class="text-[11px] font-bold text-slate-400">{{ $section->title }}</span>
+                                    <span class="text-slate-400 dark:text-slate-600">•</span>
+                                    <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">{{ $section->title }}</span>
                                 @endif
                             </div>
-                            <span class="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-indigo-950/80 text-indigo-300 border border-indigo-500/40 uppercase">
+                            <span class="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40 uppercase">
                                 Shared {{ $groupTypeLabel }} Group
                             </span>
                         </div>
 
                         <!-- ONE Shared Group Audio Stimulus Action / Player -->
-                        <div id="group-audio-container-{{ $unitIndex }}" class="mb-6 p-4 sm:p-5 rounded-2xl bg-slate-950/90 border border-indigo-500/40 bg-indigo-950/20 text-slate-200" data-audio-group-id="{{ $unit['audio_group_id'] }}">
+                        <div id="group-audio-container-{{ $unitIndex }}" class="mb-6 p-4 sm:p-5 rounded-2xl bg-indigo-50/50 dark:bg-slate-950/90 border border-indigo-200 dark:border-indigo-500/40 dark:bg-indigo-950/20 text-slate-800 dark:text-slate-200" data-audio-group-id="{{ $unit['audio_group_id'] }}">
                             <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
-                                <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                                     <span>🎧</span>
                                     <span>Shared {{ $groupTypeLabel }} Audio (Part {{ $unit['part_number'] }})</span>
                                     <span>• {{ $unit['display_question_range'] }}</span>
                                     @if($isRealTest)
-                                        <span class="text-[10px] text-rose-400 font-extrabold">(Single Play)</span>
+                                        <span class="text-[10px] text-rose-500 dark:text-rose-400 font-extrabold">(Single Play)</span>
                                     @endif
                                 </div>
                                 @if($isRealTest)
-                                    <span id="audio-badge-unit-{{ $unitIndex }}" class="text-[11px] font-bold {{ $isGroupAudioPlayed ? 'text-slate-500 bg-slate-900 border-slate-800' : 'text-amber-400 bg-amber-950/40 border-amber-500/30' }} px-2.5 py-0.5 rounded-md border">
+                                    <span id="audio-badge-unit-{{ $unitIndex }}" class="text-[11px] font-bold {{ $isGroupAudioPlayed ? 'text-slate-500 bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800' : 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40 border-amber-300 dark:border-amber-500/30' }} px-2.5 py-0.5 rounded-md border">
                                         {{ $isGroupAudioPlayed ? 'Audio Played (1/1)' : 'Play Available (1/1)' }}
                                     </span>
                                 @else
-                                    <span class="text-[10px] font-bold text-indigo-300 bg-indigo-950/60 border border-indigo-500/30 px-2 py-0.5 rounded">
+                                    <span class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-500/30 px-2 py-0.5 rounded">
                                         Shared Audio Stimulus
                                     </span>
                                 @endif
                             </div>
 
                             @if($unit['title'])
-                                <div class="text-xs text-slate-300 font-medium mb-3 italic">
-                                    📌 Questions refer to the following {{ strtolower($groupTypeLabel) }}: <strong class="text-white">{{ $unit['title'] }}</strong>
+                                <div class="text-xs text-slate-600 dark:text-slate-300 font-medium mb-3 italic">
+                                    📌 Questions refer to the following {{ strtolower($groupTypeLabel) }}: <strong class="text-slate-900 dark:text-white">{{ $unit['title'] }}</strong>
                                 </div>
                             @endif
 
                             @if($isRealTest)
                                 <div class="flex items-center gap-3">
                                     <button id="btn-play-unit-{{ $unitIndex }}" type="button"
-                                            onclick="playRealTestUnitAudio({{ $unitIndex }}, '{{ $unit['audio_group_id'] }}', '{{ route('candidate.exam.audio-stream', [$attempt, $primaryQuestion]) }}')"
+                                            onclick="playRealTestUnitAudio({{ $unitIndex }}, '{{ $unit['audio_group_id'] }}', '{{ $audioStreamUrl }}')"
                                             {{ $isGroupAudioPlayed ? 'disabled' : '' }}
-                                            class="px-4 py-2 rounded-xl {{ $isGroupAudioPlayed ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30' }} font-bold text-xs transition-all flex items-center gap-2">
+                                            class="px-4 py-2 rounded-xl {{ $isGroupAudioPlayed ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30' }} font-bold text-xs transition-all flex items-center gap-2">
                                         <span>▶</span>
                                         <span id="btn-play-label-unit-{{ $unitIndex }}">{{ $isGroupAudioPlayed ? 'Already Played' : "Play {$groupTypeLabel} Audio" }}</span>
                                     </button>
                                     <audio id="audio-unit-elem-{{ $unitIndex }}" class="hidden" preload="none" onended="onUnitAudioEnded({{ $unitIndex }}, '{{ $unit['audio_group_id'] }}', '{{ $primaryQuestion->id }}')"></audio>
                                 </div>
                             @else
-                                <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $unitAudioUrl ?: route('candidate.exam.audio-stream', [$attempt, $primaryQuestion]) }}" preload="metadata"></audio>
+                                <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ (!empty($unit['audio_url']) && filter_var($unit['audio_url'], FILTER_VALIDATE_URL)) ? $unit['audio_url'] : $audioStreamUrl }}" preload="metadata"></audio>
                             @endif
                         </div>
 
-                        <!-- THREE Child Questions Rendered Vertically on the Same Page -->
+                        <!-- Child Questions Rendered Vertically on the Same Page -->
                         <div class="space-y-6">
                             @foreach($unit['questions'] as $cIdx => $question)
                                 @php
                                     $globalQIdx = $unit['question_indices'][$cIdx];
+                                    $agn = $unit['canonical_question_numbers'][$cIdx] ?? ($globalQIdx + 1);
                                     $existingAnswer = $existingAnswers->get($question->id);
                                 @endphp
 
-                                <div id="unit-question-block-{{ $globalQIdx }}" class="p-5 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-4 transition-all">
+                                <div id="unit-question-block-{{ $globalQIdx }}" class="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4 transition-all">
                                     <!-- Child Header with Flag -->
-                                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5 flex-wrap gap-2">
-                                        <span class="text-xs font-black text-indigo-400 uppercase tracking-wider">
-                                            Question {{ $globalQIdx + 1 }}
+                                    <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2.5 flex-wrap gap-2">
+                                        <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                            Question {{ $agn }}
                                         </span>
                                         <button type="button" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
-                                                class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                                                class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
                                             🚩 Flag Question
                                         </button>
                                     </div>
 
                                     <!-- Stem Prompt -->
-                                    <div class="text-base font-semibold text-white leading-snug">
-                                        {!! e($question->prompt) !!}
-                                    </div>
+                                    @if(!empty($question->prompt))
+                                        <div class="text-base font-semibold text-slate-900 dark:text-white leading-snug">
+                                            {!! e($question->prompt) !!}
+                                        </div>
+                                    @endif
 
                                     <!-- Choices Options (Independent Autosave & Selection) -->
                                     <div class="space-y-3 pt-1">
@@ -291,14 +320,14 @@
                                             @php
                                                 $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
                                             @endphp
-                                            <label class="flex items-center p-3.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors">
+                                            <label class="flex items-center p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors shadow-sm">
                                                 <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
                                                        {{ $isChecked ? 'checked' : '' }}
                                                        onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})"
                                                        aria-label="Option {{ $choice->label }}"
-                                                       class="w-4 h-4 text-indigo-600 bg-slate-800 border-slate-700 focus:ring-0" />
-                                                <span class="ml-3 text-sm text-slate-200 font-medium">
-                                                    <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                                       class="w-4 h-4 text-indigo-600 bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 focus:ring-0" />
+                                                <span class="ml-3 text-sm text-slate-800 dark:text-slate-200 font-medium">
+                                                    <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
                                                 </span>
                                             </label>
                                         @endforeach
@@ -308,17 +337,17 @@
                         </div>
 
                         <!-- Audio Group Navigation Action Bar -->
-                        <div class="flex justify-between items-center pt-6 mt-8 border-t border-slate-800 flex-wrap gap-3">
+                        <div class="flex justify-between items-center pt-6 mt-8 border-t border-slate-200 dark:border-slate-800 flex-wrap gap-3">
                             @if(!$isRealTest)
                                 @if($isFirstUnitOfSection && $section)
                                     <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
-                                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
                                         &larr; Section Directions
                                     </button>
                                 @else
                                     <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex - 1 }})" {{ $unitIndex === 0 ? 'disabled' : '' }}
-                                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
-                                        &larr; Previous Group (P)
+                                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-white transition-colors">
+                                        &larr; Previous (P)
                                     </button>
                                 @endif
                             @else
@@ -333,23 +362,187 @@
                             @else
                                 <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'unit', {{ $unitIndex + 1 }})" {{ $unitIndex === $totalUnitsCount - 1 && $isRealTest ? 'disabled' : '' }}
                                         class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
-                                    Next Group (N) &rarr;
+                                    Next (N) &rarr;
+                                </button>
+                            @endif
+                        </div>
+
+                    @elseif($isPassageGroup)
+                        <!-- ========================================================================= -->
+                        <!-- PASSAGE GROUP DELIVERY UNIT (Part 6 Text Completion / Part 7 Reading)    -->
+                        <!-- ========================================================================= -->
+                        @php
+                            $effectivePassages = $unit['passages'];
+                            $partNum = $unit['part_number'];
+                            $groupTitle = $unit['title'] ?? ($partNum === 6 ? 'Text Completion' : 'Reading Comprehension');
+                        @endphp
+
+                        <!-- Header with Part & Range -->
+                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3.5 mb-5 flex-wrap gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                    PART {{ $partNum }} — {{ strtoupper($groupTitle) }} • {{ $unit['display_question_range'] }}
+                                </span>
+                                @if($section && !$isRealTest)
+                                    <span class="text-slate-400 dark:text-slate-600">•</span>
+                                    <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline underline-offset-2 transition-colors">
+                                        {{ $section->title }} (View Directions)
+                                    </button>
+                                @elseif($section)
+                                    <span class="text-slate-400 dark:text-slate-600">•</span>
+                                    <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">{{ $section->title }}</span>
+                                @endif
+                            </div>
+                            <span class="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/40 uppercase">
+                                {{ $partNum === 6 ? 'Text Completion Group' : 'Passage Group' }}
+                            </span>
+                        </div>
+
+                        <!-- Reading Dual Pane Split Screen -->
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                            <!-- Left Pane: Passages & Documents -->
+                            <div class="lg:col-span-6 xl:col-span-7 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col min-h-[420px] max-h-[75vh] lg:sticky lg:top-20 overflow-hidden" id="passage-pane-unit-{{ $unitIndex }}">
+                                <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-3 flex-wrap gap-2">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                            <span>📄</span>
+                                            <span>{{ ($unit['passage_type'] ?? '') ? ('Part ' . $partNum . ' ' . ucfirst($unit['passage_type']) . ' Passage') : ($partNum === 6 ? 'Text Completion Passage' : 'Reading Passage') }}</span>
+                                        </span>
+                                        @if($effectivePassages->count() > 1)
+                                            <div class="flex items-center gap-1.5 ml-2 flex-wrap">
+                                                @foreach($effectivePassages as $pIdx => $pass)
+                                                    <button type="button"
+                                                            id="passage-tab-unit-{{ $unitIndex }}-{{ $pIdx }}"
+                                                            onclick="switchPassageDocUnit({{ $unitIndex }}, {{ $pIdx }})"
+                                                            class="passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all {{ $pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700' }}">
+                                                        {{ $pass->title ?: ('Document ' . ($pIdx + 1)) }} ({{ ucfirst($pass->document_type ?? 'article') }})
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                    @if($unit['title'])
+                                        <span class="text-[11px] text-slate-500 dark:text-slate-400 italic truncate max-w-[200px]">{{ $unit['title'] }}</span>
+                                    @endif
+                                </div>
+
+                                <div class="passage-scroll-container overflow-y-auto pr-2 space-y-4 text-sm text-slate-800 dark:text-slate-200 leading-relaxed max-h-[62vh]" id="passage-scroll-unit-{{ $unitIndex }}">
+                                    @forelse($effectivePassages as $pIdx => $pass)
+                                        @php
+                                            $passImg = $pass->mediaAsset ? route('media.preview', $pass->mediaAsset->id) : $pass->getEffectiveImageUrl();
+                                        @endphp
+                                        <div id="passage-doc-unit-{{ $unitIndex }}-{{ $pIdx }}" class="passage-doc-content-unit-{{ $unitIndex }} {{ $pIdx > 0 ? 'hidden' : '' }}">
+                                            @if($pass->title && $effectivePassages->count() === 1)
+                                                <h4 class="font-bold text-base text-indigo-700 dark:text-indigo-300 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1.5">{{ $pass->title }}</h4>
+                                            @endif
+                                            @if(!empty($passImg))
+                                                <div class="mb-4 text-center">
+                                                    <img src="{{ $passImg }}" alt="{{ $pass->title ?: 'Passage Document' }}" class="max-w-full rounded-lg mx-auto border border-slate-200 dark:border-slate-800 shadow-md object-contain" style="max-height: 500px;">
+                                                </div>
+                                            @endif
+                                            @if(!empty($pass->content))
+                                                <div class="prose dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 text-sm whitespace-pre-line leading-relaxed select-text">
+                                                    {!! nl2br(e($pass->content)) !!}
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @empty
+                                        <div class="text-slate-500 italic text-sm">Passage stimulus content.</div>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            <!-- Right Pane: Associated Child Questions -->
+                            <div class="lg:col-span-6 xl:col-span-5 space-y-6">
+                                @foreach($unit['questions'] as $cIdx => $question)
+                                    @php
+                                        $globalQIdx = $unit['question_indices'][$cIdx];
+                                        $agn = $unit['canonical_question_numbers'][$cIdx] ?? ($globalQIdx + 1);
+                                        $existingAnswer = $existingAnswers->get($question->id);
+                                    @endphp
+
+                                    <div id="unit-question-block-{{ $globalQIdx }}" class="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4 transition-all">
+                                        <!-- Header with AGN & Flag -->
+                                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2.5 flex-wrap gap-2">
+                                            <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                                Question {{ $agn }}
+                                            </span>
+                                            <button type="button" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
+                                                    class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+                                                🚩 Flag Question
+                                            </button>
+                                        </div>
+
+                                        <!-- Stem Prompt (may be blank in Part 6 blanks) -->
+                                        @if(!empty($question->prompt))
+                                            <div class="text-base font-semibold text-slate-900 dark:text-white leading-snug">
+                                                {!! e($question->prompt) !!}
+                                            </div>
+                                        @endif
+
+                                        <!-- Choices Options -->
+                                        <div class="space-y-3 pt-1">
+                                            @foreach ($question->choices as $choice)
+                                                @php
+                                                    $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
+                                                @endphp
+                                                <label class="flex items-center p-3.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors shadow-sm">
+                                                    <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
+                                                           {{ $isChecked ? 'checked' : '' }}
+                                                           onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})"
+                                                           aria-label="Option {{ $choice->label }}"
+                                                           class="w-4 h-4 text-indigo-600 bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 focus:ring-0" />
+                                                    <span class="ml-3 text-sm text-slate-800 dark:text-slate-200 font-medium">
+                                                        <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                                    </span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Passage Group Navigation Action Bar -->
+                        <div class="flex justify-between items-center pt-6 mt-8 border-t border-slate-200 dark:border-slate-800 flex-wrap gap-3">
+                            @if(!$isRealTest)
+                                @if($isFirstUnitOfSection && $section)
+                                    <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
+                                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+                                        &larr; Section Directions
+                                    </button>
+                                @else
+                                    <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex - 1 }})" {{ $unitIndex === 0 ? 'disabled' : '' }}
+                                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-white transition-colors">
+                                        &larr; Previous (P)
+                                    </button>
+                                @endif
+                            @else
+                                <div></div>
+                            @endif
+
+                            @if($isLastUnitOfSection && $nextSectionId)
+                                <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'section', '{{ $nextSectionId }}')"
+                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30">
+                                    Next Section &rarr;
+                                </button>
+                            @else
+                                <button type="button" onclick="handleNextClick({{ $unitIndex }}, 'unit', {{ $unitIndex + 1 }})" {{ $unitIndex === $totalUnitsCount - 1 && $isRealTest ? 'disabled' : '' }}
+                                        class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shadow-indigo-600/30">
+                                    Next (N) &rarr;
                                 </button>
                             @endif
                         </div>
 
                     @else
                         <!-- ========================================================================= -->
-                        <!-- STANDALONE QUESTION DELIVERY UNIT (Part 1, Part 2, Part 5, 6, 7 or legacy) -->
+                        <!-- STANDALONE QUESTION DELIVERY UNIT (Part 1, Part 2, Part 5, or generic)    -->
                         <!-- ========================================================================= -->
                         @php
                             $question = $unit['questions']->first();
                             $globalQIdx = $unit['first_question_index'];
+                            $agn = $unit['canonical_question_numbers'][0] ?? ($globalQIdx + 1);
                             $existingAnswer = $existingAnswers->get($question->id);
-                            $effectivePassages = $question->getEffectivePassages();
-                            $hasPassages = $effectivePassages->isNotEmpty();
-                            $passageGroup = $question->passageGroup;
-                            $passageGroupId = $passageGroup?->id ?? ($question->passage_id ? 'p_'.$question->passage_id : null);
                             $isToeic = \App\Services\ToeicQuestionValidator::isToeic($attempt->test) || \App\Services\ToeicQuestionValidator::isToeic($question);
                             $partNum = (int) ($question->part_number ?? 0);
                             $isLetterOnly = $isToeic && in_array($partNum, [1, 2], true);
@@ -361,199 +554,123 @@
                                     return in_array(strtoupper((string) $c->label), ['A', 'B', 'C'], true);
                                 })->take(3);
                             }
+
+                            $imgMedia = $question->getEffectiveImageMedia();
+                            $qImageUrl = $imgMedia ? route('media.preview', $imgMedia->id) : ($question->getEffectiveImageUrl() ?: null);
+                            $audMedia = $question->getEffectiveAudioMedia();
+                            $hasAudioSource = !empty($audMedia) || !empty($question->audio_url) || !empty($question->audio_media_asset_id);
+                            $audioStreamUrl = route('candidate.exam.audio-stream', [$attempt, $question]);
                         @endphp
 
-                        <div id="unit-question-block-{{ $globalQIdx }}" data-passage-group-id="{{ $passageGroupId }}" data-part-number="{{ $partNum }}">
-                            <!-- Header with Part, Breadcrumb & Flag -->
-                            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 flex-wrap gap-2">
+                        <div id="unit-question-block-{{ $globalQIdx }}" data-part-number="{{ $partNum }}">
+                            <!-- Header with AGN, Breadcrumb & Flag -->
+                            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4 flex-wrap gap-2">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                        Question {{ $globalQIdx + 1 }} of {{ $totalQuestionsCount }}
+                                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        Question {{ $agn }} of {{ $totalQuestionsCount }}
                                     </span>
                                     @if($section && !$isRealTest)
-                                        <span class="text-slate-600">•</span>
-                                        <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors">
+                                        <span class="text-slate-400 dark:text-slate-600">•</span>
+                                        <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline underline-offset-2 transition-colors">
                                             {{ $section->title }} (View Directions)
                                         </button>
                                     @elseif($section)
-                                        <span class="text-slate-600">•</span>
-                                        <span class="text-[11px] font-bold text-slate-400">{{ $section->title }}</span>
+                                        <span class="text-slate-400 dark:text-slate-600">•</span>
+                                        <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">{{ $section->title }}</span>
                                     @endif
                                 </div>
                                 <button type="button" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
-                                        class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                                        class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
                                     🚩 Flag Question
                                 </button>
                             </div>
 
-                            @if ($hasPassages)
-                                <!-- Reading Dual Pane Split Screen -->
-                                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                                    <!-- Left Pane: Passages -->
-                                    <div class="lg:col-span-6 xl:col-span-7 bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-col min-h-[420px] max-h-[72vh] lg:sticky lg:top-4 overflow-hidden" id="passage-pane-{{ $question->id }}" data-passage-pane-id="{{ $passageGroupId }}">
-                                        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3 flex-wrap gap-2">
-                                            <div class="flex items-center gap-2 flex-wrap">
-                                                <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <span>📄</span>
-                                                    <span>{{ $passageGroup ? ('Part ' . $passageGroup->part_number . ' ' . ucfirst($passageGroup->passage_type) . ' Passage') : 'Reading Passage' }}</span>
-                                                </span>
-                                                @if($effectivePassages->count() > 1)
-                                                    <div class="flex items-center gap-1.5 ml-2 flex-wrap">
-                                                        @foreach($effectivePassages as $pIdx => $pass)
-                                                            <button type="button"
-                                                                    id="passage-tab-{{ $question->id }}-{{ $pIdx }}"
-                                                                    onclick="switchPassageDoc('{{ $question->id }}', {{ $pIdx }})"
-                                                                    class="passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all {{ $pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700' }}">
-                                                                {{ $pass->title ?: ('Document ' . ($pIdx + 1)) }} ({{ ucfirst($pass->document_type ?? 'article') }})
-                                                            </button>
-                                                        @endforeach
-                                                    </div>
-                                                @endif
-                                            </div>
-                                            @if($passageGroup && $passageGroup->title)
-                                                <span class="text-[11px] text-slate-400 italic truncate max-w-[200px]">{{ $passageGroup->title }}</span>
-                                            @endif
-                                        </div>
-
-                                        <div class="passage-scroll-container overflow-y-auto pr-2 space-y-4 text-sm text-slate-200 leading-relaxed max-h-[60vh]" id="passage-scroll-{{ $question->id }}">
-                                            @foreach($effectivePassages as $pIdx => $pass)
-                                                @php
-                                                    $passImg = $pass->getEffectiveImageUrl();
-                                                @endphp
-                                                <div id="passage-doc-{{ $question->id }}-{{ $pIdx }}" class="passage-doc-content {{ $pIdx > 0 ? 'hidden' : '' }}">
-                                                    @if($pass->title && $effectivePassages->count() === 1)
-                                                        <h4 class="font-bold text-base text-indigo-300 mb-2 border-b border-slate-800 pb-1.5">{{ $pass->title }}</h4>
-                                                    @endif
-                                                    @if(!empty($passImg))
-                                                        <div class="mb-4 text-center">
-                                                            <img src="{{ $passImg }}" alt="{{ $pass->title ?: 'Passage Document' }}" class="max-w-full rounded-lg mx-auto border border-slate-800 shadow-md object-contain" style="max-height: 500px;">
-                                                        </div>
-                                                    @endif
-                                                    @if(!empty($pass->content))
-                                                        <div class="prose prose-invert max-w-none text-slate-200 text-sm whitespace-pre-line leading-relaxed select-text">
-                                                            {!! nl2br(e($pass->content)) !!}
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-
-                                    <!-- Right Pane: Stem Prompt & Options -->
-                                    <div class="lg:col-span-6 xl:col-span-5 flex flex-col justify-between">
-                                        <div class="text-base font-semibold text-white mb-6 leading-snug">
-                                            {!! e($question->prompt) !!}
-                                        </div>
-
-                                        <div class="space-y-3">
-                                            @foreach ($renderChoices as $choice)
-                                                @php
-                                                    $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
-                                                @endphp
-                                                <label class="flex items-center p-3.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors">
-                                                    <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
-                                                           {{ $isChecked ? 'checked' : '' }}
-                                                           onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})"
-                                                           aria-label="Option {{ $choice->label }}"
-                                                           class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-0" />
-                                                    <span class="ml-3 text-sm text-slate-200 font-medium">
-                                                        <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
-                                                    </span>
-                                                </label>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </div>
-                            @else
-                                <!-- Standard Layout -->
-                                @if (!empty($question->image_url))
-                                    <div class="mb-5 text-center">
-                                        <img src="{{ $question->image_url }}" alt="Question Attachment" class="max-h-72 max-w-full rounded-xl mx-auto border border-slate-800 shadow-md object-contain">
-                                    </div>
-                                @endif
-
-                                @php
-                                    $hasAudioSource = !empty($question->audio_url) || ($question->mediaAsset && $question->mediaAsset->type === 'audio');
-                                @endphp
-
-                                @if ($hasAudioSource)
-                                    @if ($isRealTest)
-                                        <div id="audio-container-{{ $question->id }}" class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
-                                            <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
-                                                <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                                                    <span>🎧</span>
-                                                    <span>Question Audio Prompt (Single Play)</span>
-                                                </div>
-                                                <span id="audio-badge-{{ $question->id }}" class="text-[11px] font-bold {{ $isAudioPlayed ? 'text-slate-500 bg-slate-900 border-slate-800' : 'text-amber-400 bg-amber-950/40 border-amber-500/30' }} px-2.5 py-0.5 rounded-md border">
-                                                    {{ $isAudioPlayed ? 'Audio Played (1/1)' : 'Play Available (1/1)' }}
-                                                </span>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <button id="btn-play-{{ $question->id }}" type="button"
-                                                        onclick="playRealTestSingleAudio('{{ $question->id }}', '{{ route('candidate.exam.audio-stream', [$attempt, $question]) }}')"
-                                                        {{ $isAudioPlayed ? 'disabled' : '' }}
-                                                        class="px-4 py-2 rounded-xl {{ $isAudioPlayed ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30' }} font-bold text-xs transition-all flex items-center gap-2">
-                                                    <span>▶</span>
-                                                    <span id="btn-play-label-{{ $question->id }}">{{ $isAudioPlayed ? 'Already Played' : 'Play Audio Prompt' }}</span>
-                                                </button>
-                                                <audio id="audio-elem-{{ $question->id }}" class="hidden" preload="none" onended="onSingleAudioEnded('{{ $question->id }}')"></audio>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <div class="mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-200">
-                                            <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
-                                                <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                                                    <span>🎧</span>
-                                                    <span>Question Audio Prompt</span>
-                                                </div>
-                                            </div>
-                                            <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $question->audio_url ?: route('candidate.exam.audio-stream', [$attempt, $question]) }}" preload="metadata"></audio>
-                                        </div>
-                                    @endif
-                                @endif
-
-                                <!-- Prompt -->
-                                <div class="text-base font-semibold text-white mb-6 leading-snug">
-                                    {!! e($question->prompt) !!}
-                                </div>
-
-                                <!-- Choices Options -->
-                                <div class="space-y-3">
-                                    @foreach ($renderChoices as $choice)
-                                        @php
-                                            $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
-                                        @endphp
-                                        <label class="flex items-center p-3.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors">
-                                            <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
-                                                   {{ $isChecked ? 'checked' : '' }}
-                                                   onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})"
-                                                   aria-label="Option {{ $choice->label }}"
-                                                   class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-0" />
-                                            @if ($isLetterOnly)
-                                                <span class="ml-3 text-sm text-slate-200 font-bold">
-                                                    <strong class="text-indigo-400">({{ $choice->label }})</strong>
-                                                </span>
-                                            @else
-                                                <span class="ml-3 text-sm text-slate-200 font-medium">
-                                                    <strong class="text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
-                                                </span>
-                                            @endif
-                                        </label>
-                                    @endforeach
+                            <!-- Standard Layout Media Attachment -->
+                            @if (!empty($qImageUrl))
+                                <div class="mb-5 text-center">
+                                    <img src="{{ $qImageUrl }}" alt="Question Attachment" class="max-h-72 max-w-full rounded-xl mx-auto border border-slate-200 dark:border-slate-800 shadow-md object-contain">
                                 </div>
                             @endif
 
+                            @if ($hasAudioSource)
+                                @if ($isRealTest)
+                                    <div id="audio-container-{{ $question->id }}" class="mb-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
+                                        <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                            <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                                <span>🎧</span>
+                                                <span>Question Audio Prompt (Single Play)</span>
+                                            </div>
+                                            <span id="audio-badge-{{ $question->id }}" class="text-[11px] font-bold {{ $isAudioPlayed ? 'text-slate-500 bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800' : 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40 border-amber-300 dark:border-amber-500/30' }} px-2.5 py-0.5 rounded-md border">
+                                                {{ $isAudioPlayed ? 'Audio Played (1/1)' : 'Play Available (1/1)' }}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <button id="btn-play-{{ $question->id }}" type="button"
+                                                    onclick="playRealTestSingleAudio('{{ $question->id }}', '{{ $audioStreamUrl }}')"
+                                                    {{ $isAudioPlayed ? 'disabled' : '' }}
+                                                    class="px-4 py-2 rounded-xl {{ $isAudioPlayed ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30' }} font-bold text-xs transition-all flex items-center gap-2">
+                                                <span>▶</span>
+                                                <span id="btn-play-label-{{ $question->id }}">{{ $isAudioPlayed ? 'Already Played' : 'Play Audio Prompt' }}</span>
+                                            </button>
+                                            <audio id="audio-elem-{{ $question->id }}" class="hidden" preload="none" onended="onSingleAudioEnded('{{ $question->id }}')"></audio>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="mb-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
+                                        <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                            <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                                <span>🎧</span>
+                                                <span>Question Audio Prompt</span>
+                                            </div>
+                                        </div>
+                                        <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ (!empty($question->audio_url) && filter_var($question->audio_url, FILTER_VALIDATE_URL)) ? $question->audio_url : $audioStreamUrl }}" preload="metadata"></audio>
+                                    </div>
+                                @endif
+                            @endif
+
+                            <!-- Prompt -->
+                            @if(!empty($question->prompt))
+                                <div class="text-base font-semibold text-slate-900 dark:text-white mb-6 leading-snug">
+                                    {!! e($question->prompt) !!}
+                                </div>
+                            @endif
+
+                            <!-- Choices Options -->
+                            <div class="space-y-3">
+                                @foreach ($renderChoices as $choice)
+                                    @php
+                                        $isChecked = $existingAnswer && $existingAnswer->selected_choice_id === $choice->id;
+                                    @endphp
+                                    <label class="flex items-center p-3.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors shadow-sm">
+                                        <input type="radio" name="q_{{ $question->id }}" value="{{ $choice->id }}"
+                                               {{ $isChecked ? 'checked' : '' }}
+                                               onchange="autoSaveAnswer('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})"
+                                               aria-label="Option {{ $choice->label }}"
+                                               class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-0" />
+                                        @if ($isLetterOnly)
+                                            <span class="ml-3 text-sm text-slate-800 dark:text-slate-200 font-bold">
+                                                <strong class="text-indigo-600 dark:text-indigo-400">({{ $choice->label }})</strong>
+                                            </span>
+                                        @else
+                                            <span class="ml-3 text-sm text-slate-800 dark:text-slate-200 font-medium">
+                                                <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                            </span>
+                                        @endif
+                                    </label>
+                                @endforeach
+                            </div>
+
                             <!-- Navigation Controls -->
-                            <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-800">
+                            <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-200 dark:border-slate-800 flex-wrap gap-3">
                                 @if (!$isRealTest)
                                     @if($isFirstUnitOfSection && $section)
                                         <button type="button" onclick="showSectionIntro('{{ $section->id }}')"
-                                                class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                                                class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
                                             &larr; Section Directions
                                         </button>
                                     @else
                                         <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex - 1 }})" {{ $unitIndex === 0 ? 'disabled' : '' }}
-                                                class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition-colors">
+                                                class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-white transition-colors">
                                             &larr; Previous (P)
                                         </button>
                                     @endif
@@ -578,17 +695,17 @@
 
                 </div>
             @empty
-                <div class="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-500">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center text-slate-500">
                     No questions assigned to this test.
                 </div>
             @endforelse
         </div>
 
         <!-- Question Palette Sidebar (1 Col) -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm h-fit">
-            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
-                <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Question Navigation</h3>
-                <span id="answered-counter-badge" class="text-[11px] font-bold text-indigo-400">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm h-fit">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Question Navigation</h3>
+                <span id="answered-counter-badge" class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
                     {{ count($answeredQuestionIds) }}/{{ $totalQuestionsCount }}
                 </span>
             </div>
@@ -596,33 +713,34 @@
             <div id="palette-grid" class="flex flex-wrap gap-1.5 text-xs font-bold">
                 @foreach ($shuffledQuestions as $idx => $q)
                     @php
+                        $agn = $q->canonical_global_number ?? ($idx + 1);
                         $isAns = $existingAnswers->has($q->id) && !is_null($existingAnswers->get($q->id)->selected_choice_id);
                     @endphp
                     <button id="palette-btn-{{ $idx }}" type="button" onclick="handlePaletteClick({{ $idx }})"
-                            class="palette-btn px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 {{ $isAns ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700' }}">
-                        <span>{{ $idx + 1 }}</span>
+                            class="palette-btn px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 {{ $isAns ? 'border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700' }}">
+                        <span>{{ $agn }}</span>
                         <span id="palette-icon-{{ $idx }}" class="text-[10px]">{{ $isAns ? '✓' : '—' }}</span>
                     </button>
                 @endforeach
             </div>
 
-            <div class="mt-4 pt-3 border-t border-slate-800/80 text-[10px] text-slate-400 flex flex-wrap items-center justify-between gap-2">
+            <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800/80 text-[10px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-1">
-                    <span class="text-emerald-400 font-bold">✓</span> Answered
+                    <span class="text-emerald-600 dark:text-emerald-400 font-bold">✓</span> Answered
                 </div>
                 <div class="flex items-center gap-1">
-                    <span class="text-slate-500 font-bold">—</span> Unanswered
+                    <span class="text-slate-400 dark:text-slate-500 font-bold">—</span> Unanswered
                 </div>
                 <div class="flex items-center gap-1">
-                    <span class="text-amber-400 font-bold">⚑</span> Flagged
+                    <span class="text-amber-500 dark:text-amber-400 font-bold">⚑</span> Flagged
                 </div>
             </div>
 
-            <div class="mt-3 text-[10px] space-y-1 text-slate-500">
+            <div class="mt-3 text-[10px] space-y-1 text-slate-400 dark:text-slate-500">
                 @if(!$isRealTest)
-                    <p><kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">N</kbd> Next • <kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">P</kbd> Previous • <kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">F</kbd> Flag</p>
+                    <p><kbd class="px-1 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">N</kbd> Next • <kbd class="px-1 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">P</kbd> Previous • <kbd class="px-1 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">F</kbd> Flag</p>
                 @else
-                    <p><kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">N</kbd> Next • <kbd class="px-1 py-0.2 bg-slate-800 text-slate-300 rounded">F</kbd> Flag</p>
+                    <p><kbd class="px-1 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">N</kbd> Next • <kbd class="px-1 py-0.2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded">F</kbd> Flag</p>
                 @endif
             </div>
         </div>
@@ -730,9 +848,9 @@
                 btn.innerHTML = 'Final Submit &rarr;';
             } else {
                 btn.disabled = true;
-                btn.style.background = '#1e293b';
-                btn.style.borderColor = '#334155';
-                btn.style.color = '#64748b';
+                btn.style.background = '#94a3b8';
+                btn.style.borderColor = '#cbd5e1';
+                btn.style.color = '#ffffff';
                 btn.style.cursor = 'not-allowed';
                 btn.innerHTML = `Final Submit (${answeredQuestionIds.size}/${totalQuestions})`;
             }
@@ -765,13 +883,13 @@
 
                 btn.className = 'palette-btn px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 ';
                 if (isCurrentUnit) {
-                    btn.className += 'ring-2 ring-indigo-400 border-indigo-500 bg-indigo-950/80 text-white shadow-sm';
+                    btn.className += 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-white shadow-sm';
                 } else if (isFlagged) {
-                    btn.className += 'border-amber-500/40 bg-amber-950/30 text-amber-300';
+                    btn.className += 'border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300';
                 } else if (isAnswered) {
-                    btn.className += 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300';
+                    btn.className += 'border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300';
                 } else {
-                    btn.className += 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700';
+                    btn.className += 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700';
                 }
             });
 
@@ -808,8 +926,8 @@
                     const targetEl = document.getElementById(`unit-question-block-${targetQIndex}`);
                     if (targetEl) {
                         targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        targetEl.classList.add('ring-2', 'ring-indigo-400');
-                        setTimeout(() => targetEl.classList.remove('ring-2', 'ring-indigo-400'), 1500);
+                        targetEl.classList.add('ring-2', 'ring-indigo-500');
+                        setTimeout(() => targetEl.classList.remove('ring-2', 'ring-indigo-500'), 1500);
                     }
                 } else {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -820,6 +938,24 @@
             const firstQInUnit = unitIndexToQuestionIndices[unitIdx]?.[0] ?? 0;
             window.location.hash = 'q=' + (targetQIndex !== null ? targetQIndex : firstQInUnit);
             updatePaletteUI();
+        }
+
+        // Switch Passage Document in Passage Group Unit
+        function switchPassageDocUnit(unitIndex, docIndex) {
+            document.querySelectorAll(`.passage-doc-content-unit-${unitIndex}`).forEach(el => el.classList.add('hidden'));
+            const targetDoc = document.getElementById(`passage-doc-unit-${unitIndex}-${docIndex}`);
+            if (targetDoc) {
+                targetDoc.classList.remove('hidden');
+            }
+
+            const tabs = document.querySelectorAll(`[id^="passage-tab-unit-${unitIndex}-"]`);
+            tabs.forEach((tab, idx) => {
+                if (idx === docIndex) {
+                    tab.className = 'passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all bg-indigo-600 text-white border-indigo-500 shadow-sm';
+                } else {
+                    tab.className = 'passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700';
+                }
+            });
         }
 
         // Mode-Aware Next Action Handler
@@ -902,12 +1038,12 @@
 
             if (btn) {
                 btn.disabled = true;
-                btn.className = 'px-4 py-2 rounded-xl bg-slate-800 text-slate-500 cursor-not-allowed font-bold text-xs transition-all flex items-center gap-2';
+                btn.className = 'px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed font-bold text-xs transition-all flex items-center gap-2';
             }
             if (label) label.textContent = 'Playing Audio...';
             if (badge) {
                 badge.textContent = 'Audio Playing (1/1)';
-                badge.className = 'text-[11px] font-bold text-indigo-400 bg-indigo-950/40 border-indigo-500/30 px-2.5 py-0.5 rounded-md border';
+                badge.className = 'text-[11px] font-bold text-indigo-700 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-500/30 px-2.5 py-0.5 rounded-md border';
             }
 
             audio.src = streamUrl;
@@ -924,7 +1060,7 @@
             if (label) label.textContent = 'Already Played';
             if (badge) {
                 badge.textContent = 'Audio Played (1/1)';
-                badge.className = 'text-[11px] font-bold text-slate-500 bg-slate-900 border-slate-800 px-2.5 py-0.5 rounded-md border';
+                badge.className = 'text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800 px-2.5 py-0.5 rounded-md border';
             }
 
             fetch("{{ route('candidate.exam.violation', $attempt) }}", {
@@ -948,12 +1084,12 @@
 
             if (btn) {
                 btn.disabled = true;
-                btn.className = 'px-4 py-2 rounded-xl bg-slate-800 text-slate-500 cursor-not-allowed font-bold text-xs transition-all flex items-center gap-2';
+                btn.className = 'px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed font-bold text-xs transition-all flex items-center gap-2';
             }
             if (label) label.textContent = 'Playing Audio...';
             if (badge) {
                 badge.textContent = 'Audio Playing (1/1)';
-                badge.className = 'text-[11px] font-bold text-indigo-400 bg-indigo-950/40 border-indigo-500/30 px-2.5 py-0.5 rounded-md border';
+                badge.className = 'text-[11px] font-bold text-indigo-700 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-500/30 px-2.5 py-0.5 rounded-md border';
             }
 
             audio.src = streamUrl;
@@ -970,7 +1106,7 @@
             if (label) label.textContent = 'Already Played';
             if (badge) {
                 badge.textContent = 'Audio Played (1/1)';
-                badge.className = 'text-[11px] font-bold text-slate-500 bg-slate-900 border-slate-800 px-2.5 py-0.5 rounded-md border';
+                badge.className = 'text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800 px-2.5 py-0.5 rounded-md border';
             }
 
             fetch("{{ route('candidate.exam.violation', $attempt) }}", {
@@ -1003,14 +1139,14 @@
             if (flaggedQuestionIndices.has(index)) {
                 flaggedQuestionIndices.delete(index);
                 if (btn) {
-                    btn.classList.remove('bg-amber-500/20', 'text-amber-400');
-                    btn.classList.add('bg-slate-800', 'text-slate-300');
+                    btn.classList.remove('bg-amber-500/20', 'text-amber-600', 'dark:text-amber-400');
+                    btn.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
                 }
             } else {
                 flaggedQuestionIndices.add(index);
                 if (btn) {
-                    btn.classList.remove('bg-slate-800', 'text-slate-300');
-                    btn.classList.add('bg-amber-500/20', 'text-amber-400');
+                    btn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
+                    btn.classList.add('bg-amber-500/20', 'text-amber-600', 'dark:text-amber-400');
                 }
             }
             updatePaletteUI();

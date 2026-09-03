@@ -822,6 +822,8 @@ class QuestionBankController extends Controller
             'image_url'             => ['nullable', 'string'],
             'audio_url'             => ['nullable', 'string'],
             'media_asset_id'        => ['nullable', 'string'],
+            'image_media_asset_id'  => ['nullable', 'string'],
+            'audio_media_asset_id'  => ['nullable', 'string'],
             'part_number'           => ['nullable', 'integer', 'between:1,7'],
             'section'               => ['nullable', 'string'],
             'choices'               => ['nullable', 'array'],
@@ -849,19 +851,21 @@ class QuestionBankController extends Controller
         $qType = $validated['question_type'] === 'single_choice' ? 'multiple_choice' : $validated['question_type'];
 
         $question = Question::create([
-            'question_bank_id' => $questionBank->id,
-            'media_asset_id'   => $validated['media_asset_id'] ?? null,
-            'passage_id'       => $validated['passage_id'] ?? null,
-            'image_url'        => $validated['image_url'] ?? null,
-            'prompt'           => $validated['prompt'],
-            'section'          => $section ?: 'reading',
-            'part_number'      => $partNumber,
-            'question_type'    => $qType,
-            'difficulty'       => $validated['difficulty'],
-            'points'           => $validated['points'] ?? 1,
-            'explanation'      => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
-            'passage_text'     => $validated['passage_text'] ?? null,
-            'audio_url'        => $validated['audio_url'] ?? null,
+            'question_bank_id'      => $questionBank->id,
+            'media_asset_id'        => $validated['media_asset_id'] ?? null,
+            'image_media_asset_id'  => $validated['image_media_asset_id'] ?? null,
+            'audio_media_asset_id'  => $validated['audio_media_asset_id'] ?? null,
+            'passage_id'            => $validated['passage_id'] ?? null,
+            'image_url'             => $validated['image_url'] ?? null,
+            'prompt'                => $validated['prompt'],
+            'section'               => $section ?: 'reading',
+            'part_number'           => $partNumber,
+            'question_type'         => $qType,
+            'difficulty'            => $validated['difficulty'],
+            'points'                => $validated['points'] ?? 1,
+            'explanation'           => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
+            'passage_text'          => $validated['passage_text'] ?? null,
+            'audio_url'             => $validated['audio_url'] ?? null,
         ]);
 
         $this->saveChoicesForQuestion($question, $qType, $validated);
@@ -1204,6 +1208,8 @@ class QuestionBankController extends Controller
             'image_url'             => ['nullable', 'string'],
             'audio_url'             => ['nullable', 'string'],
             'media_asset_id'        => ['nullable', 'string'],
+            'image_media_asset_id'  => ['nullable', 'string'],
+            'audio_media_asset_id'  => ['nullable', 'string'],
             'part_number'           => ['nullable', 'integer', 'between:1,7'],
             'section'               => ['nullable', 'string'],
             'choices'               => ['nullable', 'array'],
@@ -1230,20 +1236,31 @@ class QuestionBankController extends Controller
 
         $qType = $validated['question_type'] === 'single_choice' ? 'multiple_choice' : $validated['question_type'];
 
-        $question->update([
-            'prompt'         => $validated['prompt'],
-            'media_asset_id' => $validated['media_asset_id'] ?? $question->media_asset_id,
-            'passage_id'     => $validated['passage_id'] ?? $question->passage_id,
-            'image_url'      => $validated['image_url'] ?? $question->image_url,
-            'section'        => $section ?: 'reading',
-            'part_number'    => $partNumber,
-            'question_type'  => $qType,
-            'difficulty'     => $validated['difficulty'],
-            'points'         => $validated['points'] ?? $question->points ?? 1,
-            'explanation'    => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
-            'passage_text'   => $validated['passage_text'] ?? null,
-            'audio_url'      => $validated['audio_url'] ?? null,
-        ]);
+        $updateData = [
+            'prompt'        => $validated['prompt'],
+            'passage_id'    => $validated['passage_id'] ?? $question->passage_id,
+            'image_url'     => $validated['image_url'] ?? $question->image_url,
+            'section'       => $section ?: 'reading',
+            'part_number'   => $partNumber,
+            'question_type' => $qType,
+            'difficulty'    => $validated['difficulty'],
+            'points'        => $validated['points'] ?? $question->points ?? 1,
+            'explanation'   => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
+            'passage_text'  => $validated['passage_text'] ?? null,
+            'audio_url'     => $validated['audio_url'] ?? null,
+        ];
+
+        if ($request->has('media_asset_id')) {
+            $updateData['media_asset_id'] = $request->input('media_asset_id') ?: null;
+        }
+        if ($request->has('image_media_asset_id')) {
+            $updateData['image_media_asset_id'] = $request->input('image_media_asset_id') ?: null;
+        }
+        if ($request->has('audio_media_asset_id')) {
+            $updateData['audio_media_asset_id'] = $request->input('audio_media_asset_id') ?: null;
+        }
+
+        $question->update($updateData);
 
         $question->choices()->delete();
         $this->saveChoicesForQuestion($question, $qType, $validated);

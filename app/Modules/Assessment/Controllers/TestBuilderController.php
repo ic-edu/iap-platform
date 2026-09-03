@@ -589,13 +589,15 @@ class TestBuilderController extends Controller
             'explanation'     => ['nullable', 'string'],
             'choices'         => ['nullable', 'array'],
             'correct_choice'  => ['nullable'],
-            'media_asset_id'  => ['nullable', 'string'],
-            'image_url'       => ['nullable', 'string'],
-            'audio_url'       => ['nullable', 'string'],
-            'passage_id'      => ['nullable', 'string'],
-            'passage_text'    => ['nullable', 'string'],
-            'part_number'     => ['nullable', 'integer', 'between:1,7'],
-            'section'         => ['nullable', 'string'],
+            'media_asset_id'       => ['nullable', 'string'],
+            'image_media_asset_id' => ['nullable', 'string'],
+            'audio_media_asset_id' => ['nullable', 'string'],
+            'image_url'            => ['nullable', 'string'],
+            'audio_url'            => ['nullable', 'string'],
+            'passage_id'           => ['nullable', 'string'],
+            'passage_text'         => ['nullable', 'string'],
+            'part_number'          => ['nullable', 'integer', 'between:1,7'],
+            'section'              => ['nullable', 'string'],
         ]);
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
@@ -680,6 +682,8 @@ class TestBuilderController extends Controller
             'points'                 => $validated['points'] ?? 1,
             'explanation'            => $validated['explanation'] ?? null,
             'media_asset_id'         => $validated['media_asset_id'] ?? null,
+            'image_media_asset_id'   => $validated['image_media_asset_id'] ?? null,
+            'audio_media_asset_id'   => $validated['audio_media_asset_id'] ?? null,
             'image_url'              => $validated['image_url'] ?? null,
             'audio_url'              => $validated['audio_url'] ?? null,
             'passage_id'             => $validated['passage_id'] ?? null,
@@ -1300,19 +1304,21 @@ class TestBuilderController extends Controller
         $isToeic = ToeicQuestionValidator::isToeic($test) || ToeicQuestionValidator::isToeic($question) || $request->filled('part_number');
 
         $validated = $request->validate([
-            'prompt'         => ['required', 'string'],
-            'question_type'  => ['nullable', 'string'],
-            'difficulty'     => ['nullable', 'string'],
-            'explanation'    => ['nullable', 'string'],
-            'choices'        => ['nullable', 'array'],
-            'correct_choice' => ['nullable'],
-            'media_asset_id' => ['nullable', 'string'],
-            'image_url'      => ['nullable', 'string'],
-            'audio_url'      => ['nullable', 'string'],
-            'passage_id'     => ['nullable', 'string'],
-            'passage_text'   => ['nullable', 'string'],
-            'part_number'    => ['nullable', 'integer', 'between:1,7'],
-            'section'        => ['nullable', 'string'],
+            'prompt'               => ['required', 'string'],
+            'question_type'        => ['nullable', 'string'],
+            'difficulty'           => ['nullable', 'string'],
+            'explanation'          => ['nullable', 'string'],
+            'choices'              => ['nullable', 'array'],
+            'correct_choice'       => ['nullable'],
+            'media_asset_id'       => ['nullable', 'string'],
+            'image_media_asset_id' => ['nullable', 'string'],
+            'audio_media_asset_id' => ['nullable', 'string'],
+            'image_url'            => ['nullable', 'string'],
+            'audio_url'            => ['nullable', 'string'],
+            'passage_id'           => ['nullable', 'string'],
+            'passage_text'         => ['nullable', 'string'],
+            'part_number'          => ['nullable', 'integer', 'between:1,7'],
+            'section'              => ['nullable', 'string'],
         ]);
 
         $detection = QuestionDifficultyDetectionService::detect($request->all(), $question);
@@ -1345,6 +1351,12 @@ class TestBuilderController extends Controller
         if (isset($validated['passage_id'])) $question->passage_id = $validated['passage_id'];
         if (isset($validated['passage_text'])) $question->passage_text = $validated['passage_text'];
 
+        if ($request->has('image_media_asset_id')) {
+            $question->image_media_asset_id = $request->input('image_media_asset_id') ?: null;
+        }
+        if ($request->has('audio_media_asset_id')) {
+            $question->audio_media_asset_id = $request->input('audio_media_asset_id') ?: null;
+        }
         if ($request->has('image_url')) {
             $question->image_url = $request->input('image_url') ?: null;
         }

@@ -189,6 +189,12 @@ class CandidatePortalController extends Controller
         }
 
         $attempt->loadMissing([
+            'test.sections' => function ($q) {
+                $q->orderBy('order');
+            },
+            'test.sections.testQuestions' => function ($q) {
+                $q->orderBy('order');
+            },
             'test.sections.testQuestions.question.choices',
             'test.sections.testQuestions.question.passage',
             'test.sections.testQuestions.question.passageGroup.passages',
@@ -198,19 +204,9 @@ class CandidatePortalController extends Controller
             'answers',
         ]);
 
-        $allQuestions = collect();
-        $sections = $attempt->test ? $attempt->test->sections : collect();
-        foreach ($sections as $section) {
-            foreach ($section->testQuestions as $tq) {
-                if ($tq->question) {
-                    $q = $tq->question;
-                    $q->section_model = $section;
-                    $allQuestions->push($q);
-                }
-            }
-        }
-
-        $shuffledQuestions = $this->engine->randomizationEngine->getShuffledQuestions($attempt, $allQuestions);
+        $deliveryData = \App\Modules\Assessment\Services\DeliveryUnitBuilder::build($attempt->test, $attempt);
+        $questions = $deliveryData['questions'];
+        $sections = $deliveryData['sections'];
         $remainingSeconds = $this->engine->timerEngine->getRemainingSeconds($attempt);
         $isRealTest = $attempt->test?->isRealTest() ?? false;
 
@@ -219,14 +215,12 @@ class CandidatePortalController extends Controller
             ->pluck('question_id')
             ->toArray();
 
-        $deliveryData = \App\Modules\Assessment\Services\DeliveryUnitBuilder::build($attempt->test, $shuffledQuestions);
-
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.exam';
 
         return view($viewName, array_merge([
             'attempt'                => $attempt,
-            'shuffledQuestions'      => $shuffledQuestions,
+            'shuffledQuestions'      => $questions,
             'remainingSeconds'       => $remainingSeconds,
             'sections'               => $sections,
             'isRealTest'             => $isRealTest,
@@ -275,7 +269,7 @@ class CandidatePortalController extends Controller
                     'attempt_id'  => $attempt->id,
                     'question_id' => $targetQId,
                 ], [
-                    'media_asset_id' => $question->media_asset_id ?? $question->audioGroup?->media_asset_id,
+                    'media_asset_id' => $question->audio_media_asset_id ?? $question->audioGroup?->media_asset_id ?? $question->media_asset_id,
                     'play_count'     => 1,
                     'started_at'     => now(),
                     'ip_address'     => $request->ip(),
@@ -288,27 +282,51 @@ class CandidatePortalController extends Controller
         }
 
         // Resolve audio source (Group or Question)
-        $audioUrl = $question->getEffectiveAudioUrl();
-        if (empty($audioUrl)) {
-            $audioUrl = $question->audio_url;
-            if (empty($audioUrl) && $question->mediaAsset) {
-                $audioUrl = $question->mediaAsset->path;
+        $mediaAsset = $question->audioGroup?->mediaAsset ?? $question->getEffectiveAudioMedia();
+        $filePath = null;
+
+        if ($mediaAsset && !empty($mediaAsset->path)) {
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            if ($disk->exists($mediaAsset->path)) {
+                $filePath = $disk->path($mediaAsset->path);
+            } elseif (file_exists(storage_path('app/public/' . $mediaAsset->path))) {
+                $filePath = storage_path('app/public/' . $mediaAsset->path);
+            } elseif (file_exists(public_path($mediaAsset->path))) {
+                $filePath = public_path($mediaAsset->path);
             }
         }
 
-        if (empty($audioUrl)) {
-            abort(404, 'Audio resource not found.');
+        $audioUrl = $question->audioGroup?->audio_url ?: ($question->getEffectiveAudioUrl() ?: $question->audio_url);
+
+        if (!$filePath && !empty($audioUrl)) {
+            // If it's a preview URL containing media ID, extract and resolve
+            if (preg_match('#/media/([0-9a-zA-Z]+)/preview#', $audioUrl, $matches)) {
+                $foundAsset = \App\Models\MediaAsset::find($matches[1]);
+                if ($foundAsset && !empty($foundAsset->path)) {
+                    if (file_exists(storage_path('app/public/' . $foundAsset->path))) {
+                        $filePath = storage_path('app/public/' . $foundAsset->path);
+                    } elseif (file_exists(public_path($foundAsset->path))) {
+                        $filePath = public_path($foundAsset->path);
+                    }
+                }
+            }
+
+            if (!$filePath) {
+                $cleanedPath = ltrim(parse_url($audioUrl, PHP_URL_PATH) ?: $audioUrl, '/');
+                if (file_exists(storage_path('app/public/' . $cleanedPath))) {
+                    $filePath = storage_path('app/public/' . $cleanedPath);
+                } elseif (file_exists(public_path($cleanedPath))) {
+                    $filePath = public_path($cleanedPath);
+                }
+            }
         }
 
-        $filePath = storage_path('app/public/' . ltrim($audioUrl, '/'));
-        if (!file_exists($filePath)) {
-            $filePath = public_path(ltrim($audioUrl, '/'));
-        }
-
-        if (file_exists($filePath)) {
-            $mime = mime_content_type($filePath) ?: 'audio/mpeg';
+        if ($filePath && file_exists($filePath)) {
+            $mime = $mediaAsset?->mime_type ?: (mime_content_type($filePath) ?: 'audio/mpeg');
+            $filesize = filesize($filePath);
             return response()->file($filePath, [
                 'Content-Type'        => $mime,
+                'Content-Length'      => (string) $filesize,
                 'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
                 'Cache-Control'       => 'no-store, no-cache, must-revalidate, private',
                 'Accept-Ranges'       => 'bytes',
@@ -316,7 +334,7 @@ class CandidatePortalController extends Controller
         }
 
         // Return inline redirection if URL is remote
-        if (filter_var($audioUrl, FILTER_VALIDATE_URL)) {
+        if (!empty($audioUrl) && filter_var($audioUrl, FILTER_VALIDATE_URL)) {
             return redirect()->away($audioUrl);
         }
 

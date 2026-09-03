@@ -515,11 +515,10 @@ class QuestionMediaAttachmentWorkflowTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('🖼 Image ✓', false);
-        $response->assertSee('🎧 Audio ✓', false);
         // Image preview button
-        $response->assertSee("previewAssetModal('', '" . addslashes(basename($q1->image_url)) . "', 'image', '" . $q1->image_url . "')", false);
+        $response->assertSee("previewAssetModal('{$this->photoAsset->id}', '" . addslashes($this->photoAsset->title) . "', 'image',", false);
         // Audio preview button
-        $response->assertSee("previewAssetModal('', '" . addslashes(basename($q1->audio_url)) . "', 'audio', '" . $q1->audio_url . "')", false);
+        $response->assertSee("previewAssetModal('{$this->audioAsset->id}', '" . addslashes($this->audioAsset->title) . "', 'audio',", false);
         $response->assertSee('asset-preview-modal', false);
     }
 

@@ -2,9 +2,12 @@
 
 namespace App\Modules\Assessment\Services;
 
+use App\Modules\Assessment\Engines\RandomizationEngine;
+use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\QuestionBank\Models\AudioGroup;
+use App\Modules\QuestionBank\Models\PassageGroup;
 use App\Modules\QuestionBank\Models\Question;
 use Illuminate\Support\Collection;
 
@@ -14,7 +17,8 @@ class DeliveryUnitBuilder
      * Build delivery units and lookup maps for an assessment test.
      *
      * @param Test $test
-     * @param Collection<int, Question>|null $questions
+     * @param mixed $questionsOrAttempt
+     * @param Attempt|null $attempt
      * @return array{
      *     deliveryUnits: Collection<int, array<string, mixed>>,
      *     questions: Collection<int, Question>,
@@ -23,19 +27,28 @@ class DeliveryUnitBuilder
      *     unitIndexToQuestionIndices: array<int, array<int, int>>,
      *     sectionFirstUnitIndex: array<string, int>,
      *     unitSectionMap: array<int, string>,
+     *     sections: Collection<int, TestSection>,
      *     totalQuestionsCount: int,
      *     totalUnitsCount: int
      * }
      */
-    public static function build(Test $test, ?Collection $questions = null): array
+    public static function build(Test $test, mixed $questionsOrAttempt = null, ?Attempt $attempt = null): array
     {
+        $explicitQuestions = null;
+        $activeAttempt = $attempt;
+
+        if ($questionsOrAttempt instanceof Attempt) {
+            $activeAttempt = $questionsOrAttempt;
+        } elseif ($questionsOrAttempt instanceof Collection) {
+            $explicitQuestions = $questionsOrAttempt;
+        }
+
         $orderedQuestions = collect();
-        $rawUnits = [];
         $sections = $test->sections ? $test->sections->sortBy('order')->values() : collect();
 
-        // If a pre-ordered or pre-shuffled list of questions is passed
-        if ($questions !== null && $questions->isNotEmpty()) {
-            $orderedQuestions = $questions->values();
+        // 1. Gather Questions in Canonical Section & TestQuestion Order
+        if ($explicitQuestions !== null && $explicitQuestions->isNotEmpty()) {
+            $orderedQuestions = $explicitQuestions->values();
         } else {
             foreach ($sections as $section) {
                 $secQuestions = $section->testQuestions ? $section->testQuestions->sortBy('order')->map(function ($tq) use ($section) {
@@ -47,13 +60,18 @@ class DeliveryUnitBuilder
                     return $q;
                 })->filter()->values() : collect();
 
+                if ($activeAttempt && (new RandomizationEngine)->isQuestionShuffleAllowed($activeAttempt)) {
+                    $secQuestions = (new RandomizationEngine)->getShuffledQuestions($activeAttempt, $secQuestions);
+                }
+
                 foreach ($secQuestions as $q) {
                     $orderedQuestions->push($q);
                 }
             }
         }
 
-        // Group into delivery units section by section
+        // 2. Group Questions into Atomic Delivery Units
+        $rawUnits = [];
         $globalQIndex = 0;
         $currentUnit = null;
 
@@ -62,9 +80,12 @@ class DeliveryUnitBuilder
             $sectionId = $section?->id ?? 'default';
             $partNum = (int) ($q->part_number ?? 0);
             $audioGroupId = $q->audio_group_id;
-            $isAudioGroup = in_array($partNum, [3, 4], true) && !empty($audioGroupId);
+            $passageGroupId = $q->passage_group_id ?? ($q->passage_id ? 'p_' . $q->passage_id : null);
 
-            // Check if current unit can absorb this question
+            $isAudioGroup = in_array($partNum, [3, 4], true) && !empty($audioGroupId);
+            $isPassageGroup = in_array($partNum, [6, 7], true) && (!empty($passageGroupId) || $q->passageGroup !== null || $q->passage !== null || $q->getEffectivePassages()->isNotEmpty());
+
+            // Check if current open unit can absorb this question
             if (
                 $currentUnit !== null
                 && $currentUnit['section_id'] === $sectionId
@@ -75,8 +96,18 @@ class DeliveryUnitBuilder
                 // Append to existing AudioGroup Delivery Unit
                 $currentUnit['questions']->push($q);
                 $currentUnit['question_indices'][] = $globalQIndex;
+            } elseif (
+                $currentUnit !== null
+                && $currentUnit['section_id'] === $sectionId
+                && $currentUnit['type'] === 'passage_group'
+                && $isPassageGroup
+                && $currentUnit['passage_group_id'] === ($passageGroupId ?: 'pg_' . $sectionId)
+            ) {
+                // Append to existing PassageGroup Delivery Unit
+                $currentUnit['questions']->push($q);
+                $currentUnit['question_indices'][] = $globalQIndex;
             } else {
-                // Finalize previous unit if open
+                // Finalize previous open unit
                 if ($currentUnit !== null) {
                     $rawUnits[] = $currentUnit;
                     $currentUnit = null;
@@ -91,6 +122,9 @@ class DeliveryUnitBuilder
                         'type'             => 'audio_group',
                         'audio_group_id'   => $audioGroupId,
                         'audio_group'      => $audioGroup,
+                        'passage_group_id' => null,
+                        'passage_group'    => null,
+                        'passages'         => collect(),
                         'part_number'      => $partNum,
                         'section_id'       => $sectionId,
                         'section'          => $section,
@@ -101,12 +135,39 @@ class DeliveryUnitBuilder
                         'media_asset'      => $audioGroup?->mediaAsset ?: $q->mediaAsset,
                         'group_type'       => $audioGroup?->group_type ?: ($partNum === 3 ? 'conversation' : 'talk'),
                     ];
+                } elseif ($isPassageGroup) {
+                    $passageGroup = $q->passageGroup;
+                    $passages = $passageGroup ? $passageGroup->passages : $q->getEffectivePassages();
+                    $effectivePGroupId = $passageGroupId ?: ($passageGroup?->id ?: 'pg_' . $sectionId . '_' . $unitIdx);
+
+                    $currentUnit = [
+                        'index'            => $unitIdx,
+                        'type'             => 'passage_group',
+                        'audio_group_id'   => null,
+                        'audio_group'      => null,
+                        'passage_group_id' => $effectivePGroupId,
+                        'passage_group'    => $passageGroup,
+                        'passages'         => $passages,
+                        'part_number'      => $partNum,
+                        'section_id'       => $sectionId,
+                        'section'          => $section,
+                        'questions'        => collect([$q]),
+                        'question_indices' => [$globalQIndex],
+                        'title'            => $passageGroup?->title,
+                        'passage_type'     => $passageGroup?->passage_type ?: ($partNum === 6 ? 'text' : 'single'),
+                        'audio_url'        => null,
+                        'media_asset'      => null,
+                        'group_type'       => null,
+                    ];
                 } else {
                     $rawUnits[] = [
-                        'index'            => $unitIdx,
+                        'index'            => $unitIdx++,
                         'type'             => 'question',
                         'audio_group_id'   => null,
                         'audio_group'      => null,
+                        'passage_group_id' => null,
+                        'passage_group'    => null,
+                        'passages'         => $q->getEffectivePassages(),
                         'part_number'      => $partNum,
                         'section_id'       => $sectionId,
                         'section'          => $section,
@@ -114,6 +175,7 @@ class DeliveryUnitBuilder
                         'question_indices' => [$globalQIndex],
                         'title'            => null,
                         'audio_url'        => $q->getEffectiveAudioUrl(),
+                        'image_url'        => $q->getEffectiveImageUrl(),
                         'media_asset'      => $q->mediaAsset,
                         'group_type'       => null,
                     ];
@@ -129,8 +191,7 @@ class DeliveryUnitBuilder
             $currentUnit = null;
         }
 
-        // Post-process units to add bounds, ranges, and section navigation transitions
-        $totalUnits = count($rawUnits);
+        // 3. Post-process Units, Assign Canonical AGN and Boundary State
         $finalUnits = collect();
         $sectionFirstUnitIndex = [];
         $questionIndexToUnitIndex = [];
@@ -150,13 +211,20 @@ class DeliveryUnitBuilder
                 $sectionFirstUnitIndex[$secId] = $uIdx;
             }
 
-            // Map question indices and question IDs to unit
-            foreach ($qIndices as $qi) {
-                $questionIndexToUnitIndex[$qi] = $uIdx;
-            }
-            foreach ($unitQuestions as $uq) {
+            // Assign canonical Actual Global Numbering (AGN: Q1..QN) to each question
+            $canonicalNumbers = [];
+            foreach ($unitQuestions as $cIdx => $uq) {
+                $qIdx = $qIndices[$cIdx];
+                $agn = $qIdx + 1;
+                $uq->canonical_global_number = $agn;
+                $uq->agn = $agn;
+                $canonicalNumbers[] = $agn;
+
+                $questionIndexToUnitIndex[$qIdx] = $uIdx;
                 $questionIdToUnitIndex[$uq->id] = $uIdx;
             }
+
+            $unit['canonical_question_numbers'] = $canonicalNumbers;
             $unitSectionMap[$uIdx] = $secId;
             $unitIndexToQuestionIndices[$uIdx] = $qIndices;
 
@@ -194,6 +262,7 @@ class DeliveryUnitBuilder
             'unitIndexToQuestionIndices' => $unitIndexToQuestionIndices,
             'sectionFirstUnitIndex'      => $sectionFirstUnitIndex,
             'unitSectionMap'             => $unitSectionMap,
+            'sections'                   => $sections,
             'totalQuestionsCount'        => $orderedQuestions->count(),
             'totalUnitsCount'            => $finalUnits->count(),
         ];
