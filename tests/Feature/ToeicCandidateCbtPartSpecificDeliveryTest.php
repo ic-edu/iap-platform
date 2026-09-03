@@ -100,7 +100,7 @@ test('1. Part 1 Photographs renders image + audio + letters only (A, B, C, D)', 
 
     $response->assertStatus(200);
     $response->assertSee('https://example.com/media/office-photo.jpg');
-    $response->assertSee('https://example.com/audio/part1-01.mp3');
+    $response->assertSee(route('candidate.exam.audio-stream', [$attempt, $q]));
     $response->assertSee('(A)');
     $response->assertSee('(B)');
     $response->assertSee('(C)');
@@ -171,7 +171,7 @@ test('3. Part 2 Question-Response renders audio + A/B/C only', function () {
     $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
 
     $response->assertStatus(200);
-    $response->assertSee('https://example.com/audio/part2-01.mp3');
+    $response->assertSee(route('candidate.exam.audio-stream', [$attempt, $q]));
     $response->assertSee('(A)');
     $response->assertSee('(B)');
     $response->assertSee('(C)');

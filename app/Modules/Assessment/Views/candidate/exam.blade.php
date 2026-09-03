@@ -582,7 +582,7 @@
                             $imgMedia = $question->getEffectiveImageMedia();
                             $qImageUrl = $imgMedia ? route('media.preview', $imgMedia->id) : ($question->getEffectiveImageUrl() ?: null);
                             $audMedia = $question->getEffectiveAudioMedia();
-                            $hasAudioSource = !empty($audMedia) || !empty($question->audio_url) || !empty($question->audio_media_asset_id);
+                            $hasAudioSource = !empty($audMedia) || !empty($question->audio_media_asset_id) || !empty($question->audio_url);
                             $audioStreamUrl = route('candidate.exam.audio-stream', [$attempt, $question]);
                         @endphp
 
@@ -647,7 +647,7 @@
                                                 <span>Question Audio Prompt</span>
                                             </div>
                                         </div>
-                                        <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ (!empty($question->audio_url) && filter_var($question->audio_url, FILTER_VALIDATE_URL)) ? $question->audio_url : $audioStreamUrl }}" preload="metadata"></audio>
+                                        <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $audioStreamUrl }}" preload="metadata"></audio>
                                     </div>
                                 @endif
                             @endif

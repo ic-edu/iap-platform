@@ -360,7 +360,7 @@ test('TEST 15: Candidate CBT exam renders audio + (A), (B), (C) for Part 2', fun
 
     $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
     $response->assertStatus(200);
-    $response->assertSee('https://example.com/audio/p2-cbt-01.mp3');
+    $response->assertSee(route('candidate.exam.audio-stream', [$attempt, $q]));
     $response->assertSee('(A)');
     $response->assertSee('(B)');
     $response->assertSee('(C)');
