@@ -108,8 +108,8 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
                 'part_number' => 1,
                 'image_media_asset_id' => $imgAsset->id,
                 'audio_media_asset_id' => $audAsset->id,
-                'audio_url' => "http://127.0.0.1:8000/media/{$audAsset->id}/preview", // Legacy URL present
-                'image_url' => "http://127.0.0.1:8000/media/{$imgAsset->id}/preview",
+                'audio_url' => "http://legacy-cdn.example.com/audio/{$audAsset->id}.mp3", // Legacy URL present
+                'image_url' => "http://legacy-cdn.example.com/images/{$imgAsset->id}.jpg",
                 'created_by' => $this->teacher->id,
             ]);
 
@@ -163,7 +163,7 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
                 'type' => QuestionType::MultipleChoice->value,
                 'part_number' => 2,
                 'audio_media_asset_id' => $audAsset->id,
-                'audio_url' => "http://127.0.0.1:8000/media/{$audAsset->id}/preview", // Legacy URL present
+                'audio_url' => "http://legacy-cdn.example.com/audio/{$audAsset->id}.mp3", // Legacy URL present
                 'created_by' => $this->teacher->id,
             ]);
 
@@ -262,7 +262,7 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
     }
 
     // ==========================================
-    // 32. FOCUSED AUDIO TESTS (AUDIO-01 - AUDIO-10)
+    // 30. STANDALONE SOURCE FOCUSED TESTS (AUDIO-01 - AUDIO-05)
     // ==========================================
 
     public function test_audio_01_q1_resolves_correct_audio_media_asset(): void
@@ -387,7 +387,7 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
 
         // Must not contain raw legacy audio_url in audio src
         $response->assertDontSee('src="' . $q1->audio_url . '"', false);
-        $response->assertDontSee('src="http://127.0.0.1:8000/media/' . $q1->audio_media_asset_id . '/preview"', false);
+        $response->assertDontSee('src="http://legacy-cdn.example.com/', false);
     }
 
     // ==========================================
@@ -474,7 +474,62 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
     }
 
     // ==========================================
-    // 38. DASHBOARD UI TESTS (UI-01 - UI-13)
+    // 38. AUDIO LIFECYCLE & SINGLE ACTIVE AUDIO (AUDIO-LIFECYCLE-01 - 04)
+    // ==========================================
+
+    public function test_audio_lifecycle_01_exam_audio_elements_marked_with_data_exam_audio(): void
+    {
+        [$test, $attempt, ] = $this->createToeicTestFixture(isRealTest: false);
+        $response = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
+        $response->assertStatus(200);
+
+        // Verify data-exam-audio attribute is present on candidate exam audio tags
+        $response->assertSee('data-exam-audio="true"', false);
+    }
+
+    public function test_audio_lifecycle_02_central_stop_all_exam_audio_function_defined(): void
+    {
+        [$test, $attempt, ] = $this->createToeicTestFixture(isRealTest: false);
+        $response = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
+        $response->assertStatus(200);
+
+        $response->assertSee('function stopAllExamAudio(options = {})', false);
+        $response->assertSee('document.querySelectorAll(\'audio[data-exam-audio], audio\')', false);
+    }
+
+    public function test_audio_lifecycle_03_single_active_audio_listener_enforced(): void
+    {
+        [$test, $attempt, ] = $this->createToeicTestFixture(isRealTest: false);
+        $response = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
+        $response->assertStatus(200);
+
+        // Single active audio capture listener
+        $response->assertSee("document.addEventListener('play', function(e)", false);
+    }
+
+    public function test_audio_lifecycle_04_navigation_events_invoke_audio_cleanup(): void
+    {
+        [$test, $attempt, ] = $this->createToeicTestFixture(isRealTest: false);
+        $response = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
+        $response->assertStatus(200);
+
+        $html = $response->getContent();
+
+        // navigateDeliveryUnit invokes stopAllExamAudio
+        $this->assertMatchesRegularExpression('/function navigateDeliveryUnit\([^)]*\)\s*\{[^}]*stopAllExamAudio\(\)/s', $html);
+
+        // showSectionIntro invokes stopAllExamAudio
+        $this->assertMatchesRegularExpression('/function showSectionIntro\([^)]*\)\s*\{[^}]*stopAllExamAudio\(\)/s', $html);
+
+        // confirmExitSimulator invokes stopAllExamAudio
+        $this->assertMatchesRegularExpression('/function confirmExitSimulator\(\)\s*\{[^}]*stopAllExamAudio\(\)/s', $html);
+
+        // triggerFinalSubmitModal invokes stopAllExamAudio
+        $this->assertMatchesRegularExpression('/function triggerFinalSubmitModal\(\)\s*\{[^}]*stopAllExamAudio\(\)/s', $html);
+    }
+
+    // ==========================================
+    // 39. DASHBOARD UI TESTS (UI-01 - UI-13)
     // ==========================================
 
     public function test_ui_01_to_05_portal_dashboard_text_replaced_by_home_icon_with_clean_hover(): void
@@ -527,7 +582,7 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
     }
 
     // ==========================================
-    // 39. SIMULATOR UX REGRESSION (UX-01 - UX-05)
+    // 40. SIMULATOR UX REGRESSION (UX-01 - UX-05)
     // ==========================================
 
     public function test_ux_01_and_02_simulator_has_back_to_dashboard_mock_and_real_do_not(): void

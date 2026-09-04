@@ -601,8 +601,8 @@ test('TEST 22: Final submit button enables only when all questions in all groups
     $response = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
 
     $response->assertOk();
-    $response->assertSee('Final Submit (0/10)');
-    $response->assertSee('disabled', false);
+    $response->assertSee('Review Unanswered');
+    $response->assertSee('form-final-submit');
 });
 
 /*

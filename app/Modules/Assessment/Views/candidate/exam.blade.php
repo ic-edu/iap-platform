@@ -281,10 +281,10 @@
                                         <span>▶</span>
                                         <span id="btn-play-label-unit-{{ $unitIndex }}">{{ $isGroupAudioPlayed ? 'Already Played' : "Play {$groupTypeLabel} Audio" }}</span>
                                     </button>
-                                    <audio id="audio-unit-elem-{{ $unitIndex }}" class="hidden" preload="none" onended="onUnitAudioEnded({{ $unitIndex }}, '{{ $unit['audio_group_id'] }}', '{{ $primaryQuestion->id }}')"></audio>
+                                    <audio id="audio-unit-elem-{{ $unitIndex }}" data-exam-audio="true" class="hidden" preload="none" onended="onUnitAudioEnded({{ $unitIndex }}, '{{ $unit['audio_group_id'] }}', '{{ $primaryQuestion->id }}')"></audio>
                                 </div>
                             @else
-                                <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ (!empty($unit['audio_url']) && filter_var($unit['audio_url'], FILTER_VALIDATE_URL)) ? $unit['audio_url'] : $audioStreamUrl }}" preload="metadata"></audio>
+                                <audio controls controlsList="nodownload noplaybackrate" data-exam-audio="true" class="w-full" src="{{ (!empty($unit['audio_url']) && filter_var($unit['audio_url'], FILTER_VALIDATE_URL)) ? $unit['audio_url'] : $audioStreamUrl }}" preload="metadata"></audio>
                             @endif
                         </div>
 
@@ -636,7 +636,7 @@
                                                 <span>▶</span>
                                                 <span id="btn-play-label-{{ $question->id }}">{{ $isAudioPlayed ? 'Already Played' : 'Play Audio Prompt' }}</span>
                                             </button>
-                                            <audio id="audio-elem-{{ $question->id }}" class="hidden" preload="none" onended="onSingleAudioEnded('{{ $question->id }}')"></audio>
+                                            <audio id="audio-elem-{{ $question->id }}" data-exam-audio="true" class="hidden" preload="none" onended="onSingleAudioEnded('{{ $question->id }}')"></audio>
                                         </div>
                                     </div>
                                 @else
@@ -647,7 +647,7 @@
                                                 <span>Question Audio Prompt</span>
                                             </div>
                                         </div>
-                                        <audio controls controlsList="nodownload noplaybackrate" class="w-full" src="{{ $audioStreamUrl }}" preload="metadata"></audio>
+                                        <audio controls controlsList="nodownload noplaybackrate" data-exam-audio="true" class="w-full" src="{{ $audioStreamUrl }}" preload="metadata"></audio>
                                     </div>
                                 @endif
                             @endif
@@ -805,6 +805,44 @@
         const firstSectionId = "{{ isset($sections) && $sections->isNotEmpty() ? $sections->first()->id : '' }}";
         let timerInterval = null;
 
+        // Centralized Candidate CBT Audio Lifecycle Engine
+        function stopAllExamAudio(options = {}) {
+            const examAudios = document.querySelectorAll('audio[data-exam-audio], audio');
+            examAudios.forEach(audio => {
+                try {
+                    if (!audio.paused) {
+                        audio.pause();
+                    }
+                    if (!isRealTest || options.forceReset) {
+                        audio.currentTime = 0;
+                    }
+                } catch (err) {
+                    console.error('Error pausing exam audio:', err);
+                }
+            });
+        }
+
+        // Single Active Audio Policy Enforcement (Global Capture)
+        document.addEventListener('play', function(e) {
+            if (e.target && e.target.tagName === 'AUDIO') {
+                const currentAudio = e.target;
+                document.querySelectorAll('audio[data-exam-audio], audio').forEach(audio => {
+                    if (audio !== currentAudio && !audio.paused) {
+                        try {
+                            audio.pause();
+                            if (!isRealTest) {
+                                audio.currentTime = 0;
+                            }
+                        } catch (err) {}
+                    }
+                });
+            }
+        }, true);
+
+        // Safe Page Navigation Cleanup
+        window.addEventListener('beforeunload', () => stopAllExamAudio());
+        window.addEventListener('pagehide', () => stopAllExamAudio());
+
         // Fullscreen Mode Handler for Real Test
         function enterFullscreen() {
             if (!document.fullscreenElement) {
@@ -836,6 +874,7 @@
 
         // Section Initiation
         function startSectionQuestions(firstUnitIdx) {
+            stopAllExamAudio();
             if (isRealTest) {
                 enterFullscreen();
             }
@@ -877,6 +916,7 @@
 
         // Exit Simulator Confirmation
         function confirmExitSimulator() {
+            stopAllExamAudio();
             iapConfirm({
                 title: 'Return to Dashboard?',
                 message: 'Your saved Simulator progress will be preserved. You can resume the test later.',
@@ -884,6 +924,7 @@
                 cancelText: 'Stay in Test',
                 variant: 'info',
                 onConfirm: () => {
+                    stopAllExamAudio();
                     window.location.href = "{{ route('candidate.portal') }}";
                 }
             });
@@ -891,6 +932,7 @@
 
         // Trigger Final Submit Confirmation Modal
         function triggerFinalSubmitModal() {
+            stopAllExamAudio();
             if (answeredQuestionIds.size < totalQuestions) {
                 const unansweredCount = totalQuestions - answeredQuestionIds.size;
                 iapAlert({
@@ -1016,6 +1058,7 @@
         // Show Dedicated Section Introduction Screen
         function showSectionIntro(sectionId) {
             if (!sectionId) return;
+            stopAllExamAudio();
             document.querySelectorAll('.delivery-unit-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
             const targetSection = document.getElementById('section-intro-card-' + sectionId);
             if (targetSection) {
@@ -1029,6 +1072,7 @@
         // Navigate to Delivery Unit (Group Page or Single Question Page)
         function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
             if (unitIdx < 0 || unitIdx >= totalUnits) return;
+            stopAllExamAudio();
             document.querySelectorAll('.delivery-unit-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
 
             const targetCard = document.getElementById(`delivery-unit-card-${unitIdx}`);
@@ -1148,6 +1192,8 @@
 
             if (!audio || (btn && btn.disabled)) return;
 
+            stopAllExamAudio();
+
             if (btn) {
                 btn.disabled = true;
                 btn.className = 'px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed font-bold text-xs transition-all flex items-center gap-2';
@@ -1193,6 +1239,8 @@
             const audio = document.getElementById(`audio-elem-${questionId}`);
 
             if (!audio || (btn && btn.disabled)) return;
+
+            stopAllExamAudio();
 
             if (btn) {
                 btn.disabled = true;
