@@ -244,11 +244,14 @@ class CandidatePortalController extends Controller
             abort(403, 'Unauthorized attempt access.');
         }
 
-        if ($attempt->status->value !== 'in_progress') {
+        $test = $attempt->test;
+        $isSimulator = $test ? $test->isSimulator() : true;
+        $isCompletedAttempt = in_array($attempt->status->value, ['submitted', 'expired', 'evaluated'], true) || $attempt->isEvaluated();
+
+        if ($attempt->status->value !== 'in_progress' && !($isSimulator && $isCompletedAttempt)) {
             abort(403, 'Test session is no longer in progress.');
         }
 
-        $test = $attempt->test;
         $isRealTest = $test?->isRealTest() ?? false;
 
         $groupQuestionIds = $question->audio_group_id
@@ -453,6 +456,62 @@ class CandidatePortalController extends Controller
         $viewName = 'assessment::candidate.review';
 
         return view($viewName, compact('summary', 'attempt'));
+    }
+
+    /**
+     * Candidate Simulator Wrong Answer Review (Read-Only).
+     */
+    public function wrongAnswersReview(Request $request, Attempt $attempt): View|RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || (int) $attempt->user_id !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment attempt review.');
+        }
+
+        if ($attempt->status->value === 'in_progress') {
+            abort(403, 'Wrong answer review is not available while test is in progress.');
+        }
+
+        if (!$attempt->test?->isSimulator()) {
+            abort(403, 'Wrong answer review is only available for Simulator practice assessments.');
+        }
+
+        $attempt->loadMissing([
+            'test.sections' => fn($q) => $q->orderBy('order'),
+            'test.sections.testQuestions' => fn($q) => $q->orderBy('order'),
+            'test.sections.testQuestions.question.choices',
+            'test.sections.testQuestions.question.passage',
+            'test.sections.testQuestions.question.passageGroup.passages',
+            'test.sections.testQuestions.question.audioGroup.mediaAsset',
+            'test.sections.testQuestions.question.mediaAsset',
+            'test.sections.mediaAssets',
+            'answers.question.choices',
+            'answers.question.passage',
+            'answers.selectedChoice',
+        ]);
+
+        $summary = $this->engine->reviewAttempt($attempt);
+        $deliveryData = \App\Modules\Assessment\Services\DeliveryUnitBuilder::build($attempt->test, $attempt);
+
+        $answersByQuestion = $attempt->answers->keyBy('question_id');
+        $incorrectQuestionIds = $attempt->answers->where('is_correct', false)->pluck('question_id')->toArray();
+
+        $wrongDeliveryUnits = $deliveryData['deliveryUnits']->filter(function ($unit) use ($incorrectQuestionIds) {
+            return $unit['questions']->contains(fn($q) => in_array($q->id, $incorrectQuestionIds, true));
+        })->values();
+
+        /** @var view-string $viewName */
+        $viewName = 'assessment::candidate.wrong_answers';
+
+        return view($viewName, [
+            'attempt'              => $attempt,
+            'summary'              => $summary,
+            'wrongDeliveryUnits'   => $wrongDeliveryUnits,
+            'incorrectQuestionIds' => $incorrectQuestionIds,
+            'answersByQuestion'    => $answersByQuestion,
+            'deliveryData'         => $deliveryData,
+            'totalQuestionsCount'  => $deliveryData['totalQuestionsCount'],
+        ]);
     }
 
     /**

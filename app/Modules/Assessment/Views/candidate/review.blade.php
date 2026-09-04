@@ -166,7 +166,7 @@
         <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-2.5 text-xs text-amber-700 dark:text-amber-300">
                 <span class="text-lg">ℹ️</span>
-                <span><strong>Practice Score Mode:</strong> This is a {{ $summary['total_questions'] }}-question practice assessment. Institutional scaled scoring applies to full 200-question mock assessments.</span>
+                <span><strong>Practice Score Mode:</strong> Simulator results are evaluated by accuracy. 75% or higher is considered passing. Institutional scaled scoring applies to governed full mock assessments.</span>
             </div>
             <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 uppercase tracking-wider">
                 Practice Assessment
@@ -181,7 +181,7 @@
                 <span class="text-3xl font-extrabold {{ ($summary['is_passed'] ?? false) ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }} mt-1 block">
                     {{ $summary['total_score'] ?? 0 }}
                 </span>
-                <span class="text-xs text-slate-500 mt-1 block">Pass Threshold: {{ $summary['pass_score'] ?? 0 }}</span>
+                <span class="text-xs text-slate-500 mt-1 block">Pass Threshold: {{ ($attempt->test?->isSimulator() ?? $isPractice) ? '75%' : ($summary['pass_score'] ?? 0) }}</span>
             </div>
 
             <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
@@ -200,13 +200,33 @@
                 <span class="text-xs text-slate-500 mt-1 block">out of {{ $summary['total_questions'] ?? 0 }} questions</span>
             </div>
 
-            <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
-                <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Incorrect Answers</span>
-                <span class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1 block">
-                    {{ $summary['incorrect_answers'] ?? 0 }}
-                </span>
-                <span class="text-xs text-slate-500 mt-1 block">Review items below</span>
-            </div>
+            @php
+                $incorrectCount = $summary['incorrect_answers'] ?? 0;
+                $isSimulator = $attempt->test ? $attempt->test->isSimulator() : ($isPractice && !$isRealTest);
+                $canReviewWrong = $isSimulator && $incorrectCount > 0 && in_array($attempt->status->value ?? '', ['submitted', 'expired', 'evaluated'], true);
+            @endphp
+            @if($canReviewWrong)
+                <a href="{{ route('candidate.simulator.wrong-answers', $attempt) }}"
+                   class="group block p-5 bg-slate-900 hover:bg-slate-800/80 border border-slate-800 hover:border-rose-500/40 rounded-xl text-center shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-500/50 cursor-pointer"
+                   aria-label="Review {{ $incorrectCount }} incorrect answers">
+                    <span class="block text-xs font-medium text-slate-400 group-hover:text-slate-300 uppercase tracking-wider flex items-center justify-center gap-1">
+                        <span>Incorrect Answers</span>
+                        <svg class="w-3.5 h-3.5 text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </span>
+                    <span class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1 block">
+                        {{ $incorrectCount }}
+                    </span>
+                    <span class="text-xs text-rose-400 group-hover:underline mt-1 block font-medium">Review incorrect items &rarr;</span>
+                </a>
+            @else
+                <div class="p-5 bg-slate-900 border border-slate-800 rounded-xl text-center shadow-sm">
+                    <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Incorrect Answers</span>
+                    <span class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1 block">
+                        {{ $incorrectCount }}
+                    </span>
+                    <span class="text-xs text-slate-500 mt-1 block">{{ $incorrectCount === 0 ? 'No review required' : 'Review items below' }}</span>
+                </div>
+            @endif
         </div>
 
         <!-- Certificate Issued Card (If Passed) -->

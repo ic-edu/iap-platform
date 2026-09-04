@@ -38,4 +38,5 @@ Route::middleware(['web', 'auth'])->prefix('candidate')->group(function () {
     Route::post('/exam/{attempt}/finalize', [CandidatePortalController::class, 'finalizeAttempt'])->name('candidate.exam.finalize');
     Route::post('/exam/{attempt}/retry', [CandidatePortalController::class, 'retryAttempt'])->name('candidate.exam.retry');
     Route::get('/exam/{attempt}/review', [CandidatePortalController::class, 'review'])->name('candidate.review');
+    Route::get('/exam/{attempt}/wrong-answers', [CandidatePortalController::class, 'wrongAnswersReview'])->name('candidate.simulator.wrong-answers');
 });
