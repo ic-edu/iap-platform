@@ -1,5 +1,5 @@
 <x-candidate-layout>
-    <div class="max-w-4xl mx-auto">
+    <div id="candidate-result-top" class="max-w-4xl mx-auto">
         <!-- Top Navigation Header -->
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -438,13 +438,13 @@
         </div>
 
         <!-- Action Footer -->
-        <div class="flex items-center justify-between pb-8 border-t border-slate-200 dark:border-slate-800 pt-6">
-            <a href="{{ route('candidate.my-attempts') }}" class="px-5 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm transition-colors border border-slate-300 dark:border-slate-700">
-                &larr; Back to Attempts List
-            </a>
-            <a href="{{ route('candidate.portal') }}" class="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-colors shadow-md">
-                Return to Dashboard
-            </a>
+        <div class="flex items-center justify-end pb-8 border-t border-slate-200 dark:border-slate-800 pt-6">
+            <button type="button" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors border border-slate-300 dark:border-slate-700 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="Scroll back to top of result page">
+                <svg class="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                </svg>
+                <span>Back to Top</span>
+            </button>
         </div>
     </div>
 </x-candidate-layout>
