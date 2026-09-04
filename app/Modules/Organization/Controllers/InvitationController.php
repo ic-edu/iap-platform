@@ -60,13 +60,17 @@ class InvitationController extends Controller
         }
 
         $existingUser = User::where('email', $invitation->email)->first();
+        $authenticatedUser = Auth::user();
+        $emailMismatch = $authenticatedUser && (strtolower($authenticatedUser->email) !== strtolower($invitation->email));
 
         return view('organization::invitations.accept', [
-            'invitation'   => $invitation,
-            'organization' => $invitation->organization,
-            'existingUser' => $existingUser,
-            'token'        => $token,
-            'error'        => null,
+            'invitation'        => $invitation,
+            'organization'      => $invitation->organization,
+            'existingUser'      => $existingUser,
+            'authenticatedUser' => $authenticatedUser,
+            'emailMismatch'     => $emailMismatch,
+            'token'             => $token,
+            'error'             => null,
         ]);
     }
 
@@ -85,8 +89,20 @@ class InvitationController extends Controller
         $organization = $invitation->organization;
         $user = Auth::user();
 
+        // SEC-INV-01: Authenticated user email must strictly match invitation email
+        if ($user && strtolower($user->email) !== strtolower($invitation->email)) {
+            return redirect()->route('invitations.accept', $token)
+                ->withErrors(['error' => "You are signed in as {$user->email}, but this invitation was sent to {$invitation->email}. Please sign in with the invited email address to accept."]);
+        }
+
+        // SEC-INV-02: Guest registration email input must strictly match invitation email
+        if ($request->filled('email') && strtolower($request->input('email')) !== strtolower($invitation->email)) {
+            return redirect()->route('invitations.accept', $token)
+                ->withErrors(['email' => "Registration email must match the invited email address ({$invitation->email})."]);
+        }
+
         return DB::transaction(function () use ($request, $invitation, $organization, &$user) {
-            // Case 1: User is already logged in
+            // Case 1: User is already logged in with matching email
             if ($user) {
                 // Link logged in user to organization membership
             } else {
@@ -113,7 +129,7 @@ class InvitationController extends Controller
 
                     $user = User::create([
                         'name'              => $validated['name'],
-                        'email'             => $invitation->email,
+                        'email'             => strtolower($invitation->email),
                         'password'          => Hash::make($validated['password']),
                         'status'            => 'active',
                         'email_verified_at' => now(),

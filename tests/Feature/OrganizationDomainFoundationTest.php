@@ -514,4 +514,250 @@ class OrganizationDomainFoundationTest extends TestCase
         $allLogsJson = ActivityLog::all()->toJson();
         $this->assertStringNotContainsString('token_hash', $allLogsJson);
     }
+
+    /**
+     * SEC-INV-01: Mismatched authenticated email cannot accept invitation.
+     */
+    public function test_sec_inv_01_mismatched_authenticated_email_cannot_accept_invitation(): void
+    {
+        // Issue invitation for candidate-a@example.com
+        $invData = OrganizationInvitation::createWithToken([
+            'organization_id' => $this->orgA->id,
+            'email'           => 'candidate-a@example.com',
+            'intended_role'   => MembershipRole::Member,
+            'invited_by'      => $this->coordinatorA->id,
+            'expires_at'      => now()->addDays(7),
+        ]);
+        $token = $invData['token'];
+        $invitation = $invData['invitation'];
+
+        // Candidate B is authenticated
+        $candidateB = User::factory()->create(['email' => 'candidate-b@example.com', 'name' => 'Candidate B']);
+
+        // 1. Viewing invitation page reveals mismatch state and hides acceptance form
+        $viewResponse = $this->actingAs($candidateB)->get(route('invitations.accept', $token));
+        $viewResponse->assertStatus(200);
+        $viewResponse->assertSee('Account Identity Mismatch');
+        $viewResponse->assertSee('candidate-b@example.com');
+        $viewResponse->assertSee('candidate-a@example.com');
+        $viewResponse->assertDontSee('Accept Invitation & Continue');
+
+        // 2. Direct POST acceptance attempt by Candidate B is rejected
+        $postResponse = $this->actingAs($candidateB)->post(route('invitations.process', $token));
+        $postResponse->assertRedirect(route('invitations.accept', $token));
+        $postResponse->assertSessionHasErrors(['error']);
+
+        // 3. Invitation remains pending and no membership is granted to Candidate B
+        $this->assertEquals(InvitationStatus::Pending, $invitation->fresh()->status);
+        $this->assertNull($invitation->fresh()->accepted_at);
+        $this->assertNull(OrganizationMembership::where('organization_id', $this->orgA->id)->where('user_id', $candidateB->id)->first());
+    }
+
+    /**
+     * SEC-INV-02: New registration cannot accept invitation using a different email.
+     */
+    public function test_sec_inv_02_new_registration_cannot_accept_invitation_using_different_email(): void
+    {
+        Auth::logout();
+
+        $invData = OrganizationInvitation::createWithToken([
+            'organization_id' => $this->orgA->id,
+            'email'           => 'candidate-a@example.com',
+            'intended_role'   => MembershipRole::Member,
+            'invited_by'      => $this->coordinatorA->id,
+            'expires_at'      => now()->addDays(7),
+        ]);
+        $token = $invData['token'];
+        $invitation = $invData['invitation'];
+
+        // Guest attempts to register using forged/different email
+        $response = $this->post(route('invitations.process', $token), [
+            'name'                  => 'Evil Candidate',
+            'email'                 => 'candidate-evil@example.com',
+            'password'              => 'StrongPassword123!',
+            'password_confirmation' => 'StrongPassword123!',
+        ]);
+
+        $response->assertRedirect(route('invitations.accept', $token));
+        $response->assertSessionHasErrors(['email']);
+
+        // Invitation remains pending and no user/membership created for evil email
+        $this->assertEquals(InvitationStatus::Pending, $invitation->fresh()->status);
+        $this->assertNull(User::where('email', 'candidate-evil@example.com')->first());
+    }
+
+    /**
+     * SEC-INV-03: Matching existing User can accept invitation.
+     */
+    public function test_sec_inv_03_matching_existing_user_can_accept_invitation(): void
+    {
+        $existingCandidate = User::factory()->create(['email' => 'candidate-match@example.com', 'name' => 'Matched Candidate']);
+        $existingCandCountBefore = User::count();
+
+        $invData = OrganizationInvitation::createWithToken([
+            'organization_id' => $this->orgA->id,
+            'email'           => 'candidate-match@example.com',
+            'intended_role'   => MembershipRole::Member,
+            'invited_by'      => $this->coordinatorA->id,
+            'expires_at'      => now()->addDays(7),
+        ]);
+        $token = $invData['token'];
+        $invitation = $invData['invitation'];
+
+        // Acceptance while authenticated as the matching user
+        $response = $this->actingAs($existingCandidate)->post(route('invitations.process', $token));
+        $response->assertRedirect(route('candidate.portal'));
+
+        // Zero duplicate user created
+        $this->assertEquals($existingCandCountBefore, User::count());
+
+        // Invitation accepted and membership activated
+        $this->assertEquals(InvitationStatus::Accepted, $invitation->fresh()->status);
+        $this->assertNotNull($invitation->fresh()->accepted_at);
+
+        $membership = OrganizationMembership::where('organization_id', $this->orgA->id)->where('user_id', $existingCandidate->id)->first();
+        $this->assertNotNull($membership);
+        $this->assertEquals(MembershipStatus::Active, $membership->status);
+    }
+
+    /**
+     * SEC-RBAC-01: Owner portal capability works.
+     */
+    public function test_sec_rbac_01_owner_portal_capability_works(): void
+    {
+        $owner = User::factory()->create(['email' => 'owner.alpha@alpha.edu']);
+        $owner->assignRole('organization-coordinator');
+
+        OrganizationMembership::create([
+            'organization_id' => $this->orgA->id,
+            'user_id'         => $owner->id,
+            'role'            => MembershipRole::Owner,
+            'status'          => MembershipStatus::Active,
+            'joined_at'       => now(),
+        ]);
+
+        $dashResp = $this->actingAs($owner)->get(route('organization.dashboard', $this->orgA->slug));
+        $dashResp->assertStatus(200);
+
+        $candResp = $this->actingAs($owner)->get(route('organization.candidates', $this->orgA->slug));
+        $candResp->assertStatus(200);
+
+        $groupResp = $this->actingAs($owner)->get(route('organization.groups', $this->orgA->slug));
+        $groupResp->assertStatus(200);
+
+        $profResp = $this->actingAs($owner)->get(route('organization.profile', $this->orgA->slug));
+        $profResp->assertStatus(200);
+    }
+
+    /**
+     * SEC-RBAC-02: Admin portal capability works.
+     */
+    public function test_sec_rbac_02_admin_portal_capability_works(): void
+    {
+        $admin = User::factory()->create(['email' => 'admin.alpha@alpha.edu']);
+        $admin->assignRole('organization-coordinator');
+
+        OrganizationMembership::create([
+            'organization_id' => $this->orgA->id,
+            'user_id'         => $admin->id,
+            'role'            => MembershipRole::Admin,
+            'status'          => MembershipStatus::Active,
+            'joined_at'       => now(),
+        ]);
+
+        $dashResp = $this->actingAs($admin)->get(route('organization.dashboard', $this->orgA->slug));
+        $dashResp->assertStatus(200);
+
+        $candResp = $this->actingAs($admin)->get(route('organization.candidates', $this->orgA->slug));
+        $candResp->assertStatus(200);
+    }
+
+    /**
+     * SEC-RBAC-03: Coordinator portal capability works.
+     */
+    public function test_sec_rbac_03_coordinator_portal_capability_works(): void
+    {
+        $dashResp = $this->actingAs($this->coordinatorA)->get(route('organization.dashboard', $this->orgA->slug));
+        $dashResp->assertStatus(200);
+
+        $candResp = $this->actingAs($this->coordinatorA)->get(route('organization.candidates', $this->orgA->slug));
+        $candResp->assertStatus(200);
+    }
+
+    /**
+     * SEC-RBAC-04: Member cannot manage Organization Portal.
+     */
+    public function test_sec_rbac_04_member_cannot_manage_organization_portal(): void
+    {
+        $dashResp = $this->actingAs($this->candidateX)->get(route('organization.dashboard', $this->orgA->slug));
+        $dashResp->assertStatus(403);
+
+        $candResp = $this->actingAs($this->candidateX)->get(route('organization.candidates', $this->orgA->slug));
+        $candResp->assertStatus(403);
+
+        $grpResp = $this->actingAs($this->candidateX)->get(route('organization.groups', $this->orgA->slug));
+        $grpResp->assertStatus(403);
+
+        $profResp = $this->actingAs($this->candidateX)->get(route('organization.profile', $this->orgA->slug));
+        $profResp->assertStatus(403);
+    }
+
+    /**
+     * SEC-RBAC-05: Global organization-coordinator with zero membership has no tenant access.
+     */
+    public function test_sec_rbac_05_global_organization_coordinator_with_zero_membership_has_no_tenant_access(): void
+    {
+        // 1. Direct tenant URL access returns 403
+        $respA = $this->actingAs($this->orphanCoordinator)->get(route('organization.dashboard', $this->orgA->slug));
+        $respA->assertStatus(403);
+
+        $respB = $this->actingAs($this->orphanCoordinator)->get(route('organization.dashboard', $this->orgB->slug));
+        $respB->assertStatus(403);
+
+        // 2. Canonical dashboard redirects safely to no-access page
+        $dashResp = $this->actingAs($this->orphanCoordinator)->get(route('dashboard'));
+        $dashResp->assertRedirect(route('organization.no-access'));
+
+        // 3. No-access page renders institutional help
+        $noAccessResp = $this->actingAs($this->orphanCoordinator)->get(route('organization.no-access'));
+        $noAccessResp->assertStatus(200);
+        $noAccessResp->assertSee('No Active Organization Assigned');
+    }
+
+    /**
+     * SEC-RBAC-06: Multi-organization scoped roles do not bleed.
+     */
+    public function test_sec_rbac_06_multi_organization_scoped_roles_do_not_bleed(): void
+    {
+        $splitUser = User::factory()->create(['email' => 'split.leader@example.com']);
+        $splitUser->assignRole('organization-coordinator');
+
+        // Owner in Org A
+        $memA = OrganizationMembership::create([
+            'organization_id' => $this->orgA->id,
+            'user_id'         => $splitUser->id,
+            'role'            => MembershipRole::Owner,
+            'status'          => MembershipStatus::Active,
+            'joined_at'       => now(),
+        ]);
+
+        // Coordinator in Org B
+        $memB = OrganizationMembership::create([
+            'organization_id' => $this->orgB->id,
+            'user_id'         => $splitUser->id,
+            'role'            => MembershipRole::Coordinator,
+            'status'          => MembershipStatus::Active,
+            'joined_at'       => now(),
+        ]);
+
+        // Access Org A -> Context resolves as Owner
+        $respA = $this->actingAs($splitUser)->get(route('organization.dashboard', $this->orgA->slug));
+        $respA->assertStatus(200);
+        $this->assertEquals(MembershipRole::Owner, $respA->viewData('currentMembership')?->role);
+
+        // Access Org B -> Context resolves as Coordinator, NOT Owner
+        $respB = $this->actingAs($splitUser)->get(route('organization.dashboard', $this->orgB->slug));
+        $respB->assertStatus(200);
+        $this->assertEquals(MembershipRole::Coordinator, $respB->viewData('currentMembership')?->role);
+    }
 }
