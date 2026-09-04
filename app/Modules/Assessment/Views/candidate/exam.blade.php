@@ -249,7 +249,7 @@
                             <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
                                 <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                                     <span>🎧</span>
-                                    <span>Shared {{ $groupTypeLabel }} Audio (Part {{ $unit['part_number'] }})</span>
+                                    <span>Shared {{ $groupTypeLabel }} Audio @if(!empty($unit['part_number']))(Part {{ $unit['part_number'] }})@endif</span>
                                     <span>• {{ $unit['display_question_range'] }}</span>
                                     @if($isRealTest)
                                         <span class="text-[10px] text-rose-500 dark:text-rose-400 font-extrabold">(Single Play)</span>
@@ -805,43 +805,74 @@
         const firstSectionId = "{{ isset($sections) && $sections->isNotEmpty() ? $sections->first()->id : '' }}";
         let timerInterval = null;
 
-        // Centralized Candidate CBT Audio Lifecycle Engine
-        function stopAllExamAudio(options = {}) {
-            const examAudios = document.querySelectorAll('audio[data-exam-audio], audio');
-            examAudios.forEach(audio => {
-                try {
-                    if (!audio.paused) {
-                        audio.pause();
-                    }
-                    if (!isRealTest || options.forceReset) {
-                        audio.currentTime = 0;
-                    }
-                } catch (err) {
-                    console.error('Error pausing exam audio:', err);
-                }
-            });
-        }
+        // Universal Candidate Examination Audio Lifecycle Manager
+        const CandidateExamAudioManager = (function() {
+            let activeAudio = null;
 
-        // Single Active Audio Policy Enforcement (Global Capture)
-        document.addEventListener('play', function(e) {
-            if (e.target && e.target.tagName === 'AUDIO') {
-                const currentAudio = e.target;
-                document.querySelectorAll('audio[data-exam-audio], audio').forEach(audio => {
-                    if (audio !== currentAudio && !audio.paused) {
-                        try {
+            function getAllExamAudioElements() {
+                return document.querySelectorAll('audio[data-exam-audio], audio');
+            }
+
+            function stopAll(options = {}) {
+                const elements = getAllExamAudioElements();
+                elements.forEach(audio => {
+                    try {
+                        if (!audio.paused) {
                             audio.pause();
-                            if (!isRealTest) {
-                                audio.currentTime = 0;
-                            }
-                        } catch (err) {}
+                        }
+                        if (!isRealTest || options.forceReset) {
+                            audio.currentTime = 0;
+                        }
+                    } catch (err) {
+                        console.error('CandidateExamAudioManager: error pausing audio', err);
                     }
                 });
+                activeAudio = null;
             }
-        }, true);
 
-        // Safe Page Navigation Cleanup
-        window.addEventListener('beforeunload', () => stopAllExamAudio());
-        window.addEventListener('pagehide', () => stopAllExamAudio());
+            function handlePlayEvent(e) {
+                if (e.target && e.target.tagName === 'AUDIO') {
+                    const currentAudio = e.target;
+                    activeAudio = currentAudio;
+                    getAllExamAudioElements().forEach(audio => {
+                        if (audio !== currentAudio && !audio.paused) {
+                            try {
+                                audio.pause();
+                                if (!isRealTest) {
+                                    audio.currentTime = 0;
+                                }
+                            } catch (err) {}
+                        }
+                    });
+                }
+            }
+
+            function beforeDeliveryTransition(context = {}) {
+                stopAll(context);
+            }
+
+            function init() {
+                document.addEventListener('play', handlePlayEvent, true);
+                window.addEventListener('beforeunload', () => stopAll());
+                window.addEventListener('pagehide', () => stopAll());
+            }
+
+            init();
+
+            return {
+                stopAll: stopAll,
+                getActiveAudio: () => activeAudio,
+                beforeDeliveryTransition: beforeDeliveryTransition,
+                getAllElements: getAllExamAudioElements
+            };
+        })();
+
+        // Backwards-compatible global aliases
+        function stopAllExamAudio(options = {}) {
+            CandidateExamAudioManager.stopAll(options);
+        }
+        window.CandidateExamAudioManager = CandidateExamAudioManager;
+        window.stopAllExamAudio = stopAllExamAudio;
 
         // Fullscreen Mode Handler for Real Test
         function enterFullscreen() {
@@ -874,7 +905,7 @@
 
         // Section Initiation
         function startSectionQuestions(firstUnitIdx) {
-            stopAllExamAudio();
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'start_section', targetUnit: firstUnitIdx });
             if (isRealTest) {
                 enterFullscreen();
             }
@@ -916,7 +947,7 @@
 
         // Exit Simulator Confirmation
         function confirmExitSimulator() {
-            stopAllExamAudio();
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'exit_simulator' });
             iapConfirm({
                 title: 'Return to Dashboard?',
                 message: 'Your saved Simulator progress will be preserved. You can resume the test later.',
@@ -924,7 +955,7 @@
                 cancelText: 'Stay in Test',
                 variant: 'info',
                 onConfirm: () => {
-                    stopAllExamAudio();
+                    CandidateExamAudioManager.beforeDeliveryTransition({ type: 'exit_simulator_confirmed' });
                     window.location.href = "{{ route('candidate.portal') }}";
                 }
             });
@@ -932,7 +963,7 @@
 
         // Trigger Final Submit Confirmation Modal
         function triggerFinalSubmitModal() {
-            stopAllExamAudio();
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'final_submit' });
             if (answeredQuestionIds.size < totalQuestions) {
                 const unansweredCount = totalQuestions - answeredQuestionIds.size;
                 iapAlert({
@@ -1058,7 +1089,7 @@
         // Show Dedicated Section Introduction Screen
         function showSectionIntro(sectionId) {
             if (!sectionId) return;
-            stopAllExamAudio();
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'section_intro', targetSection: sectionId });
             document.querySelectorAll('.delivery-unit-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
             const targetSection = document.getElementById('section-intro-card-' + sectionId);
             if (targetSection) {
@@ -1072,7 +1103,7 @@
         // Navigate to Delivery Unit (Group Page or Single Question Page)
         function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
             if (unitIdx < 0 || unitIdx >= totalUnits) return;
-            stopAllExamAudio();
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'delivery_unit', targetUnit: unitIdx, targetQ: targetQIndex });
             document.querySelectorAll('.delivery-unit-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
 
             const targetCard = document.getElementById(`delivery-unit-card-${unitIdx}`);
@@ -1192,7 +1223,7 @@
 
             if (!audio || (btn && btn.disabled)) return;
 
-            stopAllExamAudio();
+            CandidateExamAudioManager.stopAll();
 
             if (btn) {
                 btn.disabled = true;
@@ -1240,7 +1271,7 @@
 
             if (!audio || (btn && btn.disabled)) return;
 
-            stopAllExamAudio();
+            CandidateExamAudioManager.stopAll();
 
             if (btn) {
                 btn.disabled = true;

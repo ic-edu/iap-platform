@@ -82,8 +82,8 @@ class DeliveryUnitBuilder
             $audioGroupId = $q->audio_group_id;
             $passageGroupId = $q->passage_group_id ?? ($q->passage_id ? 'p_' . $q->passage_id : null);
 
-            $isAudioGroup = in_array($partNum, [3, 4], true) && !empty($audioGroupId);
-            $isPassageGroup = in_array($partNum, [6, 7], true) && (!empty($passageGroupId) || $q->passageGroup !== null || $q->passage !== null || $q->getEffectivePassages()->isNotEmpty());
+            $isAudioGroup = !empty($audioGroupId) || $q->audioGroup !== null;
+            $isPassageGroup = !empty($passageGroupId) || $q->passageGroup !== null || $q->passage !== null || (!empty($partNum) && in_array($partNum, [6, 7], true) && $q->getEffectivePassages()->isNotEmpty());
 
             // Check if current open unit can absorb this question
             if (

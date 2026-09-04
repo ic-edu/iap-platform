@@ -493,6 +493,7 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
         $response = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
         $response->assertStatus(200);
 
+        $response->assertSee('const CandidateExamAudioManager =', false);
         $response->assertSee('function stopAllExamAudio(options = {})', false);
         $response->assertSee('document.querySelectorAll(\'audio[data-exam-audio], audio\')', false);
     }
@@ -504,7 +505,7 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
         $response->assertStatus(200);
 
         // Single active audio capture listener
-        $response->assertSee("document.addEventListener('play', function(e)", false);
+        $response->assertSee("document.addEventListener('play', handlePlayEvent, true)", false);
     }
 
     public function test_audio_lifecycle_04_navigation_events_invoke_audio_cleanup(): void
@@ -515,17 +516,17 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
 
         $html = $response->getContent();
 
-        // navigateDeliveryUnit invokes stopAllExamAudio
-        $this->assertMatchesRegularExpression('/function navigateDeliveryUnit\([^)]*\)\s*\{[^}]*stopAllExamAudio\(\)/s', $html);
+        // navigateDeliveryUnit invokes beforeDeliveryTransition
+        $this->assertMatchesRegularExpression('/function navigateDeliveryUnit\([^)]*\)\s*\{[^}]*CandidateExamAudioManager\.beforeDeliveryTransition/s', $html);
 
-        // showSectionIntro invokes stopAllExamAudio
-        $this->assertMatchesRegularExpression('/function showSectionIntro\([^)]*\)\s*\{[^}]*stopAllExamAudio\(\)/s', $html);
+        // showSectionIntro invokes beforeDeliveryTransition
+        $this->assertMatchesRegularExpression('/function showSectionIntro\([^)]*\)\s*\{[^}]*CandidateExamAudioManager\.beforeDeliveryTransition/s', $html);
 
-        // confirmExitSimulator invokes stopAllExamAudio
-        $this->assertMatchesRegularExpression('/function confirmExitSimulator\(\)\s*\{[^}]*stopAllExamAudio\(\)/s', $html);
+        // confirmExitSimulator invokes beforeDeliveryTransition
+        $this->assertMatchesRegularExpression('/function confirmExitSimulator\(\)\s*\{[^}]*CandidateExamAudioManager\.beforeDeliveryTransition/s', $html);
 
-        // triggerFinalSubmitModal invokes stopAllExamAudio
-        $this->assertMatchesRegularExpression('/function triggerFinalSubmitModal\(\)\s*\{[^}]*stopAllExamAudio\(\)/s', $html);
+        // triggerFinalSubmitModal invokes beforeDeliveryTransition
+        $this->assertMatchesRegularExpression('/function triggerFinalSubmitModal\(\)\s*\{[^}]*CandidateExamAudioManager\.beforeDeliveryTransition/s', $html);
     }
 
     // ==========================================

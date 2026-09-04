@@ -13,7 +13,7 @@
             <div class="text-indigo-600 dark:text-indigo-400 mb-3 flex justify-center">
                 <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
             </div>
-            <audio controls controlsList="nodownload noplaybackrate" src="{{ route('media.preview', $media->id) }}" preload="metadata" class="w-full max-w-[480px] mx-auto">
+            <audio controls controlsList="nodownload noplaybackrate" data-exam-audio="true" src="{{ route('media.preview', $media->id) }}" preload="metadata" class="w-full max-w-[480px] mx-auto">
                 <source src="{{ route('media.preview', $media->id) }}" type="{{ $media->mime_type ?? 'audio/mpeg' }}">
                 <p class="text-xs text-slate-500 mt-2">Your browser does not support audio playback for {{ $media->formatLabel() }} format. Please use a compatible browser.</p>
             </audio>
