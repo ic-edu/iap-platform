@@ -99,11 +99,10 @@ class CandidateKpiRouteSeparationTest extends TestCase
     }
 
     /**
-     * TEST ATTEMPT-01: Candidate Attempt History includes in-progress Candidate attempt with Resume Exam CTA.
-     * TEST ATTEMPT-02: Candidate Attempt History includes completed Candidate attempt with View Result CTA.
-     * TEST ATTEMPT-03: Candidate Attempt History can expose other supported Candidate statuses (e.g. Expired).
+     * TEST ATTEMPT-01, HISTORY-01, 02, 03: Candidate Attempt History includes in-progress, submitted, and expired attempts.
+     * TEST ACTION-01, 02, 03, 04: Submitted shows View Result, InProgress shows Resume Exam, Expired shows View Summary.
      */
-    public function test_attempt_01_02_03_attempt_history_shows_all_sessions_and_actions(): void
+    public function test_attempt_and_history_shows_all_sessions_with_precise_action_labels(): void
     {
         // 1. In progress attempt
         $inProgressAttempt = Attempt::create([
@@ -146,14 +145,18 @@ class CandidateKpiRouteSeparationTest extends TestCase
                 && $attempts->contains('id', $expiredAttempt->id);
         });
 
-        // Verify Status Labels & CTAs
+        // ACTION-01: Submitted -> View Result
+        $response->assertSee('View Result');
+        $response->assertSee(route('candidate.review', $submittedAttempt));
+
+        // ACTION-02: InProgress -> Resume Exam
         $response->assertSee('IN PROGRESS');
         $response->assertSee('Resume Exam');
         $response->assertSee(route('candidate.exam', $inProgressAttempt));
 
-        $response->assertSee('SUBMITTED');
+        // ACTION-03 & 04: Expired -> View Summary (non-misleading)
         $response->assertSee('TIME EXPIRED');
-        $response->assertSee(route('candidate.review', $submittedAttempt));
+        $response->assertSee('View Summary');
         $response->assertSee(route('candidate.review', $expiredAttempt));
     }
 
@@ -237,12 +240,13 @@ class CandidateKpiRouteSeparationTest extends TestCase
     }
 
     /**
-     * TEST RESULT-01: Completed Tests includes completed/finalized Candidate result.
-     * TEST RESULT-02: Completed Tests excludes in-progress attempt.
-     * TEST RESULT-03: Completed Tests excludes unsubmitted attempt.
-     * TEST RESULT-04: View Result routes to canonical Candidate Result page.
+     * TEST RESULT-01: Submitted Attempt appears in Completed Results.
+     * TEST RESULT-02: Expired Attempt does NOT appear in Completed Results.
+     * TEST RESULT-03: InProgress Attempt does NOT appear in Completed Results.
+     * TEST RESULT-04: Cancelled Attempt does NOT appear in Completed Results.
+     * TEST RESULT-05: Completed Result action routes to canonical Candidate Result page.
      */
-    public function test_result_01_02_03_04_completed_results_shows_only_finalized_outcomes(): void
+    public function test_result_01_to_05_completed_results_strictly_includes_only_submitted(): void
     {
         // 1. In progress attempt (Must NOT appear in Completed Results)
         $inProgressAttempt = Attempt::create([
@@ -262,17 +266,38 @@ class CandidateKpiRouteSeparationTest extends TestCase
             'total_score' => 0,
         ]);
 
-        // 3. Submitted completed result (Must appear)
+        // 3. Expired attempt (Must NOT appear in Completed Results)
+        $expiredAttempt = Attempt::create([
+            'user_id' => $this->candidateA->id,
+            'test_id' => $this->realTest->id,
+            'status' => AttemptStatus::Expired,
+            'started_at' => now()->subDays(1),
+            'submitted_at' => now()->subDays(1)->addHours(2),
+            'total_score' => 0,
+        ]);
+
+        // 4. Cancelled attempt (Must NOT appear in Completed Results)
+        $cancelledAttempt = Attempt::create([
+            'user_id' => $this->candidateA->id,
+            'test_id' => $this->realTest->id,
+            'status' => AttemptStatus::Cancelled,
+            'started_at' => now()->subDays(2),
+            'total_score' => 0,
+        ]);
+
+        // 5. Submitted completed result (Must appear)
         $submittedAttempt = $this->createSimulatorAttempt($this->candidateA, 68, 66);
 
         $response = $this->actingAs($this->candidateA)->get(route('candidate.my-results'));
         $response->assertStatus(200);
 
-        // View data assertions
-        $response->assertViewHas('results', function ($results) use ($submittedAttempt, $inProgressAttempt, $draftAttempt) {
+        // View data assertions: Only submitted attempt is present
+        $response->assertViewHas('results', function ($results) use ($submittedAttempt, $inProgressAttempt, $draftAttempt, $expiredAttempt, $cancelledAttempt) {
             return $results->contains('id', $submittedAttempt->id)
                 && !$results->contains('id', $inProgressAttempt->id)
-                && !$results->contains('id', $draftAttempt->id);
+                && !$results->contains('id', $draftAttempt->id)
+                && !$results->contains('id', $expiredAttempt->id)
+                && !$results->contains('id', $cancelledAttempt->id);
         });
 
         // Content assertions: finalized info present, in-progress actions strictly absent
@@ -283,23 +308,26 @@ class CandidateKpiRouteSeparationTest extends TestCase
         $response->assertSee('PASSED');
         $response->assertSee(route('candidate.review', $submittedAttempt));
         $response->assertDontSee('Resume Exam');
+        $response->assertDontSee('TIME EXPIRED');
     }
 
     /**
-     * TEST COUNT-01: My Total Attempts count equals all eligible Candidate-owned Attempts.
-     * TEST COUNT-02: Completed Tests count equals only finalized Candidate assessments.
-     * TEST COUNT-03: Counts are allowed to be equal when all attempts happen to be completed.
+     * TEST COUNT-01: Candidate with 2 Submitted + 3 Expired -> Total Attempts = 5.
+     * TEST COUNT-02: Same Candidate -> Completed Tests = 2.
+     * TEST COUNT-03: Expired Attempts do NOT increment Completed Tests.
+     * TEST COUNT-04: InProgress Attempt increments My Total Attempts but not Completed Tests.
+     * TEST COUNT-05: Cancelled Attempt increments Total Attempts but not Completed Tests.
      */
-    public function test_count_01_02_03_dashboard_kpi_counts_semantics(): void
+    public function test_count_01_to_05_dashboard_kpi_counts_exact_semantics(): void
     {
-        // Scenario A: 1 in-progress, 1 submitted -> Counts must differ (Total: 2, Completed: 1)
+        // Candidate with 2 Submitted + 3 Expired
         Attempt::create([
             'user_id' => $this->candidateA->id,
             'test_id' => $this->simulatorTest->id,
-            'status' => AttemptStatus::InProgress,
-            'started_at' => now()->subMinutes(10),
+            'status' => AttemptStatus::Submitted,
+            'started_at' => now()->subDays(1),
+            'submitted_at' => now()->subDays(1)->addHour(),
         ]);
-
         Attempt::create([
             'user_id' => $this->candidateA->id,
             'test_id' => $this->simulatorTest->id,
@@ -307,25 +335,48 @@ class CandidateKpiRouteSeparationTest extends TestCase
             'started_at' => now()->subHours(2),
             'submitted_at' => now()->subHour(),
         ]);
+        Attempt::create([
+            'user_id' => $this->candidateA->id,
+            'test_id' => $this->simulatorTest->id,
+            'status' => AttemptStatus::Expired,
+            'started_at' => now()->subDays(3),
+        ]);
+        Attempt::create([
+            'user_id' => $this->candidateA->id,
+            'test_id' => $this->simulatorTest->id,
+            'status' => AttemptStatus::Expired,
+            'started_at' => now()->subDays(2),
+        ]);
+        Attempt::create([
+            'user_id' => $this->candidateA->id,
+            'test_id' => $this->simulatorTest->id,
+            'status' => AttemptStatus::Expired,
+            'started_at' => now()->subDays(4),
+        ]);
 
         $responseA = $this->actingAs($this->candidateA)->get(route('candidate.portal'));
-        $responseA->assertViewHas('myAttemptsCount', 2);
-        $responseA->assertViewHas('completedAttemptsCount', 1);
+        // COUNT-01: Total Attempts = 5
+        $responseA->assertViewHas('myAttemptsCount', 5);
+        // COUNT-02 & 03: Completed Tests = 2 (Expired are excluded)
+        $responseA->assertViewHas('completedAttemptsCount', 2);
 
-        // Scenario B: Candidate B has exactly 5 completed attempts -> Counts legitimately equal 5 / 5
-        for ($i = 0; $i < 5; $i++) {
-            Attempt::create([
-                'user_id' => $this->candidateB->id,
-                'test_id' => $this->simulatorTest->id,
-                'status' => AttemptStatus::Submitted,
-                'started_at' => now()->subDays($i + 1),
-                'submitted_at' => now()->subDays($i + 1)->addHour(),
-            ]);
-        }
+        // COUNT-04 & 05: Adding InProgress and Cancelled increments Total (5 + 2 = 7) but not Completed (remains 2)
+        Attempt::create([
+            'user_id' => $this->candidateA->id,
+            'test_id' => $this->simulatorTest->id,
+            'status' => AttemptStatus::InProgress,
+            'started_at' => now()->subMinutes(10),
+        ]);
+        Attempt::create([
+            'user_id' => $this->candidateA->id,
+            'test_id' => $this->simulatorTest->id,
+            'status' => AttemptStatus::Cancelled,
+            'started_at' => now()->subDays(5),
+        ]);
 
-        $responseB = $this->actingAs($this->candidateB)->get(route('candidate.portal'));
-        $responseB->assertViewHas('myAttemptsCount', 5);
-        $responseB->assertViewHas('completedAttemptsCount', 5);
+        $responseA2 = $this->actingAs($this->candidateA)->get(route('candidate.portal'));
+        $responseA2->assertViewHas('myAttemptsCount', 7);
+        $responseA2->assertViewHas('completedAttemptsCount', 2);
     }
 
     /**

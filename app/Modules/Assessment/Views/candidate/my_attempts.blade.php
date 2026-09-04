@@ -68,6 +68,10 @@
                         <td class="p-4">
                             @if ($isInProgress)
                                 <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">Active Session</span>
+                            @elseif ($att->status->value === 'expired')
+                                <span class="text-xs text-slate-500 dark:text-slate-400">Time Expired</span>
+                            @elseif ($att->status->value === 'cancelled')
+                                <span class="text-xs text-slate-500 dark:text-slate-400">Cancelled</span>
                             @elseif ($isSim)
                                 <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $correctCount }} / {{ $totalQ }}</span>
                             @else
@@ -80,8 +84,18 @@
                                     <span>Resume Exam</span>
                                     <span>&rarr;</span>
                                 </a>
-                            @else
+                            @elseif ($att->status->value === 'expired')
                                 <a href="{{ route('candidate.review', $att) }}" class="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-semibold hover:underline focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-1.5 py-0.5">
+                                    <span>View Summary</span>
+                                    <span>&rarr;</span>
+                                </a>
+                            @elseif ($att->status->value === 'cancelled')
+                                <a href="{{ route('candidate.review', $att) }}" class="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-semibold hover:underline focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-1.5 py-0.5">
+                                    <span>View Details</span>
+                                    <span>&rarr;</span>
+                                </a>
+                            @else
+                                <a href="{{ route('candidate.review', $att) }}" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold hover:underline focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-1.5 py-0.5">
                                     <span>View Result</span>
                                     <span>&rarr;</span>
                                 </a>

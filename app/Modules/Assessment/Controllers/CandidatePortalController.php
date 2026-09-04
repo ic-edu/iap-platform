@@ -43,7 +43,7 @@ class CandidatePortalController extends Controller
             ->count();
 
         $myAttemptsCount = Attempt::where('user_id', $userId)->count();
-        $completedAttemptsCount = Attempt::where('user_id', $userId)->whereIn('status', ['submitted', 'expired'])->count();
+        $completedAttemptsCount = Attempt::where('user_id', $userId)->where('status', AttemptStatus::Submitted->value)->count();
         $issuedCertificatesCount = Certificate::where('user_id', $userId)
             ->whereHas('attempt.test', function ($q) {
                 $q->where('assessment_mode', '!=', \App\Modules\Assessment\Enums\AssessmentMode::Simulator->value);
@@ -116,7 +116,7 @@ class CandidatePortalController extends Controller
         $query = Attempt::where('user_id', $userId)->with(['test', 'certificate']);
 
         if ($request->input('filter') === 'completed' || $request->input('status') === 'completed') {
-            $query->whereIn('status', ['submitted', 'expired']);
+            $query->where('status', AttemptStatus::Submitted->value);
         }
 
         $attempts = $query->latest('started_at')->latest('created_at')->paginate(10)->withQueryString();
@@ -128,14 +128,14 @@ class CandidatePortalController extends Controller
     }
 
     /**
-     * Candidate completed assessment results history (finalized assessments only).
+     * Candidate completed assessment results history (finalized submitted assessments only).
      */
     public function myResults(Request $request): View
     {
         $userId = (int) $request->user()?->id;
 
         $results = Attempt::where('user_id', $userId)
-            ->whereIn('status', ['submitted', 'expired'])
+            ->where('status', AttemptStatus::Submitted->value)
             ->with(['test', 'certificate'])
             ->latest('submitted_at')
             ->latest('created_at')
