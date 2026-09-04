@@ -49,6 +49,23 @@ class NavigationService
             return route('finance.dashboard');
         }
 
+        if ($user->hasRole('organization-coordinator')) {
+            $memberships = $user->organizationMemberships()
+                ->where('status', 'active')
+                ->whereIn('role', ['owner', 'admin', 'coordinator'])
+                ->with('organization')
+                ->get();
+            $activeOrgs = $memberships->map(fn($m) => $m->organization)->filter(fn($o) => $o && $o->isActive());
+
+            if ($activeOrgs->count() === 1) {
+                return route('organization.dashboard', $activeOrgs->first()->slug);
+            }
+            if ($activeOrgs->count() > 1) {
+                return route('organization.select');
+            }
+            return route('organization.no-access');
+        }
+
         return route('candidate.portal');
     }
 
@@ -68,6 +85,15 @@ class NavigationService
                     'icon' => 'home',
                     'permission' => null,
                     'active_pattern' => 'super-admin/dashboard*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Institutional Management',
+                    'label' => 'Organizations',
+                    'route' => 'admin.organizations.index',
+                    'icon' => 'building-office-2',
+                    'permission' => null,
+                    'active_pattern' => 'admin/organizations*',
                     'badge' => null,
                 ],
                 [

@@ -26,30 +26,7 @@ Route::get('/', function () {
         return redirect()->route('login');
     }
 
-    /** @var User $user */
-    $user = Auth::user();
-
-    if ($user->hasRole('super-admin')) {
-        return redirect()->route('super-admin.dashboard');
-    }
-
-    if ($user->hasRole('repository-manager')) {
-        return redirect()->route('admin.repository-manager.dashboard');
-    }
-
-    if ($user->hasRole('admin')) {
-        return redirect()->route('admin.dashboard');
-    }
-
-    if ($user->hasRole('teacher')) {
-        return redirect()->route('teacher.dashboard');
-    }
-
-    if ($user->hasRole('finance')) {
-        return redirect()->route('finance.dashboard');
-    }
-
-    return redirect()->route('candidate.portal');
+    return redirect(\App\Services\NavigationService::getDashboardRouteForUser(Auth::user()));
 });
 
 Route::get('/dashboard', function () {
