@@ -398,7 +398,7 @@ class QuestionMediaAttachmentWorkflowTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee($this->photoAsset->publicUrl(), false);
-        $response->assertSee($this->audioAsset->publicUrl(), false);
+        $response->assertSee(route('candidate.exam.audio-stream', [$attempt, $question]), false);
         $response->assertSee('Question Audio Prompt');
         $response->assertSee('Look at the picture and choose the best statement.');
         $response->assertSee('She is checking into the hotel.');
