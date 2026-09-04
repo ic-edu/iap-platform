@@ -153,6 +153,26 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get organization memberships for user.
+     *
+     * @return HasMany<\App\Modules\Organization\Models\OrganizationMembership, $this>
+     */
+    public function organizationMemberships(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Organization\Models\OrganizationMembership::class, 'user_id');
+    }
+
+    /**
+     * Get active organization memberships for user.
+     *
+     * @return HasMany<\App\Modules\Organization\Models\OrganizationMembership, $this>
+     */
+    public function activeOrganizationMemberships(): HasMany
+    {
+        return $this->organizationMemberships()->where('status', 'active');
+    }
+
+    /**
      * Defensive permission check for downloading repository assets.
      * Never throws PermissionDoesNotExist exception even if permissions are unseeded.
      */

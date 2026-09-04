@@ -123,6 +123,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'repository.audit',
             'repository.quality_assurance',
             'repository.versioning',
+
+            // Organization Portal & Group Permissions (Phase O1)
+            'organization.portal.access',
+            'organization.members.manage',
+            'organization.groups.manage',
+            'organization.invitations.manage',
+            'organization.profile.manage',
         ];
 
         foreach ($permissions as $permission) {
@@ -177,6 +184,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoice.manage',
             'payment.manage',
             'reporting.view',
+        ]);
+
+        // Organization Coordinator (O1 Foundation)
+        $roleOrgCoordinator = Role::firstOrCreate(['name' => 'organization-coordinator', 'guard_name' => 'web']);
+        $roleOrgCoordinator->syncPermissions([
+            'organization.portal.access',
+            'organization.members.manage',
+            'organization.groups.manage',
+            'organization.invitations.manage',
+            'organization.profile.manage',
         ]);
 
         // PART A: Repository Manager (Academic Leader)
