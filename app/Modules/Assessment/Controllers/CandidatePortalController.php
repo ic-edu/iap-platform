@@ -108,7 +108,7 @@ class CandidatePortalController extends Controller
     }
 
     /**
-     * Candidate attempt history.
+     * Candidate attempt history (all candidate-owned attempt sessions).
      */
     public function myAttempts(Request $request): View
     {
@@ -119,12 +119,33 @@ class CandidatePortalController extends Controller
             $query->whereIn('status', ['submitted', 'expired']);
         }
 
-        $attempts = $query->latest()->paginate(10)->withQueryString();
+        $attempts = $query->latest('started_at')->latest('created_at')->paginate(10)->withQueryString();
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.my_attempts';
 
         return view($viewName, compact('attempts'));
+    }
+
+    /**
+     * Candidate completed assessment results history (finalized assessments only).
+     */
+    public function myResults(Request $request): View
+    {
+        $userId = (int) $request->user()?->id;
+
+        $results = Attempt::where('user_id', $userId)
+            ->whereIn('status', ['submitted', 'expired'])
+            ->with(['test', 'certificate'])
+            ->latest('submitted_at')
+            ->latest('created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        /** @var view-string $viewName */
+        $viewName = 'assessment::candidate.my_results';
+
+        return view($viewName, compact('results'));
     }
 
     /**

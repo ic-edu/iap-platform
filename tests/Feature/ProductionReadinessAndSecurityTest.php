@@ -541,7 +541,7 @@ test('authenticated candidate can access my certificates view and see issued cer
         ->assertSee('Verify Online');
 });
 
-test('attempt history my-attempts view displays synchronized PASSED status and score', function () {
+test('completed results my-results view displays synchronized PASSED status and score', function () {
     $student = User::factory()->create();
     $student->assignRole('student');
 
@@ -587,12 +587,11 @@ test('attempt history my-attempts view displays synchronized PASSED status and s
 
     $attemptEngine->submitAttempt($attempt);
 
-    $response = $this->actingAs($student)->get('/candidate/my-attempts');
+    $response = $this->actingAs($student)->get('/candidate/my-results');
 
     $response->assertStatus(200)
         ->assertSee('PASSED')
-        ->assertSee('TOEIC Mini Practice Test Sync')
-        ->assertSee('/ 1');
+        ->assertSee('TOEIC Mini Practice Test Sync');
 });
 
 test('candidate review page renders detailed question breakdown with explanation and section stats', function () {

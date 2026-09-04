@@ -353,7 +353,7 @@ class CandidateCbtSubmitAndDashboardInteractionTest extends TestCase
         $response->assertSee('My Total Attempts');
 
         // 3. Completed Tests KPI
-        $response->assertSee(route('candidate.my-attempts', ['filter' => 'completed']));
+        $response->assertSee(route('candidate.my-results'));
         $response->assertSee('Completed Tests');
 
         // 4. My Certificates KPI
@@ -395,11 +395,11 @@ class CandidateCbtSubmitAndDashboardInteractionTest extends TestCase
             return $attempts->contains('id', $cand1Attempt->id) && !$attempts->contains('id', $cand2Attempt->id);
         });
 
-        // 2. Candidate 1 views filtered completed attempts
-        $cand1FilteredResp = $this->actingAs($this->candidate)->get(route('candidate.my-attempts', ['filter' => 'completed']));
+        // 2. Candidate 1 views completed results
+        $cand1FilteredResp = $this->actingAs($this->candidate)->get(route('candidate.my-results'));
         $cand1FilteredResp->assertStatus(200);
-        $cand1FilteredResp->assertViewHas('attempts', function ($attempts) use ($cand1Attempt) {
-            return $attempts->contains('id', $cand1Attempt->id);
+        $cand1FilteredResp->assertViewHas('results', function ($results) use ($cand1Attempt, $cand2Attempt) {
+            return $results->contains('id', $cand1Attempt->id) && !$results->contains('id', $cand2Attempt->id);
         });
 
         // 3. Available tests access
@@ -429,13 +429,13 @@ class CandidateCbtSubmitAndDashboardInteractionTest extends TestCase
         // All 4 KPI links must still be present as anchors
         $response->assertSee(route('candidate.available-tests'));
         $response->assertSee(route('candidate.my-attempts'));
-        $response->assertSee(route('candidate.my-attempts', ['filter' => 'completed']));
+        $response->assertSee(route('candidate.my-results'));
         $response->assertSee(route('candidate.my-certificates'));
 
         // Visiting each destination returns 200 (not 403 or 500)
         $this->actingAs($freshUser)->get(route('candidate.available-tests'))->assertStatus(200);
         $this->actingAs($freshUser)->get(route('candidate.my-attempts'))->assertStatus(200);
-        $this->actingAs($freshUser)->get(route('candidate.my-attempts', ['filter' => 'completed']))->assertStatus(200);
+        $this->actingAs($freshUser)->get(route('candidate.my-results'))->assertStatus(200);
         $this->actingAs($freshUser)->get(route('candidate.my-certificates'))->assertStatus(200);
     }
 

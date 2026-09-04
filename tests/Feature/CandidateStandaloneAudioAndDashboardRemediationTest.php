@@ -565,7 +565,7 @@ class CandidateStandaloneAudioAndDashboardRemediationTest extends TestCase
         $response->assertSee('My Total Attempts');
 
         // UI-08: Completed Tests
-        $response->assertSee(route('candidate.my-attempts', ['filter' => 'completed']));
+        $response->assertSee(route('candidate.my-results'));
         $response->assertSee('Completed Tests');
 
         // UI-09: My Certificates

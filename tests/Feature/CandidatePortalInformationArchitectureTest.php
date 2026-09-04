@@ -101,6 +101,7 @@ class CandidatePortalInformationArchitectureTest extends TestCase
             'candidate.invoices.index',
             'candidate.payments.index',
             'candidate.my-attempts',
+            'candidate.my-results',
             'candidate.my-certificates',
         ];
 

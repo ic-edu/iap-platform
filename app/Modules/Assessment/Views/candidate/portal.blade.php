@@ -35,7 +35,7 @@
         </a>
 
         {{-- 3. Completed Tests KPI --}}
-        <a href="{{ route('candidate.my-attempts', ['filter' => 'completed']) }}"
+        <a href="{{ route('candidate.my-results') }}"
            class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 transition-colors duration-150 group block cursor-pointer"
            aria-label="Completed Tests: {{ $completedAttemptsCount }}">
             <div class="flex items-center justify-between">
@@ -45,7 +45,7 @@
                 </svg>
             </div>
             <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ $completedAttemptsCount }}</span>
-            <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block group-hover:underline">View exam results &rarr;</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block group-hover:underline">View completed results &rarr;</span>
         </a>
 
         {{-- 4. My Certificates KPI --}}
