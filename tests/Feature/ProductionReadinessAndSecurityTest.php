@@ -276,6 +276,7 @@ test('submitting passing assessment attempt automatically generates digital cert
         'title' => 'Certification Test',
         'slug' => 'certification-test',
         'test_type' => 'toefl',
+        'assessment_mode' => 'real_test',
         'duration_minutes' => 60,
         'pass_score' => 50,
         'is_published' => true,
@@ -307,6 +308,16 @@ test('submitting passing assessment attempt automatically generates digital cert
     ]);
 
     $attemptEngine->submitAttempt($attempt);
+
+    $attempt->update(['is_final' => true]);
+    $assignment = \App\Modules\Assessment\Models\CandidateTestAssignment::create([
+        'test_id' => $test->id,
+        'user_id' => $student->id,
+        'status' => 'completed',
+        'final_attempt_id' => $attempt->id,
+    ]);
+    $attempt->update(['assignment_id' => $assignment->id]);
+    app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment);
 
     $certificate = Certificate::where('attempt_id', $attempt->id)->first();
     expect($certificate)->not->toBeNull();
@@ -393,7 +404,7 @@ test('toeic practice assessment scores correctly without generic percentage scal
     expect($result['is_passed'])->toBeTrue();
 
     $certificate = Certificate::where('attempt_id', $attempt->id)->first();
-    expect($certificate)->not->toBeNull();
+    expect($certificate)->toBeNull();
 });
 
 test('authenticated candidate can download digital certificate HTML PDF', function () {
@@ -411,6 +422,7 @@ test('authenticated candidate can download digital certificate HTML PDF', functi
         'title' => 'TOEFL ITP Exam',
         'slug' => 'toefl-itp-exam',
         'test_type' => 'toefl',
+        'assessment_mode' => 'real_test',
         'duration_minutes' => 60,
         'pass_score' => 50,
         'is_published' => true,
@@ -442,6 +454,16 @@ test('authenticated candidate can download digital certificate HTML PDF', functi
     ]);
 
     $attemptEngine->submitAttempt($attempt);
+
+    $attempt->update(['is_final' => true]);
+    $assignment = \App\Modules\Assessment\Models\CandidateTestAssignment::create([
+        'test_id' => $test->id,
+        'user_id' => $student->id,
+        'status' => 'completed',
+        'final_attempt_id' => $attempt->id,
+    ]);
+    $attempt->update(['assignment_id' => $assignment->id]);
+    app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment);
 
     $certificate = Certificate::where('attempt_id', $attempt->id)->firstOrFail();
 
@@ -466,6 +488,7 @@ test('authenticated candidate can access my certificates view and see issued cer
         'title' => 'TOEFL ITP Certification',
         'slug' => 'toefl-itp-cert',
         'test_type' => 'toefl',
+        'assessment_mode' => 'real_test',
         'duration_minutes' => 60,
         'pass_score' => 50,
         'is_published' => true,
@@ -497,6 +520,16 @@ test('authenticated candidate can access my certificates view and see issued cer
     ]);
 
     $attemptEngine->submitAttempt($attempt);
+
+    $attempt->update(['is_final' => true]);
+    $assignment = \App\Modules\Assessment\Models\CandidateTestAssignment::create([
+        'test_id' => $test->id,
+        'user_id' => $student->id,
+        'status' => 'completed',
+        'final_attempt_id' => $attempt->id,
+    ]);
+    $attempt->update(['assignment_id' => $assignment->id]);
+    app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment);
 
     $response = $this->actingAs($student)->get('/candidate/my-certificates');
 

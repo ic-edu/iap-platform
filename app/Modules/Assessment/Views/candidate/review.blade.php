@@ -229,8 +229,8 @@
             @endif
         </div>
 
-        <!-- Certificate Issued Card (If Passed) -->
-        @if(($summary['is_passed'] ?? false) && !empty($summary['certificate_id']))
+        <!-- Certificate Issued Card (If Passed & Eligible) -->
+        @if(($summary['is_passed'] ?? false) && !empty($summary['certificate_id']) && !($attempt->test?->isSimulator()))
             <div class="mb-8 p-6 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h3 class="text-base font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2">

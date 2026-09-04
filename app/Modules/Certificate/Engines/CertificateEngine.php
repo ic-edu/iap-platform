@@ -11,10 +11,17 @@ use App\Modules\Certificate\Events\CertificateIssued;
 use App\Modules\Certificate\Events\CertificateReissued;
 use App\Modules\Certificate\Events\CertificateRevoked;
 use App\Modules\Certificate\Models\Certificate;
+use App\Modules\Certificate\Services\CertificateEligibilityService;
 use Illuminate\Support\Str;
 
 class CertificateEngine
 {
+    public function __construct(
+        protected ?CertificateEligibilityService $eligibilityService = null
+    ) {
+        $this->eligibilityService = $eligibilityService ?? app(CertificateEligibilityService::class);
+    }
+
     /**
      * Issue digital certificate for the authoritative final attempt of a completed assignment.
      */
@@ -31,29 +38,34 @@ class CertificateEngine
             return null;
         }
 
-        // 3. Verify attempt is completed and marked final
+        // 3. Authoritative eligibility check (Simulator is NEVER eligible)
+        if (!$this->eligibilityService->canIssueCertificate($finalAttempt->test, $finalAttempt)) {
+            return null;
+        }
+
+        // 4. Verify attempt is completed and marked final
         if (!in_array($finalAttempt->status, [AttemptStatus::Submitted, AttemptStatus::Expired], true) || !$finalAttempt->is_final) {
             return null;
         }
 
-        // 4. Verify evaluation is complete (not pending evaluation)
+        // 5. Verify evaluation is complete (not pending evaluation)
         if ($finalAttempt->isPendingEvaluation()) {
             return null;
         }
 
-        // 5. Verify certificate eligibility (passed score threshold)
+        // 6. Verify certificate eligibility (passed score threshold)
         $result = app(ResultEngine::class)->generateResult($finalAttempt);
         if (!($result['is_passed'] ?? false)) {
             return null;
         }
 
-        // 6. Check existing certificate for final attempt (Idempotency)
+        // 7. Check existing certificate for final attempt (Idempotency)
         $existing = Certificate::where('attempt_id', $finalAttempt->id)->first();
         if ($existing) {
             return $existing;
         }
 
-        // 7. Check if a certificate was already created for any attempt of this assignment
+        // 8. Check if a certificate was already created for any attempt of this assignment
         $existingAssignmentCert = Certificate::whereIn('attempt_id', $assignment->attempts()->pluck('id'))->first();
         if ($existingAssignmentCert) {
             if ($existingAssignmentCert->attempt_id !== $finalAttempt->id) {
@@ -62,7 +74,7 @@ class CertificateEngine
             return $existingAssignmentCert;
         }
 
-        // 8. Generate authoritative certificate
+        // 9. Generate authoritative certificate
         $dateStr = now()->format('Ymd');
         $randomCode = strtoupper(Str::random(4));
         $certNumber = "CERT-{$dateStr}-{$randomCode}";
@@ -89,17 +101,12 @@ class CertificateEngine
      */
     public function issueCertificate(Attempt $attempt, string $template = 'internal'): ?Certificate
     {
+        $attempt->loadMissing(['test', 'assignment']);
         $test = $attempt->test;
-        if ($test && $test->isRealTest()) {
-            // For Mock Tests (Real Tests), certificates can ONLY be issued for authoritative final attempts
-            if (!$attempt->is_final || empty($attempt->assignment_id)) {
-                return null;
-            }
 
-            $assignment = $attempt->assignment;
-            if (!$assignment || $assignment->status !== 'completed' || $assignment->final_attempt_id !== $attempt->id) {
-                return null;
-            }
+        // Authoritative eligibility check (Simulator is NEVER eligible, Mock test checks finality)
+        if (!$this->eligibilityService->canIssueCertificate($test, $attempt)) {
+            return null;
         }
 
         $existing = Certificate::where('attempt_id', $attempt->id)->first();

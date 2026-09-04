@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Assessment\Engines\AttemptEngine;
 use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Engines\ScoringEngine;
+use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Assessment\Enums\ScoringMethod;
@@ -68,6 +69,7 @@ class ScoringFoundationLifecycleTest extends TestCase
             'title' => 'Test Assessment ' . $method->value,
             'slug' => 'test-assessment-' . $method->value . '-' . uniqid(),
             'test_type' => TestType::General,
+            'assessment_mode' => AssessmentMode::RealTest,
             'scoring_method' => $method,
             'duration_minutes' => 60,
             'pass_score' => $passScore,
@@ -173,6 +175,17 @@ class ScoringFoundationLifecycleTest extends TestCase
         $this->assertTrue($result['is_passed']);
         $this->assertFalse($result['is_pending_evaluation']);
         $this->assertEquals('Submitted & Completed', $result['completion_status']);
+
+        // Finalize attempt and assignment to issue certificate
+        $attempt->update(['is_final' => true]);
+        $assignment = \App\Modules\Assessment\Models\CandidateTestAssignment::create([
+            'test_id' => $test->id,
+            'user_id' => $this->candidate->id,
+            'status' => 'completed',
+            'final_attempt_id' => $attempt->id,
+        ]);
+        $attempt->update(['assignment_id' => $assignment->id]);
+        app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment);
 
         // Certificate must be issued for passed automatic test
         $this->assertDatabaseHas('certificates', [

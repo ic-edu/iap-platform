@@ -61,7 +61,9 @@ class InternalApiController extends Controller
     public function userCertificates(Request $request): JsonResponse
     {
         $user = $request->user();
-        $certs = Certificate::where('user_id', $user->id)->paginate(15);
+        $certs = Certificate::where('user_id', $user->id)
+            ->whereHas('attempt.test', fn($t) => $t->where('assessment_mode', '!=', \App\Modules\Assessment\Enums\AssessmentMode::Simulator->value))
+            ->paginate(15);
 
         return response()->json([
             'success' => true,

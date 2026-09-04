@@ -29,6 +29,14 @@ class VerificationService
             ];
         }
 
+        if ($certificate->attempt?->test?->isSimulator()) {
+            return [
+                'status' => 'not_eligible',
+                'message' => 'Practice Simulator assessments are not eligible for official certification.',
+                'certificate' => null,
+            ];
+        }
+
         if ($certificate->status->value === 'revoked') {
             return [
                 'status' => 'revoked',

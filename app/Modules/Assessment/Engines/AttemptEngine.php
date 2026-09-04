@@ -133,7 +133,8 @@ class AttemptEngine
         $result = $this->resultEngine->generateResult($attempt);
 
         // Certificate Decoupling: Real Tests / Mock Tests NEVER issue certificate on raw submission
-        if ((!$test || !$test->isRealTest()) && !$requiresEvaluation && ($result['is_passed'] ?? false)) {
+        // Simulators NEVER issue certificate.
+        if ($test && !$test->isSimulator() && !$test->isRealTest() && !$requiresEvaluation && ($result['is_passed'] ?? false)) {
             $this->certificateEngine->issueCertificate($attempt);
         }
 

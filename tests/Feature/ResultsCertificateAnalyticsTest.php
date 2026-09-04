@@ -64,7 +64,7 @@ test('certificate engine issues certificate with unique codes and events', funct
     Event::fake([CertificateIssued::class]);
     $engine = new CertificateEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Cert Test', 'slug' => 'cert-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Cert Test', 'slug' => 'cert-test', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::Submitted, 'total_score' => 90.0]);
 
     $cert = $engine->issueCertificate($attempt);
@@ -79,7 +79,7 @@ test('certificate engine issues certificate with unique codes and events', funct
 test('certificate engine returns existing certificate if already issued', function () {
     $engine = new CertificateEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Cert Dup', 'slug' => 'cert-dup', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Cert Dup', 'slug' => 'cert-dup', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::Submitted]);
 
     $c1 = $engine->issueCertificate($attempt);
@@ -92,7 +92,7 @@ test('certificate engine can reissue and revoke certificate', function () {
     Event::fake([CertificateReissued::class, CertificateRevoked::class]);
     $engine = new CertificateEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Cert 2', 'slug' => 'cert-2', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Cert 2', 'slug' => 'cert-2', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::Submitted]);
     $cert = $engine->issueCertificate($attempt);
 
@@ -109,7 +109,7 @@ test('verification service validates valid revoked and expired certificates', fu
     $verifService = new VerificationService;
     $engine = new CertificateEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Verif Test', 'slug' => 'verif-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Verif Test', 'slug' => 'verif-test', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::Submitted]);
 
     $cert = $engine->issueCertificate($attempt);
@@ -128,7 +128,7 @@ test('verification service validates valid revoked and expired certificates', fu
 test('public verification portal renders result for input code', function () {
     $engine = new CertificateEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Public Test', 'slug' => 'public-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'Public Test', 'slug' => 'public-test', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::Submitted]);
     $cert = $engine->issueCertificate($attempt);
 
@@ -179,7 +179,7 @@ test('admin can view certificates list and revoke certificate', function () {
 
     $engine = new CertificateEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Admin Cert', 'slug' => 'admin-cert', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $admin->id]);
+    $test = Test::create(['title' => 'Admin Cert', 'slug' => 'admin-cert', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $admin->id]);
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::Submitted]);
     $cert = $engine->issueCertificate($attempt);
 

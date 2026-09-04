@@ -81,7 +81,7 @@ test('api auth logout revokes access token', function () {
 
 test('public api verifies valid certificate code', function () {
     $user = User::factory()->create(['name' => 'John Doe']);
-    $test = Test::create(['title' => 'T1', 'slug' => 't1', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
+    $test = Test::create(['title' => 'T1', 'slug' => 't1', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $user->id]);
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id]);
 
     $cert = Certificate::create([
@@ -147,7 +147,7 @@ test('internal api lists question banks and tests for authenticated user', funct
 test('internal api lists user attempts and certificates', function () {
     $user = User::factory()->create();
     $teacher = User::factory()->create();
-    $test = Test::create(['title' => 'Test A', 'slug' => 'ta', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $teacher->id]);
+    $test = Test::create(['title' => 'Test A', 'slug' => 'ta', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'created_by' => $teacher->id]);
 
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id]);
     Certificate::create(['attempt_id' => $attempt->id, 'user_id' => $user->id, 'certificate_number' => 'C-01', 'verification_code' => 'V-01', 'status' => CertificateStatus::Valid]);

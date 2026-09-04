@@ -65,6 +65,13 @@ class CertificateAdminController extends Controller
      */
     public function download(Certificate $certificate): Response
     {
+        $certificate->loadMissing(['attempt.test', 'user']);
+
+        // Direct Download Protection: Simulator / Practice assessments are not certificate-eligible
+        if ($certificate->attempt?->test?->isSimulator()) {
+            abort(404, 'Certificate is not available for practice simulator assessments.');
+        }
+
         $html = $this->pdfService->renderCertificateHtml($certificate);
 
         return response($html)

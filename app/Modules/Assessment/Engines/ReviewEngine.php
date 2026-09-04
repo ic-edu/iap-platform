@@ -35,11 +35,19 @@ class ReviewEngine
         $resultPayload = $this->resultEngine->generateResult($attempt);
         $isPassed = $resultPayload['is_passed'];
 
+        $eligibilityService = app(\App\Modules\Certificate\Services\CertificateEligibilityService::class);
         $certificate = Certificate::where('attempt_id', $attempt->id)->first();
 
-        // Auto-issue if passed, evaluation complete, but certificate missing
-        if ($isPassed && !$attempt->isPendingEvaluation() && !$certificate) {
-            $certificate = app(CertificateEngine::class)->issueCertificate($attempt);
+        if ($certificate) {
+            // If certificate exists in database, ensure it is not from a simulator attempt
+            if (!$eligibilityService->isCertificateEligible($certificate)) {
+                $certificate = null;
+            }
+        } elseif ($eligibilityService->canIssueCertificate($attempt->test, $attempt)) {
+            // Auto-issue for passed, non-simulator, evaluation-complete attempt if missing
+            if ($isPassed && !$attempt->isPendingEvaluation()) {
+                $certificate = app(CertificateEngine::class)->issueCertificate($attempt);
+            }
         }
 
         $answersByQuestion = $attempt->answers->keyBy('question_id');
