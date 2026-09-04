@@ -28,17 +28,26 @@ class ResultEngine
         $testType = $attempt->test?->test_type;
         $isToeic = $testType === TestType::Toeic || (is_string($testType) && strtolower($testType) === 'toeic');
 
+        $isSimulator = $attempt->test ? $attempt->test->isSimulator() : true;
+
         if ($isToeic) {
             $toeicEval = app(TOEICScoringEngine::class)->evaluateAttempt($attempt);
             $finalScore = (float) $toeicEval['total_score'];
             $isPassed = !$isPendingEvaluation && $toeicEval['passed'];
             $toeicData = $toeicEval;
+            $isPractice = $toeicEval['is_practice'] ?? false;
         } else {
             // General or standard test scoring
             $finalScore = $rawScore;
-            // Check both raw score and accuracy percentage against pass_score threshold
-            $effectiveScore = max($rawScore, $percentage);
-            $isPassed = !$isPendingEvaluation && ($effectiveScore >= $passScore);
+            $isPractice = $isSimulator;
+            if ($isPractice) {
+                // Universal Simulator / Practice assessment: 75% accuracy pass threshold
+                $isPassed = !$isPendingEvaluation && ($totalQuestions > 0 ? ($percentage >= 75.00) : ($rawScore >= $passScore));
+            } else {
+                // Mock / Real test scoring against pass_score threshold
+                $effectiveScore = max($rawScore, $percentage);
+                $isPassed = !$isPendingEvaluation && ($effectiveScore >= $passScore);
+            }
             $toeicData = null;
         }
 
@@ -75,7 +84,7 @@ class ResultEngine
             'correct_count' => $correctCount,
             'toeic_breakdown' => $toeicData,
             'is_full_toeic' => $toeicData['is_full_toeic'] ?? false,
-            'is_practice' => $toeicData['is_practice'] ?? false,
+            'is_practice' => $isPractice,
             'score_label' => $toeicData['score_label'] ?? null,
             'certificate_id' => $certificate?->id,
             'certificate_number' => $certificate?->certificate_number,

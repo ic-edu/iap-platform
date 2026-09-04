@@ -260,7 +260,14 @@ class TOEICScoringEngine
             $totalScore = (float) $totalCorrect;
             $isPractice = true;
             $scoreLabel = $isMockTest ? 'Practice / Raw Score' : 'Practice Score';
-            $passed = ($totalScore >= $passScore) || ($percentage >= $passScore);
+
+            if (!$isMockTest) {
+                // Simulator / Practice assessment: 75% accuracy pass threshold
+                $passed = ($percentage >= 75.00);
+            } else {
+                // Non-full mock test in mock mode
+                $passed = ($totalScore >= $passScore) || ($percentage >= $passScore);
+            }
         }
 
         return [
