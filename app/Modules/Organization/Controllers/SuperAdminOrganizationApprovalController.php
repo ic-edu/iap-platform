@@ -3,9 +3,11 @@
 namespace App\Modules\Organization\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Models\Organization;
 use App\Modules\Organization\Models\OrganizationGroup;
+use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,6 +85,23 @@ class SuperAdminOrganizationApprovalController extends Controller
             ]
         );
 
+        $recipient = $organization->submitter ?? $organization->creator;
+        if ($recipient) {
+            try {
+                $recipient->notify(new EnterpriseSystemNotification(
+                    title: 'Organization Approved',
+                    message: "Organization '{$organization->name}' has been approved by Super Admin {$request->user()?->name} and is now Active.",
+                    type: 'ORGANIZATION_APPROVED',
+                    priority: 'HIGH',
+                    entityType: 'organization',
+                    entityId: (string) $organization->id,
+                    targetUrl: route('admin.organizations.index')
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
         return back()->with('status', "Organization '{$organization->name}' has been approved and is now Active.");
     }
 
@@ -112,6 +131,23 @@ class SuperAdminOrganizationApprovalController extends Controller
             ]
         );
 
+        $recipient = $organization->submitter ?? $organization->creator;
+        if ($recipient) {
+            try {
+                $recipient->notify(new EnterpriseSystemNotification(
+                    title: 'Organization Needs Revision',
+                    message: "Super Admin {$request->user()?->name} requested revisions for '{$organization->name}': {$validated['revision_note']}",
+                    type: 'ORGANIZATION_NEEDS_REVISION',
+                    priority: 'HIGH',
+                    entityType: 'organization',
+                    entityId: (string) $organization->id,
+                    targetUrl: route('admin.organizations.edit', $organization->id)
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
         return back()->with('status', "Organization '{$organization->name}' returned to Registration Admin for revision.");
     }
 
@@ -140,6 +176,23 @@ class SuperAdminOrganizationApprovalController extends Controller
                 'rejection_reason' => $validated['rejection_reason'],
             ]
         );
+
+        $recipient = $organization->submitter ?? $organization->creator;
+        if ($recipient) {
+            try {
+                $recipient->notify(new EnterpriseSystemNotification(
+                    title: 'Organization Rejected',
+                    message: "Super Admin {$request->user()?->name} rejected organization '{$organization->name}'. Reason: {$validated['rejection_reason']}",
+                    type: 'ORGANIZATION_REJECTED',
+                    priority: 'HIGH',
+                    entityType: 'organization',
+                    entityId: (string) $organization->id,
+                    targetUrl: route('admin.organizations.index')
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
 
         return back()->with('status', "Organization '{$organization->name}' has been rejected.");
     }

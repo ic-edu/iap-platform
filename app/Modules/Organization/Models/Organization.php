@@ -149,6 +149,11 @@ class Organization extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function isDraft(): bool
+    {
+        return $this->status === OrganizationStatus::Draft;
+    }
+
     public function isPending(): bool
     {
         return $this->status === OrganizationStatus::Pending;

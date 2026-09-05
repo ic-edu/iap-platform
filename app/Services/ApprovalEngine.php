@@ -7,6 +7,9 @@ use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Commerce\Domain\Models\PriceChangeRequest;
+use App\Modules\Organization\Enums\OrganizationStatus;
+use App\Modules\Organization\Models\Organization;
+use App\Modules\Organization\Models\OrganizationGroup;
 use App\Modules\QuestionBank\Models\QuestionBank;
 
 class ApprovalEngine
@@ -36,6 +39,8 @@ class ApprovalEngine
             'user_creations' => fn (): int => UserCreationRequest::where('status', 'pending')->count(),
             'user_deletions' => fn (): int => UserDeletionRequest::where('status', 'pending')->count(),
             'price_changes' => fn (): int => PriceChangeRequest::where('status', 'pending')->count(),
+            'organizations' => fn (): int => Organization::where('status', OrganizationStatus::Pending->value)->count(),
+            'organization_groups' => fn (): int => OrganizationGroup::where('approval_status', 'pending')->count(),
         ];
     }
 

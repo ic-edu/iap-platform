@@ -98,6 +98,10 @@
                                     <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                                         Active
                                     </span>
+                                @elseif($org->isDraft())
+                                    <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-500/20 text-slate-600 dark:text-slate-400 border border-slate-500/30">
+                                        Draft
+                                    </span>
                                 @elseif($org->isPending())
                                     <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                                         Pending Approval
@@ -156,13 +160,20 @@
                                             </form>
                                         </div>
                                     </div>
+                                @elseif($org->isDraft())
+                                    <a href="{{ route('admin.organizations.edit', $org->id) }}" class="text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-300">Edit</a>
+                                    <form method="POST" action="{{ route('admin.organizations.submit', $org->id) }}" class="inline">
+                                        @csrf
+                                        <button type="submit" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded shadow transition-colors">
+                                            Submit for Approval
+                                        </button>
+                                    </form>
                                 @elseif($org->needsRevision())
                                     <a href="{{ route('admin.organizations.edit', $org->id) }}" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded shadow">
                                         Edit & Resubmit
                                     </a>
                                 @elseif($org->isPending())
-                                    <a href="{{ route('admin.organizations.edit', $org->id) }}" class="text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-300">Edit</a>
-                                    <span class="text-[11px] text-amber-600 dark:text-amber-400 italic">Awaiting Approval</span>
+                                    <span class="text-[11px] text-amber-600 dark:text-amber-400 font-medium italic">Awaiting Approval</span>
                                 @elseif($org->isSuspended())
                                     <a href="{{ route('admin.organizations.edit', $org->id) }}" class="text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-300">Edit</a>
                                     <form method="POST" action="{{ route('admin.organizations.activate', $org->id) }}" class="inline">

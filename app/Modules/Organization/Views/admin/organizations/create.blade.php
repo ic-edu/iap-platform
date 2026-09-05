@@ -12,13 +12,12 @@
     </div>
 
     <!-- Governance Notice Banner -->
-    <div class="mb-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex items-start gap-3">
+    <div class="mb-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs flex items-start gap-3">
         <span class="text-base">ℹ️</span>
         <div>
-            <div class="font-semibold text-white mb-0.5">Approval Governance Workflow</div>
-            <p class="text-slate-400">
-                Submitting this form creates the organization in <strong>Pending Approval</strong> status.
-                Once reviewed and approved by Super Admin, you can issue primary coordinator onboarding invitations.
+            <div class="font-semibold text-slate-900 dark:text-white mb-0.5">Approval Governance Workflow</div>
+            <p class="text-slate-600 dark:text-slate-400">
+                You can <strong>Save Draft</strong> to keep working on this organization privately, or <strong>Submit for Approval</strong> to send it to Super Admin for official review.
             </p>
         </div>
     </div>
@@ -33,18 +32,18 @@
         </div>
     @endif
 
-    <div class="max-w-3xl bg-slate-950/80 border border-slate-800 rounded-xl p-6 shadow-sm">
+    <div class="max-w-3xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
         <form method="POST" action="{{ route('admin.organizations.store') }}" class="space-y-5">
             @csrf
             <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Organization Name *</label>
+                <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Organization Name *</label>
                 <input type="text" name="name" value="{{ old('name') }}" required placeholder="e.g. Jakarta State University"
-                       class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                       class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
             </div>
 
             <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Organization Type *</label>
-                <select name="organization_type" required class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Organization Type *</label>
+                <select name="organization_type" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                     @foreach($types as $t)
                         <option value="{{ $t->value }}" {{ old('organization_type') === $t->value ? 'selected' : '' }}>{{ $t->label() }}</option>
                     @endforeach
@@ -53,39 +52,40 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Official Email</label>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Official Email</label>
                     <input type="email" name="email" value="{{ old('email') }}" placeholder="contact@example.edu"
-                           class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                           class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number</label>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                     <input type="text" name="phone" value="{{ old('phone') }}" placeholder="+62 21 1234567"
-                           class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                           class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">City</label>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">City</label>
                     <input type="text" name="city" value="{{ old('city') }}" placeholder="Jakarta"
-                           class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                           class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Website</label>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Website</label>
                     <input type="url" name="website" value="{{ old('website') }}" placeholder="https://example.edu"
-                           class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                           class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Address</label>
+                <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Address</label>
                 <textarea name="address" rows="2" placeholder="Campus / Office Street Address..."
-                          class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">{{ old('address') }}</textarea>
+                          class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">{{ old('address') }}</textarea>
             </div>
 
-            <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
-                <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg transition-colors">Cancel</a>
-                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Submit for Approval</button>
+            <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
+                <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg transition-colors">Cancel</a>
+                <button type="submit" name="action" value="draft" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">Save Draft</button>
+                <button type="submit" name="action" value="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Submit for Approval</button>
             </div>
         </form>
     </div>

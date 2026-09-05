@@ -42,19 +42,19 @@
         </div>
     @endif
 
-    <div class="max-w-3xl bg-slate-950/80 border border-slate-800 rounded-xl p-6 shadow-sm">
+    <div class="max-w-3xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
         <form method="POST" action="{{ route('admin.organizations.update', $organization->id) }}" class="space-y-5">
             @csrf
             @method('PUT')
             <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Organization Name *</label>
+                <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Organization Name *</label>
                 <input type="text" name="name" value="{{ old('name', $organization->name) }}" required
-                       class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                       class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
             </div>
 
             <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Organization Type *</label>
-                <select name="organization_type" required class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Organization Type *</label>
+                <select name="organization_type" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                     @foreach($types as $t)
                         <option value="{{ $t->value }}" {{ old('organization_type', $organization->organization_type->value) === $t->value ? 'selected' : '' }}>{{ $t->label() }}</option>
                     @endforeach
@@ -63,48 +63,47 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Official Email</label>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Official Email</label>
                     <input type="email" name="email" value="{{ old('email', $organization->email) }}"
-                           class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                           class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number</label>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                     <input type="text" name="phone" value="{{ old('phone', $organization->phone) }}"
-                           class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                           class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">City</label>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">City</label>
                     <input type="text" name="city" value="{{ old('city', $organization->city) }}"
-                           class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                           class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Website</label>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Website</label>
                     <input type="url" name="website" value="{{ old('website', $organization->website) }}" placeholder="https://example.edu"
-                           class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
+                           class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Address</label>
+                <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Address</label>
                 <textarea name="address" rows="2"
-                          class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">{{ old('address', $organization->address) }}</textarea>
+                          class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">{{ old('address', $organization->address) }}</textarea>
             </div>
 
-            @if($organization->needsRevision() || $organization->isRejected())
-                <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex items-center gap-2">
-                    <input type="checkbox" name="resubmit" id="resubmit" value="1" checked class="rounded border-slate-800 bg-slate-900 text-indigo-600 focus:ring-indigo-500">
-                    <label for="resubmit" class="text-xs text-indigo-300 font-medium">Resubmit to Super Admin approval queue upon saving</label>
-                </div>
-            @endif
-
-            <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
-                <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg transition-colors">Cancel</a>
-                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">
-                    {{ ($organization->needsRevision() || $organization->isRejected()) ? 'Save & Resubmit' : 'Save Changes' }}
-                </button>
+            <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
+                <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg transition-colors">Cancel</a>
+                @if($organization->isDraft())
+                    <button type="submit" name="action" value="draft" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">Save Draft</button>
+                    <button type="submit" name="action" value="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Submit for Approval</button>
+                @elseif($organization->needsRevision() || $organization->isRejected())
+                    <button type="submit" name="action" value="draft" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">Save Draft</button>
+                    <button type="submit" name="action" value="resubmit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Save &amp; Resubmit</button>
+                @else
+                    <button type="submit" name="action" value="save" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Save Changes</button>
+                @endif
             </div>
         </form>
     </div>

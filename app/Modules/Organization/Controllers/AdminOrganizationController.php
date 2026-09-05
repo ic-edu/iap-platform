@@ -10,6 +10,7 @@ use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Enums\OrganizationType;
 use App\Modules\Organization\Models\Organization;
 use App\Modules\Organization\Models\OrganizationInvitation;
+use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -70,7 +71,7 @@ class AdminOrganizationController extends Controller
     }
 
     /**
-     * Store new Organization in Pending status awaiting Super Admin approval.
+     * Store new Organization (Save Draft or Submit for Super Admin approval).
      */
     public function store(Request $request): RedirectResponse
     {
@@ -85,7 +86,10 @@ class AdminOrganizationController extends Controller
             'province'          => ['nullable', 'string', 'max:100'],
             'country'           => ['nullable', 'string', 'max:100'],
             'postal_code'       => ['nullable', 'string', 'max:20'],
+            'action'            => ['nullable', 'string'],
         ]);
+
+        $action = $request->input('action', 'submit');
 
         $baseSlug = Str::slug($validated['name']);
         $slug = $baseSlug;
@@ -93,6 +97,42 @@ class AdminOrganizationController extends Controller
         while (Organization::where('slug', $slug)->exists()) {
             $slug = "{$baseSlug}-{$counter}";
             $counter++;
+        }
+
+        if ($action === 'draft') {
+            $organization = Organization::create([
+                'name'              => $validated['name'],
+                'slug'              => $slug,
+                'organization_type' => $validated['organization_type'],
+                'email'             => $validated['email'] ?? null,
+                'phone'             => $validated['phone'] ?? null,
+                'website'           => $validated['website'] ?? null,
+                'address'           => $validated['address'] ?? null,
+                'city'              => $validated['city'] ?? null,
+                'province'          => $validated['province'] ?? null,
+                'country'           => $validated['country'] ?? 'Indonesia',
+                'postal_code'       => $validated['postal_code'] ?? null,
+                'status'            => OrganizationStatus::Draft,
+                'created_by'        => Auth::id(),
+                'submitted_by'      => null,
+                'submitted_at'      => null,
+            ]);
+
+            ActivityLogger::log(
+                action: 'ORG_DRAFT_SAVED',
+                description: "Registration Admin saved draft organization '{$organization->name}'",
+                subject: $organization,
+                properties: [
+                    'organization_id' => $organization->id,
+                    'name'            => $organization->name,
+                    'slug'            => $organization->slug,
+                    'type'            => $organization->organization_type->value,
+                    'status'          => $organization->status->value,
+                ]
+            );
+
+            return redirect()->route('admin.organizations.index')
+                ->with('status', "Organization '{$organization->name}' saved as draft.");
         }
 
         $organization = Organization::create([
@@ -126,6 +166,24 @@ class AdminOrganizationController extends Controller
             ]
         );
 
+        $user = $request->user();
+        $superAdmins = User::role('super-admin')->get();
+        foreach ($superAdmins as $sa) {
+            try {
+                $sa->notify(new EnterpriseSystemNotification(
+                    title: 'New Organization Approval Request',
+                    message: "Registration Admin {$user?->name} submitted organization '{$organization->name}' for Super Admin approval.",
+                    type: 'ORGANIZATION_APPROVAL_REQUEST',
+                    priority: 'HIGH',
+                    entityType: 'organization',
+                    entityId: (string) $organization->id,
+                    targetUrl: route('admin.approvals.organizations')
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
+
         return redirect()->route('admin.organizations.index')
             ->with('status', "Organization '{$organization->name}' created and submitted for Super Admin approval.");
     }
@@ -133,8 +191,13 @@ class AdminOrganizationController extends Controller
     /**
      * Show Organization Edit Form.
      */
-    public function edit(Organization $organization): View
+    public function edit(Organization $organization): View|RedirectResponse
     {
+        if ($organization->isPending()) {
+            return redirect()->route('admin.organizations.index')
+                ->with('error', "Organization '{$organization->name}' is currently awaiting Super Admin approval and cannot be modified.");
+        }
+
         $types = OrganizationType::cases();
         $statuses = OrganizationStatus::cases();
 
@@ -146,6 +209,11 @@ class AdminOrganizationController extends Controller
      */
     public function update(Request $request, Organization $organization): RedirectResponse
     {
+        if ($organization->isPending()) {
+            return redirect()->route('admin.organizations.index')
+                ->with('error', "Organization '{$organization->name}' is currently awaiting Super Admin approval and cannot be modified.");
+        }
+
         $validated = $request->validate([
             'name'              => ['required', 'string', 'max:255'],
             'organization_type' => ['required', Rule::in(OrganizationType::values())],
@@ -157,10 +225,12 @@ class AdminOrganizationController extends Controller
             'province'          => ['nullable', 'string', 'max:100'],
             'country'           => ['nullable', 'string', 'max:100'],
             'postal_code'       => ['nullable', 'string', 'max:20'],
+            'action'            => ['nullable', 'string'],
             'resubmit'          => ['nullable', 'boolean'],
         ]);
 
-        $resubmit = $request->boolean('resubmit') || $organization->needsRevision();
+        $action = $request->input('action');
+        $isSubmitting = ($action === 'submit' || $action === 'resubmit' || ($action !== 'draft' && ($request->boolean('resubmit') || $organization->needsRevision())));
 
         $updateData = [
             'name'              => $validated['name'],
@@ -175,30 +245,60 @@ class AdminOrganizationController extends Controller
             'postal_code'       => $validated['postal_code'] ?? null,
         ];
 
-        if ($resubmit) {
+        if ($isSubmitting) {
             $updateData['status'] = OrganizationStatus::Pending;
             $updateData['submitted_by'] = Auth::id();
             $updateData['submitted_at'] = now();
             $updateData['revision_note'] = null;
+            $updateData['rejection_reason'] = null;
         }
 
         $organization->update($updateData);
 
+        if ($isSubmitting) {
+            ActivityLogger::log(
+                action: 'ORG_SUBMITTED_FOR_APPROVAL',
+                description: "Registration Admin submitted organization '{$organization->name}' for Super Admin approval",
+                subject: $organization,
+                properties: [
+                    'organization_id' => $organization->id,
+                    'resubmitted'     => true,
+                ]
+            );
+
+            $user = $request->user();
+            $superAdmins = User::role('super-admin')->get();
+            foreach ($superAdmins as $sa) {
+                try {
+                    $sa->notify(new EnterpriseSystemNotification(
+                        title: 'New Organization Approval Request',
+                        message: "Registration Admin {$user?->name} submitted organization '{$organization->name}' for Super Admin approval.",
+                        type: 'ORGANIZATION_APPROVAL_REQUEST',
+                        priority: 'HIGH',
+                        entityType: 'organization',
+                        entityId: (string) $organization->id,
+                        targetUrl: route('admin.approvals.organizations')
+                    ));
+                } catch (\Throwable $e) {
+                    // Silently handle in dev
+                }
+            }
+
+            return redirect()->route('admin.organizations.index')
+                ->with('status', "Organization '{$organization->name}' updated and submitted for Super Admin approval.");
+        }
+
         ActivityLogger::log(
-            action: 'ORG_UPDATED',
-            description: "Registration Admin updated organization '{$organization->name}'" . ($resubmit ? " and resubmitted for approval" : ""),
+            action: $organization->isDraft() ? 'ORG_DRAFT_SAVED' : 'ORG_UPDATED',
+            description: "Registration Admin updated organization '{$organization->name}'",
             subject: $organization,
             properties: [
                 'organization_id' => $organization->id,
-                'resubmitted'     => $resubmit,
             ]
         );
 
-        $msg = $resubmit
-            ? "Organization '{$organization->name}' updated and resubmitted for Super Admin approval."
-            : "Organization '{$organization->name}' updated successfully.";
-
-        return redirect()->route('admin.organizations.index')->with('status', $msg);
+        return redirect()->route('admin.organizations.index')
+            ->with('status', "Organization '{$organization->name}' updated successfully.");
     }
 
     /**
@@ -206,11 +306,16 @@ class AdminOrganizationController extends Controller
      */
     public function submitForApproval(Request $request, Organization $organization): RedirectResponse
     {
+        if ($organization->isPending()) {
+            return back()->with('status', "Organization '{$organization->name}' is already awaiting Super Admin approval.");
+        }
+
         $organization->update([
-            'status'        => OrganizationStatus::Pending,
-            'submitted_by'  => Auth::id(),
-            'submitted_at'  => now(),
-            'revision_note' => null,
+            'status'           => OrganizationStatus::Pending,
+            'submitted_by'     => Auth::id(),
+            'submitted_at'     => now(),
+            'revision_note'    => null,
+            'rejection_reason' => null,
         ]);
 
         ActivityLogger::log(
@@ -219,6 +324,24 @@ class AdminOrganizationController extends Controller
             subject: $organization,
             properties: ['organization_id' => $organization->id]
         );
+
+        $user = $request->user();
+        $superAdmins = User::role('super-admin')->get();
+        foreach ($superAdmins as $sa) {
+            try {
+                $sa->notify(new EnterpriseSystemNotification(
+                    title: 'New Organization Approval Request',
+                    message: "Registration Admin {$user?->name} submitted organization '{$organization->name}' for Super Admin approval.",
+                    type: 'ORGANIZATION_APPROVAL_REQUEST',
+                    priority: 'HIGH',
+                    entityType: 'organization',
+                    entityId: (string) $organization->id,
+                    targetUrl: route('admin.approvals.organizations')
+                ));
+            } catch (\Throwable $e) {
+                // Silently handle in dev
+            }
+        }
 
         return back()->with('status', "Organization '{$organization->name}' submitted for Super Admin approval.");
     }
