@@ -999,4 +999,27 @@ class OrganizationDomainFoundationTest extends TestCase
         $saApprovals->assertSee('Assessment Platform', false);
         $saApprovals->assertSee('Organization Approvals & Governance', false);
     }
+
+    /**
+     * TEST UI-05: RA Organization index light-theme normalization and token compliance.
+     */
+    public function test_ui_05_ra_organization_index_light_mode_table_theme_normalization(): void
+    {
+        $response = $this->actingAs($this->adminRA)->get(route('admin.organizations.index'));
+        $response->assertStatus(200);
+
+        // Verify table header light & dark paired tokens
+        $response->assertSee('border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400', false);
+
+        // Verify no un-prefixed dark island on the thead tr
+        $response->assertDontSee('border-b border-slate-800 bg-slate-900/50 text-[11px] font-semibold uppercase text-slate-400', false);
+
+        // Verify table and filter container styling
+        $response->assertSee('bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm', false);
+        $response->assertSee('bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm', false);
+
+        // Verify tbody divider and hover states
+        $response->assertSee('divide-y divide-slate-200 dark:divide-slate-800/60', false);
+        $response->assertSee('hover:bg-slate-50 dark:hover:bg-slate-900/40', false);
+    }
 }
