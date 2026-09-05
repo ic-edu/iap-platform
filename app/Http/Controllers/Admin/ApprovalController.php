@@ -9,6 +9,8 @@ use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Commerce\Domain\Models\PriceChangeRequest;
+use App\Modules\Organization\Enums\OrganizationStatus;
+use App\Modules\Organization\Models\Organization;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
@@ -60,13 +62,14 @@ class ApprovalController extends Controller
             ->get();
 
         $publishedCount = Test::where('is_published', true)->count();
-        $pendingCount = Test::where('status', 'pending_approval')->count();
+        $pendingCount = Test::where('status', 'pending')->count();
         $pendingQuestionBankCount = $pendingQuestionBanks->count();
         $pendingQuestionBankArchiveCount = $pendingArchiveRequests->count();
         $pendingRestorationCount = $pendingRestorationRequests->count();
         $pendingUserCreationCount = $userCreationRequests->count();
         $pendingUserDeletionCount = $userDeletionRequests->count();
         $pendingPriceChangeCount = $pendingPriceChangeRequests->count();
+        $pendingOrganizationCount = Organization::where('status', OrganizationStatus::Pending->value)->count();
 
         return view('admin.approvals.index', compact(
             'pendingTests',
@@ -83,7 +86,8 @@ class ApprovalController extends Controller
             'userDeletionRequests',
             'pendingUserDeletionCount',
             'pendingPriceChangeRequests',
-            'pendingPriceChangeCount'
+            'pendingPriceChangeCount',
+            'pendingOrganizationCount'
         ));
     }
 

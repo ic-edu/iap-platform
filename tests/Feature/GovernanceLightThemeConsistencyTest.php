@@ -79,6 +79,6 @@ class GovernanceLightThemeConsistencyTest extends TestCase
     {
         $response = $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'));
         $response->assertStatus(200);
-        $response->assertSee('Super Admin Content Approval Command Center');
+        $response->assertSee('Super Admin Governance & Approval Command Center', false);
     }
 }

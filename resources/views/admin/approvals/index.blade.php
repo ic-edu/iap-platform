@@ -4,9 +4,9 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>🛡️</span> Super Admin Content Approval Command Center
+                <span>🛡️</span> Super Admin Governance & Approval Command Center
             </h1>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">High-level governance summary and authorization command center for institutional assessments, question banks, staff creations, deletion requests, and commercial price change proposals.</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">High-level governance summary and authorization command center for institutional assessments, question banks, staff creations, deletion requests, commercial price change proposals, and partner organization approvals.</p>
         </div>
     </div>
 
@@ -33,7 +33,7 @@
     @endif
 
     <!-- Command Center Metrics Summary Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <!-- 1. Pending Assessments -->
         <a href="{{ route('admin.approvals.assessments') }}" class="gov-card p-5 hover:border-amber-500/50 flex items-center justify-between transition-all group no-underline">
             <div>
@@ -106,7 +106,19 @@
             <span class="text-4xl p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">📩</span>
         </a>
 
-        <!-- 7. Pending Price Changes -->
+        <!-- 7. Pending Organizations -->
+        <a href="{{ route('admin.approvals.organizations') }}" class="gov-card p-5 hover:border-amber-500/50 flex items-center justify-between transition-all group no-underline">
+            <div>
+                <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider block">Pending Organizations</span>
+                <span class="text-3xl font-extrabold text-amber-500 dark:text-amber-400 my-1 block">{{ $pendingOrganizationCount ?? 0 }}</span>
+                <span class="text-xs text-amber-600 dark:text-amber-400 group-hover:underline font-semibold flex items-center gap-1">
+                    Organization Queue &rarr;
+                </span>
+            </div>
+            <span class="text-4xl p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">🏛️</span>
+        </a>
+
+        <!-- 8. Pending Price Changes -->
         <div class="gov-card p-5 flex items-center justify-between transition-all">
             <div>
                 <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider block">Pending Price Changes</span>
