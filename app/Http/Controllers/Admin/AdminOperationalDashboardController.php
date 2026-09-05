@@ -54,6 +54,9 @@ class AdminOperationalDashboardController extends Controller
         // 7. Pending Organization Approvals (Awaiting Super Admin review)
         $pendingOrganizationsCount = Organization::where('status', OrganizationStatus::Pending)->count();
 
+        // 8. Active Organizations (Approved & operational institutions)
+        $activeOrganizationsCount = Organization::where('status', OrganizationStatus::Active)->count();
+
         // ACTION PANEL: Candidates Requiring Action (Paid Real Test awaiting Admin Assignment)
         $paidOrders = Order::with(['user', 'items.product.test', 'invoice.payments'])
             ->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]))
@@ -128,6 +131,7 @@ class AdminOperationalDashboardController extends Controller
             'inProgressAttemptsCount',
             'totalCertificatesIssued',
             'pendingOrganizationsCount',
+            'activeOrganizationsCount',
             'actionRequiredCandidates',
             'recentAssignments',
             'availableTests',
