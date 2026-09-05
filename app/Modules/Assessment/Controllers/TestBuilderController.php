@@ -344,7 +344,7 @@ class TestBuilderController extends Controller
         // Regular Admin Operational View: Render Assessment Candidate Assignment & Management workspace
         if ($user && $user->hasRole('admin') && !$user->hasRole(['teacher', 'repository-manager'])) {
             $assignedCandidates = $test->assignments()->with(['user', 'assignedBy'])->latest('assigned_at')->get();
-            $availableStudents = \App\Models\User::role('student')->get();
+            $availableStudents = $test->isSimulator() ? collect() : app(\App\Modules\Assessment\Engines\AssignmentEngine::class)->getEligibleCandidates($test);
             return view('assessment::admin_show', compact('test', 'assignedCandidates', 'availableStudents'));
         }
 
@@ -1564,6 +1564,10 @@ class TestBuilderController extends Controller
      */
     public function assignCandidate(Request $request, Test $test): RedirectResponse
     {
+        if ($test->isSimulator()) {
+            return back()->with('error', "Test Simulator '{$test->title}' uses open candidate access and does not support manual candidate assignment.");
+        }
+
         $validated = $request->validate([
             'candidate_id' => ['required', 'exists:users,id'],
         ]);

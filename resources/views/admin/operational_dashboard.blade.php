@@ -232,7 +232,11 @@
                             </span>
                         </div>
                         <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            {{ $test->active_assignments_count }} Active Candidate(s) Assigned
+                            @if($test->isSimulator())
+                                Automatic / Open Candidate Access
+                            @else
+                                {{ $test->active_assignments_count }} Active Candidate(s) Assigned
+                            @endif
                         </p>
                     </div>
                     <a href="{{ route('admin.tests.show', $test->id) }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 transition-colors flex-shrink-0">

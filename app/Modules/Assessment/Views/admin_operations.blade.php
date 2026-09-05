@@ -158,18 +158,22 @@
                         </td>
                         <td class="px-5 py-4">
                             <div class="text-slate-200 font-semibold">{{ $test->duration_minutes }} mins</div>
-                            <div class="text-[11px] text-slate-400 mt-0.5">Pass: {{ $test->pass_score }} pts</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">Pass: {{ $test->getPassingThresholdDisplay() }}</div>
                         </td>
                         <td class="px-5 py-4">
                             <div class="text-slate-200 font-semibold">{{ $qCount }} questions</div>
                             <div class="text-[11px] text-slate-400 mt-0.5">{{ $test->sections->count() }} section(s)</div>
                         </td>
                         <td class="px-5 py-4">
+                            @if($isReal)
                             <div class="flex items-center gap-1.5">
                                 <span class="w-2 h-2 rounded-full {{ $activeAssignments > 0 ? 'bg-emerald-400' : 'bg-slate-600' }}"></span>
                                 <span class="font-bold text-white">{{ $activeAssignments }}</span>
                                 <span class="text-[11px] text-slate-400">candidate(s)</span>
                             </div>
+                            @else
+                            <div class="text-[11px] font-medium text-emerald-400">Open Access</div>
+                            @endif
                         </td>
                         <td class="px-5 py-4">
                             <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $test->is_published ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400 border border-slate-700' }}">
@@ -178,7 +182,7 @@
                         </td>
                         <td class="px-5 py-4 text-right">
                             <a href="{{ route('admin.tests.show', $test->id) }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20">
-                                <span>Manage Assignments &rarr;</span>
+                                <span>{{ $isReal ? 'Manage Assignments →' : 'View Details →' }}</span>
                             </a>
                         </td>
                     </tr>

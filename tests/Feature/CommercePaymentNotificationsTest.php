@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Academic\Models\Course;
 use App\Modules\Academic\Models\CourseCategory;
 use App\Modules\Academic\Models\CourseEnrollment;
+use App\Modules\Assessment\Engines\AssignmentEngine;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestSection;
@@ -537,7 +538,10 @@ class CommercePaymentNotificationsTest extends \Tests\TestCase
             ->where('test_id', $this->simulatorTest->id)
             ->first();
 
-        $this->assertNotNull($assignment, 'Simulator test must be assigned alongside notifications.');
+        // Simulator is open access and does not require CandidateTestAssignment
+        $this->assertNull($assignment, 'Simulator test does not require CandidateTestAssignment.');
+        $this->assertTrue(app(AssignmentEngine::class)->isEligibleToStart($this->simulatorTest, $this->candidate));
+        $this->assertNotEmpty($this->candidate->notifications()->get());
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

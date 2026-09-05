@@ -90,7 +90,47 @@ test('assignment engine assigns and revokes test assignments', function () {
     Event::fake([TestAssigned::class, AssignmentRevoked::class]);
     $engine = new AssignmentEngine;
     $user = User::factory()->create();
-    $test = Test::create(['title' => 'Assign Test', 'slug' => 'assign-test', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'status' => 'published', 'is_published' => true, 'created_by' => $user->id]);
+    $user->assignRole('student');
+    $test = Test::create(['title' => 'Assign Test', 'slug' => 'assign-test', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'is_published' => true, 'created_by' => $user->id]);
+
+    $product = \App\Modules\Commerce\Domain\Models\Product::create([
+        'title' => 'Assign Test Product',
+        'slug' => 'assign-test-prod-' . \Illuminate\Support\Str::random(5),
+        'product_type' => 'assessment',
+        'price' => 100000,
+        'is_active' => true,
+        'test_id' => $test->id,
+    ]);
+    $order = \App\Modules\Commerce\Domain\Models\Order::create([
+        'user_id' => $user->id,
+        'order_number' => 'ORD-' . \Illuminate\Support\Str::random(8),
+        'status' => \App\Modules\Commerce\Domain\Enums\OrderStatus::Completed,
+        'subtotal' => 100000,
+        'grand_total' => 100000,
+    ]);
+    \App\Modules\Commerce\Domain\Models\OrderItem::create([
+        'order_id' => $order->id,
+        'product_id' => $product->id,
+        'quantity' => 1,
+        'price' => 100000,
+        'total' => 100000,
+    ]);
+    $invoice = \App\Modules\Commerce\Domain\Models\Invoice::create([
+        'order_id' => $order->id,
+        'user_id' => $user->id,
+        'invoice_number' => 'INV-' . \Illuminate\Support\Str::random(8),
+        'amount' => 100000,
+        'status' => \App\Modules\Commerce\Domain\Enums\InvoiceStatus::Paid,
+    ]);
+    \App\Modules\Commerce\Domain\Models\Payment::create([
+        'invoice_id' => $invoice->id,
+        'user_id' => $user->id,
+        'amount' => 100000,
+        'payment_gateway' => 'manual_transfer',
+        'reference_number' => 'PAY-' . \Illuminate\Support\Str::random(8),
+        'status' => \App\Modules\Commerce\Domain\Enums\PaymentStatus::Success,
+        'transaction_id' => 'TXN-' . \Illuminate\Support\Str::random(8),
+    ]);
 
     $attempt = $engine->assignToUser($test, $user);
     expect($attempt->user_id)->toBe($user->id);
@@ -105,12 +145,52 @@ test('assignment engine assigns test to enrolled course students', function () {
     $engine = new AssignmentEngine;
     $enrollEngine = new EnrollmentEngine;
     $student = User::factory()->create();
+    $student->assignRole('student');
     $teacher = User::factory()->create();
     $cat = CourseCategory::create(['name' => 'Cat Course', 'slug' => 'cat-course']);
     $course = Course::create(['title' => 'Course Target', 'slug' => 'course-target', 'code' => 'CT', 'category_id' => $cat->id, 'level' => CourseLevel::Beginner, 'is_published' => true]);
     $enrollEngine->enrollStudent($course, $student);
 
-    $test = Test::create(['title' => 'Course Exam', 'slug' => 'course-exam', 'test_type' => TestType::General, 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'status' => 'published', 'is_published' => true, 'created_by' => $teacher->id]);
+    $test = Test::create(['title' => 'Course Exam', 'slug' => 'course-exam', 'test_type' => TestType::General, 'assessment_mode' => 'real_test', 'duration_minutes' => 60, 'pass_score' => 70, 'status' => 'published', 'is_published' => true, 'created_by' => $teacher->id]);
+
+    $product = \App\Modules\Commerce\Domain\Models\Product::create([
+        'title' => 'Course Exam Product',
+        'slug' => 'course-exam-prod-' . \Illuminate\Support\Str::random(5),
+        'product_type' => 'assessment',
+        'price' => 100000,
+        'is_active' => true,
+        'test_id' => $test->id,
+    ]);
+    $order = \App\Modules\Commerce\Domain\Models\Order::create([
+        'user_id' => $student->id,
+        'order_number' => 'ORD-' . \Illuminate\Support\Str::random(8),
+        'status' => \App\Modules\Commerce\Domain\Enums\OrderStatus::Completed,
+        'subtotal' => 100000,
+        'grand_total' => 100000,
+    ]);
+    \App\Modules\Commerce\Domain\Models\OrderItem::create([
+        'order_id' => $order->id,
+        'product_id' => $product->id,
+        'quantity' => 1,
+        'price' => 100000,
+        'total' => 100000,
+    ]);
+    $invoice = \App\Modules\Commerce\Domain\Models\Invoice::create([
+        'order_id' => $order->id,
+        'user_id' => $student->id,
+        'invoice_number' => 'INV-' . \Illuminate\Support\Str::random(8),
+        'amount' => 100000,
+        'status' => \App\Modules\Commerce\Domain\Enums\InvoiceStatus::Paid,
+    ]);
+    \App\Modules\Commerce\Domain\Models\Payment::create([
+        'invoice_id' => $invoice->id,
+        'user_id' => $student->id,
+        'amount' => 100000,
+        'payment_gateway' => 'manual_transfer',
+        'reference_number' => 'PAY-' . \Illuminate\Support\Str::random(8),
+        'status' => \App\Modules\Commerce\Domain\Enums\PaymentStatus::Success,
+        'transaction_id' => 'TXN-' . \Illuminate\Support\Str::random(8),
+    ]);
 
     $attempts = $engine->assignToCourse($test, $course->id);
     expect(count($attempts))->toBe(1);

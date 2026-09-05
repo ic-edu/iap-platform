@@ -120,6 +120,56 @@ class AssessmentLifecycleConsolidationTest extends TestCase
         return $test;
     }
 
+    private function createPaidMockAssessment(string $status = 'published', bool $isPublished = true): Test
+    {
+        $test = $this->createAssessment($status, $isPublished, 'real_test');
+
+        $prod = Product::create([
+            'title'        => 'Mock Product ' . uniqid(),
+            'slug'         => 'mock-prod-' . uniqid(),
+            'product_type' => 'assessment',
+            'test_id'      => $test->id,
+            'price'        => 500000,
+            'is_active'    => true,
+        ]);
+
+        $order = Order::create([
+            'user_id'      => $this->candidate->id,
+            'order_number' => 'ORD-' . uniqid(),
+            'total_amount' => 500000,
+            'status'       => OrderStatus::Completed,
+        ]);
+
+        OrderItem::create([
+            'order_id'   => $order->id,
+            'product_id' => $prod->id,
+            'quantity'   => 1,
+            'price'      => 500000,
+            'total'      => 500000,
+        ]);
+
+        $invoice = \App\Modules\Commerce\Domain\Models\Invoice::create([
+            'order_id'       => $order->id,
+            'user_id'        => $this->candidate->id,
+            'invoice_number' => 'INV-' . uniqid(),
+            'amount'         => 500000,
+            'status'         => \App\Modules\Commerce\Domain\Enums\InvoiceStatus::Paid,
+            'paid_at'        => now(),
+        ]);
+
+        \App\Modules\Commerce\Domain\Models\Payment::create([
+            'invoice_id'       => $invoice->id,
+            'user_id'          => $this->candidate->id,
+            'reference_number' => 'PAY-' . uniqid(),
+            'amount'           => 500000,
+            'status'           => \App\Modules\Commerce\Domain\Enums\PaymentStatus::Success,
+            'payment_method'   => 'manual',
+            'paid_at'          => now(),
+        ]);
+
+        return $test;
+    }
+
     /*
      * -------------------------------------------------------------
      * SECTION 45: FOCUSED TESTS — RM APPROVE (TEST 01 - TEST 06)
@@ -410,11 +460,17 @@ class AssessmentLifecycleConsolidationTest extends TestCase
 
     public function test_26_published_true_can_be_assigned(): void
     {
-        $test = $this->createAssessment('published', true, 'simulator');
+        // Governed Real Test with confirmed payment is assignable
+        $test = $this->createPaidMockAssessment('published', true);
 
         $assignment = $this->assignmentEngine->assignToUser($test, $this->candidate, $this->adminRa);
         $this->assertInstanceOf(CandidateTestAssignment::class, $assignment);
         $this->assertEquals('active', $assignment->status);
+
+        // Simulator is rejected from manual assignment (open access)
+        $simTest = $this->createAssessment('published', true, 'simulator');
+        $this->expectException(InvalidArgumentException::class);
+        $this->assignmentEngine->assignToUser($simTest, $this->candidate, $this->adminRa);
     }
 
     public function test_27_non_canonical_published_false_rejected_from_assignment(): void
@@ -612,8 +668,8 @@ class AssessmentLifecycleConsolidationTest extends TestCase
 
     public function test_43_ra_may_assign_only_canonical_published_assessment(): void
     {
-        $approvedTest = $this->createAssessment('approved', false, 'simulator');
-        $publishedTest = $this->createAssessment('published', true, 'simulator');
+        $approvedTest = $this->createAssessment('approved', false, 'real_test');
+        $publishedTest = $this->createPaidMockAssessment('published', true);
 
         $this->assertFalse($approvedTest->isPublished());
         $this->assertTrue($publishedTest->isPublished());
@@ -642,7 +698,7 @@ class AssessmentLifecycleConsolidationTest extends TestCase
 
     public function test_45_new_assignments_blocked_after_unpublish(): void
     {
-        $test = $this->createAssessment('published', true, 'simulator');
+        $test = $this->createPaidMockAssessment('published', true);
         $this->actingAs($this->repoManager)->post(route('admin.publications.assessments.unpublish', $test->id));
 
         $test->refresh();

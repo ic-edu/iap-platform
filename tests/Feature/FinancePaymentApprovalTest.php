@@ -545,12 +545,13 @@ class FinancePaymentApprovalTest extends \Tests\TestCase
 
         $this->actingAs($this->finance)->post(route('finance.payments.approve', $payment->id));
 
-        // Simulator test should be auto-assigned by listener
+        // Simulator test uses open access and does not create CandidateTestAssignment
         $assignment = CandidateTestAssignment::where('user_id', $this->candidate->id)
             ->where('test_id', $this->simulatorTest->id)
             ->first();
 
-        $this->assertNotNull($assignment, 'Simulator test payment confirmation must auto-assign simulator.');
+        $this->assertNull($assignment, 'Simulator test uses open candidate access without CandidateTestAssignment.');
+        $this->assertTrue(app(AssignmentEngine::class)->isEligibleToStart($this->simulatorTest, $this->candidate));
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

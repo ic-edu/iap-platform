@@ -111,7 +111,7 @@ class AssignmentEngine
     public function getEligibleCandidates(Test $test)
     {
         if ($test->isSimulator()) {
-            return User::role('student')->get();
+            return collect();
         }
 
         $testFamily = is_object($test->test_type) ? strtolower($test->test_type->value) : strtolower((string) $test->test_type);
@@ -157,6 +157,11 @@ class AssignmentEngine
         if (!$test->isPublished()) {
             $label = $test->isRealTest() ? 'Mock Test' : 'Assessment';
             throw new InvalidArgumentException("Cannot assign unpublished {$label} '{$test->title}'. {$label} must be published first.");
+        }
+
+        // Simulator / Practice mode uses open candidate access and does not support manual candidate assignment
+        if ($test->isSimulator()) {
+            throw new InvalidArgumentException("Test Simulator '{$test->title}' uses open candidate access and does not support manual candidate assignment.");
         }
 
         // For Real Test: Validate paid payment transaction
