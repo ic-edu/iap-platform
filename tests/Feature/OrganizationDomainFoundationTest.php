@@ -27,6 +27,8 @@ class OrganizationDomainFoundationTest extends TestCase
     use RefreshDatabase;
 
     protected User $superAdmin;
+    protected User $adminRA;
+    protected User $repositoryManager;
     protected User $coordinatorA;
     protected User $coordinatorB;
     protected User $candidateX;
@@ -45,9 +47,15 @@ class OrganizationDomainFoundationTest extends TestCase
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        // 1. Super Admin
-        $this->superAdmin = User::factory()->create(['name' => 'Super Admin Demo']);
+        // 1. Internal Roles
+        $this->superAdmin = User::factory()->create(['name' => 'Super Admin Demo', 'email' => 'superadmin@iap.test']);
         $this->superAdmin->assignRole('super-admin');
+
+        $this->adminRA = User::factory()->create(['name' => 'Registration Admin Demo', 'email' => 'admin.ra@iap.test']);
+        $this->adminRA->assignRole('admin');
+
+        $this->repositoryManager = User::factory()->create(['name' => 'Repository Manager Demo', 'email' => 'repo.manager@iap.test']);
+        $this->repositoryManager->assignRole('repository-manager');
 
         // 2. Organizations
         $this->orgA = Organization::create([
@@ -141,7 +149,7 @@ class OrganizationDomainFoundationTest extends TestCase
 
     /**
      * TEST ORG-01: Organization can be created with valid type/status.
-     * TEST ORG-02: Organization status defaults correctly.
+     * TEST ORG-02: Organization status defaults correctly to Pending.
      * TEST ORG-03: Same User can belong to multiple Organizations.
      * TEST ORG-04: Duplicate same-Organization membership prevented.
      */
@@ -153,8 +161,8 @@ class OrganizationDomainFoundationTest extends TestCase
             'slug'              => 'gamma-academy',
             'organization_type' => OrganizationType::School,
         ]);
-        $this->assertTrue($org->isActive());
-        $this->assertEquals(OrganizationStatus::Active, $org->status);
+        $this->assertTrue($org->isPending());
+        $this->assertEquals(OrganizationStatus::Pending, $org->status);
         $this->assertEquals(OrganizationType::School, $org->organization_type);
 
         // ORG-03: Same user belongs to multiple organizations
@@ -490,8 +498,8 @@ class OrganizationDomainFoundationTest extends TestCase
      */
     public function test_log_01_to_04_activity_logging_and_privacy(): void
     {
-        // Super admin creates org via admin endpoint
-        $this->actingAs($this->superAdmin)->post(route('admin.organizations.store'), [
+        // Registration Admin creates org via operational endpoint
+        $this->actingAs($this->adminRA)->post(route('admin.organizations.store'), [
             'name'              => 'Delta Institute',
             'organization_type' => 'company',
         ]);
@@ -762,53 +770,233 @@ class OrganizationDomainFoundationTest extends TestCase
     }
 
     /**
-     * TEST UI-ORG-01 to 07: Super Admin Organization views use canonical IAP Super Admin layout.
+     * TEST AUTH-ORG-01 to 10: Authorization matrix for Registration Admin, Super Admin, and forbidden roles.
      */
-    public function test_ui_org_01_to_07_super_admin_layout_integration(): void
+    public function test_auth_org_matrix(): void
     {
-        // UI-ORG-01, 02, 03, 04, 05: Index page layout, branding, and active navigation
-        $indexResp = $this->actingAs($this->superAdmin)->get(route('admin.organizations.index'));
-        $indexResp->assertStatus(200);
-        $indexResp->assertSee('iC.edu', false);
-        $indexResp->assertSee('Assessment Platform', false);
-        $indexResp->assertSee('Institutional Management', false);
-        $indexResp->assertSee('Organizations', false);
-        $indexResp->assertSee('bg-indigo-600 text-white shadow-md shadow-indigo-600/20', false); // Active sidebar state
-        $indexResp->assertDontSee('Workspace Laravel', false);
-        $indexResp->assertDontSee('x-app-layout', false);
+        // 1. RA (Registration Admin) has operational access
+        $this->actingAs($this->adminRA)->get(route('admin.organizations.index'))->assertStatus(200);
+        $this->actingAs($this->adminRA)->get(route('admin.organizations.create'))->assertStatus(200);
+        $this->actingAs($this->adminRA)->get(route('admin.organizations.edit', $this->orgA->id))->assertStatus(200);
 
-        // UI-ORG-06: Create page uses canonical shell
-        $createResp = $this->actingAs($this->superAdmin)->get(route('admin.organizations.create'));
-        $createResp->assertStatus(200);
-        $createResp->assertSee('iC.edu', false);
-        $createResp->assertSee('Assessment Platform', false);
-        $createResp->assertSee('Create New Organization', false);
-        $createResp->assertDontSee('Workspace Laravel', false);
+        // 2. RA is forbidden from Super Admin Approval Center
+        $this->actingAs($this->adminRA)->get(route('admin.approvals.organizations'))->assertStatus(403);
+        $this->actingAs($this->adminRA)->post(route('admin.approvals.organizations.approve', $this->orgA->id))->assertStatus(403);
 
-        // UI-ORG-07: Edit page uses canonical shell
-        $editResp = $this->actingAs($this->superAdmin)->get(route('admin.organizations.edit', $this->orgA->id));
-        $editResp->assertStatus(200);
-        $editResp->assertSee('iC.edu', false);
-        $editResp->assertSee('Assessment Platform', false);
-        $editResp->assertSee('Edit Organization: Alpha University', false);
-        $editResp->assertDontSee('Workspace Laravel', false);
+        // 3. Super Admin has approval and governance access
+        $this->actingAs($this->superAdmin)->get(route('admin.approvals.organizations'))->assertStatus(200);
+        $this->actingAs($this->superAdmin)->get(route('admin.organizations.index'))->assertStatus(200);
+
+        // 4. Repository Manager is forbidden from Organization management and approvals
+        $this->actingAs($this->repositoryManager)->get(route('admin.organizations.index'))->assertStatus(403);
+        $this->actingAs($this->repositoryManager)->get(route('admin.approvals.organizations'))->assertStatus(403);
+
+        // 5. Candidate is forbidden
+        $this->actingAs($this->candidateX)->get(route('admin.organizations.index'))->assertStatus(403);
+        $this->actingAs($this->candidateX)->get(route('admin.approvals.organizations'))->assertStatus(403);
+
+        // 6. Organization Coordinator is forbidden from internal admin
+        $this->actingAs($this->coordinatorA)->get(route('admin.organizations.index'))->assertStatus(403);
+        $this->actingAs($this->coordinatorA)->get(route('admin.approvals.organizations'))->assertStatus(403);
     }
 
     /**
-     * TEST AUTH-01 to 03: Internal Super Admin Organization management authorization.
+     * TEST GOV-01 to 04: Negative permission invariant (RA never gains Question Bank / Assessment governance).
      */
-    public function test_auth_01_to_03_super_admin_organization_authorization(): void
+    public function test_gov_negative_permissions_invariant(): void
     {
-        // AUTH-01: Super Admin authorized
-        $saResp = $this->actingAs($this->superAdmin)->get(route('admin.organizations.index'));
-        $saResp->assertStatus(200);
+        // GOV-01: RA is forbidden from Question Bank / Assessment approvals
+        $this->actingAs($this->adminRA)->get(route('admin.approvals.index'))->assertStatus(403);
 
-        // AUTH-02: Candidate rejected (403)
-        $candResp = $this->actingAs($this->candidateX)->get(route('admin.organizations.index'));
-        $candResp->assertStatus(403);
+        // GOV-02: RA is forbidden from Publication Queues
+        $this->actingAs($this->adminRA)->get(route('admin.publications.question-banks'))->assertStatus(403);
+        $this->actingAs($this->adminRA)->get(route('admin.publications.assessments'))->assertStatus(403);
 
-        // AUTH-03: Organization Coordinator rejected from internal Super Admin management (403)
-        $coordResp = $this->actingAs($this->coordinatorA)->get(route('admin.organizations.index'));
-        $coordResp->assertStatus(403);
+        // GOV-03: RA is forbidden from Academic Operations Libraries
+        $this->actingAs($this->adminRA)->get(route('admin.academic-operations.libraries'))->assertStatus(403);
+
+        // GOV-04: Super Admin retains approval authority
+        $this->actingAs($this->superAdmin)->get(route('admin.approvals.index'))->assertStatus(200);
+    }
+
+    /**
+     * TEST APR-01 to 06: Organization Approval Lifecycle (Pending -> Active, NeedsRevision, Rejected, Archived).
+     */
+    public function test_apr_01_to_06_organization_approval_lifecycle(): void
+    {
+        // APR-01: RA creates Organization -> starts as Pending
+        $createResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.store'), [
+            'name'              => 'Epsilon Tech Institute',
+            'organization_type' => OrganizationType::TrainingInstitution->value,
+            'email'             => 'admin@epsilon.edu',
+        ]);
+        $createResp->assertRedirect(route('admin.organizations.index'));
+
+        $org = Organization::where('name', 'Epsilon Tech Institute')->first();
+        $this->assertNotNull($org);
+        $this->assertEquals(OrganizationStatus::Pending, $org->status);
+        $this->assertEquals($this->adminRA->id, $org->submitted_by);
+        $this->assertNotNull($org->submitted_at);
+
+        // APR-02: Super Admin returns for revision
+        $revResp = $this->actingAs($this->superAdmin)->post(route('admin.approvals.organizations.return-revision', $org->id), [
+            'revision_note' => 'Please provide full accreditation license number.',
+        ]);
+        $revResp->assertRedirect();
+        $org->refresh();
+        $this->assertEquals(OrganizationStatus::NeedsRevision, $org->status);
+        $this->assertEquals('Please provide full accreditation license number.', $org->revision_note);
+        $this->assertEquals($this->superAdmin->id, $org->reviewed_by);
+
+        // APR-03: RA updates and resubmits
+        $updateResp = $this->actingAs($this->adminRA)->put(route('admin.organizations.update', $org->id), [
+            'name'              => 'Epsilon Tech Institute Accredited',
+            'organization_type' => OrganizationType::TrainingInstitution->value,
+            'email'             => 'admin@epsilon.edu',
+            'resubmit'          => true,
+        ]);
+        $updateResp->assertRedirect(route('admin.organizations.index'));
+        $org->refresh();
+        $this->assertEquals(OrganizationStatus::Pending, $org->status);
+        $this->assertNull($org->revision_note);
+
+        // APR-04: Super Admin approves
+        $appResp = $this->actingAs($this->superAdmin)->post(route('admin.approvals.organizations.approve', $org->id));
+        $appResp->assertRedirect();
+        $org->refresh();
+        $this->assertEquals(OrganizationStatus::Active, $org->status);
+        $this->assertTrue($org->isActive());
+        $this->assertEquals($this->superAdmin->id, $org->reviewed_by);
+        $this->assertNotNull($org->reviewed_at);
+
+        // APR-05: RA can suspend active organization
+        $susResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.suspend', $org->id));
+        $susResp->assertRedirect();
+        $org->refresh();
+        $this->assertEquals(OrganizationStatus::Suspended, $org->status);
+
+        // Reactivate
+        $this->actingAs($this->adminRA)->post(route('admin.organizations.activate', $org->id));
+        $this->assertEquals(OrganizationStatus::Active, $org->fresh()->status);
+
+        // APR-06: Super Admin can reject an organization
+        $tempOrg = Organization::create([
+            'name'              => 'Invalid Fake Academy',
+            'slug'              => 'invalid-fake-academy',
+            'organization_type' => OrganizationType::Other,
+            'status'            => OrganizationStatus::Pending,
+        ]);
+        $rejResp = $this->actingAs($this->superAdmin)->post(route('admin.approvals.organizations.reject', $tempOrg->id), [
+            'rejection_reason' => 'Failed corporate verification check.',
+        ]);
+        $rejResp->assertRedirect();
+        $tempOrg->refresh();
+        $this->assertEquals(OrganizationStatus::Rejected, $tempOrg->status);
+        $this->assertEquals('Failed corporate verification check.', $tempOrg->rejection_reason);
+
+        // Archive
+        $archResp = $this->actingAs($this->superAdmin)->post(route('admin.approvals.organizations.archive', $org->id));
+        $archResp->assertRedirect();
+        $this->assertEquals(OrganizationStatus::Archived, $org->fresh()->status);
+        $this->assertNotNull($org->fresh()->archived_at);
+    }
+
+    /**
+     * TEST GROUP-APR-01 to 04: Group Approval Lifecycle (Institutional groups require SA approval).
+     */
+    public function test_group_apr_01_to_04_group_approval_lifecycle(): void
+    {
+        // 1. Institutional group created with pending approval
+        $instGroup = OrganizationGroup::create([
+            'organization_id' => $this->orgA->id,
+            'name'            => 'Institutional Faculty Group',
+            'group_type'      => GroupType::Department->value,
+            'approval_status' => 'pending',
+            'submitted_by'    => $this->adminRA->id,
+            'submitted_at'    => now(),
+            'is_active'       => false,
+        ]);
+
+        $this->assertEquals('pending', $instGroup->approval_status);
+        $this->assertFalse($instGroup->is_active);
+
+        // 2. Super Admin approves institutional group
+        $saAppGroup = $this->actingAs($this->superAdmin)->post(route('admin.approvals.organizations.groups.approve', $instGroup->id));
+        $saAppGroup->assertRedirect();
+        $instGroup->refresh();
+        $this->assertEquals('approved', $instGroup->approval_status);
+        $this->assertTrue($instGroup->is_active);
+        $this->assertEquals($this->superAdmin->id, $instGroup->reviewed_by);
+
+        // 3. Coordinator creating routine group inside tenant portal is auto-approved
+        $storeResp = $this->actingAs($this->coordinatorA)->post(route('organization.groups.store', $this->orgA->slug), [
+            'name'       => 'Self Service Cohort 2026',
+            'group_type' => GroupType::Cohort->value,
+        ]);
+        $coordGroup = OrganizationGroup::where('name', 'Self Service Cohort 2026')->first();
+        $this->assertNotNull($coordGroup);
+        $storeResp->assertRedirect(route('organization.groups.show', [$this->orgA->slug, $coordGroup->id]));
+        $this->assertTrue($coordGroup->is_active);
+    }
+
+    /**
+     * TEST COORD-INV-01 to 03: Primary Coordinator invitation gated by Active organization status.
+     */
+    public function test_coord_inv_01_to_03_coordinator_invitation_gating(): void
+    {
+        $pendingOrg = Organization::create([
+            'name'              => 'Pending Institute',
+            'slug'              => 'pending-institute',
+            'organization_type' => OrganizationType::School,
+            'status'            => OrganizationStatus::Pending,
+        ]);
+
+        // COORD-INV-01: Inviting coordinator to pending organization is rejected
+        $failResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.invite-coordinator', $pendingOrg->id), [
+            'coordinator_email' => 'leader@pending.edu',
+        ]);
+        $failResp->assertSessionHasErrors(['error']);
+        $this->assertNull(OrganizationInvitation::where('email', 'leader@pending.edu')->first());
+
+        // COORD-INV-02: Once active, RA can invite primary coordinator
+        $pendingOrg->update(['status' => OrganizationStatus::Active]);
+
+        $successResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.invite-coordinator', $pendingOrg->id), [
+            'coordinator_email' => 'leader@pending.edu',
+        ]);
+        $successResp->assertSessionHas('status');
+
+        $invitation = OrganizationInvitation::where('email', 'leader@pending.edu')->first();
+        $this->assertNotNull($invitation);
+        $this->assertEquals(MembershipRole::Owner, $invitation->intended_role);
+        $this->assertEquals(InvitationStatus::Pending, $invitation->status);
+    }
+
+    /**
+     * TEST UI-01 to 04: Canonical layout and branding on RA & SA views.
+     */
+    public function test_ui_01_to_04_canonical_layout_and_navigation(): void
+    {
+        // UI-01: RA Organization Directory uses canonical IAP shell
+        $raIndex = $this->actingAs($this->adminRA)->get(route('admin.organizations.index'));
+        $raIndex->assertStatus(200);
+        $raIndex->assertSee('iC.edu', false);
+        $raIndex->assertSee('Assessment Platform', false);
+        $raIndex->assertSee('Institutional Operations', false);
+        $raIndex->assertSee('Organizations', false);
+
+        // UI-02: RA Organization Create uses canonical IAP shell
+        $raCreate = $this->actingAs($this->adminRA)->get(route('admin.organizations.create'));
+        $raCreate->assertStatus(200);
+        $raCreate->assertSee('iC.edu', false);
+        $raCreate->assertSee('Assessment Platform', false);
+        $raCreate->assertSee('Create New Organization', false);
+
+        // UI-03: Super Admin Approval Center uses canonical IAP shell
+        $saApprovals = $this->actingAs($this->superAdmin)->get(route('admin.approvals.organizations'));
+        $saApprovals->assertStatus(200);
+        $saApprovals->assertSee('iC.edu', false);
+        $saApprovals->assertSee('Assessment Platform', false);
+        $saApprovals->assertSee('Organization Approvals & Governance', false);
     }
 }

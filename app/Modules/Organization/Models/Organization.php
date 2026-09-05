@@ -40,7 +40,7 @@ class Organization extends Model
     protected $table = 'organizations';
 
     protected $attributes = [
-        'status'            => OrganizationStatus::Active,
+        'status'            => OrganizationStatus::Pending,
         'organization_type' => OrganizationType::Other,
     ];
 
@@ -59,6 +59,12 @@ class Organization extends Model
         'status',
         'logo_path',
         'created_by',
+        'submitted_by',
+        'submitted_at',
+        'reviewed_by',
+        'reviewed_at',
+        'revision_note',
+        'rejection_reason',
         'archived_at',
     ];
 
@@ -67,6 +73,8 @@ class Organization extends Model
         return [
             'organization_type' => OrganizationType::class,
             'status'            => OrganizationStatus::class,
+            'submitted_at'      => 'datetime',
+            'reviewed_at'       => 'datetime',
             'archived_at'       => 'datetime',
         ];
     }
@@ -129,6 +137,31 @@ class Organization extends Model
     public function pendingInvitations(): HasMany
     {
         return $this->invitations()->where('status', 'pending');
+    }
+
+    public function submitter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === OrganizationStatus::Pending;
+    }
+
+    public function needsRevision(): bool
+    {
+        return $this->status === OrganizationStatus::NeedsRevision;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === OrganizationStatus::Rejected;
     }
 
     public function isActive(): bool

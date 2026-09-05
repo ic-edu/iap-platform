@@ -3,6 +3,7 @@
 use App\Modules\Organization\Controllers\AdminOrganizationController;
 use App\Modules\Organization\Controllers\InvitationController;
 use App\Modules\Organization\Controllers\OrganizationPortalController;
+use App\Modules\Organization\Controllers\SuperAdminOrganizationApprovalController;
 use Illuminate\Support\Facades\Route;
 
 // 1. Public / Guest Invitation Acceptance Routes
@@ -44,8 +45,8 @@ Route::middleware(['web', 'auth', 'org.context'])
         Route::put('/profile', [OrganizationPortalController::class, 'updateProfile'])->name('profile.update');
     });
 
-// 4. Super Admin Internal Organization Administration
-Route::middleware(['web', 'auth', 'role:super-admin'])
+// 4. Registration Admin & Super Admin Operational Organization Administration
+Route::middleware(['web', 'auth', 'role:admin|super-admin'])
     ->prefix('admin/organizations')
     ->name('admin.organizations.')
     ->group(function () {
@@ -54,5 +55,21 @@ Route::middleware(['web', 'auth', 'role:super-admin'])
         Route::post('/', [AdminOrganizationController::class, 'store'])->name('store');
         Route::get('/{organization}/edit', [AdminOrganizationController::class, 'edit'])->name('edit');
         Route::put('/{organization}', [AdminOrganizationController::class, 'update'])->name('update');
+        Route::post('/{organization}/submit', [AdminOrganizationController::class, 'submitForApproval'])->name('submit');
+        Route::post('/{organization}/invite-coordinator', [AdminOrganizationController::class, 'inviteCoordinator'])->name('invite-coordinator');
         Route::post('/{organization}/toggle-status', [AdminOrganizationController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{organization}/suspend', [AdminOrganizationController::class, 'suspend'])->name('suspend');
+        Route::post('/{organization}/activate', [AdminOrganizationController::class, 'activate'])->name('activate');
+    });
+
+// 5. Super Admin Organization Governance & Approvals
+Route::middleware(['web', 'auth', 'role:super-admin'])
+    ->prefix('admin/approvals/organizations')
+    ->group(function () {
+        Route::get('/', [SuperAdminOrganizationApprovalController::class, 'index'])->name('admin.approvals.organizations');
+        Route::post('/{organization}/approve', [SuperAdminOrganizationApprovalController::class, 'approveOrganization'])->name('admin.approvals.organizations.approve');
+        Route::post('/{organization}/return-revision', [SuperAdminOrganizationApprovalController::class, 'returnRevision'])->name('admin.approvals.organizations.return-revision');
+        Route::post('/{organization}/reject', [SuperAdminOrganizationApprovalController::class, 'rejectOrganization'])->name('admin.approvals.organizations.reject');
+        Route::post('/{organization}/archive', [SuperAdminOrganizationApprovalController::class, 'approveArchive'])->name('admin.approvals.organizations.archive');
+        Route::post('/groups/{group}/approve', [SuperAdminOrganizationApprovalController::class, 'approveGroup'])->name('admin.approvals.organizations.groups.approve');
     });

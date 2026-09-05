@@ -35,14 +35,32 @@ class OrganizationGroup extends Model
         'group_type',
         'description',
         'is_active',
+        'approval_status',
         'created_by',
+        'submitted_by',
+        'submitted_at',
+        'reviewed_by',
+        'reviewed_at',
+        'revision_note',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
+            'is_active'    => 'boolean',
+            'submitted_at' => 'datetime',
+            'reviewed_at'  => 'datetime',
         ];
+    }
+
+    public function submitter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function organization(): BelongsTo
