@@ -4,11 +4,23 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Create New Organization</h1>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Register a new partner institution and onboard its primary coordinator</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Register a new partner institution for Super Admin approval</p>
         </div>
         <a href="{{ route('admin.organizations.index') }}" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg text-center transition-colors">
             &larr; Back to Directory
         </a>
+    </div>
+
+    <!-- Governance Notice Banner -->
+    <div class="mb-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex items-start gap-3">
+        <span class="text-base">ℹ️</span>
+        <div>
+            <div class="font-semibold text-white mb-0.5">Approval Governance Workflow</div>
+            <p class="text-slate-400">
+                Submitting this form creates the organization in <strong>Pending Approval</strong> status.
+                Once reviewed and approved by Super Admin, you can issue primary coordinator onboarding invitations.
+            </p>
+        </div>
     </div>
 
     @if($errors->any())
@@ -39,22 +51,15 @@
                 </select>
             </div>
 
-            <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Initial Coordinator Email (Optional Invitation)</label>
-                <input type="email" name="coordinator_email" value="{{ old('coordinator_email') }}" placeholder="coordinator@example.org"
-                       class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
-                <p class="text-[11px] text-slate-500 mt-1">If provided, an invitation token will be generated to onboard the primary owner/coordinator.</p>
-            </div>
-
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-300 mb-1">Official Email</label>
-                    <input type="email" name="email" value="{{ old('email') }}"
+                    <input type="email" name="email" value="{{ old('email') }}" placeholder="contact@example.edu"
                            class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number</label>
-                    <input type="text" name="phone" value="{{ old('phone') }}"
+                    <input type="text" name="phone" value="{{ old('phone') }}" placeholder="+62 21 1234567"
                            class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
             </div>
@@ -62,7 +67,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-300 mb-1">City</label>
-                    <input type="text" name="city" value="{{ old('city') }}"
+                    <input type="text" name="city" value="{{ old('city') }}" placeholder="Jakarta"
                            class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">
                 </div>
                 <div>
@@ -72,9 +77,15 @@
                 </div>
             </div>
 
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Address</label>
+                <textarea name="address" rows="2" placeholder="Campus / Office Street Address..."
+                          class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-indigo-500 focus:outline-none">{{ old('address') }}</textarea>
+            </div>
+
             <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
                 <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg transition-colors">Cancel</a>
-                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Create Organization</button>
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-lg shadow transition-colors">Submit for Approval</button>
             </div>
         </form>
     </div>

@@ -88,15 +88,6 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
-                    'section' => 'Institutional Management',
-                    'label' => 'Organizations',
-                    'route' => 'admin.organizations.index',
-                    'icon' => 'building-office-2',
-                    'permission' => null,
-                    'active_pattern' => 'admin/organizations*',
-                    'badge' => null,
-                ],
-                [
                     'section' => 'Candidate Management',
                     'label' => 'Candidates',
                     'route' => 'admin.candidates.index',
@@ -131,6 +122,15 @@ class NavigationService
                     'permission' => null,
                     'active_pattern' => 'admin/approvals*',
                     'badge' => 'NEW',
+                ],
+                [
+                    'section' => 'Governance',
+                    'label' => 'Organization Approvals',
+                    'route' => 'admin.approvals.organizations',
+                    'icon' => 'building-office-2',
+                    'permission' => null,
+                    'active_pattern' => 'admin/approvals/organizations*',
+                    'badge' => null,
                 ],
                 [
                     'section' => 'Governance',
@@ -208,6 +208,15 @@ class NavigationService
                     'icon' => 'home',
                     'permission' => null,
                     'active_pattern' => 'admin/dashboard*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Institutional Operations',
+                    'label' => 'Organizations',
+                    'route' => 'admin.organizations.index',
+                    'icon' => 'building-office-2',
+                    'permission' => null,
+                    'active_pattern' => 'admin/organizations*',
                     'badge' => null,
                 ],
                 [
