@@ -1,7 +1,7 @@
-@props(['role' => 'student'])
+@props(['role' => null])
 
 @php
-    $rawRole = (string)$role;
+    $rawRole = (string)($role ?? '');
     $roleSlug = strtolower(trim(str_replace(['_', ' '], '-', $rawRole)));
     
     $badgeClass = match($roleSlug) {
@@ -10,7 +10,10 @@
         'teacher', 'author' => 'role-badge--teacher',
         'finance' => 'role-badge--finance',
         'repository-manager', 'repository_manager', 'repomanager' => 'role-badge--repository-manager',
-        default => 'role-badge--student',
+        'student', 'candidate' => 'role-badge--student',
+        'organization-coordinator', 'coordinator' => 'role-badge--organization-coordinator',
+        'unassigned', 'none', '' => 'role-badge--unassigned',
+        default => 'role-badge--unassigned',
     };
 
     $displayLabel = match($roleSlug) {
@@ -19,7 +22,10 @@
         'teacher', 'author' => 'TEACHER',
         'finance' => 'FINANCE',
         'repository-manager', 'repository_manager', 'repomanager' => 'REPOSITORY MANAGER',
-        default => strtoupper($rawRole ?: 'STUDENT'),
+        'student', 'candidate' => 'STUDENT',
+        'organization-coordinator', 'coordinator' => 'ORGANIZATION COORDINATOR',
+        'unassigned', 'none', '' => 'UNASSIGNED',
+        default => strtoupper($rawRole),
     };
 @endphp
 

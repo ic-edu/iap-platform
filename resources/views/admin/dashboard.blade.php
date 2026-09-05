@@ -68,18 +68,20 @@
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <span>👥</span> Latest Registered Users
                 </h3>
-                <a href="{{ route('admin.users.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">Manage Users &rarr;</a>
+                <a href="{{ route('admin.all-users.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">Manage Users &rarr;</a>
             </div>
             <div class="space-y-3">
-                @foreach($recentUsers as $u)
+                @forelse($recentUsers as $u)
                     <div class="p-3 bg-slate-900 border border-slate-800/80 rounded-lg flex items-center justify-between text-xs">
                         <div>
                             <span class="font-bold text-white block">{{ $u->name }}</span>
                             <span class="text-slate-400 font-mono text-[11px]">{{ $u->email }}</span>
                         </div>
-                        <x-role-badge :role="$u->roles->pluck('name')->first() ?? 'student'" />
+                        <x-role-badge :role="$u->roles->pluck('name')->first() ?? 'unassigned'" />
                     </div>
-                @endforeach
+                @empty
+                    <div class="p-6 text-center text-slate-500 text-xs">No registered users found.</div>
+                @endforelse
             </div>
         </div>
 
@@ -92,7 +94,7 @@
                 <a href="{{ route('admin.certificates.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">View Registry &rarr;</a>
             </div>
             <div class="space-y-3">
-                @foreach($recentCertificates as $cert)
+                @forelse($recentCertificates as $cert)
                     <div class="p-3 bg-slate-900 border border-slate-800/80 rounded-lg flex items-center justify-between text-xs">
                         <div>
                             <span class="font-bold text-white block">{{ $cert->user?->name ?? 'Candidate' }}</span>
@@ -102,7 +104,9 @@
                             VALID
                         </span>
                     </div>
-                @endforeach
+                @empty
+                    <div class="p-6 text-center text-slate-500 text-xs">No certificates issued yet.</div>
+                @endforelse
             </div>
         </div>
     </div>

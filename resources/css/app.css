@@ -2476,6 +2476,38 @@ html[data-theme="dark"] .role-badge--repomanager {
     border-color: rgba(148, 163, 184, 0.35) !important;
 }
 
+/* 7. Organization Coordinator: Professional Teal */
+.role-badge--organization-coordinator,
+.role-badge--coordinator {
+    background-color: #f0fdfa !important;
+    color: #0f766e !important;
+    border-color: #99f6e4 !important;
+}
+html.dark .role-badge--organization-coordinator,
+html[data-theme="dark"] .role-badge--organization-coordinator,
+html.dark .role-badge--coordinator,
+html[data-theme="dark"] .role-badge--coordinator {
+    background-color: rgba(20, 184, 166, 0.15) !important;
+    color: #2dd4bf !important;
+    border-color: rgba(20, 184, 166, 0.35) !important;
+}
+
+/* 8. Unassigned: Neutral Muted Slate */
+.role-badge--unassigned,
+.role-badge--none {
+    background-color: #f8fafc !important;
+    color: #64748b !important;
+    border-color: #e2e8f0 !important;
+}
+html.dark .role-badge--unassigned,
+html[data-theme="dark"] .role-badge--unassigned,
+html.dark .role-badge--none,
+html[data-theme="dark"] .role-badge--none {
+    background-color: rgba(100, 116, 139, 0.15) !important;
+    color: #94a3b8 !important;
+    border-color: rgba(100, 116, 139, 0.35) !important;
+}
+
 /* ==========================================================================
    CANDIDATE ASSESSMENT STATUS WIDGET SEMANTICS
    ========================================================================== */
