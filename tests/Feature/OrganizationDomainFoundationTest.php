@@ -760,4 +760,55 @@ class OrganizationDomainFoundationTest extends TestCase
         $respB->assertStatus(200);
         $this->assertEquals(MembershipRole::Coordinator, $respB->viewData('currentMembership')?->role);
     }
+
+    /**
+     * TEST UI-ORG-01 to 07: Super Admin Organization views use canonical IAP Super Admin layout.
+     */
+    public function test_ui_org_01_to_07_super_admin_layout_integration(): void
+    {
+        // UI-ORG-01, 02, 03, 04, 05: Index page layout, branding, and active navigation
+        $indexResp = $this->actingAs($this->superAdmin)->get(route('admin.organizations.index'));
+        $indexResp->assertStatus(200);
+        $indexResp->assertSee('iC.edu', false);
+        $indexResp->assertSee('Assessment Platform', false);
+        $indexResp->assertSee('Institutional Management', false);
+        $indexResp->assertSee('Organizations', false);
+        $indexResp->assertSee('bg-indigo-600 text-white shadow-md shadow-indigo-600/20', false); // Active sidebar state
+        $indexResp->assertDontSee('Workspace Laravel', false);
+        $indexResp->assertDontSee('x-app-layout', false);
+
+        // UI-ORG-06: Create page uses canonical shell
+        $createResp = $this->actingAs($this->superAdmin)->get(route('admin.organizations.create'));
+        $createResp->assertStatus(200);
+        $createResp->assertSee('iC.edu', false);
+        $createResp->assertSee('Assessment Platform', false);
+        $createResp->assertSee('Create New Organization', false);
+        $createResp->assertDontSee('Workspace Laravel', false);
+
+        // UI-ORG-07: Edit page uses canonical shell
+        $editResp = $this->actingAs($this->superAdmin)->get(route('admin.organizations.edit', $this->orgA->id));
+        $editResp->assertStatus(200);
+        $editResp->assertSee('iC.edu', false);
+        $editResp->assertSee('Assessment Platform', false);
+        $editResp->assertSee('Edit Organization: Alpha University', false);
+        $editResp->assertDontSee('Workspace Laravel', false);
+    }
+
+    /**
+     * TEST AUTH-01 to 03: Internal Super Admin Organization management authorization.
+     */
+    public function test_auth_01_to_03_super_admin_organization_authorization(): void
+    {
+        // AUTH-01: Super Admin authorized
+        $saResp = $this->actingAs($this->superAdmin)->get(route('admin.organizations.index'));
+        $saResp->assertStatus(200);
+
+        // AUTH-02: Candidate rejected (403)
+        $candResp = $this->actingAs($this->candidateX)->get(route('admin.organizations.index'));
+        $candResp->assertStatus(403);
+
+        // AUTH-03: Organization Coordinator rejected from internal Super Admin management (403)
+        $coordResp = $this->actingAs($this->coordinatorA)->get(route('admin.organizations.index'));
+        $coordResp->assertStatus(403);
+    }
 }
