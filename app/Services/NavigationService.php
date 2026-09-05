@@ -107,6 +107,15 @@ class NavigationService
                 ],
                 [
                     'section' => 'User Management',
+                    'label' => 'All Users',
+                    'route' => 'admin.all-users.index',
+                    'icon' => 'users',
+                    'permission' => null,
+                    'active_pattern' => 'admin/all-users*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'User Management',
                     'label' => 'Staff & Access Control',
                     'route' => 'admin.users.index',
                     'icon' => 'shield-check',

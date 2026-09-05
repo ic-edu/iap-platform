@@ -58,6 +58,56 @@ class UserController extends Controller
     public const CANDIDATE_ROLES = ['student'];
 
     /**
+     * Display Canonical Universal All Users Directory (/admin/all-users).
+     * Represents all App\Models\User accounts under Super Admin governance:
+     * Internal Staff, Candidates, Organization Users, and Unassigned accounts.
+     */
+    public function allUsers(Request $request): View
+    {
+        $query = User::query()->with(['roles', 'organizationMemberships.organization']);
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($category = $request->input('category')) {
+            if ($category === 'internal_staff') {
+                $query->whereHas('roles', fn($q) => $q->whereIn('name', self::STAFF_ROLES));
+            } elseif ($category === 'candidate') {
+                $query->whereHas('roles', fn($q) => $q->where('name', 'student'));
+            } elseif ($category === 'organization_user') {
+                $query->where(function ($q) {
+                    $q->whereHas('roles', fn($sub) => $sub->where('name', 'organization-coordinator'))
+                        ->orWhereHas('organizationMemberships');
+                });
+            } elseif ($category === 'unassigned') {
+                $query->doesntHave('roles');
+            }
+        }
+
+        if ($role = $request->input('role')) {
+            if ($role === 'unassigned') {
+                $query->doesntHave('roles');
+            } else {
+                $query->role($role);
+            }
+        }
+
+        if ($status = $request->input('status')) {
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+        }
+
+        $users = $query->latest()->paginate(15)->withQueryString();
+
+        return view('admin.users.all', compact('users'));
+    }
+
+    /**
      * Display Candidate Management Workspace (/admin/candidates).
      * Strictly scopes query to candidate/student population.
      */

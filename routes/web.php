@@ -191,6 +191,11 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
         Route::post('/', [UserController::class, 'storeCandidate'])->name('admin.candidates.store');
     });
 
+    // Universal All Users Directory (Super Admin & Admin Governance)
+    Route::get('/admin/all-users', [UserController::class, 'allUsers'])
+        ->middleware('role:admin|super-admin')
+        ->name('admin.all-users.index');
+
     // Institutional Staff & Access Control Workspace
     Route::prefix('admin/users')->middleware('role:admin|super-admin')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('admin.users.index');
