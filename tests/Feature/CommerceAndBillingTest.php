@@ -43,7 +43,7 @@ test('pricing engine calculates base price, discount and tax correctly', functio
     $engine = new PricingEngine;
     $cat = ProductCategory::create(['name' => 'Prep', 'slug' => 'prep']);
     $product = Product::create(['title' => 'TOEFL Prep', 'slug' => 'toefl-prep', 'product_type' => 'toefl_prep', 'category_id' => $cat->id, 'price' => 100000]);
-    $coupon = Coupon::create(['code' => 'DISC10', 'type' => 'percentage', 'value' => 10, 'usage_limit' => 10, 'is_active' => true]);
+    $coupon = Coupon::create(['code' => 'DISC10', 'type' => 'percentage', 'value' => 10, 'usage_limit' => 10, 'valid_from' => now()->subDay(), 'valid_until' => now()->addDays(7), 'is_active' => true]);
 
     $calc = $engine->calculate($product, 1, $coupon, 11.0);
 
@@ -106,7 +106,7 @@ test('checkout engine calculates correct subtotal and grand total with coupon an
     $user = User::factory()->create();
     $cat = ProductCategory::create(['name' => 'Cout Cat', 'slug' => 'cout-cat']);
     $product = Product::create(['title' => 'Course P', 'slug' => 'course-p', 'product_type' => 'toefl_prep', 'category_id' => $cat->id, 'price' => 100000]);
-    $coupon = Coupon::create(['code' => 'HALF10', 'type' => 'percentage', 'value' => 50, 'usage_limit' => 10, 'is_active' => true]);
+    $coupon = Coupon::create(['code' => 'HALF10', 'type' => 'percentage', 'value' => 50, 'usage_limit' => 10, 'valid_from' => now()->subDay(), 'valid_until' => now()->addDays(7), 'is_active' => true]);
 
     $res = $checkout->checkout($user, $product, 1, $coupon);
     expect($res['order']->discount)->toBe(50000.0);
@@ -207,7 +207,7 @@ test('payment confirmation automatically activates course enrollment and test as
 
 test('coupon engine validates coupon active, expired, and usage limits', function () {
     $engine = new CouponEngine;
-    $coupon = Coupon::create(['code' => 'SAVE20', 'type' => 'percentage', 'value' => 20, 'usage_limit' => 5, 'is_active' => true]);
+    $coupon = Coupon::create(['code' => 'SAVE20', 'type' => 'percentage', 'value' => 20, 'usage_limit' => 5, 'valid_from' => now()->subDay(), 'valid_until' => now()->addDays(7), 'is_active' => true]);
 
     $val1 = $engine->validateCoupon('SAVE20');
     expect($val1['valid'])->toBeTrue();
@@ -218,7 +218,7 @@ test('coupon engine validates coupon active, expired, and usage limits', functio
 
 test('coupon engine blocks validation when usage limit is reached', function () {
     $engine = new CouponEngine;
-    $coupon = Coupon::create(['code' => 'LIMIT1', 'type' => 'percentage', 'value' => 20, 'usage_limit' => 1, 'used_count' => 1, 'is_active' => true]);
+    $coupon = Coupon::create(['code' => 'LIMIT1', 'type' => 'percentage', 'value' => 20, 'usage_limit' => 1, 'used_count' => 1, 'valid_from' => now()->subDay(), 'valid_until' => now()->addDays(7), 'is_active' => true]);
 
     $res = $engine->validateCoupon('LIMIT1');
     expect($res['valid'])->toBeFalse();
@@ -304,7 +304,7 @@ test('cart engine handles product with fixed discount coupon correctly', functio
     $cart = new CartEngine;
     $cat = ProductCategory::create(['name' => 'Fix Cat', 'slug' => 'fix-cat']);
     $product = Product::create(['title' => 'Fix P', 'slug' => 'fix-p', 'product_type' => 'toefl_prep', 'category_id' => $cat->id, 'price' => 100000]);
-    $coupon = Coupon::create(['code' => 'FIX20', 'type' => 'fixed', 'value' => 20000, 'usage_limit' => 10, 'is_active' => true]);
+    $coupon = Coupon::create(['code' => 'FIX20', 'type' => 'fixed', 'value' => 20000, 'usage_limit' => 10, 'valid_from' => now()->subDay(), 'valid_until' => now()->addDays(7), 'is_active' => true]);
 
     $cart->addItem($product, 1);
     $cart->applyCoupon($coupon);

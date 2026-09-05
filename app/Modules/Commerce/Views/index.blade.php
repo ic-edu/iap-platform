@@ -166,24 +166,92 @@
         @endif
     </div>
 
-    <!-- Active Vouchers Grid -->
+    <!-- Promotional Vouchers Grid -->
     <div class="mb-8">
-        <h2 class="text-sm font-bold text-white mb-3">Active Promotional Vouchers</h2>
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-white">Promotional Vouchers &amp; Validity Governance</h2>
+            <span class="text-xs text-slate-400">{{ $coupons->count() }} configured voucher(s)</span>
+        </div>
         @if($coupons->isEmpty())
         <div class="p-6 bg-slate-900 border border-dashed border-slate-800 rounded-xl text-center">
-            <p class="text-xs text-slate-400">No active promotional vouchers found. Use the button above to create one.</p>
+            <p class="text-xs text-slate-400">No promotional vouchers found. Use the button above to create one.</p>
         </div>
         @else
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             @foreach($coupons as $v)
-                <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
-                    <div>
-                        <span class="font-mono font-bold text-indigo-400 text-sm block">{{ $v->code }}</span>
-                        <span class="text-xs text-slate-400 mt-0.5 block">{{ $v->value }}% OFF &bull; {{ $v->used_count }} redemptions</span>
+                @php
+                    $state = $v->getEffectiveState();
+                    $badgeClasses = match($state) {
+                        'ACTIVE'    => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                        'SCHEDULED' => 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+                        'EXPIRED'   => 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                        default     => 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+                    };
+                @endphp
+                <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex flex-col justify-between space-y-3 relative group">
+                    <div class="space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <span class="font-mono font-black text-indigo-400 text-base tracking-wider block">{{ $v->code }}</span>
+                                <span class="text-xs font-bold text-slate-200 mt-0.5 block">{{ $v->value }}% OFF</span>
+                            </div>
+                            <span class="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border {{ $badgeClasses }}">
+                                {{ $state }}
+                            </span>
+                        </div>
+
+                        {{-- Validity Period Display --}}
+                        <div class="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 text-[11px] space-y-1">
+                            <div class="flex items-center justify-between text-slate-400">
+                                <span>Validity Period:</span>
+                                <span class="font-semibold text-slate-300">
+                                    @if($state === 'ACTIVE')
+                                        {{ $v->valid_from ? $v->valid_from->format('d M Y') : 'Now' }} &rarr; {{ $v->valid_until ? $v->valid_until->format('d M Y') : 'Finite' }}
+                                    @elseif($state === 'SCHEDULED')
+                                        Starts {{ $v->valid_from ? $v->valid_from->format('d M Y, H:i') : '-' }}
+                                    @elseif($state === 'EXPIRED')
+                                        Expired {{ $v->valid_until ? $v->valid_until->format('d M Y') : '-' }}
+                                    @else
+                                        {{ $v->valid_until ? $v->validity_display : 'Validity not configured' }}
+                                    @endif
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between text-slate-400">
+                                <span>Redemptions:</span>
+                                <span class="font-mono font-medium text-slate-300">{{ $v->used_count }} / {{ $v->usage_limit }} used</span>
+                            </div>
+                        </div>
                     </div>
-                    <span class="px-2 py-0.5 text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
-                        {{ $v->is_active ? 'ACTIVE' : 'INACTIVE' }}
-                    </span>
+
+                    {{-- Actions Toolbar --}}
+                    <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                        <form action="{{ route('admin.commerce.vouchers.toggle', $v->id) }}" method="POST" class="inline">
+                            @csrf
+                            <button type="submit" class="px-2.5 py-1 text-[11px] font-semibold rounded transition-colors {{ $v->is_active ? 'text-amber-400 hover:bg-amber-500/10' : 'text-emerald-400 hover:bg-emerald-500/10' }}">
+                                {{ $v->is_active ? 'Deactivate' : 'Activate' }}
+                            </button>
+                        </form>
+
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="openEditVoucherModal('{{ $v->id }}', '{{ $v->code }}', {{ $v->value }}, '{{ $v->valid_from ? $v->valid_from->format('Y-m-d\TH:i') : '' }}', '{{ $v->valid_until ? $v->valid_until->format('Y-m-d\TH:i') : '' }}', {{ $v->usage_limit }}, {{ $v->is_active ? 'true' : 'false' }})" class="px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors">
+                                Edit
+                            </button>
+
+                            @if($v->isDeletable())
+                                <button type="button" onclick="confirmDeleteVoucher('{{ $v->id }}', '{{ $v->code }}', {{ $v->value }}, {{ $v->used_count }})" class="px-2.5 py-1 text-[11px] font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors">
+                                    Delete
+                                </button>
+                                <form id="delete-voucher-form-{{ $v->id }}" action="{{ route('admin.commerce.vouchers.destroy', $v->id) }}" method="POST" class="hidden">
+                                    @csrf
+                                    @method('DELETE')
+                                </form>
+                            @else
+                                <span class="px-2 py-1 text-[10px] text-slate-500 cursor-not-allowed" title="Voucher has redemption history and cannot be deleted.">
+                                    Locked
+                                </span>
+                            @endif
+                        </div>
+                    </div>
                 </div>
             @endforeach
         </div>
@@ -336,22 +404,99 @@
     </div>
 
     <!-- Create Voucher Modal -->
-    <div id="create-voucher-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
-            <h2 class="text-lg font-bold text-white mb-4">Create Voucher Code</h2>
+    <div id="create-voucher-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl my-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-white">Create Promotional Voucher</h2>
+                <button type="button" onclick="document.getElementById('create-voucher-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
             <form action="{{ route('admin.commerce.vouchers.store') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
                     <label class="block text-xs font-medium text-slate-300 mb-1">Voucher Code *</label>
-                    <input type="text" name="code" required placeholder="e.g. PROMO2026" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-mono uppercase">
+                    <input type="text" name="code" required placeholder="e.g. TOEIC2026" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs font-mono uppercase">
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Discount Percentage (%) *</label>
-                    <input type="number" name="discount" min="1" max="100" required placeholder="e.g. 50" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Discount (%) *</label>
+                        <input type="number" name="discount" min="1" max="100" required placeholder="e.g. 20" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Usage Limit</label>
+                        <input type="number" name="usage_limit" min="1" value="100" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Valid From</label>
+                        <input type="datetime-local" name="valid_from" value="{{ now()->format('Y-m-d\TH:i') }}" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Valid Until *</label>
+                        <input type="datetime-local" name="valid_until" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" name="is_active" id="create-voucher-active" value="1" checked class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500">
+                    <label for="create-voucher-active" class="text-xs text-slate-300">Activate voucher immediately upon creation</label>
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                    <button type="button" onclick="document.getElementById('create-voucher-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold text-xs rounded-lg shadow">Create Voucher</button>
+                    <button type="button" onclick="document.getElementById('create-voucher-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg hover:bg-slate-700 transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold text-xs rounded-lg shadow hover:bg-indigo-500 transition-colors">Create Voucher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Edit Voucher Modal --}}
+    <div id="edit-voucher-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl my-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-white">Edit Promotional Voucher</h2>
+                <button type="button" onclick="document.getElementById('edit-voucher-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="edit-voucher-form" method="POST" class="space-y-4">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Voucher Code</label>
+                    <input type="text" id="edit-voucher-code" disabled class="w-full p-2.5 bg-slate-950/50 border border-slate-800 rounded-lg text-slate-400 text-xs font-mono uppercase cursor-not-allowed">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Discount (%) *</label>
+                        <input type="number" name="discount" id="edit-voucher-discount" min="1" max="100" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Usage Limit</label>
+                        <input type="number" name="usage_limit" id="edit-voucher-usage-limit" min="1" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Valid From</label>
+                        <input type="datetime-local" name="valid_from" id="edit-voucher-valid-from" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Valid Until *</label>
+                        <input type="datetime-local" name="valid_until" id="edit-voucher-valid-until" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" name="is_active" id="edit-voucher-active" value="1" class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500">
+                    <label for="edit-voucher-active" class="text-xs text-slate-300">Voucher Active Status</label>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="document.getElementById('edit-voucher-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-lg hover:bg-slate-700 transition-colors">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold text-xs rounded-lg shadow hover:bg-indigo-500 transition-colors">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -385,6 +530,48 @@
                 if (descInput) descInput.value = desc || '';
                 if (testSelect) testSelect.value = testId || '';
                 modal.classList.remove('hidden');
+            }
+        }
+
+        function openEditVoucherModal(id, code, discount, validFrom, validUntil, usageLimit, isActive) {
+            const modal = document.getElementById('edit-voucher-modal');
+            const form = document.getElementById('edit-voucher-form');
+            const codeInput = document.getElementById('edit-voucher-code');
+            const discountInput = document.getElementById('edit-voucher-discount');
+            const validFromInput = document.getElementById('edit-voucher-valid-from');
+            const validUntilInput = document.getElementById('edit-voucher-valid-until');
+            const usageLimitInput = document.getElementById('edit-voucher-usage-limit');
+            const activeCheckbox = document.getElementById('edit-voucher-active');
+
+            if (modal && form) {
+                form.action = '/admin/commerce/vouchers/' + id;
+                if (codeInput) codeInput.value = code;
+                if (discountInput) discountInput.value = discount;
+                if (validFromInput) validFromInput.value = validFrom || '';
+                if (validUntilInput) validUntilInput.value = validUntil || '';
+                if (usageLimitInput) usageLimitInput.value = usageLimit || 100;
+                if (activeCheckbox) activeCheckbox.checked = !!isActive;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function confirmDeleteVoucher(id, code, discount, usedCount) {
+            const form = document.getElementById('delete-voucher-form-' + id);
+            if (!form) return;
+
+            if (typeof window.iapConfirm === 'function') {
+                window.iapConfirm({
+                    title: 'Delete Promotional Voucher',
+                    message: 'Are you sure you want to delete voucher "' + code + '" (' + discount + '% OFF)?\n\nThis voucher has ' + usedCount + ' redemptions. Deleting it will permanently remove it from candidate access.',
+                    confirmText: 'Delete Voucher',
+                    cancelText: 'Cancel',
+                    variant: 'danger',
+                    form: form
+                });
+            } else {
+                if (confirm('Are you sure you want to delete voucher ' + code + '?')) {
+                    form.submit();
+                }
             }
         }
     </script>

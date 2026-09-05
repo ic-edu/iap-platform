@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['web', 'auth', 'role:admin|super-admin'])->prefix('admin/commerce')->group(function () {
     Route::get('/', [CommerceController::class, 'index'])->name('admin.commerce.index');
     Route::post('/vouchers', [CommerceController::class, 'storeVoucher'])->name('admin.commerce.vouchers.store');
+    Route::put('/vouchers/{coupon}', [CommerceController::class, 'updateVoucher'])->name('admin.commerce.vouchers.update');
+    Route::post('/vouchers/{coupon}/toggle', [CommerceController::class, 'toggleVoucherStatus'])->name('admin.commerce.vouchers.toggle');
+    Route::delete('/vouchers/{coupon}', [CommerceController::class, 'destroyVoucher'])->name('admin.commerce.vouchers.destroy');
 
     // Product & Package Management
     Route::post('/products', [CommerceController::class, 'storeProduct'])->name('admin.commerce.products.store');

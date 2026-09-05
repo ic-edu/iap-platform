@@ -586,8 +586,11 @@ class FinanceCommerceGovernanceSeparationTest extends TestCase
     public function test_29_ra_can_create_voucher(): void
     {
         $response = $this->actingAs($this->adminUser)->post(route('admin.commerce.vouchers.store'), [
-            'code'     => 'RA2026',
-            'discount' => 20,
+            'code'        => 'RA2026',
+            'discount'    => 20,
+            'valid_from'  => now()->format('Y-m-d H:i:s'),
+            'valid_until' => now()->addDays(30)->format('Y-m-d H:i:s'),
+            'is_active'   => 1,
         ]);
 
         $response->assertRedirect(route('admin.commerce.index'));

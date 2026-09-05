@@ -17,6 +17,7 @@ use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -227,30 +228,161 @@ class CommerceController extends Controller
     }
 
     /**
-     * Store coupon/voucher code (RA and SA only).
+     * Store coupon/voucher code with finite validity (RA and SA only).
      */
     public function storeVoucher(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'code'     => ['required', 'string', 'max:50', 'unique:coupons,code'],
-            'discount' => ['required', 'numeric', 'min:1', 'max:100'],
+            'code'        => ['required', 'string', 'max:50', 'unique:coupons,code'],
+            'discount'    => ['required', 'numeric', 'min:1', 'max:100'],
+            'valid_from'  => ['nullable', 'date'],
+            'valid_until' => ['required', 'date'],
+            'usage_limit' => ['nullable', 'integer', 'min:1'],
+            'is_active'   => ['nullable', 'boolean'],
         ]);
 
+        $validFrom = !empty($validated['valid_from'])
+            ? Carbon::parse($validated['valid_from'])
+            : now();
+        $validUntil = Carbon::parse($validated['valid_until']);
+
+        if ($validUntil->lte($validFrom)) {
+            return back()->withErrors(['valid_until' => 'The valid until date must be after the valid from date.'])->withInput();
+        }
+
+        $isActive = $request->has('is_active') ? $request->boolean('is_active') : true;
+
         $coupon = Coupon::create([
-            'code'        => strtoupper($validated['code']),
+            'code'        => strtoupper(trim($validated['code'])),
             'type'        => 'percentage',
             'value'       => (float) $validated['discount'],
-            'usage_limit' => 100,
+            'usage_limit' => !empty($validated['usage_limit']) ? (int) $validated['usage_limit'] : 100,
             'used_count'  => 0,
-            'is_active'   => true,
+            'valid_from'  => $validFrom,
+            'valid_until' => $validUntil,
+            'expires_at'  => $validUntil,
+            'is_active'   => $isActive,
         ]);
 
         ActivityLogger::log(
-            'COUPON_CREATED',
-            "Created discount coupon '{$coupon->code}' ({$coupon->value}%)",
-            $coupon
+            'VOUCHER_CREATED',
+            "Created promotional voucher '{$coupon->code}' ({$coupon->value}% OFF, valid {$coupon->valid_from->format('d M Y')} to {$coupon->valid_until->format('d M Y')})",
+            $coupon,
+            [
+                'code'        => $coupon->code,
+                'value'       => $coupon->value,
+                'valid_from'  => $coupon->valid_from->toDateTimeString(),
+                'valid_until' => $coupon->valid_until->toDateTimeString(),
+                'is_active'   => $coupon->is_active,
+            ]
         );
 
-        return redirect()->route('admin.commerce.index')->with('status', "Voucher {$validated['code']} created successfully.");
+        return redirect()->route('admin.commerce.index')->with('status', "Voucher {$coupon->code} created successfully.");
+    }
+
+    /**
+     * Update an existing voucher's validity and metadata (RA and SA only).
+     */
+    public function updateVoucher(Request $request, Coupon $coupon): RedirectResponse
+    {
+        $validated = $request->validate([
+            'discount'    => ['required', 'numeric', 'min:1', 'max:100'],
+            'valid_from'  => ['nullable', 'date'],
+            'valid_until' => ['required', 'date'],
+            'usage_limit' => ['nullable', 'integer', 'min:1'],
+            'is_active'   => ['nullable', 'boolean'],
+        ]);
+
+        $validFrom = !empty($validated['valid_from'])
+            ? Carbon::parse($validated['valid_from'])
+            : ($coupon->valid_from ?? now());
+        $validUntil = Carbon::parse($validated['valid_until']);
+
+        if ($validUntil->lte($validFrom)) {
+            return back()->withErrors(['valid_until' => 'The valid until date must be after the valid from date.'])->withInput();
+        }
+
+        $validityChanged = ($coupon->valid_from?->toDateTimeString() !== $validFrom->toDateTimeString())
+            || ($coupon->valid_until?->toDateTimeString() !== $validUntil->toDateTimeString());
+
+        $coupon->update([
+            'value'       => (float) $validated['discount'],
+            'usage_limit' => !empty($validated['usage_limit']) ? (int) $validated['usage_limit'] : $coupon->usage_limit,
+            'valid_from'  => $validFrom,
+            'valid_until' => $validUntil,
+            'expires_at'  => $validUntil,
+            'is_active'   => $request->has('is_active') ? $request->boolean('is_active') : $coupon->is_active,
+        ]);
+
+        if ($validityChanged) {
+            ActivityLogger::log(
+                'VOUCHER_VALIDITY_UPDATED',
+                "Updated validity period for voucher '{$coupon->code}' ({$coupon->valid_from->format('d M Y')} to {$coupon->valid_until->format('d M Y')})",
+                $coupon,
+                [
+                    'valid_from'  => $coupon->valid_from->toDateTimeString(),
+                    'valid_until' => $coupon->valid_until->toDateTimeString(),
+                ]
+            );
+        } else {
+            ActivityLogger::log(
+                'VOUCHER_UPDATED',
+                "Updated voucher '{$coupon->code}'",
+                $coupon,
+                ['value' => $coupon->value, 'is_active' => $coupon->is_active]
+            );
+        }
+
+        return redirect()->route('admin.commerce.index')
+            ->with('status', "Voucher '{$coupon->code}' updated successfully.");
+    }
+
+    /**
+     * Toggle voucher active/inactive state.
+     */
+    public function toggleVoucherStatus(Coupon $coupon): RedirectResponse
+    {
+        if (!$coupon->is_active && ($coupon->valid_until === null || $coupon->valid_until->isPast())) {
+            return back()->withErrors(['error' => "Cannot activate voucher '{$coupon->code}' without a future expiration date. Please update its validity period first."]);
+        }
+
+        $newStatus = !$coupon->is_active;
+        $coupon->update(['is_active' => $newStatus]);
+
+        $action = $newStatus ? 'VOUCHER_ACTIVATED' : 'VOUCHER_DEACTIVATED';
+        ActivityLogger::log(
+            $action,
+            "Toggled voucher '{$coupon->code}' status to " . ($newStatus ? 'ACTIVE' : 'INACTIVE'),
+            $coupon,
+            ['is_active' => $newStatus]
+        );
+
+        return redirect()->route('admin.commerce.index')
+            ->with('status', "Voucher '{$coupon->code}' status updated.");
+    }
+
+    /**
+     * Safely delete an unused voucher.
+     */
+    public function destroyVoucher(Coupon $coupon): RedirectResponse
+    {
+        if (!$coupon->isDeletable()) {
+            return back()->withErrors(['error' => 'This voucher has redemption history and cannot be deleted. Deactivate it instead to preserve transaction history.']);
+        }
+
+        $code = $coupon->code;
+        $usedCount = $coupon->used_count;
+
+        ActivityLogger::log(
+            'VOUCHER_DELETED',
+            "Deleted promotional voucher '{$code}'",
+            $coupon,
+            ['code' => $code, 'used_count' => $usedCount]
+        );
+
+        $coupon->delete();
+
+        return redirect()->route('admin.commerce.index')
+            ->with('status', "Voucher '{$code}' deleted successfully.");
     }
 }
