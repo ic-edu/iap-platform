@@ -250,6 +250,39 @@
 
     </div>
 
+    {{-- Institutional Operations Snapshot --}}
+    <section class="space-y-4 pt-2">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <span>Institutional Operations</span>
+            </h2>
+            <a href="{{ route('admin.organizations.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold flex items-center gap-1">
+                <span>View All Organizations</span>
+                <span>&rarr;</span>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {{-- Pending Organization Approvals --}}
+            <a href="{{ route('admin.organizations.index', ['status' => 'pending']) }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-amber-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Pending Organization Approvals</p>
+                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-1 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">{{ number_format($pendingOrganizationsCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xl">
+                        🏛️
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span>Awaiting Super Admin review</span>
+                    <span class="text-amber-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+            </a>
+        </div>
+    </section>
+
     {{-- Commercial & Voucher Operations Snapshot --}}
     <section class="space-y-4 pt-2">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">

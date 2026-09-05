@@ -11,6 +11,8 @@ use App\Modules\Certificate\Models\Certificate;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Modules\Commerce\Domain\Models\Coupon;
 use App\Modules\Commerce\Domain\Models\Order;
+use App\Modules\Organization\Enums\OrganizationStatus;
+use App\Modules\Organization\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -48,6 +50,9 @@ class AdminOperationalDashboardController extends Controller
 
         // 6. Total Verified Certificates Issued
         $totalCertificatesIssued = Certificate::count();
+
+        // 7. Pending Organization Approvals (Awaiting Super Admin review)
+        $pendingOrganizationsCount = Organization::where('status', OrganizationStatus::Pending)->count();
 
         // ACTION PANEL: Candidates Requiring Action (Paid Real Test awaiting Admin Assignment)
         $paidOrders = Order::with(['user', 'items.product.test', 'invoice.payments'])
@@ -122,6 +127,7 @@ class AdminOperationalDashboardController extends Controller
             'completedAttemptsCount',
             'inProgressAttemptsCount',
             'totalCertificatesIssued',
+            'pendingOrganizationsCount',
             'actionRequiredCandidates',
             'recentAssignments',
             'availableTests',
