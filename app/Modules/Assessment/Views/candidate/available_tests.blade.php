@@ -33,8 +33,8 @@
                             <span class="font-medium text-slate-200">{{ $test->duration_minutes }} Minutes</span>
                         </div>
                         <div class="flex justify-between">
-                            <span>Passing Score:</span>
-                            <span class="font-medium text-slate-200">{{ $test->pass_score }} Points</span>
+                            <span>{{ $isRealTest ? 'Passing Score:' : 'Passing Threshold:' }}</span>
+                            <span class="font-medium text-slate-200">{{ $test->getPassingThresholdDisplay() }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Mode:</span>

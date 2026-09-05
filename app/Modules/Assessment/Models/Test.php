@@ -89,6 +89,18 @@ class Test extends Model
     }
 
     /**
+     * Get user-facing formatted passing threshold.
+     */
+    public function getPassingThresholdDisplay(): string
+    {
+        if ($this->isSimulator()) {
+            return '75% Accuracy';
+        }
+
+        return "{$this->pass_score} Points";
+    }
+
+    /**
      * Get Assessment Mode Policy instance.
      */
     public function policy(): \App\Modules\Assessment\Policies\AssessmentModePolicy

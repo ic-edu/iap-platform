@@ -32,7 +32,7 @@
                 </div>
                 <div>
                     <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Pass Threshold</span>
-                    <span class="text-base font-bold text-emerald-400 mt-0.5 block">🎯 {{ $test->pass_score }} Points</span>
+                    <span class="text-base font-bold text-emerald-400 mt-0.5 block">🎯 {{ $test->getPassingThresholdDisplay() }}</span>
                 </div>
                 <div>
                     <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Sections</span>
