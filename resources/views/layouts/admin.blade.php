@@ -70,7 +70,8 @@
                         <div class="space-y-1">
                             @foreach ($items as $item)
                                 @php
-                                    $isActive = request()->is($item['active_pattern']);
+                                    $isActive = request()->is($item['active_pattern'])
+                                        && (empty($item['exclude_pattern']) || !request()->is($item['exclude_pattern']));
                                 @endphp
                                 <a href="{{ route($item['route']) }}"
                                    class="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors {{ $isActive ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-900' }}">

@@ -130,6 +130,7 @@ class NavigationService
                     'icon' => 'shield-check',
                     'permission' => null,
                     'active_pattern' => 'admin/approvals*',
+                    'exclude_pattern' => 'admin/approvals/organizations*',
                     'badge' => 'NEW',
                 ],
                 [
