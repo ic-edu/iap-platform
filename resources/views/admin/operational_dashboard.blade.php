@@ -250,5 +250,158 @@
 
     </div>
 
+    {{-- Commercial & Voucher Operations Snapshot --}}
+    <section class="space-y-4 pt-2">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <span>Commercial &amp; Voucher Snapshot</span>
+                @if($inactiveVouchersCount > 0)
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20">
+                    Inactive: {{ $inactiveVouchersCount }}
+                </span>
+                @endif
+            </h2>
+            <a href="{{ route('admin.commerce.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold flex items-center gap-1">
+                <span>View Commercial Catalog</span>
+                <span>&rarr;</span>
+            </a>
+        </div>
+
+        {{-- Voucher KPI Cards Grid --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+            {{-- 1. Active Vouchers --}}
+            <a href="{{ route('admin.commerce.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Vouchers</p>
+                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">{{ number_format($activeVouchersCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xl">
+                        🎟️
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span>Currently redeemable</span>
+                    <span class="text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+            </a>
+
+            {{-- 2. Scheduled Vouchers --}}
+            <a href="{{ route('admin.commerce.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-sky-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-sky-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Scheduled Vouchers</p>
+                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-1 group-hover:text-sky-600 dark:group-hover:text-sky-300 transition-colors">{{ number_format($scheduledVouchersCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 text-xl">
+                        ⏳
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span>Not active yet</span>
+                    <span class="text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+            </a>
+
+            {{-- 3. Expired Vouchers --}}
+            <a href="{{ route('admin.commerce.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-rose-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-rose-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Expired Vouchers</p>
+                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-1 group-hover:text-rose-600 dark:group-hover:text-rose-300 transition-colors">{{ number_format($expiredVouchersCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xl">
+                        ⌛
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span>Validity ended</span>
+                    <span class="text-rose-600 dark:text-rose-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+            </a>
+
+            {{-- 4. Total Redemptions --}}
+            <a href="{{ route('admin.commerce.index') }}" class="group block p-5 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-indigo-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Redemptions</p>
+                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{{ number_format($totalVoucherRedemptions) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xl">
+                        📊
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span>Across all vouchers</span>
+                    <span class="text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+            </a>
+
+        </div>
+
+        {{-- Voucher Activity Panel --}}
+        <div class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <span>🎟️</span> Current Vouchers
+                </h3>
+                <a href="{{ route('admin.commerce.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold">View Commercial Catalog &rarr;</a>
+            </div>
+
+            @if($recentVouchers->isEmpty())
+            <div class="py-8 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40">
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">No vouchers configured yet.</p>
+                <a href="{{ route('admin.commerce.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">View Commercial Catalog &rarr;</a>
+            </div>
+            @else
+            <div class="space-y-2.5">
+                @foreach($recentVouchers as $voucher)
+                    @php
+                        $vState = $voucher->getEffectiveState();
+                        $badgeClasses = match($vState) {
+                            'ACTIVE'    => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                            'SCHEDULED' => 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
+                            'EXPIRED'   => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                            default     => 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+                        };
+                    @endphp
+                    <div class="p-3.5 rounded-lg bg-slate-900/60 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-900/90 transition-colors">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">{{ $voucher->code }}</span>
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ $voucher->value }}% OFF</span>
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border {{ $badgeClasses }}">
+                                    {{ $vState }}
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                                @if($vState === 'ACTIVE')
+                                    Valid until {{ $voucher->valid_until ? $voucher->valid_until->format('d M Y') : 'Open' }}
+                                @elseif($vState === 'SCHEDULED')
+                                    Starts {{ $voucher->valid_from ? $voucher->valid_from->format('d M Y, H:i') : '-' }}
+                                @elseif($vState === 'EXPIRED')
+                                    Expired {{ $voucher->valid_until ? $voucher->valid_until->format('d M Y') : '-' }}
+                                @else
+                                    {{ $voucher->valid_until ? 'Valid until ' . $voucher->valid_until->format('d M Y') : 'Inactive' }}
+                                @endif
+                                &bull;
+                                <span class="font-medium text-slate-700 dark:text-slate-300">{{ $voucher->used_count }} {{ \Illuminate\Support\Str::plural('redemption', $voucher->used_count) }}</span>
+                            </p>
+                        </div>
+                        <a href="{{ route('admin.commerce.index') }}" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 transition-colors flex-shrink-0 text-center">
+                            Manage &rarr;
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+            @endif
+        </div>
+    </section>
+
 </div>
 @endsection

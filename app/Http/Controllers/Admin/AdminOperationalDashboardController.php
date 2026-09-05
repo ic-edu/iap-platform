@@ -9,6 +9,7 @@ use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Certificate\Models\Certificate;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
+use App\Modules\Commerce\Domain\Models\Coupon;
 use App\Modules\Commerce\Domain\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -100,6 +101,20 @@ class AdminOperationalDashboardController extends Controller
         // Unread Notifications Count
         $unreadNotificationsCount = $user ? $user->unreadNotifications->count() : 0;
 
+        // Commercial & Voucher Operations Snapshot
+        $allVouchers = Coupon::latest()->get();
+        $activeVouchersCount = $allVouchers->filter(fn($c) => $c->isEffectiveActive())->count();
+        $scheduledVouchersCount = $allVouchers->filter(fn($c) => $c->isScheduled())->count();
+        $expiredVouchersCount = $allVouchers->filter(fn($c) => $c->isExpired())->count();
+        $inactiveVouchersCount = $allVouchers->filter(fn($c) => $c->getEffectiveState() === 'INACTIVE')->count();
+        $totalVoucherRedemptions = (int) Coupon::withTrashed()->sum('used_count');
+
+        // Recent 5 Operationally Relevant Vouchers
+        $recentVouchers = $allVouchers->sortBy([
+            fn($a, $b) => match($a->getEffectiveState()) { 'ACTIVE' => 1, 'SCHEDULED' => 2, 'EXPIRED' => 3, default => 4 } <=> match($b->getEffectiveState()) { 'ACTIVE' => 1, 'SCHEDULED' => 2, 'EXPIRED' => 3, default => 4 },
+            fn($a, $b) => $b->updated_at <=> $a->updated_at,
+        ])->take(5);
+
         return view('admin.operational_dashboard', compact(
             'totalCandidates',
             'paidEligibleCandidatesCount',
@@ -110,7 +125,13 @@ class AdminOperationalDashboardController extends Controller
             'actionRequiredCandidates',
             'recentAssignments',
             'availableTests',
-            'unreadNotificationsCount'
+            'unreadNotificationsCount',
+            'activeVouchersCount',
+            'scheduledVouchersCount',
+            'expiredVouchersCount',
+            'inactiveVouchersCount',
+            'totalVoucherRedemptions',
+            'recentVouchers'
         ));
     }
 }
