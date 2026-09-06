@@ -46,6 +46,7 @@
 
                 <form method="POST" action="{{ route('logout') }}" class="pt-2">
                     @csrf
+                    <input type="hidden" name="return_url" value="{{ route('invitations.accept', $token) }}">
                     <button type="submit" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition">
                         Log Out &amp; Switch Account
                     </button>

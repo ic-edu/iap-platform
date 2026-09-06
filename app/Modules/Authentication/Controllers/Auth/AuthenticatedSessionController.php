@@ -28,6 +28,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        $redirectUrl = $request->input('redirect') ?? $request->query('redirect');
+
         // Flush previous session completely to avoid context bleed
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -57,6 +59,15 @@ class AuthenticatedSessionController extends Controller
             event(new UserLoggedIn($user));
         }
 
+        // Return to redirect/intended URL if present and safe (e.g. invitation acceptance)
+        if ($redirectUrl) {
+            $parsedHost = parse_url($redirectUrl, PHP_URL_HOST);
+            $appHost = parse_url(config('app.url'), PHP_URL_HOST);
+            if (!$parsedHost || $parsedHost === $appHost || in_array($parsedHost, ['localhost', '127.0.0.1'], true)) {
+                return redirect()->to($redirectUrl);
+            }
+        }
+
         // Redirect strictly based on active role
         if ($user?->hasRole('super-admin')) {
             return redirect()->route('super-admin.dashboard');
@@ -78,6 +89,13 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('finance.dashboard');
         }
 
+        if ($user?->hasRole('organization-coordinator')) {
+            $orgSlug = $user->organizationMemberships()->first()?->organization?->slug;
+            if ($orgSlug) {
+                return redirect()->route('organization.dashboard', $orgSlug);
+            }
+        }
+
         if ($user?->hasRole('student')) {
             return redirect()->route('candidate.portal');
         }
@@ -91,6 +109,7 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         $user = $request->user();
+        $returnUrl = $request->input('return_url') ?? $request->query('return_url') ?? $request->session()->get('url.intended');
 
         Auth::guard('web')->logout();
 
@@ -101,6 +120,14 @@ class AuthenticatedSessionController extends Controller
 
         if ($user) {
             event(new UserLoggedOut($user));
+        }
+
+        if ($returnUrl) {
+            $parsedHost = parse_url($returnUrl, PHP_URL_HOST);
+            $appHost = parse_url(config('app.url'), PHP_URL_HOST);
+            if (!$parsedHost || $parsedHost === $appHost || in_array($parsedHost, ['localhost', '127.0.0.1'], true)) {
+                return redirect()->route('login', ['redirect' => $returnUrl]);
+            }
         }
 
         return redirect('/login');
