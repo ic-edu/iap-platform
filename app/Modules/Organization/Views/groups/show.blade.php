@@ -76,7 +76,7 @@
                     @empty
                         <tr>
                             <td colspan="5" class="py-8 text-center text-slate-400 text-sm">
-                                No members assigned to this group yet. Click "Add Member to Group" above.
+                                No candidate members assigned to this group yet. Click "Add Member to Group" above.
                             </td>
                         </tr>
                     @endforelse
@@ -100,12 +100,12 @@
             </div>
 
             @if($availableMemberships->isEmpty())
-                <p class="text-xs text-slate-500 py-4 text-center">All active organization members are already in this group.</p>
+                <p class="text-xs text-slate-500 py-4 text-center">All eligible candidate members are already in this group.</p>
             @else
                 <form method="POST" action="{{ route('organization.groups.members.add', [$organization->slug, $group->id]) }}" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">Select Active Member *</label>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">Select Candidate Member *</label>
                         <select name="membership_id" required class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                             @foreach($availableMemberships as $avail)
                                 <option value="{{ $avail->id }}">

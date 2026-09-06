@@ -380,10 +380,11 @@ class OrganizationPortalController extends Controller
             ->with(['membership.user'])
             ->paginate(20);
 
-        // Active organization members who are not yet in this group
+        // Active candidate members who are not yet in this group (Coordinators/Admins/Owners excluded)
         $assignedMembershipIds = $group->groupMembers()->pluck('membership_id');
         $availableMemberships = $organization->memberships()
             ->where('status', MembershipStatus::Active)
+            ->where('role', MembershipRole::Member)
             ->whereNotIn('id', $assignedMembershipIds)
             ->with('user')
             ->orderBy('department')
@@ -483,6 +484,10 @@ class OrganizationPortalController extends Controller
 
         if ($membership->status !== MembershipStatus::Active) {
             return back()->withErrors(['error' => 'Only active members can be assigned to groups.']);
+        }
+
+        if ($membership->role !== MembershipRole::Member) {
+            return back()->withErrors(['error' => 'Only Candidate Members can be assigned to groups. Privileged roles (Coordinators, Admins, Owners) cannot be group members.']);
         }
 
         $group->addMembership($membership);

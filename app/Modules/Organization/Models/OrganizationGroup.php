@@ -4,6 +4,7 @@ namespace App\Modules\Organization\Models;
 
 use App\Models\User;
 use App\Modules\Organization\Enums\GroupType;
+use App\Modules\Organization\Enums\MembershipRole;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -99,6 +100,10 @@ class OrganizationGroup extends Model
     {
         if ((string) $membership->organization_id !== (string) $this->organization_id) {
             throw new \InvalidArgumentException("Cannot add member from Organization '{$membership->organization_id}' to Group of Organization '{$this->organization_id}'.");
+        }
+
+        if ($membership->role !== MembershipRole::Member) {
+            throw new \InvalidArgumentException("Only Candidate Members can be added to groups. Role '{$membership->role->value}' is not eligible.");
         }
 
         return $this->groupMembers()->firstOrCreate([
