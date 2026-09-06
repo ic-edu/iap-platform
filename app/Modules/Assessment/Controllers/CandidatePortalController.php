@@ -66,6 +66,18 @@ class CandidatePortalController extends Controller
             ->where('status', \App\Modules\Commerce\Domain\Enums\PaymentStatus::Pending)
             ->count();
 
+        $user = $request->user();
+        $institutionalMemberships = $user ? $user->activeOrganizationMemberships()
+            ->with([
+                'organization',
+                'groups' => function ($query) {
+                    $query->where('is_active', true);
+                },
+            ])
+            ->get()
+            ->filter(fn ($m) => $m->organization && $m->organization->isActive())
+            ->values() : collect();
+
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.portal';
 
@@ -76,7 +88,8 @@ class CandidatePortalController extends Controller
             'issuedCertificatesCount',
             'ongoingAttempts',
             'openOrdersCount',
-            'pendingPaymentsCount'
+            'pendingPaymentsCount',
+            'institutionalMemberships'
         ));
     }
 

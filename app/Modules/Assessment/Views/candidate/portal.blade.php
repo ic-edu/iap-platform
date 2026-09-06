@@ -4,6 +4,58 @@
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Welcome back, {{ Auth::user()?->name }}. Manage your test attempts and digital certifications.</p>
     </div>
 
+    {{-- Institutional Membership Context Banner --}}
+    @if (isset($institutionalMemberships) && $institutionalMemberships->isNotEmpty())
+        <div class="mb-8 space-y-4">
+            @foreach ($institutionalMemberships as $membership)
+                <div class="p-5 sm:p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="flex items-start gap-3.5">
+                            <div class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50 shrink-0 mt-0.5">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/50">
+                                        Institutional Membership
+                                    </span>
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-950/50 dark:text-emerald-400 dark:ring-emerald-500/30">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        Active
+                                    </span>
+                                </div>
+                                <h2 class="text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                                    {{ $membership->organization->name }}
+                                </h2>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">
+                                    {{ is_object($membership->organization->organization_type) ? $membership->organization->organization_type->label() : ($membership->organization->organization_type ?? 'Institutional Organization') }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/60">
+                            <div class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Role</span>
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                    {{ is_object($membership->role) ? $membership->role->label() : $membership->role }}
+                                </span>
+                            </div>
+
+                            <div class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Group / Cohort</span>
+                                <span class="text-xs font-bold {{ $membership->groups->isNotEmpty() ? 'text-slate-800 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400 font-normal' }}">
+                                    {{ $membership->groups->isNotEmpty() ? $membership->groups->pluck('name')->join(', ') : 'Not Assigned' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @endif
+
     <!-- Metrics Summary Grid -->
     <div class="grid gap-5 sm:grid-cols-4 mb-8">
         {{-- 1. Available Tests KPI --}}
