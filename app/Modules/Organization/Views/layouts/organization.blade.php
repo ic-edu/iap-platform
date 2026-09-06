@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,15 +11,15 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
 
-    <!-- Theme Initialization -->
+    <!-- Early Theme Initialization to prevent flash of wrong theme -->
     <script>
         (function() {
-            var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}';
+            var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
             function resolveTheme(pref) {
                 if (pref === 'system') {
                     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                return pref === 'dark' ? 'dark' : 'light';
+                return pref === 'light' ? 'light' : 'dark';
             }
             var activeTheme = resolveTheme(preference);
             var root = document.documentElement;
@@ -97,13 +97,48 @@
             </nav>
 
             <!-- Bottom User & Switcher Area -->
-            <div class="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+            <div class="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                <!-- Theme Selector: [ ☼ Light ] [ ☾ Dark ] [ ▣ System ] -->
+                <div class="space-y-1.5">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Theme &amp; Appearance</span>
+                    <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl" role="group" aria-label="Theme selector">
+                        <button type="button"
+                                onclick="setIapTheme('light')"
+                                id="theme-btn-light"
+                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
+                                title="Light theme"
+                                aria-label="Select Light theme">
+                            <span class="text-sm">☼</span>
+                            <span class="text-[11px]">Light</span>
+                        </button>
+                        <button type="button"
+                                onclick="setIapTheme('dark')"
+                                id="theme-btn-dark"
+                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
+                                title="Dark theme"
+                                aria-label="Select Dark theme">
+                            <span class="text-sm">☾</span>
+                            <span class="text-[11px]">Dark</span>
+                        </button>
+                        <button type="button"
+                                onclick="setIapTheme('system')"
+                                id="theme-btn-system"
+                                class="theme-switcher-btn flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
+                                title="System theme"
+                                aria-label="Select System theme">
+                            <span class="text-sm">▣</span>
+                            <span class="text-[11px]">System</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Switch Organization -->
                 <a href="{{ route('organization.select') }}" class="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/70 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition">
                     <span>Switch Organization</span>
                     <svg class="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
                 </a>
 
-                <div class="flex items-center justify-between pt-2">
+                <div class="flex items-center justify-between pt-1">
                     <div class="flex items-center gap-2 overflow-hidden">
                         <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-700 dark:text-slate-300">
                             {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
@@ -183,5 +218,75 @@
 
     <!-- Global IAP Modal System -->
     <x-iap-modal />
+
+    <!-- Theme Switcher Engine -->
+    <script>
+        function updateSwitcherButtonsUI(mode) {
+            ['light', 'dark', 'system'].forEach(function(m) {
+                var btn = document.getElementById('theme-btn-' + m);
+                if (btn) {
+                    if (m === mode) {
+                        btn.classList.add('active');
+                        btn.setAttribute('aria-pressed', 'true');
+                    } else {
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-pressed', 'false');
+                    }
+                }
+            });
+        }
+
+        window.setIapTheme = function(mode) {
+            var root = document.documentElement;
+            var activeTheme = mode;
+            if (mode === 'system') {
+                activeTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            root.setAttribute('data-theme', activeTheme);
+            root.setAttribute('data-preference', mode);
+            if (activeTheme === 'dark') {
+                root.classList.add('dark');
+                root.classList.remove('light');
+            } else {
+                root.classList.add('light');
+                root.classList.remove('dark');
+            }
+
+            updateSwitcherButtonsUI(mode);
+
+            // Persist preference to database & session
+            fetch('{{ route('settings.appearance.update') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ theme: mode })
+            }).catch(function(err) {
+                console.error('Failed to persist theme preference:', err);
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var currentPref = document.documentElement.getAttribute('data-preference') || 'dark';
+            updateSwitcherButtonsUI(currentPref);
+
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                var root = document.documentElement;
+                if (root.getAttribute('data-preference') === 'system') {
+                    var activeTheme = e.matches ? 'dark' : 'light';
+                    root.setAttribute('data-theme', activeTheme);
+                    if (activeTheme === 'dark') {
+                        root.classList.add('dark');
+                        root.classList.remove('light');
+                    } else {
+                        root.classList.add('light');
+                        root.classList.remove('dark');
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>

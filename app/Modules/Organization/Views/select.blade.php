@@ -1,9 +1,34 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ Auth::user()?->getThemePreference() ?? 'light' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Select Organization — iC.edu Assessment Platform</title>
+
+    <!-- Early Theme Initialization to prevent flash of wrong theme -->
+    <script>
+        (function() {
+            var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
+            function resolveTheme(pref) {
+                if (pref === 'system') {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                return pref === 'light' ? 'light' : 'dark';
+            }
+            var activeTheme = resolveTheme(preference);
+            var root = document.documentElement;
+            root.setAttribute('data-theme', activeTheme);
+            root.setAttribute('data-preference', preference);
+            if (activeTheme === 'dark') {
+                root.classList.add('dark');
+                root.classList.remove('light');
+            } else {
+                root.classList.add('light');
+                root.classList.remove('dark');
+            }
+        })();
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex items-center justify-center p-6">
