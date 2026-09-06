@@ -500,31 +500,40 @@ class OrganizationPortalController extends Controller
     }
 
     /**
-     * Update Organization Profile.
+     * Update Organization Profile (Operational contact fields only).
+     * Governance-sensitive identity fields (name, organization_type, status, slug) are protected.
      */
     public function updateProfile(Request $request, Organization $organization): RedirectResponse
     {
         $validated = $request->validate([
-            'name'              => ['required', 'string', 'max:255'],
-            'organization_type' => ['required', Rule::in(OrganizationType::values())],
-            'email'             => ['nullable', 'email', 'max:255'],
-            'phone'             => ['nullable', 'string', 'max:50'],
-            'website'           => ['nullable', 'url', 'max:255'],
-            'address'           => ['nullable', 'string', 'max:500'],
-            'city'              => ['nullable', 'string', 'max:100'],
-            'province'          => ['nullable', 'string', 'max:100'],
-            'country'           => ['nullable', 'string', 'max:100'],
-            'postal_code'       => ['nullable', 'string', 'max:20'],
+            'email'       => ['nullable', 'email', 'max:255'],
+            'phone'       => ['nullable', 'string', 'max:50'],
+            'website'     => ['nullable', 'url', 'max:255'],
+            'address'     => ['nullable', 'string', 'max:500'],
+            'city'        => ['nullable', 'string', 'max:100'],
+            'province'    => ['nullable', 'string', 'max:100'],
+            'country'     => ['nullable', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
         ]);
 
-        $organization->update($validated);
+        $organization->update([
+            'email'       => $validated['email'] ?? null,
+            'phone'       => $validated['phone'] ?? null,
+            'website'     => $validated['website'] ?? null,
+            'address'     => $validated['address'] ?? null,
+            'city'        => $validated['city'] ?? null,
+            'province'    => $validated['province'] ?? null,
+            'country'     => $validated['country'] ?? 'Indonesia',
+            'postal_code' => $validated['postal_code'] ?? null,
+        ]);
 
         ActivityLogger::log(
-            action: 'ORG_UPDATED',
-            description: "Updated organization profile for '{$organization->name}'",
+            action: 'ORG_PROFILE_UPDATED',
+            description: "Coordinator updated contact & operational profile for '{$organization->name}'",
             subject: $organization,
             properties: [
                 'organization_id' => $organization->id,
+                'updated_fields'  => array_keys($validated),
             ]
         );
 
