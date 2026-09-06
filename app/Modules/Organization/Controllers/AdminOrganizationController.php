@@ -10,11 +10,13 @@ use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Enums\OrganizationType;
 use App\Modules\Organization\Models\Organization;
 use App\Modules\Organization\Models\OrganizationInvitation;
+use App\Modules\Organization\Notifications\OrganizationInvitationNotification;
 use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -388,7 +390,35 @@ class AdminOrganizationController extends Controller
         ]);
 
         $plainToken = $invitationData['token'];
+        $invitation = $invitationData['invitation'];
         $acceptUrl = route('invitations.accept', ['token' => $plainToken]);
+
+        $emailDispatched = false;
+        try {
+            Notification::route('mail', $email)->notify(new OrganizationInvitationNotification($invitation, $acceptUrl));
+            $emailDispatched = true;
+
+            ActivityLogger::log(
+                action: 'ORG_COORDINATOR_INVITATION_QUEUED',
+                description: "Queued coordinator invitation email for '{$email}' in '{$organization->name}'",
+                subject: $invitation,
+                properties: [
+                    'organization_id' => $organization->id,
+                    'email'           => $email,
+                    'intended_role'   => $invitation->intended_role->value,
+                ]
+            );
+        } catch (\Throwable $e) {
+            ActivityLogger::log(
+                action: 'ORG_COORDINATOR_INVITATION_EMAIL_FAILED',
+                description: "Failed to queue coordinator invitation email for '{$email}': {$e->getMessage()}",
+                subject: $invitation,
+                properties: [
+                    'organization_id' => $organization->id,
+                    'email'           => $email,
+                ]
+            );
+        }
 
         ActivityLogger::log(
             action: 'ORG_COORDINATOR_INVITED',
@@ -400,8 +430,12 @@ class AdminOrganizationController extends Controller
             ]
         );
 
+        $statusMsg = $emailDispatched
+            ? "Primary coordinator invitation link generated and email queued for {$email}."
+            : "Primary coordinator invitation link generated for {$email}. (Email delivery could not be queued)";
+
         return back()
-            ->with('status', "Primary coordinator invitation link generated for {$email}.")
+            ->with('status', $statusMsg)
             ->with('invitation_url', $acceptUrl);
     }
 
@@ -425,6 +459,35 @@ class AdminOrganizationController extends Controller
             'expires_at' => now()->addDays(7),
         ]);
 
+        $acceptUrl = route('invitations.accept', ['token' => $plainToken]);
+
+        $emailDispatched = false;
+        try {
+            Notification::route('mail', $invitation->email)->notify(new OrganizationInvitationNotification($invitation, $acceptUrl));
+            $emailDispatched = true;
+
+            ActivityLogger::log(
+                action: 'ORG_COORDINATOR_INVITATION_QUEUED',
+                description: "Queued resent coordinator invitation email for '{$invitation->email}' in '{$organization->name}'",
+                subject: $invitation,
+                properties: [
+                    'organization_id' => $organization->id,
+                    'email'           => $invitation->email,
+                    'intended_role'   => $invitation->intended_role->value,
+                ]
+            );
+        } catch (\Throwable $e) {
+            ActivityLogger::log(
+                action: 'ORG_COORDINATOR_INVITATION_EMAIL_FAILED',
+                description: "Failed to queue resent coordinator invitation email for '{$invitation->email}': {$e->getMessage()}",
+                subject: $invitation,
+                properties: [
+                    'organization_id' => $organization->id,
+                    'email'           => $invitation->email,
+                ]
+            );
+        }
+
         ActivityLogger::log(
             action: 'ORG_COORDINATOR_INVITATION_RESENT',
             description: "Registration Admin resent coordinator invitation to {$invitation->email} for '{$organization->name}'",
@@ -435,10 +498,12 @@ class AdminOrganizationController extends Controller
             ]
         );
 
-        $acceptUrl = route('invitations.accept', ['token' => $plainToken]);
+        $statusMsg = $emailDispatched
+            ? "Primary coordinator invitation resent and email queued for {$invitation->email}."
+            : "Primary coordinator invitation resent to {$invitation->email}. (Email delivery could not be queued)";
 
         return back()
-            ->with('status', "Primary coordinator invitation resent to {$invitation->email}.")
+            ->with('status', $statusMsg)
             ->with('invitation_url', $acceptUrl);
     }
 
