@@ -19,7 +19,7 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->prefix('admin/comm
     Route::post('/products/{product}/propose-price', [CommerceController::class, 'proposePriceChange'])->name('admin.commerce.products.propose-price');
 });
 
-Route::middleware(['web', 'auth'])->prefix('candidate')->name('candidate.')->group(function () {
+Route::middleware(['web', 'auth', 'role:student'])->prefix('candidate')->name('candidate.')->group(function () {
     // Store & Product Detail
     Route::get('/store', [CandidateCommerceController::class, 'store'])->name('store');
     Route::get('/store/{product}', [CandidateCommerceController::class, 'showProduct'])->name('store.show');

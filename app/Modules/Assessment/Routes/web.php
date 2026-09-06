@@ -21,7 +21,7 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-man
 });
 
 // Candidate Portal & CBT Delivery Engine Routes
-Route::middleware(['web', 'auth'])->prefix('candidate')->group(function () {
+Route::middleware(['web', 'auth', 'role:student'])->prefix('candidate')->group(function () {
     Route::get('/portal', [CandidatePortalController::class, 'portal'])->name('candidate.portal');
     Route::get('/available-tests', [CandidatePortalController::class, 'availableTests'])->name('candidate.available-tests');
     Route::get('/my-attempts', [CandidatePortalController::class, 'myAttempts'])->name('candidate.my-attempts');

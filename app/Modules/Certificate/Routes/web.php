@@ -10,7 +10,7 @@ Route::get('/verify/{code}', [PublicVerificationController::class, 'show'])->nam
 
 // Candidate Certificate Download
 Route::get('/candidate/certificates/{certificate}/download', [CertificateAdminController::class, 'download'])
-    ->middleware('auth')
+    ->middleware(['auth', 'role:student'])
     ->name('candidate.certificates.download');
 
 // Admin Certificate Management
