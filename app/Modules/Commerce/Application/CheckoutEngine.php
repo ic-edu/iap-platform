@@ -10,9 +10,9 @@ use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Models\OrderItem;
 use App\Modules\Commerce\Domain\Models\Product;
 use App\Modules\Commerce\Events\CheckoutCompleted;
-use Illuminate\Support\Str;
-
+use App\Modules\Organization\Models\Organization;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CheckoutEngine
 {
@@ -22,19 +22,29 @@ class CheckoutEngine
     ) {}
 
     /**
-     * Process checkout for user, product, optional coupon.
+     * Process checkout for user, product, optional coupon, and optional owning organization.
      *
      * @return array{order: Order, invoice: Invoice}
      */
-    public function checkout(User $user, Product $product, int $quantity = 1, ?Coupon $coupon = null): array
-    {
-        return DB::transaction(function () use ($user, $product, $quantity, $coupon) {
-            // Idempotency: Check if an active pending order already exists for this user and product
-            $existingOrder = Order::where('user_id', $user->id)
-                ->where('status', OrderStatus::Pending)
-                ->whereHas('items', fn($q) => $q->where('product_id', $product->id))
-                ->with(['invoice', 'items'])
-                ->first();
+    public function checkout(
+        User $user,
+        Product $product,
+        int $quantity = 1,
+        ?Coupon $coupon = null,
+        ?Organization $organization = null
+    ): array {
+        return DB::transaction(function () use ($user, $product, $quantity, $coupon, $organization) {
+            // Idempotency: Check if an active pending order already exists for this customer and product
+            $query = Order::where('status', OrderStatus::Pending)
+                ->whereHas('items', fn($q) => $q->where('product_id', $product->id));
+
+            if ($organization) {
+                $query->where('organization_id', $organization->id);
+            } else {
+                $query->where('user_id', $user->id)->whereNull('organization_id');
+            }
+
+            $existingOrder = $query->with(['invoice', 'items'])->first();
 
             if ($existingOrder && $existingOrder->invoice) {
                 return [
@@ -48,21 +58,22 @@ class CheckoutEngine
             $orderNumber = 'ORD-'.now()->format('Ymd').'-'.strtoupper(Str::random(4));
 
             $order = Order::create([
-                'user_id' => $user->id,
-                'order_number' => $orderNumber,
-                'status' => OrderStatus::Pending,
-                'subtotal' => $pricing['base_price'],
-                'discount' => $pricing['discount'],
-                'tax' => $pricing['tax'],
-                'grand_total' => $pricing['grand_total'],
+                'user_id'         => $user->id,
+                'organization_id' => $organization?->id,
+                'order_number'    => $orderNumber,
+                'status'          => OrderStatus::Pending,
+                'subtotal'        => $pricing['base_price'],
+                'discount'        => $pricing['discount'],
+                'tax'             => $pricing['tax'],
+                'grand_total'     => $pricing['grand_total'],
             ]);
 
             OrderItem::create([
-                'order_id' => $order->id,
+                'order_id'   => $order->id,
                 'product_id' => $product->id,
-                'quantity' => $quantity,
-                'price' => $product->price,
-                'total' => $pricing['grand_total'],
+                'quantity'   => $quantity,
+                'price'      => $product->price,
+                'total'      => $pricing['grand_total'],
             ]);
 
             $invoice = $this->invoiceEngine->generateInvoice($order);
@@ -70,7 +81,7 @@ class CheckoutEngine
             event(new CheckoutCompleted($order, $invoice));
 
             return [
-                'order' => $order,
+                'order'   => $order,
                 'invoice' => $invoice,
             ];
         });

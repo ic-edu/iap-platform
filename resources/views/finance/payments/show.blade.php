@@ -41,7 +41,12 @@
         {{-- Metadata Grid --}}
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800">
             <div>
-                <span class="text-slate-400 uppercase font-bold text-[10px] block tracking-wider">Candidate / Student</span>
+                <span class="text-slate-400 uppercase font-bold text-[10px] block tracking-wider">Candidate / Payer</span>
+                @if($payment->invoice?->order?->organization)
+                    <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 mt-1 mb-0.5">
+                        <span>Institution: {{ $payment->invoice->order->organization->name }}</span>
+                    </div>
+                @endif
                 <span class="font-bold text-slate-900 dark:text-white text-sm block mt-1">{{ $payment->user?->name ?? 'Candidate' }}</span>
                 <span class="text-slate-500 dark:text-slate-400 font-mono">{{ $payment->user?->email }}</span>
             </div>
@@ -61,13 +66,14 @@
 
         {{-- Purchased Items Summary --}}
         <div class="space-y-3">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Order Package Inclusions</h2>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Order Package Inclusions &amp; Seat Quantities</h2>
             <div class="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
                         <tr>
                             <th class="p-4">Item Title</th>
                             <th class="p-4 text-center">Type</th>
+                            <th class="p-4 text-center">Quantity / Seats</th>
                             <th class="p-4 text-right">Price</th>
                         </tr>
                     </thead>
@@ -76,13 +82,16 @@
                             @foreach($payment->invoice->order->items as $item)
                             <tr>
                                 <td class="p-4">
-                                    <span class="font-bold text-slate-900 dark:text-white block">{{ $item->product?->title ?? 'Package Item' }}</span>
-                                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{{ $item->product?->slug }}</span>
+                                    <span class="font-bold text-slate-900 dark:text-white block">{{ $item->product?->title ?? $item->product_name ?? 'Package Item' }}</span>
+                                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{{ $item->product?->slug ?? $item->product_id }}</span>
                                 </td>
                                 <td class="p-4 text-center">
                                     <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300">
                                         {{ $item->product?->product_type ?? 'Package' }}
                                     </span>
+                                </td>
+                                <td class="p-4 text-center font-bold text-slate-900 dark:text-white font-mono">
+                                    {{ $item->quantity }}
                                 </td>
                                 <td class="p-4 text-right font-bold text-slate-900 dark:text-white">IDR {{ number_format($item->total) }}</td>
                             </tr>

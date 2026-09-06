@@ -31,6 +31,11 @@ class ActivateEnrollmentOnPayment
             return;
         }
 
+        // Institutional orders provision OrganizationEntitlements instead of individual enrollment
+        if ($order->organization_id) {
+            return;
+        }
+
         $user = $order->user;
         if (!$user) {
             return;

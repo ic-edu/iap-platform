@@ -144,6 +144,7 @@ class ModuleServiceProvider extends ServiceProvider
 
         // Commerce Listeners
         Event::listen(PaymentConfirmed::class, [ActivateEnrollmentOnPayment::class, 'handle']);
+        Event::listen(PaymentConfirmed::class, [\App\Modules\Organization\Listeners\ProvisionOrganizationEntitlementsOnPayment::class, 'handle']);
         Event::listen(PaymentCreated::class, [SendCommercePaymentNotifications::class, 'handlePaymentCreated']);
         Event::listen(PaymentConfirmed::class, [SendCommercePaymentNotifications::class, 'handlePaymentConfirmed']);
         Event::listen(PaymentCancelled::class, [SendCommercePaymentNotifications::class, 'handlePaymentCancelled']);

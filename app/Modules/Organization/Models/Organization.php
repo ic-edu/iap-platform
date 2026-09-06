@@ -156,6 +156,21 @@ class Organization extends Model
             ->where('status', MembershipStatus::Active);
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Commerce\Domain\Models\Order::class, 'organization_id');
+    }
+
+    public function entitlements(): HasMany
+    {
+        return $this->hasMany(OrganizationEntitlement::class, 'organization_id');
+    }
+
+    public function activeEntitlements(): HasMany
+    {
+        return $this->entitlements()->where('status', \App\Modules\Organization\Enums\EntitlementStatus::Active);
+    }
+
     public function submitter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'submitted_by');

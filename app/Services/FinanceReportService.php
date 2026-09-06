@@ -28,7 +28,7 @@ class FinanceReportService
     public function buildReportQuery(array $filters): Builder
     {
         $query = Payment::validCommerce()
-            ->with(['user', 'invoice.order.items.product.test'])
+            ->with(['user', 'invoice.order.items.product.test', 'invoice.order.organization'])
             ->latest('created_at');
 
         // 1. Status Filter
@@ -37,7 +37,7 @@ class FinanceReportService
             $query->where('status', $status);
         }
 
-        // 2. Search Filter (Payment ref, invoice ref, candidate name, candidate email, transaction ID)
+        // 2. Search Filter (Payment ref, invoice ref, candidate name, candidate email, transaction ID, organization name)
         if (!empty($filters['search'])) {
             $searchTerm = trim($filters['search']);
             $query->where(function (Builder $q) use ($searchTerm) {
@@ -49,6 +49,9 @@ class FinanceReportService
                     })
                     ->orWhereHas('invoice', function (Builder $invQ) use ($searchTerm) {
                         $invQ->where('invoice_number', 'like', "%{$searchTerm}%");
+                    })
+                    ->orWhereHas('invoice.order.organization', function (Builder $orgQ) use ($searchTerm) {
+                        $orgQ->where('name', 'like', "%{$searchTerm}%");
                     });
             });
         }

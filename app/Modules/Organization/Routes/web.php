@@ -2,6 +2,8 @@
 
 use App\Modules\Organization\Controllers\AdminOrganizationController;
 use App\Modules\Organization\Controllers\InvitationController;
+use App\Modules\Organization\Controllers\OrganizationCommerceController;
+use App\Modules\Organization\Controllers\OrganizationEntitlementController;
 use App\Modules\Organization\Controllers\OrganizationPortalController;
 use App\Modules\Organization\Controllers\SuperAdminOrganizationApprovalController;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +42,19 @@ Route::middleware(['web', 'auth', 'org.context'])
         Route::post('/groups/{group}/toggle', [OrganizationPortalController::class, 'toggleGroupStatus'])->name('groups.toggle');
         Route::post('/groups/{group}/members', [OrganizationPortalController::class, 'addGroupMember'])->name('groups.members.add');
         Route::delete('/groups/{group}/members/{membership}', [OrganizationPortalController::class, 'removeGroupMember'])->name('groups.members.remove');
+
+        // Purchases & Billing
+        Route::get('/purchases', [OrganizationCommerceController::class, 'purchases'])->name('purchases');
+        Route::get('/purchases/create', [OrganizationCommerceController::class, 'createPurchase'])->name('purchases.create');
+        Route::post('/purchases', [OrganizationCommerceController::class, 'storePurchase'])->name('purchases.store');
+        Route::get('/purchases/{order}', [OrganizationCommerceController::class, 'showOrder'])->name('purchases.show');
+        Route::post('/purchases/{order}/proof', [OrganizationCommerceController::class, 'uploadProof'])->name('purchases.proof');
+
+        // Seats & Entitlements
+        Route::get('/entitlements', [OrganizationEntitlementController::class, 'index'])->name('entitlements');
+        Route::get('/entitlements/{entitlement}', [OrganizationEntitlementController::class, 'show'])->name('entitlements.show');
+        Route::post('/entitlements/{entitlement}/allocate', [OrganizationEntitlementController::class, 'allocate'])->name('entitlements.allocate');
+        Route::post('/entitlements/{entitlement}/allocations/{allocation}/release', [OrganizationEntitlementController::class, 'release'])->name('entitlements.release');
 
         // Profile
         Route::get('/profile', [OrganizationPortalController::class, 'profile'])->name('profile');

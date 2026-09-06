@@ -254,13 +254,26 @@
                             @endif
                         </td>
                         <td class="px-5 py-4">
+                            @if($order && $order->organization)
+                                <div class="flex items-center gap-1.5 mb-1">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                        Org
+                                    </span>
+                                    <span class="font-bold text-xs text-indigo-600 dark:text-indigo-400 truncate max-w-[150px]">{{ $order->organization->name }}</span>
+                                </div>
+                            @endif
                             <div class="font-bold text-slate-900 dark:text-white">{{ $payment->user?->name ?? 'Candidate User' }}</div>
                             <span class="text-[11px] text-slate-600 dark:text-slate-400 font-mono">{{ $payment->user?->email }}</span>
                         </td>
                         <td class="px-5 py-4">
                             @if($order)
                                 @foreach($order->items as $item)
-                                    <div class="font-semibold text-slate-900 dark:text-white">{{ $item->product?->title ?? 'Package Item' }}</div>
+                                    <div class="font-semibold text-slate-900 dark:text-white">
+                                        {{ $item->product?->title ?? $item->product_name ?? 'Package Item' }}
+                                        @if($item->quantity > 1)
+                                            <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400">({{ $item->quantity }} seats)</span>
+                                        @endif
+                                    </div>
                                     @if($item->product?->test)
                                         <span class="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">🎯 Mock Test Product</span>
                                     @endif

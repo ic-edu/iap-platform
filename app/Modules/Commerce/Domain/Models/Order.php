@@ -4,6 +4,7 @@ namespace App\Modules\Commerce\Domain\Models;
 
 use App\Models\User;
 use App\Modules\Commerce\Domain\Enums\OrderStatus;
+use App\Modules\Organization\Models\Organization;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property string $id
  * @property int $user_id
+ * @property string|null $organization_id
  * @property string $order_number
  * @property OrderStatus $status
  * @property float $subtotal
@@ -24,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property User|null $user
+ * @property Organization|null $organization
  * @property Invoice|null $invoice
  */
 class Order extends Model
@@ -34,6 +37,7 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'organization_id',
         'order_number',
         'status',
         'subtotal',
@@ -54,13 +58,47 @@ class Order extends Model
     }
 
     /**
-     * Get user.
+     * Get user who initiated the order.
      *
      * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get owning organization if institutional order.
+     *
+     * @return BelongsTo<Organization, $this>
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class, 'organization_id');
+    }
+
+    /**
+     * Determine if this is an institutional order.
+     */
+    public function isInstitutional(): bool
+    {
+        return !is_null($this->organization_id);
+    }
+
+    /**
+     * Scope query to institutional orders.
+     */
+    public function scopeInstitutional($query)
+    {
+        return $query->whereNotNull('organization_id');
+    }
+
+    /**
+     * Scope query to individual candidate orders.
+     */
+    public function scopeIndividual($query)
+    {
+        return $query->whereNull('organization_id');
     }
 
     /**
