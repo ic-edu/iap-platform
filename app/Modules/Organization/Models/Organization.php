@@ -145,14 +145,14 @@ class Organization extends Model
     public function primaryCoordinatorInvitation(): HasOne
     {
         return $this->hasOne(OrganizationInvitation::class, 'organization_id')
-            ->where('intended_role', MembershipRole::Owner)
+            ->whereIn('intended_role', [MembershipRole::Coordinator, MembershipRole::Owner])
             ->latestOfMany();
     }
 
     public function primaryCoordinatorMembership(): HasOne
     {
         return $this->hasOne(OrganizationMembership::class, 'organization_id')
-            ->where('role', MembershipRole::Owner)
+            ->whereIn('role', [MembershipRole::Coordinator, MembershipRole::Owner])
             ->where('status', MembershipStatus::Active);
     }
 

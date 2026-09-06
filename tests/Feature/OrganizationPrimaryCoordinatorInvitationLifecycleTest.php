@@ -56,14 +56,53 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
     }
 
     /**
-     * TEST INV-LIFE-01: Pending Coordinator invitation is visible on RA directory.
+     * TEST COORD-ROLE-01 & 02: Invite Primary Coordinator creates invitation with intended_role = coordinator and never owner.
      */
-    public function test_inv_life_01_pending_coordinator_invitation_visibility(): void
+    public function test_coord_role_01_and_02_invite_primary_coordinator_sets_coordinator_role(): void
     {
-        $invData = OrganizationInvitation::createWithToken([
+        $response = $this->actingAs($this->adminRA)->post(route('admin.organizations.invite-coordinator', $this->activeOrg->id), [
+            'coordinator_email' => 'primary.coord@example.edu',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status');
+
+        $invitation = OrganizationInvitation::where('email', 'primary.coord@example.edu')->first();
+        $this->assertNotNull($invitation);
+        $this->assertEquals(MembershipRole::Coordinator, $invitation->intended_role);
+        $this->assertNotEquals(MembershipRole::Owner, $invitation->intended_role);
+        $this->assertEquals(InvitationStatus::Pending, $invitation->status);
+    }
+
+    /**
+     * TEST COORD-ROLE-03: Crafted request cannot elevate intended role to owner.
+     */
+    public function test_coord_role_03_crafted_request_cannot_elevate_role_to_owner(): void
+    {
+        $response = $this->actingAs($this->adminRA)->post(route('admin.organizations.invite-coordinator', $this->activeOrg->id), [
+            'coordinator_email' => 'exploit.attempt@example.edu',
+            'intended_role'     => 'owner',
+            'role'              => 'owner',
+            'is_owner'          => true,
+        ]);
+
+        $response->assertRedirect();
+
+        $invitation = OrganizationInvitation::where('email', 'exploit.attempt@example.edu')->first();
+        $this->assertNotNull($invitation);
+        $this->assertEquals(MembershipRole::Coordinator, $invitation->intended_role);
+        $this->assertNotEquals(MembershipRole::Owner, $invitation->intended_role);
+    }
+
+    /**
+     * TEST COORD-ROLE-04: Pending invitation displays as COORDINATOR in RA directory and modal.
+     */
+    public function test_coord_role_04_invitation_displays_as_coordinator_in_directory(): void
+    {
+        OrganizationInvitation::createWithToken([
             'organization_id' => $this->activeOrg->id,
             'email'           => 'dean.alpha@example.edu',
-            'intended_role'   => MembershipRole::Owner,
+            'intended_role'   => MembershipRole::Coordinator,
             'invited_by'      => $this->adminRA->id,
             'expires_at'      => now()->addDays(7),
         ]);
@@ -75,6 +114,8 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         $response->assertSee('Pending');
         $response->assertSee('Coord Pending');
         $response->assertSee('Primary Coordinator Governance');
+        $response->assertSee('ROLE: COORDINATOR');
+        $response->assertDontSee('ROLE: OWNER');
         $response->assertSee('Resend / Extend (7 Days)');
         $response->assertSee('Revoke Invitation');
     }
@@ -94,7 +135,7 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         OrganizationMembership::create([
             'organization_id' => $this->activeOrg->id,
             'user_id'         => $coordUser->id,
-            'role'            => MembershipRole::Owner,
+            'role'            => MembershipRole::Coordinator,
             'status'          => MembershipStatus::Active,
             'joined_at'       => now(),
         ]);
@@ -105,6 +146,7 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         $response->assertSee('jane.coord@example.edu');
         $response->assertSee('Active');
         $response->assertSee('Coord Active');
+        $response->assertSee('ROLE: COORDINATOR');
     }
 
     /**
@@ -112,10 +154,10 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
      */
     public function test_inv_life_03_expired_invitation_visibility(): void
     {
-        $invData = OrganizationInvitation::createWithToken([
+        OrganizationInvitation::createWithToken([
             'organization_id' => $this->activeOrg->id,
             'email'           => 'expired.coord@example.edu',
-            'intended_role'   => MembershipRole::Owner,
+            'intended_role'   => MembershipRole::Coordinator,
             'invited_by'      => $this->adminRA->id,
             'expires_at'      => now()->subDay(),
         ]);
@@ -136,7 +178,7 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         $invData = OrganizationInvitation::createWithToken([
             'organization_id' => $this->activeOrg->id,
             'email'           => 'revoked.coord@example.edu',
-            'intended_role'   => MembershipRole::Owner,
+            'intended_role'   => MembershipRole::Coordinator,
             'invited_by'      => $this->adminRA->id,
             'expires_at'      => now()->addDays(7),
         ]);
@@ -158,7 +200,7 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         OrganizationInvitation::createWithToken([
             'organization_id' => $this->activeOrg->id,
             'email'           => 'leader1@example.edu',
-            'intended_role'   => MembershipRole::Owner,
+            'intended_role'   => MembershipRole::Coordinator,
             'invited_by'      => $this->adminRA->id,
             'expires_at'      => now()->addDays(7),
         ]);
@@ -180,7 +222,7 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         OrganizationMembership::create([
             'organization_id' => $this->activeOrg->id,
             'user_id'         => $existingCoord->id,
-            'role'            => MembershipRole::Owner,
+            'role'            => MembershipRole::Coordinator,
             'status'          => MembershipStatus::Active,
             'joined_at'       => now(),
         ]);
@@ -194,14 +236,14 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
     }
 
     /**
-     * TEST INV-RESEND-01 to 03: RA resend rotates token, refreshes expiry, cannot resend accepted.
+     * TEST COORD-LIFE-01: Resend preserves intended_role = coordinator.
      */
-    public function test_inv_resend_lifecycle_and_invariants(): void
+    public function test_coord_life_01_resend_preserves_coordinator_role(): void
     {
         $invData = OrganizationInvitation::createWithToken([
             'organization_id' => $this->activeOrg->id,
             'email'           => 'coordinator.resend@example.edu',
-            'intended_role'   => MembershipRole::Owner,
+            'intended_role'   => MembershipRole::Coordinator,
             'invited_by'      => $this->adminRA->id,
             'expires_at'      => now()->addDay(),
         ]);
@@ -209,7 +251,6 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         $oldToken = $invData['token'];
         $oldHash = $invitation->token_hash;
 
-        // Resend
         $resendResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.invitations.resend', [
             'organization' => $this->activeOrg->id,
             'invitation'   => $invitation->id,
@@ -220,6 +261,7 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         $resendResp->assertSessionHas('invitation_url');
 
         $invitation->refresh();
+        $this->assertEquals(MembershipRole::Coordinator, $invitation->intended_role);
         $this->assertNotEquals($oldHash, $invitation->token_hash);
         $this->assertTrue($invitation->expires_at->gt(now()->addDays(6)));
 
@@ -237,21 +279,20 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
     }
 
     /**
-     * TEST INV-REVOKE-01 to 03: RA revoke marks status revoked and blocks acceptance.
+     * TEST COORD-LIFE-02: Revoke marks status revoked and blocks acceptance.
      */
-    public function test_inv_revoke_lifecycle_and_invariants(): void
+    public function test_coord_life_02_revoke_lifecycle_and_invariants(): void
     {
         $invData = OrganizationInvitation::createWithToken([
             'organization_id' => $this->activeOrg->id,
             'email'           => 'coordinator.revoke@example.edu',
-            'intended_role'   => MembershipRole::Owner,
+            'intended_role'   => MembershipRole::Coordinator,
             'invited_by'      => $this->adminRA->id,
             'expires_at'      => now()->addDays(7),
         ]);
         $invitation = $invData['invitation'];
         $token = $invData['token'];
 
-        // Revoke
         $revokeResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.invitations.revoke', [
             'organization' => $this->activeOrg->id,
             'invitation'   => $invitation->id,
@@ -263,7 +304,6 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
         $invitation->refresh();
         $this->assertEquals(InvitationStatus::Revoked, $invitation->status);
 
-        // Attempting to accept revoked invitation fails
         $acceptResp = $this->get(route('invitations.accept', $token));
         $acceptResp->assertSee('revoked');
 
@@ -276,14 +316,14 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
     }
 
     /**
-     * TEST INV-ACC-01 to 02: Active members remain 0 while pending, increments to 1 upon acceptance.
+     * TEST COORD-ACC-01 to 04: Primary Coordinator acceptance creates coordinator membership, increments active members, grants portal role.
      */
-    public function test_inv_acc_active_member_count_and_role_grant(): void
+    public function test_coord_acc_01_to_04_acceptance_creates_coordinator_membership(): void
     {
         $invData = OrganizationInvitation::createWithToken([
             'organization_id' => $this->activeOrg->id,
             'email'           => 'new.coordinator@example.edu',
-            'intended_role'   => MembershipRole::Owner,
+            'intended_role'   => MembershipRole::Coordinator,
             'invited_by'      => $this->adminRA->id,
             'expires_at'      => now()->addDays(7),
         ]);
@@ -314,7 +354,130 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
             ->where('user_id', $createdUser->id)
             ->first();
         $this->assertNotNull($membership);
-        $this->assertEquals(MembershipRole::Owner, $membership->role);
+        $this->assertEquals(MembershipRole::Coordinator, $membership->role);
+        $this->assertNotEquals(MembershipRole::Owner, $membership->role);
         $this->assertEquals(MembershipStatus::Active, $membership->status);
+    }
+
+    /**
+     * TEST COORD-PERM-01 to 05: Coordinator authority vs RA, SA, and cross-tenant boundaries.
+     */
+    public function test_coord_perm_boundaries_and_isolation(): void
+    {
+        $coordUser = User::factory()->create([
+            'email'  => 'operational.coord@example.edu',
+            'status' => 'active',
+        ]);
+        $coordUser->assignRole('organization-coordinator');
+
+        OrganizationMembership::create([
+            'organization_id' => $this->activeOrg->id,
+            'user_id'         => $coordUser->id,
+            'role'            => MembershipRole::Coordinator,
+            'status'          => MembershipStatus::Active,
+            'joined_at'       => now(),
+        ]);
+
+        $orgOther = Organization::create([
+            'name'              => 'Other University',
+            'slug'              => 'other-university',
+            'organization_type' => OrganizationType::University,
+            'status'            => OrganizationStatus::Active,
+        ]);
+
+        // COORD-PERM-01: Coordinator can access Portal Dashboard & Roster in own org
+        $dashResp = $this->actingAs($coordUser)->get(route('organization.dashboard', $this->activeOrg->slug));
+        $dashResp->assertStatus(200);
+
+        $candResp = $this->actingAs($coordUser)->get(route('organization.candidates', $this->activeOrg->slug));
+        $candResp->assertStatus(200);
+
+        // COORD-PERM-02: Coordinator cannot access other Organization portal (cross-tenant 403)
+        $otherResp = $this->actingAs($coordUser)->get(route('organization.dashboard', $orgOther->slug));
+        $otherResp->assertStatus(403);
+
+        // COORD-PERM-03: Coordinator cannot access RA directory
+        $raResp = $this->actingAs($coordUser)->get(route('admin.organizations.index'));
+        $raResp->assertStatus(403);
+
+        // COORD-PERM-04: Coordinator cannot access SA approvals
+        $saResp = $this->actingAs($coordUser)->get(route('admin.approvals.organizations'));
+        $saResp->assertStatus(403);
+    }
+
+    /**
+     * TEST COORD-MULTI-01: Multi-organization role context isolation.
+     */
+    public function test_coord_multi_01_multi_org_role_isolation(): void
+    {
+        $multiUser = User::factory()->create(['email' => 'multi.user@example.edu']);
+        $multiUser->assignRole('organization-coordinator');
+
+        $orgB = Organization::create([
+            'name'              => 'Beta Tech Institute',
+            'slug'              => 'beta-tech-institute',
+            'organization_type' => OrganizationType::Company,
+            'status'            => OrganizationStatus::Active,
+        ]);
+
+        $orgC = Organization::create([
+            'name'              => 'Gamma Academy',
+            'slug'              => 'gamma-academy',
+            'organization_type' => OrganizationType::School,
+            'status'            => OrganizationStatus::Active,
+        ]);
+
+        // User is Coordinator in activeOrg, and Owner in orgB
+        $memA = OrganizationMembership::create([
+            'organization_id' => $this->activeOrg->id,
+            'user_id'         => $multiUser->id,
+            'role'            => MembershipRole::Coordinator,
+            'status'          => MembershipStatus::Active,
+            'joined_at'       => now(),
+        ]);
+
+        $memB = OrganizationMembership::create([
+            'organization_id' => $orgB->id,
+            'user_id'         => $multiUser->id,
+            'role'            => MembershipRole::Owner,
+            'status'          => MembershipStatus::Active,
+            'joined_at'       => now(),
+        ]);
+
+        // In activeOrg: can access as Coordinator
+        $respA = $this->actingAs($multiUser)->get(route('organization.dashboard', $this->activeOrg->slug));
+        $respA->assertStatus(200);
+        $this->assertEquals(MembershipRole::Coordinator, $memA->role);
+
+        // In orgB: can access as Owner
+        $respB = $this->actingAs($multiUser)->get(route('organization.dashboard', $orgB->slug));
+        $respB->assertStatus(200);
+        $this->assertEquals(MembershipRole::Owner, $memB->role);
+
+        // In orgC (no membership): forbidden 403
+        $respC = $this->actingAs($multiUser)->get(route('organization.dashboard', $orgC->slug));
+        $respC->assertStatus(403);
+    }
+
+    /**
+     * TEST COORD-SEC-01: Identity binding prevents cross-account invitation acceptance.
+     */
+    public function test_coord_sec_01_identity_binding_enforcement(): void
+    {
+        $invData = OrganizationInvitation::createWithToken([
+            'organization_id' => $this->activeOrg->id,
+            'email'           => 'designated.coord@example.edu',
+            'intended_role'   => MembershipRole::Coordinator,
+            'invited_by'      => $this->adminRA->id,
+            'expires_at'      => now()->addDays(7),
+        ]);
+        $token = $invData['token'];
+
+        $intruder = User::factory()->create(['email' => 'intruder@example.com']);
+
+        $badAcceptResp = $this->actingAs($intruder)->post(route('invitations.process', $token));
+        $badAcceptResp->assertSessionHasErrors(['error']);
+
+        $this->assertEquals(0, $this->activeOrg->activeMemberships()->count());
     }
 }

@@ -365,7 +365,7 @@ class AdminOrganizationController extends Controller
         }
 
         $pendingInv = $organization->invitations()
-            ->where('intended_role', MembershipRole::Owner)
+            ->whereIn('intended_role', [MembershipRole::Coordinator, MembershipRole::Owner])
             ->where('status', InvitationStatus::Pending)
             ->first();
 
@@ -382,7 +382,7 @@ class AdminOrganizationController extends Controller
         $invitationData = OrganizationInvitation::createWithToken([
             'organization_id' => $organization->id,
             'email'           => $email,
-            'intended_role'   => MembershipRole::Owner,
+            'intended_role'   => MembershipRole::Coordinator,
             'invited_by'      => Auth::id(),
             'expires_at'      => now()->addDays(7),
         ]);

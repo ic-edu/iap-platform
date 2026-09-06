@@ -968,7 +968,7 @@ class OrganizationDomainFoundationTest extends TestCase
 
         $invitation = OrganizationInvitation::where('email', 'leader@pending.edu')->first();
         $this->assertNotNull($invitation);
-        $this->assertEquals(MembershipRole::Owner, $invitation->intended_role);
+        $this->assertEquals(MembershipRole::Coordinator, $invitation->intended_role);
         $this->assertEquals(InvitationStatus::Pending, $invitation->status);
     }
 

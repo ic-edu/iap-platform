@@ -272,7 +272,7 @@
                                                                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                                                                 <span>Active Primary Coordinator</span>
                                                             </div>
-                                                            <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">ROLE: OWNER</span>
+                                                            <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">ROLE: {{ strtoupper($activeCoord->role->value) }}</span>
                                                         </div>
                                                         <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-950/50 rounded-lg border border-slate-200 dark:border-slate-800">
                                                             <div>
