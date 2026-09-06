@@ -3,6 +3,8 @@
 namespace App\Modules\Organization\Models;
 
 use App\Models\User;
+use App\Modules\Organization\Enums\MembershipRole;
+use App\Modules\Organization\Enums\MembershipStatus;
 use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Enums\OrganizationType;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -11,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -137,6 +140,20 @@ class Organization extends Model
     public function pendingInvitations(): HasMany
     {
         return $this->invitations()->where('status', 'pending');
+    }
+
+    public function primaryCoordinatorInvitation(): HasOne
+    {
+        return $this->hasOne(OrganizationInvitation::class, 'organization_id')
+            ->where('intended_role', MembershipRole::Owner)
+            ->latestOfMany();
+    }
+
+    public function primaryCoordinatorMembership(): HasOne
+    {
+        return $this->hasOne(OrganizationMembership::class, 'organization_id')
+            ->where('role', MembershipRole::Owner)
+            ->where('status', MembershipStatus::Active);
     }
 
     public function submitter(): BelongsTo

@@ -32,7 +32,12 @@ class AdminOrganizationController extends Controller
 
         $organizations = Organization::query()
             ->withCount(['memberships', 'activeMemberships', 'groups'])
-            ->with(['submitter', 'reviewer'])
+            ->with([
+                'submitter',
+                'reviewer',
+                'primaryCoordinatorMembership.user',
+                'primaryCoordinatorInvitation.inviter',
+            ])
             ->when($statusFilter && $statusFilter !== 'all', fn($q) => $q->where('status', $statusFilter))
             ->when($typeFilter && $typeFilter !== 'all', fn($q) => $q->where('organization_type', $typeFilter))
             ->when($search, function ($q) use ($search) {
@@ -355,13 +360,28 @@ class AdminOrganizationController extends Controller
             return back()->withErrors(['error' => 'Coordinator invitations can only be issued for Approved / Active organizations.']);
         }
 
+        if ($organization->primaryCoordinatorMembership()->exists()) {
+            return back()->withErrors(['error' => "Organization '{$organization->name}' already has an active Primary Coordinator."]);
+        }
+
+        $pendingInv = $organization->invitations()
+            ->where('intended_role', MembershipRole::Owner)
+            ->where('status', InvitationStatus::Pending)
+            ->first();
+
+        if ($pendingInv && ! $pendingInv->isExpired()) {
+            return back()->withErrors(['error' => "A primary coordinator invitation is already pending for {$pendingInv->email}. You can resend or revoke the existing invitation."]);
+        }
+
         $validated = $request->validate([
             'coordinator_email' => ['required', 'email', 'max:255'],
         ]);
 
+        $email = strtolower($validated['coordinator_email']);
+
         $invitationData = OrganizationInvitation::createWithToken([
             'organization_id' => $organization->id,
-            'email'           => $validated['coordinator_email'],
+            'email'           => $email,
             'intended_role'   => MembershipRole::Owner,
             'invited_by'      => Auth::id(),
             'expires_at'      => now()->addDays(7),
@@ -372,15 +392,82 @@ class AdminOrganizationController extends Controller
 
         ActivityLogger::log(
             action: 'ORG_COORDINATOR_INVITED',
-            description: "Invited primary coordinator '{$validated['coordinator_email']}' for '{$organization->name}'",
+            description: "Invited primary coordinator '{$email}' for '{$organization->name}'",
             subject: $organization,
             properties: [
                 'organization_id' => $organization->id,
-                'email'           => $validated['coordinator_email'],
+                'email'           => $email,
             ]
         );
 
-        return back()->with('status', "Primary coordinator invitation link generated: {$acceptUrl}");
+        return back()
+            ->with('status', "Primary coordinator invitation link generated for {$email}.")
+            ->with('invitation_url', $acceptUrl);
+    }
+
+    /**
+     * Resend an existing coordinator invitation.
+     */
+    public function resendCoordinatorInvitation(Organization $organization, OrganizationInvitation $invitation): RedirectResponse
+    {
+        if ((string) $invitation->organization_id !== (string) $organization->id) {
+            abort(403, 'Invitation does not belong to this organization.');
+        }
+
+        if ($invitation->status === InvitationStatus::Accepted) {
+            return back()->withErrors(['error' => 'Cannot resend an already accepted invitation.']);
+        }
+
+        $plainToken = Str::random(40);
+        $invitation->update([
+            'token_hash' => hash('sha256', $plainToken),
+            'status'     => InvitationStatus::Pending,
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        ActivityLogger::log(
+            action: 'ORG_COORDINATOR_INVITATION_RESENT',
+            description: "Registration Admin resent coordinator invitation to {$invitation->email} for '{$organization->name}'",
+            subject: $invitation,
+            properties: [
+                'organization_id' => $organization->id,
+                'email'           => $invitation->email,
+            ]
+        );
+
+        $acceptUrl = route('invitations.accept', ['token' => $plainToken]);
+
+        return back()
+            ->with('status', "Primary coordinator invitation resent to {$invitation->email}.")
+            ->with('invitation_url', $acceptUrl);
+    }
+
+    /**
+     * Revoke a pending coordinator invitation.
+     */
+    public function revokeCoordinatorInvitation(Organization $organization, OrganizationInvitation $invitation): RedirectResponse
+    {
+        if ((string) $invitation->organization_id !== (string) $organization->id) {
+            abort(403, 'Invitation does not belong to this organization.');
+        }
+
+        if ($invitation->status !== InvitationStatus::Pending) {
+            return back()->withErrors(['error' => 'Only pending invitations can be revoked.']);
+        }
+
+        $invitation->update(['status' => InvitationStatus::Revoked]);
+
+        ActivityLogger::log(
+            action: 'ORG_COORDINATOR_INVITATION_REVOKED',
+            description: "Registration Admin revoked coordinator invitation for {$invitation->email} in '{$organization->name}'",
+            subject: $invitation,
+            properties: [
+                'organization_id' => $organization->id,
+                'email'           => $invitation->email,
+            ]
+        );
+
+        return back()->with('status', "Primary coordinator invitation for {$invitation->email} has been revoked.");
     }
 
     /**

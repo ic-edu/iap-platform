@@ -73,7 +73,7 @@ class OrganizationInvitation extends Model
 
     public function isExpired(): bool
     {
-        return $this->status === InvitationStatus::Expired || ($this->isPending() && $this->expires_at->isPast());
+        return $this->status === InvitationStatus::Expired || ($this->isPending() && $this->expires_at && $this->expires_at->isPast());
     }
 
     public function isRevoked(): bool

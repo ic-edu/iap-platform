@@ -57,6 +57,8 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])
         Route::put('/{organization}', [AdminOrganizationController::class, 'update'])->name('update');
         Route::post('/{organization}/submit', [AdminOrganizationController::class, 'submitForApproval'])->name('submit');
         Route::post('/{organization}/invite-coordinator', [AdminOrganizationController::class, 'inviteCoordinator'])->name('invite-coordinator');
+        Route::post('/{organization}/invitations/{invitation}/resend', [AdminOrganizationController::class, 'resendCoordinatorInvitation'])->name('invitations.resend');
+        Route::post('/{organization}/invitations/{invitation}/revoke', [AdminOrganizationController::class, 'revokeCoordinatorInvitation'])->name('invitations.revoke');
         Route::post('/{organization}/toggle-status', [AdminOrganizationController::class, 'toggleStatus'])->name('toggle-status');
         Route::post('/{organization}/suspend', [AdminOrganizationController::class, 'suspend'])->name('suspend');
         Route::post('/{organization}/activate', [AdminOrganizationController::class, 'activate'])->name('activate');
