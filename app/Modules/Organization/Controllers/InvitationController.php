@@ -135,15 +135,16 @@ class InvitationController extends Controller
                         'email_verified_at' => now(),
                     ]);
 
-                    // Assign student role as default candidate role
-                    $user->assignRole('student');
-
                     Auth::login($user);
                 }
             }
 
-            // If intended role is coordinator/admin/owner, grant global organization-coordinator role
-            if (in_array($invitation->intended_role, [MembershipRole::Owner, MembershipRole::Admin, MembershipRole::Coordinator], true)) {
+            // Provision platform capability based on invitation intended role
+            if ($invitation->intended_role === MembershipRole::Member) {
+                if (!$user->hasRole('student')) {
+                    $user->assignRole('student');
+                }
+            } elseif (in_array($invitation->intended_role, [MembershipRole::Owner, MembershipRole::Admin, MembershipRole::Coordinator], true)) {
                 if (!$user->hasRole('organization-coordinator') && !$user->hasRole('super-admin')) {
                     $user->assignRole('organization-coordinator');
                 }
@@ -155,8 +156,19 @@ class InvitationController extends Controller
                 ->first();
 
             if ($membership) {
+                // Safeguard against silent privilege downgrade on existing memberships:
+                // If user holds a management role (Owner, Admin, Coordinator), preserve higher authority.
+                $effectiveRole = $invitation->intended_role;
+                if ($membership->hasManagementAuthority() && $invitation->intended_role === MembershipRole::Member) {
+                    $effectiveRole = $membership->role;
+                } elseif ($membership->isOwner() && in_array($invitation->intended_role, [MembershipRole::Admin, MembershipRole::Coordinator], true)) {
+                    $effectiveRole = $membership->role;
+                } elseif ($membership->isAdmin() && $invitation->intended_role === MembershipRole::Coordinator) {
+                    $effectiveRole = $membership->role;
+                }
+
                 $membership->update([
-                    'role'              => $invitation->intended_role,
+                    'role'              => $effectiveRole,
                     'member_identifier' => $invitation->member_identifier ?? $membership->member_identifier,
                     'department'        => $invitation->department ?? $membership->department,
                     'status'            => MembershipStatus::Active,

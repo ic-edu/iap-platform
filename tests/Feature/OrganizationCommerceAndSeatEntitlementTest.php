@@ -56,6 +56,8 @@ class OrganizationCommerceAndSeatEntitlementTest extends TestCase
         parent::setUp();
 
         Role::findOrCreate('finance', 'web');
+        Role::findOrCreate('student', 'web');
+        Role::findOrCreate('organization-coordinator', 'web');
 
         // 1. Create Organization A
         $this->organizationA = Organization::create([
@@ -95,18 +97,21 @@ class OrganizationCommerceAndSeatEntitlementTest extends TestCase
             'email' => 'ca01@uat.org',
             'status' => 'active',
         ]);
+        $this->candidateA1->assignRole('student');
 
         $this->candidateA2 = User::factory()->create([
             'name' => 'Candidate A2',
             'email' => 'ca02@uat.org',
             'status' => 'active',
         ]);
+        $this->candidateA2->assignRole('student');
 
         $this->candidateB1 = User::factory()->create([
             'name' => 'Candidate B1',
             'email' => 'cb01@other.org',
             'status' => 'active',
         ]);
+        $this->candidateB1->assignRole('student');
 
         // 4. Create Memberships
         $this->membershipCoordA = OrganizationMembership::create([
