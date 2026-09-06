@@ -63,6 +63,53 @@
         </div>
     </div>
 
+    {{-- Commercial & Voucher Awareness Snapshot (Read-Only) --}}
+    <section id="commercial-voucher-snapshot" class="mb-8">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                <span>Commercial &amp; Voucher Snapshot</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                    Read-Only Awareness
+                </span>
+                @if($inactiveVouchersCount > 0)
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                    Inactive: {{ $inactiveVouchersCount }}
+                </span>
+                @endif
+            </h2>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            {{-- 1. Active Vouchers --}}
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-sm">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">Active Vouchers</span>
+                <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ number_format($activeVouchersCount) }}</span>
+                <span class="text-xs text-slate-600 dark:text-slate-400 mt-1 block">Currently applied at checkout</span>
+            </div>
+
+            {{-- 2. Scheduled Vouchers --}}
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-sm">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">Scheduled Vouchers</span>
+                <span class="text-3xl font-black text-sky-600 dark:text-sky-400 mt-1 block">{{ number_format($scheduledVouchersCount) }}</span>
+                <span class="text-xs text-slate-600 dark:text-slate-400 mt-1 block">Upcoming promotional impact</span>
+            </div>
+
+            {{-- 3. Expired Vouchers --}}
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-sm">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">Expired Vouchers</span>
+                <span class="text-3xl font-black text-rose-600 dark:text-rose-400 mt-1 block">{{ number_format($expiredVouchersCount) }}</span>
+                <span class="text-xs text-slate-600 dark:text-slate-400 mt-1 block">Past discount campaigns</span>
+            </div>
+
+            {{-- 4. Total Redemptions --}}
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-sm">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">Total Redemptions</span>
+                <span class="text-3xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{{ number_format($totalVoucherRedemptions) }}</span>
+                <span class="text-xs text-slate-600 dark:text-slate-400 mt-1 block">Total voucher discounts utilized</span>
+            </div>
+        </div>
+    </section>
+
     <!-- Live Pending Payments Queue Section -->
     @if(isset($recentPendingPayments) && $recentPendingPayments->isNotEmpty())
     <div class="mb-8 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-900/40 rounded-2xl overflow-hidden shadow-sm">

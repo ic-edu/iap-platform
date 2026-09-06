@@ -7,6 +7,7 @@ use App\Modules\Commerce\Domain\Enums\InvoiceStatus;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Modules\Commerce\Domain\Models\Invoice;
 use App\Modules\Commerce\Domain\Models\Payment;
+use App\Modules\Commerce\Domain\Services\VoucherOperationalSummary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -77,14 +78,17 @@ class FinanceDashboardController extends Controller
             ->take(1)
             ->get();
 
-        return view('finance.dashboard', compact(
-            'grossCashCollections',
-            'pendingPaymentsCount',
-            'invoicesIssuedCount',
-            'unpaidInvoicesCount',
-            'recentPendingPayments',
-            'latestTransactions',
-            'period'
-        ));
+        // Commercial & Voucher Operations Snapshot (Canonical Shared Read Model - Read Only)
+        $voucherSummary = VoucherOperationalSummary::get();
+
+        return view('finance.dashboard', array_merge([
+            'grossCashCollections'  => $grossCashCollections,
+            'pendingPaymentsCount'  => $pendingPaymentsCount,
+            'invoicesIssuedCount'   => $invoicesIssuedCount,
+            'unpaidInvoicesCount'   => $unpaidInvoicesCount,
+            'recentPendingPayments' => $recentPendingPayments,
+            'latestTransactions'    => $latestTransactions,
+            'period'                => $period,
+        ], $voucherSummary));
     }
 }

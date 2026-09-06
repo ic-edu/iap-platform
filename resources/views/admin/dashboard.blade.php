@@ -2,6 +2,66 @@
 
 @section('content')
 
+    {{-- Commercial & Voucher Governance Snapshot --}}
+    <section id="commercial-voucher-snapshot" class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <span>Commercial &amp; Voucher Snapshot</span>
+                @if($inactiveVouchersCount > 0)
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20">
+                    Inactive: {{ $inactiveVouchersCount }}
+                </span>
+                @endif
+            </h2>
+            <a href="{{ route('admin.commerce.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold flex items-center gap-1">
+                <span>View Commercial Oversight</span>
+                <span>&rarr;</span>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {{-- 1. Active Vouchers --}}
+            <a href="{{ route('admin.commerce.index') }}" class="p-5 bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-xl transition-all block group shadow-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Active Vouchers</span>
+                    <span class="text-xs text-emerald-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+                <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{{ number_format($activeVouchersCount) }}</div>
+                <div class="text-[11px] text-slate-500 mt-1">Live promotional discounts</div>
+            </a>
+
+            {{-- 2. Scheduled Vouchers --}}
+            <a href="{{ route('admin.commerce.index') }}" class="p-5 bg-slate-900 border border-slate-800 hover:border-sky-500/50 rounded-xl transition-all block group shadow-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Scheduled Vouchers</span>
+                    <span class="text-xs text-sky-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+                <div class="text-3xl font-extrabold text-sky-600 dark:text-sky-400 mt-1">{{ number_format($scheduledVouchersCount) }}</div>
+                <div class="text-[11px] text-slate-500 mt-1">Future scheduled releases</div>
+            </a>
+
+            {{-- 3. Expired Vouchers --}}
+            <a href="{{ route('admin.commerce.index') }}" class="p-5 bg-slate-900 border border-slate-800 hover:border-rose-500/50 rounded-xl transition-all block group shadow-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Expired Vouchers</span>
+                    <span class="text-xs text-rose-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+                <div class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">{{ number_format($expiredVouchersCount) }}</div>
+                <div class="text-[11px] text-slate-500 mt-1">Concluded promotions</div>
+            </a>
+
+            {{-- 4. Total Redemptions --}}
+            <a href="{{ route('admin.commerce.index') }}" class="p-5 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl transition-all block group shadow-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Total Redemptions</span>
+                    <span class="text-xs text-indigo-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                </div>
+                <div class="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">{{ number_format($totalVoucherRedemptions) }}</div>
+                <div class="text-[11px] text-slate-500 mt-1">Platform-wide redemptions</div>
+            </a>
+        </div>
+    </section>
+
     <!-- Platform User Breakdown KPIs (Strictly Non-Overlapping Baseline v1.1 Counts) -->
     <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
         <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">

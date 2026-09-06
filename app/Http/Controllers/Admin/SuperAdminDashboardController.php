@@ -7,6 +7,7 @@ use App\Models\QuestionBankArchiveRequest;
 use App\Models\User;
 use App\Modules\Assessment\Models\Test as AssessmentTest;
 use App\Modules\Certificate\Models\Certificate;
+use App\Modules\Commerce\Domain\Services\VoucherOperationalSummary;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\Reporting\Services\SystemHealthService;
 use App\Services\ApprovalEngine;
@@ -50,22 +51,23 @@ class SuperAdminDashboardController extends Controller
         $systemHealth = $this->healthService->checkHealth();
         $recentUsers = User::latest()->take(5)->get();
         $recentCertificates = Certificate::with('user')->latest()->take(5)->get();
+        $voucherSummary = VoucherOperationalSummary::get();
 
-        return view('admin.dashboard', compact(
-            'totalUsers',
-            'superAdminsCount',
-            'adminsCount',
-            'teachersCount',
-            'financeCount',
-            'studentsCount',
-            'publishedQuestionBanksCount',
-            'publishedTestsCount',
-            'pendingApprovalsCount',
-            'certificatesCount',
-            'systemHealth',
-            'recentUsers',
-            'recentCertificates'
-        ));
+        return view('admin.dashboard', array_merge([
+            'totalUsers'                  => $totalUsers,
+            'superAdminsCount'            => $superAdminsCount,
+            'adminsCount'                 => $adminsCount,
+            'teachersCount'               => $teachersCount,
+            'financeCount'                => $financeCount,
+            'studentsCount'               => $studentsCount,
+            'publishedQuestionBanksCount' => $publishedQuestionBanksCount,
+            'publishedTestsCount'         => $publishedTestsCount,
+            'pendingApprovalsCount'       => $pendingApprovalsCount,
+            'certificatesCount'           => $certificatesCount,
+            'systemHealth'                => $systemHealth,
+            'recentUsers'                 => $recentUsers,
+            'recentCertificates'          => $recentCertificates,
+        ], $voucherSummary));
     }
 
     /**

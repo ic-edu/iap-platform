@@ -99,6 +99,7 @@ class RaDashboardInstitutionalOperationsRepositioningTest extends TestCase
         $this->assertNotFalse($contentHeadingPos, 'Operational Dashboard heading missing');
         $mainContent = substr($html, $contentHeadingPos);
 
+        $commercialSnapshotPos = strpos($mainContent, 'id="commercial-voucher-snapshot"');
         $candidateMetricsPos = strpos($mainContent, 'Platform Candidate &amp; Testing Metrics');
         if ($candidateMetricsPos === false) {
             $candidateMetricsPos = strpos($mainContent, 'Platform Candidate & Testing Metrics');
@@ -106,18 +107,18 @@ class RaDashboardInstitutionalOperationsRepositioningTest extends TestCase
         $institutionalOpsPos = strpos($mainContent, 'id="institutional-operations"');
         $actionQueuePos = strpos($mainContent, 'id="action-queue"');
         $assignmentsPos = strpos($mainContent, 'Recent Active Assignments');
-        $commercialSnapshotPos = strpos($mainContent, 'Commercial &amp; Voucher Snapshot');
-        if ($commercialSnapshotPos === false) {
-            $commercialSnapshotPos = strpos($mainContent, 'Commercial & Voucher Snapshot');
-        }
 
+        $this->assertNotFalse($commercialSnapshotPos, 'Commercial snapshot section missing in main content');
         $this->assertNotFalse($candidateMetricsPos, 'Candidate metrics section missing in main content');
         $this->assertNotFalse($institutionalOpsPos, 'Institutional operations section missing in main content');
         $this->assertNotFalse($actionQueuePos, 'Action queue section missing in main content');
         $this->assertNotFalse($assignmentsPos, 'Recent active assignments section missing in main content');
-        $this->assertNotFalse($commercialSnapshotPos, 'Commercial snapshot section missing in main content');
 
         // Assert strictly ordered hierarchy
+        $this->assertTrue(
+            $commercialSnapshotPos < $candidateMetricsPos,
+            'Commercial & Voucher Snapshot must appear before Platform Candidate & Testing Metrics'
+        );
         $this->assertTrue(
             $candidateMetricsPos < $institutionalOpsPos,
             'Platform Candidate & Testing Metrics must appear before Institutional Operations'
@@ -129,10 +130,6 @@ class RaDashboardInstitutionalOperationsRepositioningTest extends TestCase
         $this->assertTrue(
             $actionQueuePos < $assignmentsPos,
             'Candidates Requiring Action must appear before Recent Active Assignments'
-        );
-        $this->assertTrue(
-            $assignmentsPos < $commercialSnapshotPos,
-            'Recent Active Assignments must appear before Commercial Snapshot'
         );
     }
 
