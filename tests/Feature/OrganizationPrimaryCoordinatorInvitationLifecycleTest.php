@@ -480,4 +480,188 @@ class OrganizationPrimaryCoordinatorInvitationLifecycleTest extends TestCase
 
         $this->assertEquals(0, $this->activeOrg->activeMemberships()->count());
     }
+
+    /**
+     * TEST REINV-01: Revoked invitation does not block inviting a different email address.
+     */
+    public function test_reinv_01_revoked_invitation_does_not_block_inviting_different_email(): void
+    {
+        $invA = OrganizationInvitation::createWithToken([
+            'organization_id' => $this->activeOrg->id,
+            'email'           => 'old.coordinator@example.edu',
+            'intended_role'   => MembershipRole::Coordinator,
+            'invited_by'      => $this->adminRA->id,
+            'expires_at'      => now()->addDays(7),
+        ]);
+        $invA['invitation']->update(['status' => InvitationStatus::Revoked]);
+
+        $response = $this->actingAs($this->adminRA)->post(route('admin.organizations.invite-coordinator', $this->activeOrg->id), [
+            'coordinator_email' => 'new.coordinator@example.edu',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status');
+
+        $this->assertEquals(2, OrganizationInvitation::where('organization_id', $this->activeOrg->id)->count());
+
+        $oldInv = OrganizationInvitation::where('email', 'old.coordinator@example.edu')->first();
+        $this->assertEquals(InvitationStatus::Revoked, $oldInv->status);
+        $this->assertEquals(MembershipRole::Coordinator, $oldInv->intended_role);
+
+        $newInv = OrganizationInvitation::where('email', 'new.coordinator@example.edu')->first();
+        $this->assertEquals(InvitationStatus::Pending, $newInv->status);
+        $this->assertEquals(MembershipRole::Coordinator, $newInv->intended_role);
+
+        $this->assertEquals(0, $this->activeOrg->activeMemberships()->count());
+    }
+
+    /**
+     * TEST REINV-02: Re-inviting same email creates new pending invitation and preserves revoked record.
+     */
+    public function test_reinv_02_reinviting_same_email_creates_new_pending_invitation_and_preserves_revoked_record(): void
+    {
+        $invA = OrganizationInvitation::createWithToken([
+            'organization_id' => $this->activeOrg->id,
+            'email'           => 'same.coordinator@example.edu',
+            'intended_role'   => MembershipRole::Coordinator,
+            'invited_by'      => $this->adminRA->id,
+            'expires_at'      => now()->addDays(7),
+        ]);
+        $invA['invitation']->update(['status' => InvitationStatus::Revoked]);
+        $oldId = $invA['invitation']->id;
+
+        $response = $this->actingAs($this->adminRA)->post(route('admin.organizations.invite-coordinator', $this->activeOrg->id), [
+            'coordinator_email' => 'same.coordinator@example.edu',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status');
+
+        $this->assertEquals(2, OrganizationInvitation::where('organization_id', $this->activeOrg->id)->count());
+
+        $oldInv = OrganizationInvitation::find($oldId);
+        $this->assertEquals(InvitationStatus::Revoked, $oldInv->status);
+        $this->assertEquals(MembershipRole::Coordinator, $oldInv->intended_role);
+
+        $newInv = OrganizationInvitation::where('organization_id', $this->activeOrg->id)
+            ->where('id', '!=', $oldId)
+            ->first();
+        $this->assertNotNull($newInv);
+        $this->assertEquals('same.coordinator@example.edu', $newInv->email);
+        $this->assertEquals(InvitationStatus::Pending, $newInv->status);
+        $this->assertEquals(MembershipRole::Coordinator, $newInv->intended_role);
+    }
+
+    /**
+     * TEST REINV-03: Expired invitation does not block inviting a different email address.
+     */
+    public function test_reinv_03_expired_invitation_does_not_block_inviting_different_email(): void
+    {
+        OrganizationInvitation::createWithToken([
+            'organization_id' => $this->activeOrg->id,
+            'email'           => 'expired.coord@example.edu',
+            'intended_role'   => MembershipRole::Coordinator,
+            'invited_by'      => $this->adminRA->id,
+            'expires_at'      => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($this->adminRA)->post(route('admin.organizations.invite-coordinator', $this->activeOrg->id), [
+            'coordinator_email' => 'fresh.coord@example.edu',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status');
+
+        $this->assertEquals(2, OrganizationInvitation::where('organization_id', $this->activeOrg->id)->count());
+
+        $freshInv = OrganizationInvitation::where('email', 'fresh.coord@example.edu')->first();
+        $this->assertEquals(InvitationStatus::Pending, $freshInv->status);
+        $this->assertEquals(MembershipRole::Coordinator, $freshInv->intended_role);
+    }
+
+    /**
+     * TEST REINV-04: Revoked token remains unusable even after new pending invitation is created.
+     */
+    public function test_reinv_04_revoked_token_remains_unusable_after_new_invitation(): void
+    {
+        $invA = OrganizationInvitation::createWithToken([
+            'organization_id' => $this->activeOrg->id,
+            'email'           => 'revoked.coord@example.edu',
+            'intended_role'   => MembershipRole::Coordinator,
+            'invited_by'      => $this->adminRA->id,
+            'expires_at'      => now()->addDays(7),
+        ]);
+        $invA['invitation']->update(['status' => InvitationStatus::Revoked]);
+        $oldToken = $invA['token'];
+
+        // Create new invitation
+        $this->actingAs($this->adminRA)->post(route('admin.organizations.invite-coordinator', $this->activeOrg->id), [
+            'coordinator_email' => 'second.coord@example.edu',
+        ]);
+
+        // Trying to view old token shows revoked
+        $viewResp = $this->get(route('invitations.accept', $oldToken));
+        $viewResp->assertSee('revoked');
+
+        // Trying to process old token fails
+        $processResp = $this->post(route('invitations.process', $oldToken), [
+            'name'                  => 'Old Revoked Person',
+            'password'              => 'Password123!',
+            'password_confirmation' => 'Password123!',
+        ]);
+        $processResp->assertSessionHasErrors(['error']);
+    }
+
+    /**
+     * TEST REINV-UI-01: UI renders both Coord Revoked and + Invite Coord buttons and modal actions.
+     */
+    public function test_reinv_ui_01_revoked_state_renders_reinvite_and_invite_new_buttons(): void
+    {
+        $invData = OrganizationInvitation::createWithToken([
+            'organization_id' => $this->activeOrg->id,
+            'email'           => 'revoked.dean@example.edu',
+            'intended_role'   => MembershipRole::Coordinator,
+            'invited_by'      => $this->adminRA->id,
+            'expires_at'      => now()->addDays(7),
+        ]);
+        $invData['invitation']->update(['status' => InvitationStatus::Revoked]);
+
+        $response = $this->actingAs($this->adminRA)->get(route('admin.organizations.index'));
+        $response->assertStatus(200);
+
+        // Row shows Revoked status and Coord Revoked + Invite Coord buttons
+        $response->assertSee('Coord Revoked');
+        $response->assertSee('+ Invite Coord');
+
+        // Modal shows governance details and both action buttons
+        $response->assertSee('Primary Coordinator Governance');
+        $response->assertSee('Invite New Coordinator');
+        $response->assertSee('Re-invite revoked.dean@example.edu');
+    }
+
+    /**
+     * TEST REINV-UI-02: UI renders both Coord Expired and + Invite Coord buttons and modal actions.
+     */
+    public function test_reinv_ui_02_expired_state_renders_resend_and_invite_new_buttons(): void
+    {
+        OrganizationInvitation::createWithToken([
+            'organization_id' => $this->activeOrg->id,
+            'email'           => 'expired.dean@example.edu',
+            'intended_role'   => MembershipRole::Coordinator,
+            'invited_by'      => $this->adminRA->id,
+            'expires_at'      => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($this->adminRA)->get(route('admin.organizations.index'));
+        $response->assertStatus(200);
+
+        // Row shows Expired status and Coord Expired + Invite Coord buttons
+        $response->assertSee('Coord Expired');
+        $response->assertSee('+ Invite Coord');
+
+        // Modal shows governance details and both action buttons
+        $response->assertSee('Primary Coordinator Governance');
+        $response->assertSee('Invite New Coordinator');
+        $response->assertSee('Resend Invitation (7 Days)');
+    }
 }

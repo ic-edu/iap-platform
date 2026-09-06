@@ -216,9 +216,15 @@
                                         <button type="button" onclick="document.getElementById('coord-modal-{{ $org->id }}').classList.remove('hidden')" class="text-xs font-semibold text-rose-600 hover:text-rose-500 dark:text-rose-400 dark:hover:text-rose-300">
                                             Coord Expired
                                         </button>
+                                        <button type="button" onclick="document.getElementById('invite-modal-{{ $org->id }}').classList.remove('hidden')" class="text-xs font-semibold text-teal-600 hover:text-teal-500 dark:text-teal-400 dark:hover:text-teal-300">
+                                            + Invite Coord
+                                        </button>
                                     @elseif($coordInv && $coordInv->isRevoked())
                                         <button type="button" onclick="document.getElementById('coord-modal-{{ $org->id }}').classList.remove('hidden')" class="text-xs font-semibold text-slate-600 hover:text-slate-500 dark:text-slate-400 dark:hover:text-slate-300">
                                             Coord Revoked
+                                        </button>
+                                        <button type="button" onclick="document.getElementById('invite-modal-{{ $org->id }}').classList.remove('hidden')" class="text-xs font-semibold text-teal-600 hover:text-teal-500 dark:text-teal-400 dark:hover:text-teal-300">
+                                            + Invite Coord
                                         </button>
                                     @elseif($activeCoord || ($coordInv && $coordInv->isAccepted()))
                                         <button type="button" onclick="document.getElementById('coord-modal-{{ $org->id }}').classList.remove('hidden')" class="text-xs font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300">
@@ -341,6 +347,9 @@
                                                                 </button>
                                                             </form>
                                                         @elseif($coordInv->isExpired())
+                                                            <button type="button" onclick="document.getElementById('coord-modal-{{ $org->id }}').classList.add('hidden'); document.getElementById('invite-modal-{{ $org->id }}').classList.remove('hidden');" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg transition-colors">
+                                                                Invite New Coordinator
+                                                            </button>
                                                             <form method="POST" action="{{ route('admin.organizations.invitations.resend', ['organization' => $org->id, 'invitation' => $coordInv->id]) }}">
                                                                 @csrf
                                                                 <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-colors">
@@ -348,6 +357,9 @@
                                                                 </button>
                                                             </form>
                                                         @elseif($coordInv->isRevoked())
+                                                            <button type="button" onclick="document.getElementById('coord-modal-{{ $org->id }}').classList.add('hidden'); document.getElementById('invite-modal-{{ $org->id }}').classList.remove('hidden');" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg transition-colors">
+                                                                Invite New Coordinator
+                                                            </button>
                                                             <form method="POST" action="{{ route('admin.organizations.invite-coordinator', $org->id) }}">
                                                                 @csrf
                                                                 <input type="hidden" name="coordinator_email" value="{{ $coordInv->email }}">
