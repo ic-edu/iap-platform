@@ -215,6 +215,42 @@ class OrganizationPortalController extends Controller
     }
 
     /**
+     * Generate / Rotate Invitation Link for a valid pending invitation without triggering email.
+     */
+    public function generateInvitationLink(Organization $organization, OrganizationInvitation $invitation): RedirectResponse
+    {
+        if ((string) $invitation->organization_id !== (string) $organization->id) {
+            abort(403, 'Invitation does not belong to this organization.');
+        }
+
+        if (!$invitation->canBeAccepted()) {
+            return back()->withErrors(['error' => 'Invitation link can only be generated for active, non-expired pending invitations.']);
+        }
+
+        $plainToken = Str::random(40);
+        $invitation->update([
+            'token_hash' => hash('sha256', $plainToken),
+        ]);
+
+        ActivityLogger::log(
+            action: 'ORG_INVITATION_LINK_ROTATED',
+            description: "Generated new invitation link for '{$invitation->email}' in '{$organization->name}'",
+            subject: $invitation,
+            properties: [
+                'organization_id' => $organization->id,
+                'email'           => $invitation->email,
+                'intended_role'   => $invitation->intended_role->value,
+            ]
+        );
+
+        $acceptUrl = route('invitations.accept', ['token' => $plainToken]);
+
+        return back()
+            ->with('status', "Invitation link generated successfully for {$invitation->email}.")
+            ->with('invitation_url', $acceptUrl);
+    }
+
+    /**
      * Resend an existing invitation.
      */
     public function resendInvitation(Organization $organization, OrganizationInvitation $invitation): RedirectResponse

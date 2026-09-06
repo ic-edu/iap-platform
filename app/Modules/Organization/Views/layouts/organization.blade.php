@@ -189,12 +189,20 @@
                 @endif
 
                 @if(session('invitation_url'))
-                    <div class="mb-4 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-xs flex flex-col gap-2">
-                        <div class="font-semibold text-sm flex items-center gap-2">
-                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                            Invitation Link (Send to Candidate):
+                    <div class="mb-4 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-xs flex flex-col gap-2" x-data="{ copied: false }">
+                        <div class="font-semibold text-sm flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                <span>Invitation Link (Send to Candidate):</span>
+                            </div>
+                            <button type="button"
+                                    @click="navigator.clipboard.writeText('{{ session('invitation_url') }}'); copied = true; setTimeout(() => copied = false, 2500)"
+                                    class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+                                <span x-show="!copied">Copy Invitation Link</span>
+                                <span x-show="copied" style="display: none;">✓ Copied!</span>
+                            </button>
                         </div>
-                        <input type="text" readonly value="{{ session('invitation_url') }}" class="w-full text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2" onclick="this.select()">
+                        <input type="text" readonly value="{{ session('invitation_url') }}" class="w-full text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-slate-900 dark:text-slate-100" onclick="this.select()">
                     </div>
                 @endif
 

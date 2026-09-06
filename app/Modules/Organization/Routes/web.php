@@ -28,6 +28,7 @@ Route::middleware(['web', 'auth', 'org.context'])
         // Member Roster & Invitations
         Route::get('/candidates', [OrganizationPortalController::class, 'candidates'])->name('candidates');
         Route::post('/candidates/invite', [OrganizationPortalController::class, 'invite'])->name('candidates.invite');
+        Route::post('/invitations/{invitation}/generate-link', [OrganizationPortalController::class, 'generateInvitationLink'])->name('invitations.generate-link');
         Route::post('/invitations/{invitation}/resend', [OrganizationPortalController::class, 'resendInvitation'])->name('invitations.resend');
         Route::post('/invitations/{invitation}/revoke', [OrganizationPortalController::class, 'revokeInvitation'])->name('invitations.revoke');
 

@@ -126,9 +126,13 @@
                             <td class="py-3 px-4 text-slate-500">{{ $inv->inviter->name ?? 'Admin' }}</td>
                             <td class="py-3 px-6 text-right space-x-2">
                                 @if($inv->isPending())
+                                    <form method="POST" action="{{ route('organization.invitations.generate-link', [$organization->slug, $inv->id]) }}" class="inline">
+                                        @csrf
+                                        <button type="submit" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-medium">Generate Link</button>
+                                    </form>
                                     <form method="POST" action="{{ route('organization.invitations.resend', [$organization->slug, $inv->id]) }}" class="inline">
                                         @csrf
-                                        <button type="submit" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-medium">Resend</button>
+                                        <button type="submit" class="text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white font-medium">Resend</button>
                                     </form>
                                     <form method="POST" action="{{ route('organization.invitations.revoke', [$organization->slug, $inv->id]) }}" class="inline">
                                         @csrf
