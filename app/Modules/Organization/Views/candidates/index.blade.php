@@ -165,12 +165,12 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">Intended Role *</label>
-                    <select name="intended_role" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-                        <option value="member">Candidate Member (Default)</option>
-                        <option value="coordinator">Organization Coordinator</option>
-                        <option value="admin">Organization Admin</option>
-                    </select>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">Role</label>
+                    <div class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-700 dark:text-slate-300 flex items-center justify-between select-none">
+                        <span class="font-medium">Candidate Member</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Default</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Coordinators can enroll candidates into the organization roster.</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">

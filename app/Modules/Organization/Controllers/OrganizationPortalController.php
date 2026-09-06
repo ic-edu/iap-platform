@@ -146,36 +146,46 @@ class OrganizationPortalController extends Controller
     }
 
     /**
-     * Create single member invitation.
+     * Create single candidate member invitation.
+     * Coordinators are strictly restricted to inviting Candidate Members (MembershipRole::Member).
      */
     public function invite(Request $request, Organization $organization): RedirectResponse
     {
+        // Explicitly reject any attempt to submit privileged roles via crafted requests
+        if ($request->has('intended_role') && $request->input('intended_role') !== MembershipRole::Member->value) {
+            return back()->withErrors(['intended_role' => 'Organization Coordinators may only invite Candidate Members.']);
+        }
+        if ($request->has('role') && $request->input('role') !== MembershipRole::Member->value) {
+            return back()->withErrors(['role' => 'Organization Coordinators may only invite Candidate Members.']);
+        }
+
         $validated = $request->validate([
             'email'             => ['required', 'email', 'max:255'],
-            'intended_role'     => ['required', Rule::in(MembershipRole::values())],
             'member_identifier' => ['nullable', 'string', 'max:100'],
             'department'        => ['nullable', 'string', 'max:100'],
         ]);
 
+        $email = strtolower($validated['email']);
+
         // Check if user already has an active membership in this organization
-        $existingUser = User::where('email', $validated['email'])->first();
+        $existingUser = User::where('email', $email)->first();
         if ($existingUser && $organization->hasUser($existingUser)) {
             $membership = $organization->getMembership($existingUser);
             if ($membership && $membership->isActive()) {
-                return back()->withErrors(['email' => "User {$validated['email']} is already an active member of this organization."]);
+                return back()->withErrors(['email' => "User {$email} is already an active member of this organization."]);
             }
         }
 
         // Revoke any existing pending invitations for this email in this org
         $organization->invitations()
-            ->where('email', $validated['email'])
+            ->where('email', $email)
             ->where('status', InvitationStatus::Pending)
             ->update(['status' => InvitationStatus::Revoked]);
 
         $invitationData = OrganizationInvitation::createWithToken([
             'organization_id'   => $organization->id,
-            'email'             => $validated['email'],
-            'intended_role'     => $validated['intended_role'],
+            'email'             => $email,
+            'intended_role'     => MembershipRole::Member,
             'member_identifier' => $validated['member_identifier'] ?? null,
             'department'        => $validated['department'] ?? null,
             'invited_by'        => Auth::id(),
@@ -187,7 +197,7 @@ class OrganizationPortalController extends Controller
 
         ActivityLogger::log(
             action: 'ORG_INVITATION_SENT',
-            description: "Sent organization invitation to {$invitation->email} as {$invitation->intended_role->value}",
+            description: "Sent candidate member invitation to {$invitation->email}",
             subject: $invitation,
             properties: [
                 'organization_id' => $organization->id,
