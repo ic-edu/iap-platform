@@ -21,44 +21,40 @@
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {{-- 1. Active Vouchers --}}
-            <a href="{{ route('admin.commerce.index') }}" class="p-5 bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-xl transition-all block group shadow-sm">
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase">Active Vouchers</span>
-                    <span class="text-xs text-emerald-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                    <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Active Vouchers</span>
                 </div>
                 <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{{ number_format($activeVouchersCount) }}</div>
                 <div class="text-[11px] text-slate-500 mt-1">Live promotional discounts</div>
-            </a>
+            </div>
 
             {{-- 2. Scheduled Vouchers --}}
-            <a href="{{ route('admin.commerce.index') }}" class="p-5 bg-slate-900 border border-slate-800 hover:border-sky-500/50 rounded-xl transition-all block group shadow-sm">
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase">Scheduled Vouchers</span>
-                    <span class="text-xs text-sky-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                    <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Scheduled Vouchers</span>
                 </div>
                 <div class="text-3xl font-extrabold text-sky-600 dark:text-sky-400 mt-1">{{ number_format($scheduledVouchersCount) }}</div>
                 <div class="text-[11px] text-slate-500 mt-1">Future scheduled releases</div>
-            </a>
+            </div>
 
             {{-- 3. Expired Vouchers --}}
-            <a href="{{ route('admin.commerce.index') }}" class="p-5 bg-slate-900 border border-slate-800 hover:border-rose-500/50 rounded-xl transition-all block group shadow-sm">
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase">Expired Vouchers</span>
-                    <span class="text-xs text-rose-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                    <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Expired Vouchers</span>
                 </div>
                 <div class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">{{ number_format($expiredVouchersCount) }}</div>
                 <div class="text-[11px] text-slate-500 mt-1">Concluded promotions</div>
-            </a>
+            </div>
 
             {{-- 4. Total Redemptions --}}
-            <a href="{{ route('admin.commerce.index') }}" class="p-5 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl transition-all block group shadow-sm">
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase">Total Redemptions</span>
-                    <span class="text-xs text-indigo-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                    <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Total Redemptions</span>
                 </div>
                 <div class="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">{{ number_format($totalVoucherRedemptions) }}</div>
                 <div class="text-[11px] text-slate-500 mt-1">Platform-wide redemptions</div>
-            </a>
+            </div>
         </div>
     </section>
 

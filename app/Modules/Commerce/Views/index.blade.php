@@ -176,9 +176,6 @@
                 <h2 class="text-sm font-bold text-white">Voucher Campaigns (Primary Generator Engine)</h2>
                 <p class="text-xs text-slate-400 mt-0.5">Assessment-family governed promotional campaigns with transactional unique code generation.</p>
             </div>
-            <a href="{{ route('admin.commerce.campaigns.create') }}" class="text-xs font-bold text-indigo-400 hover:text-indigo-300">
-                + New Campaign &rarr;
-            </a>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-300">
