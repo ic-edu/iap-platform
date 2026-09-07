@@ -7,17 +7,20 @@
             <p class="text-xs text-slate-400">Operational Admin management for institutional assessment packages, initial pricing, promotional vouchers, and SA price proposals.</p>
         </div>
         <div class="flex items-center gap-3">
-            <button onclick="document.getElementById('create-product-modal').classList.remove('hidden')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer">
+            <a href="{{ route('admin.commerce.campaigns.create') }}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
-                <span>+ Create Assessment Package</span>
-            </button>
-            <button onclick="document.getElementById('create-voucher-modal').classList.remove('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer">
+                <span>+ Generate Voucher Campaign</span>
+            </a>
+            <button onclick="document.getElementById('create-product-modal').classList.remove('hidden')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
-                <span>+ Create Voucher</span>
+                <span>+ Create Package</span>
+            </button>
+            <button onclick="document.getElementById('create-voucher-modal').classList.remove('hidden')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer">
+                <span>+ Legacy Voucher</span>
             </button>
         </div>
     </div>
@@ -166,10 +169,80 @@
         @endif
     </div>
 
-    <!-- Promotional Vouchers Grid -->
+    <!-- Voucher Campaigns (Primary Generator Engine) -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm mb-8">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-bold text-white">Voucher Campaigns (Primary Generator Engine)</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Assessment-family governed promotional campaigns with transactional unique code generation.</p>
+            </div>
+            <a href="{{ route('admin.commerce.campaigns.create') }}" class="text-xs font-bold text-indigo-400 hover:text-indigo-300">
+                + New Campaign &rarr;
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
+                    <tr>
+                        <th class="p-4">Campaign Name</th>
+                        <th class="p-4">Assessment Family</th>
+                        <th class="p-4">Product Scope</th>
+                        <th class="p-4">Discount</th>
+                        <th class="p-4 text-center">Codes</th>
+                        <th class="p-4 text-center">Status</th>
+                        <th class="p-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 font-sans text-xs">
+                    @forelse($campaigns as $camp)
+                        <tr>
+                            <td class="p-4 font-bold text-white">
+                                <a href="{{ route('admin.commerce.campaigns.show', $camp->id) }}" class="hover:text-indigo-400 transition">
+                                    {{ $camp->name }}
+                                </a>
+                                <span class="text-[11px] text-slate-500 block font-mono">{{ $camp->valid_from ? $camp->valid_from->format('d M Y') : 'Now' }} &rarr; {{ $camp->valid_until ? $camp->valid_until->format('d M Y') : 'Finite' }}</span>
+                            </td>
+                            <td class="p-4">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-500/20 text-indigo-300">
+                                    {{ strtoupper($camp->assessment_family) }}
+                                </span>
+                            </td>
+                            <td class="p-4 text-slate-400">
+                                {{ $camp->scope_mode === 'all_products_in_family' ? 'All Family Products' : 'Selected Products' }}
+                            </td>
+                            <td class="p-4 font-bold text-indigo-400">
+                                {{ $camp->discount_type === 'percentage' ? number_format($camp->discount_value, 0) . '%' : 'IDR ' . number_format($camp->discount_value) }} OFF
+                            </td>
+                            <td class="p-4 text-center font-mono font-bold text-white">
+                                {{ $camp->coupons_count }}
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $camp->is_active ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300' }}">
+                                    {{ $camp->getEffectiveState() }}
+                                </span>
+                            </td>
+                            <td class="p-4 text-right space-x-2">
+                                <a href="{{ route('admin.commerce.campaigns.show', $camp->id) }}" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+                                    Manage &rarr;
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="p-6 text-center text-slate-500">
+                                No voucher campaigns created yet. Use the "+ Generate Voucher Campaign" button above to start.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Standalone / Legacy Promotional Vouchers Grid -->
     <div class="mb-8">
         <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-bold text-white">Promotional Vouchers &amp; Validity Governance</h2>
+            <h2 class="text-sm font-bold text-white">Standalone / Legacy Promotional Vouchers</h2>
             <span class="text-xs text-slate-400">{{ $coupons->count() }} configured voucher(s)</span>
         </div>
         @if($coupons->isEmpty())

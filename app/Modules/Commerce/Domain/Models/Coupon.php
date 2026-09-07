@@ -30,6 +30,7 @@ class Coupon extends Model
     protected $table = 'coupons';
 
     protected $fillable = [
+        'campaign_id',
         'code',
         'type',
         'value',
@@ -40,6 +41,55 @@ class Coupon extends Model
         'expires_at',
         'is_active',
     ];
+
+    /**
+     * Get parent campaign if generated under a campaign.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<CouponCampaign, $this>
+     */
+    public function campaign(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(CouponCampaign::class, 'campaign_id');
+    }
+
+    /**
+     * Get redemptions for this coupon.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<CouponRedemption, $this>
+     */
+    public function redemptions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CouponRedemption::class, 'coupon_id');
+    }
+
+    /**
+     * Get orders that used this coupon.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Order, $this>
+     */
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'coupon_id');
+    }
+
+    /**
+     * Get active reservations count (pending orders that haven't been consumed or released).
+     */
+    public function getActiveReservationsCount(): int
+    {
+        return (int) $this->redemptions()->where('status', 'reserved')->count();
+    }
+
+    /**
+     * Get available remaining uses capacity.
+     */
+    public function getAvailableUses(): int
+    {
+        $activeReservations = $this->getActiveReservationsCount();
+        $consumed = (int) $this->used_count;
+
+        return max(0, $this->usage_limit - ($consumed + $activeReservations));
+    }
 
     protected function casts(): array
     {
@@ -71,6 +121,13 @@ class Coupon extends Model
      */
     public function getEffectiveState(): string
     {
+        if ($this->campaign_id && $this->campaign) {
+            $campaignState = $this->campaign->getEffectiveState();
+            if ($campaignState !== 'ACTIVE') {
+                return $campaignState;
+            }
+        }
+
         if (!$this->is_active) {
             return 'INACTIVE';
         }
