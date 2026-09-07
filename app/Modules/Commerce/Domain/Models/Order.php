@@ -38,6 +38,7 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'organization_id',
+        'coupon_id',
         'order_number',
         'status',
         'subtotal',
@@ -45,6 +46,26 @@ class Order extends Model
         'tax',
         'grand_total',
     ];
+
+    /**
+     * Get applied coupon if any.
+     *
+     * @return BelongsTo<Coupon, $this>
+     */
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class, 'coupon_id')->withTrashed();
+    }
+
+    /**
+     * Get redemption record if any.
+     *
+     * @return HasOne<CouponRedemption, $this>
+     */
+    public function redemption(): HasOne
+    {
+        return $this->hasOne(CouponRedemption::class, 'order_id');
+    }
 
     protected function casts(): array
     {

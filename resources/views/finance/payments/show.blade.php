@@ -98,6 +98,40 @@
                             @endforeach
                         @endif
                     </tbody>
+                    @if($payment->invoice?->order)
+                    <tfoot class="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-xs">
+                        <tr>
+                            <td colspan="3" class="p-3.5 text-right font-bold text-slate-500 dark:text-slate-400">Subtotal</td>
+                            <td class="p-3.5 text-right font-bold text-slate-900 dark:text-white font-mono">IDR {{ number_format($payment->invoice->order->subtotal) }}</td>
+                        </tr>
+                        @if($payment->invoice->order->discount > 0 || $payment->invoice->order->coupon)
+                        <tr class="bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300">
+                            <td colspan="3" class="p-3.5 text-right font-bold">
+                                <div class="flex items-center justify-end gap-2">
+                                    <span>Promotional Voucher Discount</span>
+                                    @if($payment->invoice->order->coupon)
+                                    <span class="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 font-mono font-bold text-[11px] text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800">
+                                        {{ $payment->invoice->order->coupon->code }}
+                                        @if($payment->invoice->order->coupon->campaign)
+                                        ({{ $payment->invoice->order->coupon->campaign->name }})
+                                        @endif
+                                    </span>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="p-3.5 text-right font-bold font-mono">- IDR {{ number_format($payment->invoice->order->discount) }}</td>
+                        </tr>
+                        @endif
+                        <tr>
+                            <td colspan="3" class="p-3.5 text-right font-bold text-slate-500 dark:text-slate-400">VAT (11%)</td>
+                            <td class="p-3.5 text-right font-bold text-slate-900 dark:text-white font-mono">IDR {{ number_format($payment->invoice->order->tax) }}</td>
+                        </tr>
+                        <tr class="border-t border-slate-200 dark:border-slate-800 font-bold bg-slate-100/50 dark:bg-slate-900/50">
+                            <td colspan="3" class="p-4 text-right text-slate-900 dark:text-white text-sm">Grand Total (Settlement)</td>
+                            <td class="p-4 text-right text-indigo-600 dark:text-indigo-400 font-black text-sm font-mono">IDR {{ number_format($payment->invoice->order->grand_total) }}</td>
+                        </tr>
+                    </tfoot>
+                    @endif
                 </table>
             </div>
         </div>

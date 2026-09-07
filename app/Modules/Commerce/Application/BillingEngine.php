@@ -5,6 +5,8 @@ namespace App\Modules\Commerce\Application;
 use App\Modules\Commerce\Domain\Enums\InvoiceStatus;
 use App\Modules\Commerce\Domain\Enums\OrderStatus;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
+use App\Modules\Commerce\Domain\Models\Coupon;
+use App\Modules\Commerce\Domain\Models\CouponRedemption;
 use App\Modules\Commerce\Domain\Models\Invoice;
 use App\Modules\Commerce\Domain\Models\Payment;
 use App\Modules\Commerce\Events\PaymentCancelled;
@@ -32,12 +34,12 @@ class BillingEngine
         $refNumber = 'PAY-'.now()->format('Ymd').'-'.strtoupper(Str::random(4));
 
         $payment = Payment::create([
-            'invoice_id' => $invoice->id,
-            'user_id' => $invoice->user_id,
+            'invoice_id'       => $invoice->id,
+            'user_id'          => $invoice->user_id,
             'reference_number' => $refNumber,
-            'payment_gateway' => $gateway,
-            'status' => PaymentStatus::Pending,
-            'amount' => $invoice->amount,
+            'payment_gateway'  => $gateway,
+            'status'           => PaymentStatus::Pending,
+            'amount'           => $invoice->amount,
         ]);
 
         event(new PaymentCreated($payment));
@@ -46,7 +48,7 @@ class BillingEngine
     }
 
     /**
-     * Confirm payment and trigger automatic enrollment activation.
+     * Confirm payment, consume voucher redemption, and trigger automatic enrollment/entitlement activation.
      */
     public function confirmPayment(Payment $payment, ?string $transactionId = null): Payment
     {
@@ -62,21 +64,34 @@ class BillingEngine
 
         return DB::transaction(function () use ($payment, $transactionId) {
             $payment->update([
-                'status' => PaymentStatus::Success,
+                'status'         => PaymentStatus::Success,
                 'transaction_id' => $transactionId ?? 'TXN-'.now()->timestamp,
-                'confirmed_at' => now(),
+                'confirmed_at'   => now(),
             ]);
 
             $invoice = $payment->invoice;
             if ($invoice) {
                 $invoice->update([
-                    'status' => InvoiceStatus::Paid,
+                    'status'  => InvoiceStatus::Paid,
                     'paid_at' => now(),
                 ]);
 
                 $order = $invoice->order;
                 if ($order) {
                     $order->update(['status' => OrderStatus::Completed]);
+
+                    // Consume voucher redemption if reserved
+                    $redemption = CouponRedemption::where('order_id', $order->id)->lockForUpdate()->first();
+                    if ($redemption && $redemption->status === 'reserved') {
+                        $redemption->update([
+                            'status'      => 'consumed',
+                            'consumed_at' => now(),
+                        ]);
+
+                        if ($redemption->coupon) {
+                            $redemption->coupon->increment('used_count');
+                        }
+                    }
                 }
             }
 
@@ -87,7 +102,7 @@ class BillingEngine
     }
 
     /**
-     * Cancel payment.
+     * Cancel payment and release reserved voucher.
      */
     public function cancelPayment(Payment $payment, ?string $reason = null): Payment
     {
@@ -102,14 +117,25 @@ class BillingEngine
 
         return DB::transaction(function () use ($payment, $reason) {
             $payment->update([
-                'status' => PaymentStatus::Failed,
+                'status'      => PaymentStatus::Failed,
                 'proof_notes' => $reason ? ($payment->proof_notes ? $payment->proof_notes." | Rejection reason: {$reason}" : "Rejection reason: {$reason}") : $payment->proof_notes,
             ]);
 
             if ($payment->invoice) {
                 $payment->invoice->update(['status' => InvoiceStatus::Cancelled]);
-                if ($payment->invoice->order) {
-                    $payment->invoice->order->update(['status' => OrderStatus::Cancelled]);
+                $order = $payment->invoice->order;
+                if ($order) {
+                    $order->update(['status' => OrderStatus::Cancelled]);
+
+                    // Release reserved voucher redemption
+                    $redemption = CouponRedemption::where('order_id', $order->id)->lockForUpdate()->first();
+                    if ($redemption && $redemption->status === 'reserved') {
+                        $redemption->update([
+                            'status'          => 'released',
+                            'released_at'     => now(),
+                            'released_reason' => $reason ?? 'Payment cancelled or rejected by finance.',
+                        ]);
+                    }
                 }
             }
 
@@ -129,8 +155,23 @@ class BillingEngine
 
             if ($payment->invoice) {
                 $payment->invoice->update(['status' => InvoiceStatus::Cancelled]);
-                if ($payment->invoice->order) {
-                    $payment->invoice->order->update(['status' => OrderStatus::Refunded]);
+                $order = $payment->invoice->order;
+                if ($order) {
+                    $order->update(['status' => OrderStatus::Refunded]);
+
+                    // Release voucher redemption if was consumed
+                    $redemption = CouponRedemption::where('order_id', $order->id)->lockForUpdate()->first();
+                    if ($redemption && $redemption->status === 'consumed') {
+                        $redemption->update([
+                            'status'          => 'released',
+                            'released_at'     => now(),
+                            'released_reason' => 'Payment refunded.',
+                        ]);
+
+                        if ($redemption->coupon && $redemption->coupon->used_count > 0) {
+                            $redemption->coupon->decrement('used_count');
+                        }
+                    }
                 }
             }
 
