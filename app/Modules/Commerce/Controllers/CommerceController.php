@@ -20,6 +20,7 @@ use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -127,11 +128,24 @@ class CommerceController extends Controller
             return back()->withErrors(['valid_until' => 'The valid until date must be after the valid from date.'])->withInput();
         }
 
-        if ($validated['scope_mode'] === 'selected_products' && empty($validated['products'])) {
-            return back()->withErrors(['products' => 'Please select at least one eligible product for the selected products scope.'])->withInput();
+        $family = $validated['assessment_family'];
+
+        if ($validated['scope_mode'] === 'selected_products') {
+            if (empty($validated['products'])) {
+                return back()->withErrors(['products' => 'Please select at least one eligible product for the selected products scope.'])->withInput();
+            }
+
+            $selectedProducts = Product::whereIn('id', $validated['products'])->get();
+            foreach ($selectedProducts as $prod) {
+                $prodFamily = $prod->getEffectiveFamily();
+                if (empty($prodFamily) || strtolower($prodFamily) !== strtolower($family)) {
+                    return back()->withErrors([
+                        'products' => "The selected product '{$prod->title}' does not belong to the " . strtoupper($family) . " assessment family.",
+                    ])->withInput();
+                }
+            }
         }
 
-        $family = $validated['assessment_family'];
         $prefix = !empty($validated['code_prefix'])
             ? strtoupper(trim($validated['code_prefix']))
             : CouponGenerator::getDefaultPrefix($family);
@@ -142,28 +156,32 @@ class CommerceController extends Controller
 
         $usesPerCode = !empty($validated['uses_per_code']) ? (int) $validated['uses_per_code'] : 1;
 
-        $campaign = CouponCampaign::create([
-            'name'              => $validated['name'],
-            'assessment_family' => $family,
-            'scope_mode'        => $validated['scope_mode'],
-            'discount_type'     => $validated['discount_type'],
-            'discount_value'    => (float) $validated['discount_value'],
-            'generation_mode'   => $validated['generation_mode'],
-            'code_prefix'       => $prefix,
-            'code_length'       => !empty($validated['code_length']) ? (int) $validated['code_length'] : 6,
-            'uses_per_code'     => $usesPerCode,
-            'total_codes'       => $totalCodes,
-            'valid_from'        => $validFrom,
-            'valid_until'       => $validUntil,
-            'is_active'         => $request->has('is_active') ? $request->boolean('is_active') : true,
-            'created_by'        => $request->user()?->id,
-        ]);
+        $campaign = DB::transaction(function () use ($validated, $family, $prefix, $usesPerCode, $totalCodes, $validFrom, $validUntil, $request, &$generatedCoupons) {
+            $campaign = CouponCampaign::create([
+                'name'              => $validated['name'],
+                'assessment_family' => $family,
+                'scope_mode'        => $validated['scope_mode'],
+                'discount_type'     => $validated['discount_type'],
+                'discount_value'    => (float) $validated['discount_value'],
+                'generation_mode'   => $validated['generation_mode'],
+                'code_prefix'       => $prefix,
+                'code_length'       => !empty($validated['code_length']) ? (int) $validated['code_length'] : 6,
+                'uses_per_code'     => $usesPerCode,
+                'total_codes'       => $totalCodes,
+                'valid_from'        => $validFrom,
+                'valid_until'       => $validUntil,
+                'is_active'         => $request->has('is_active') ? $request->boolean('is_active') : true,
+                'created_by'        => $request->user()?->id,
+            ]);
 
-        if ($validated['scope_mode'] === 'selected_products' && !empty($validated['products'])) {
-            $campaign->products()->sync($validated['products']);
-        }
+            if ($validated['scope_mode'] === 'selected_products' && !empty($validated['products'])) {
+                $campaign->products()->sync(array_unique($validated['products']));
+            }
 
-        $generatedCoupons = $this->couponGenerator->generateForCampaign($campaign);
+            $generatedCoupons = $this->couponGenerator->generateForCampaign($campaign);
+
+            return $campaign;
+        });
 
         ActivityLogger::log(
             'CAMPAIGN_CREATED',

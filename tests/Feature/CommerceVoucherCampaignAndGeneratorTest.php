@@ -154,27 +154,183 @@ class CommerceVoucherCampaignAndGeneratorTest extends TestCase
         $this->assertTrue($campaign->fresh()->is_active);
     }
 
-    public function test_vgen_04_authorization_governance_for_campaign_management(): void
+    public function test_vgen_04_uat_regression_selected_products_pivot_and_code_generation(): void
     {
-        // Student cannot access campaign creation or store
+        // Exact payload replicating the Product Owner Human UAT scenario
+        $response = $this->actingAs($this->adminUser)->post(route('admin.commerce.campaigns.store'), [
+            'name'              => 'TOEIC O2 UAT Promo',
+            'assessment_family' => 'toeic',
+            'scope_mode'        => 'selected_products',
+            'products'          => [$this->toeicProduct->id],
+            'discount_type'     => 'percentage',
+            'discount_value'    => 10,
+            'generation_mode'   => 'shared',
+            'code_prefix'       => 'TOEIC',
+            'code_length'       => 6,
+            'uses_per_code'     => 10,
+            'valid_from'        => now()->format('Y-m-d H:i:s'),
+            'valid_until'       => now()->addDays(30)->format('Y-m-d H:i:s'),
+            'is_active'         => 1,
+        ]);
+
+        $response->assertRedirect();
+        $campaign = CouponCampaign::where('name', 'TOEIC O2 UAT Promo')->first();
+        $this->assertNotNull($campaign, 'Campaign must be created');
+        $this->assertEquals('toeic', $campaign->assessment_family);
+        $this->assertEquals('selected_products', $campaign->scope_mode);
+
+        // Verify pivot table persistence without surrogate key failure
+        $this->assertEquals(1, $campaign->products()->count());
+        $this->assertEquals($this->toeicProduct->id, $campaign->products()->first()->id);
+
+        // Verify coupon generated
+        $coupon = Coupon::where('campaign_id', $campaign->id)->first();
+        $this->assertNotNull($coupon);
+        $this->assertStringStartsWith('TOEIC', $coupon->code);
+        $this->assertEquals(10, $coupon->usage_limit);
+        $this->assertEquals(10, $coupon->value);
+    }
+
+    public function test_vgen_05_family_mismatch_validation_rejects_selected_products(): void
+    {
+        $response = $this->actingAs($this->adminUser)->post(route('admin.commerce.campaigns.store'), [
+            'name'              => 'Mismatch Family Promo',
+            'assessment_family' => 'toeic',
+            'scope_mode'        => 'selected_products',
+            'products'          => [$this->toeflProduct->id], // TOEFL product for TOEIC campaign
+            'discount_type'     => 'percentage',
+            'discount_value'    => 15,
+            'generation_mode'   => 'shared',
+            'code_prefix'       => 'MISMATCH',
+            'uses_per_code'     => 10,
+            'valid_from'        => now()->format('Y-m-d H:i:s'),
+            'valid_until'       => now()->addDays(10)->format('Y-m-d H:i:s'),
+            'is_active'         => 1,
+        ]);
+
+        $response->assertSessionHasErrors('products');
+        $this->assertDatabaseMissing('coupon_campaigns', [
+            'name' => 'Mismatch Family Promo',
+        ]);
+    }
+
+    public function test_vgen_06_atomic_transaction_rollback_on_failure(): void
+    {
+        // Mock CouponGenerator to throw an exception
+        $mockGenerator = $this->createMock(CouponGenerator::class);
+        $mockGenerator->method('generateForCampaign')
+            ->willThrowException(new \RuntimeException('Simulated generator failure'));
+        $this->app->instance(CouponGenerator::class, $mockGenerator);
+
+        $initialCampaignCount = CouponCampaign::count();
+        $initialCouponCount = Coupon::count();
+
+        try {
+            $this->actingAs($this->adminUser)->post(route('admin.commerce.campaigns.store'), [
+                'name'              => 'Failing Atomic Campaign',
+                'assessment_family' => 'toeic',
+                'scope_mode'        => 'selected_products',
+                'products'          => [$this->toeicProduct->id],
+                'discount_type'     => 'percentage',
+                'discount_value'    => 10,
+                'generation_mode'   => 'shared',
+                'valid_from'        => now()->format('Y-m-d H:i:s'),
+                'valid_until'       => now()->addDays(30)->format('Y-m-d H:i:s'),
+            ]);
+        } catch (\RuntimeException $e) {
+            // Expected
+        }
+
+        // Verify zero orphan records created
+        $this->assertEquals($initialCampaignCount, CouponCampaign::count());
+        $this->assertEquals($initialCouponCount, Coupon::count());
+        $this->assertDatabaseMissing('coupon_campaigns', ['name' => 'Failing Atomic Campaign']);
+    }
+
+    public function test_v_cam_gov_01_to_07_governance_role_boundary(): void
+    {
+        $campaign = CouponCampaign::create([
+            'name'              => 'Governance Test Campaign',
+            'assessment_family' => 'toeic',
+            'scope_mode'        => 'all_products_in_family',
+            'discount_type'     => 'percentage',
+            'discount_value'    => 10,
+            'generation_mode'   => 'shared',
+            'code_prefix'       => 'GOVTEST',
+            'uses_per_code'     => 10,
+            'valid_from'        => now()->subDay(),
+            'valid_until'       => now()->addDays(10),
+            'is_active'         => true,
+        ]);
+
+        // V-CAM-GOV-01: RA GET create = 200
+        $this->actingAs($this->adminUser)
+            ->get(route('admin.commerce.campaigns.create'))
+            ->assertOk();
+
+        // V-CAM-GOV-02: RA POST store = 302 redirect
+        $this->actingAs($this->adminUser)
+            ->post(route('admin.commerce.campaigns.store'), [
+                'name'              => 'RA New Campaign',
+                'assessment_family' => 'toeic',
+                'scope_mode'        => 'all_products_in_family',
+                'discount_type'     => 'percentage',
+                'discount_value'    => 10,
+                'generation_mode'   => 'shared',
+                'valid_from'        => now()->format('Y-m-d H:i:s'),
+                'valid_until'       => now()->addDays(30)->format('Y-m-d H:i:s'),
+            ])
+            ->assertRedirect();
+
+        // V-CAM-GOV-03: SA GET index & show = 200 (oversight)
+        $this->actingAs($this->superAdminUser)
+            ->get(route('admin.commerce.index'))
+            ->assertOk();
+
+        $this->actingAs($this->superAdminUser)
+            ->get(route('admin.commerce.campaigns.show', $campaign->id))
+            ->assertOk();
+
+        // V-CAM-GOV-04: SA GET create & POST store = 403 Forbidden (routine campaign mutation)
+        $this->actingAs($this->superAdminUser)
+            ->get(route('admin.commerce.campaigns.create'))
+            ->assertStatus(403);
+
+        $this->actingAs($this->superAdminUser)
+            ->post(route('admin.commerce.campaigns.store'), [
+                'name' => 'SA Illegal Campaign',
+            ])
+            ->assertStatus(403);
+
+        // V-CAM-GOV-05: SA POST toggle & DELETE destroy = 403 Forbidden
+        $this->actingAs($this->superAdminUser)
+            ->post(route('admin.commerce.campaigns.toggle', $campaign->id))
+            ->assertStatus(403);
+
+        $this->actingAs($this->superAdminUser)
+            ->delete(route('admin.commerce.campaigns.destroy', $campaign->id))
+            ->assertStatus(403);
+
+        // V-CAM-GOV-06: Finance mutation = 403 Forbidden
+        $this->actingAs($this->financeUser)
+            ->get(route('admin.commerce.campaigns.create'))
+            ->assertStatus(403);
+
+        $this->actingAs($this->financeUser)
+            ->post(route('admin.commerce.campaigns.store'), [
+                'name' => 'Finance Illegal Campaign',
+            ])
+            ->assertStatus(403);
+
+        // V-CAM-GOV-07: Student / Coordinator mutation = 403 Forbidden
         $this->actingAs($this->studentUser)
             ->get(route('admin.commerce.campaigns.create'))
             ->assertStatus(403);
 
         $this->actingAs($this->studentUser)
             ->post(route('admin.commerce.campaigns.store'), [
-                'name' => 'Unauthorized Campaign',
+                'name' => 'Student Illegal Campaign',
             ])
             ->assertStatus(403);
-
-        // Finance cannot create campaigns (RA / Super-admin only)
-        $this->actingAs($this->financeUser)
-            ->get(route('admin.commerce.campaigns.create'))
-            ->assertStatus(403);
-
-        // Super-admin can create and manage
-        $this->actingAs($this->superAdminUser)
-            ->get(route('admin.commerce.campaigns.create'))
-            ->assertOk();
     }
 }

@@ -5,14 +5,11 @@ use App\Modules\Commerce\Controllers\CommerceController;
 use App\Modules\Commerce\Middleware\EnsureStandaloneCandidate;
 use Illuminate\Support\Facades\Route;
 
-// Governance Separation: Only Regular Admin (RA) and Super Admin (SA) manage Product Catalog and Vouchers
-Route::middleware(['web', 'auth', 'role:admin|super-admin'])->prefix('admin/commerce')->group(function () {
-    Route::get('/', [CommerceController::class, 'index'])->name('admin.commerce.index');
-
-    // Voucher Campaigns (Primary Generator Engine)
+// 1. Routine Operational Mutation routes (Operational Admin / RA ONLY)
+Route::middleware(['web', 'auth', 'role:admin'])->prefix('admin/commerce')->group(function () {
+    // Voucher Campaigns (Primary Generator Engine) - Create route MUST precede {campaign} parameter
     Route::get('/campaigns/create', [CommerceController::class, 'createCampaign'])->name('admin.commerce.campaigns.create');
     Route::post('/campaigns', [CommerceController::class, 'storeCampaign'])->name('admin.commerce.campaigns.store');
-    Route::get('/campaigns/{campaign}', [CommerceController::class, 'showCampaign'])->name('admin.commerce.campaigns.show');
     Route::post('/campaigns/{campaign}/toggle', [CommerceController::class, 'toggleCampaignStatus'])->name('admin.commerce.campaigns.toggle');
     Route::delete('/campaigns/{campaign}', [CommerceController::class, 'destroyCampaign'])->name('admin.commerce.campaigns.destroy');
 
@@ -27,6 +24,12 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])->prefix('admin/comm
     Route::put('/products/{product}', [CommerceController::class, 'updateProduct'])->name('admin.commerce.products.update');
     Route::post('/products/{product}/toggle', [CommerceController::class, 'toggleProductStatus'])->name('admin.commerce.products.toggle');
     Route::post('/products/{product}/propose-price', [CommerceController::class, 'proposePriceChange'])->name('admin.commerce.products.propose-price');
+});
+
+// 2. Read & Oversight routes (Operational Admin & Super Admin Oversight)
+Route::middleware(['web', 'auth', 'role:admin|super-admin'])->prefix('admin/commerce')->group(function () {
+    Route::get('/', [CommerceController::class, 'index'])->name('admin.commerce.index');
+    Route::get('/campaigns/{campaign}', [CommerceController::class, 'showCampaign'])->name('admin.commerce.campaigns.show');
 });
 
 Route::middleware(['web', 'auth', 'role:student', EnsureStandaloneCandidate::class])->prefix('candidate')->name('candidate.')->group(function () {

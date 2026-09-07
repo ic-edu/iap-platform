@@ -404,7 +404,7 @@ class CommerceVoucherValidityAndSafeDeleteTest extends TestCase
         $this->assertSoftDeleted('coupons', ['id' => $coupon->id]);
     }
 
-    public function test_voucher_auth_02_super_admin_has_oversight_and_management_authority(): void
+    public function test_voucher_auth_02_super_admin_has_oversight_authority_and_routine_mutations_restricted(): void
     {
         $coupon = Coupon::create([
             'code'        => 'SAVOUCHER',
@@ -417,18 +417,22 @@ class CommerceVoucherValidityAndSafeDeleteTest extends TestCase
             'is_active'   => true,
         ]);
 
+        // Oversight: Super Admin has view access
+        $this->actingAs($this->superAdminUser)
+            ->get(route('admin.commerce.index'))
+            ->assertOk();
+
+        // Routine Mutation: Super Admin is restricted (RA only) -> 403 Forbidden
         $resUpdate = $this->actingAs($this->superAdminUser)->put(route('admin.commerce.vouchers.update', $coupon->id), [
             'discount'    => 40,
             'valid_from'  => now()->format('Y-m-d H:i:s'),
             'valid_until' => now()->addDays(15)->format('Y-m-d H:i:s'),
             'is_active'   => 1,
         ]);
-        $resUpdate->assertRedirect(route('admin.commerce.index'));
-        $this->assertEquals(40, $coupon->fresh()->value);
+        $resUpdate->assertStatus(403);
 
         $resDel = $this->actingAs($this->superAdminUser)->delete(route('admin.commerce.vouchers.destroy', $coupon->id));
-        $resDel->assertRedirect(route('admin.commerce.index'));
-        $this->assertSoftDeleted('coupons', ['id' => $coupon->id]);
+        $resDel->assertStatus(403);
     }
 
     public function test_voucher_auth_03_finance_cannot_create_update_or_delete_voucher(): void
