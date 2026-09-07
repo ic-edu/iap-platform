@@ -49,6 +49,7 @@ Route::middleware(['web', 'auth', 'org.context'])
         Route::post('/purchases/quote', [OrganizationCommerceController::class, 'quote'])->name('purchases.quote');
         Route::post('/purchases', [OrganizationCommerceController::class, 'storePurchase'])->name('purchases.store');
         Route::get('/purchases/{order}', [OrganizationCommerceController::class, 'showOrder'])->name('purchases.show');
+        Route::get('/purchases/{order}/proof', [OrganizationCommerceController::class, 'viewProof'])->name('purchases.proof.view');
         Route::post('/purchases/{order}/proof', [OrganizationCommerceController::class, 'uploadProof'])->name('purchases.proof');
 
         // Seats & Entitlements

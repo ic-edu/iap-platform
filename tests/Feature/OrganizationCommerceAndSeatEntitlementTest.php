@@ -278,7 +278,7 @@ class OrganizationCommerceAndSeatEntitlementTest extends TestCase
 
     public function test_o2_pay_02_coordinator_can_upload_payment_proof(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
 
         $this->actingAs($this->coordinatorA)
             ->post(route('organization.purchases.store', $this->organizationA->slug), [

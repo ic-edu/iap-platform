@@ -24,6 +24,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class OrganizationCommerceController extends Controller
 {
@@ -186,85 +187,139 @@ class OrganizationCommerceController extends Controller
     /**
      * Upload Bank Transfer Payment Proof for Institutional Order.
      */
-    public function uploadProof(Request $request, Organization $organization, Order $order): RedirectResponse
+     public function uploadProof(Request $request, Organization $organization, Order $order): RedirectResponse
+     {
+         if ((string) $order->organization_id !== (string) $organization->id) {
+             abort(403, 'Order does not belong to this organization.');
+         }
+
+         $user = $request->user();
+         $membership = $organization->getMembership($user);
+
+         if (!$membership || $membership->status !== MembershipStatus::Active) {
+             abort(403, 'Unauthorized. Active organization membership required.');
+         }
+
+         if ($membership->role === MembershipRole::Member) {
+             abort(403, 'Candidate Members are not authorized to upload organization payment proof.');
+         }
+
+         if ($order->status !== OrderStatus::Pending) {
+             return back()->withErrors(['error' => 'Payment proof can only be uploaded for pending orders.']);
+         }
+
+         $request->validate([
+             'proof'             => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+             'payment_proof'     => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+             'proof_file'        => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+             'sender_bank'       => ['nullable', 'string', 'max:100'],
+             'sender_name'       => ['nullable', 'string', 'max:255'],
+             'payment_reference' => ['nullable', 'string', 'max:255'],
+             'notes'             => ['nullable', 'string', 'max:500'],
+         ]);
+
+         $file = $request->file('proof') ?? $request->file('payment_proof') ?? $request->file('proof_file');
+         if (!$file) {
+             return back()->withErrors(['proof' => 'Please provide a valid payment proof file (JPG, PNG, PDF).']);
+         }
+
+         $invoice = $order->invoice;
+         if (!$invoice) {
+             $invoice = Invoice::create([
+                 'order_id'       => $order->id,
+                 'user_id'        => $order->user_id,
+                 'invoice_number' => 'INV-' . strtoupper(uniqid()),
+                 'amount'         => $order->grand_total,
+                 'status'         => InvoiceStatus::Unpaid,
+             ]);
+         }
+
+         $payment = $invoice->payments()->where('status', PaymentStatus::Pending)->first() ?? $invoice->payments()->first();
+         if ($payment && $payment->status !== PaymentStatus::Pending) {
+             return back()->withErrors(['error' => 'Payment proof cannot be replaced after payment has been verified.']);
+         }
+
+         if (!$payment) {
+             $payment = Payment::create([
+                 'invoice_id'       => $invoice->id,
+                 'user_id'          => $order->user_id,
+                 'reference_number' => 'PAY-' . strtoupper(uniqid()),
+                 'payment_gateway'  => 'manual_transfer',
+                 'amount'           => $order->grand_total,
+                 'status'           => PaymentStatus::Pending,
+             ]);
+         }
+
+         // Clean up existing local proof file if replacing
+         if ($payment->proof_path && Storage::disk('local')->exists($payment->proof_path)) {
+             Storage::disk('local')->delete($payment->proof_path);
+         }
+
+         $storedPath = $file->store('payment_proofs', 'local');
+
+         $notesParts = array_filter([
+             $request->input('notes'),
+             $request->filled('sender_bank') ? "Bank: {$request->input('sender_bank')}" : null,
+             $request->filled('sender_name') ? "Sender: {$request->input('sender_name')}" : null,
+         ]);
+         $notes = !empty($notesParts) ? implode(' | ', $notesParts) : null;
+
+         $payment->update([
+             'proof_path'          => $storedPath,
+             'proof_original_name' => $file->getClientOriginalName(),
+             'proof_uploaded_at'   => now(),
+             'proof_notes'         => $notes ?: $payment->proof_notes,
+             'transaction_id'      => $request->input('payment_reference') ?: $payment->transaction_id,
+             'status'              => PaymentStatus::Pending,
+         ]);
+
+         ActivityLogger::log(
+             action: 'ORG_PAYMENT_PROOF_SUBMITTED',
+             description: "Submitted payment proof for institutional order #{$order->order_number} (Ref: {$payment->reference_number})",
+             subject: $payment,
+             properties: [
+                 'organization_id'  => $organization->id,
+                 'order_id'         => $order->id,
+                 'payment_id'       => $payment->id,
+                 'reference_number' => $payment->reference_number,
+                 'amount'           => $payment->amount,
+                 'uploaded_by'      => $user->id,
+             ]
+         );
+
+         return back()->with('status', 'Payment proof submitted successfully. Awaiting Finance verification and approval.');
+     }
+
+    /**
+     * Securely Stream Payment Evidence File for Organization Coordinator.
+     */
+    public function viewProof(Request $request, Organization $organization, Order $order): BinaryFileResponse|RedirectResponse
     {
         if ((string) $order->organization_id !== (string) $organization->id) {
             abort(403, 'Order does not belong to this organization.');
         }
 
-        if ($order->status !== OrderStatus::Pending) {
-            return back()->withErrors(['error' => 'Payment proof can only be uploaded for pending orders.']);
+        $user = $request->user();
+        $membership = $organization->getMembership($user);
+
+        if (!$membership || $membership->status !== MembershipStatus::Active) {
+            abort(403, 'Unauthorized. Active organization membership required.');
         }
 
-        $request->validate([
-            'payment_proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
-            'proof_file'    => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
-            'sender_bank'   => ['nullable', 'string', 'max:100'],
-            'sender_name'   => ['nullable', 'string', 'max:255'],
-            'payment_reference' => ['nullable', 'string', 'max:255'],
-            'notes'         => ['nullable', 'string', 'max:500'],
+        if ($membership->role === MembershipRole::Member) {
+            abort(403, 'Candidate Members are not authorized to view organization payment proof.');
+        }
+
+        $payment = $order->invoice?->payments()->latest()->first();
+
+        if (!$payment || !$payment->proof_path || !Storage::disk('local')->exists($payment->proof_path)) {
+            abort(404, 'Payment proof document not found.');
+        }
+
+        $filePath = Storage::disk('local')->path($payment->proof_path);
+
+        return response()->file($filePath, [
+            'Content-Disposition' => 'inline; filename="' . ($payment->proof_original_name ?? 'proof.pdf') . '"',
         ]);
-
-        $file = $request->file('payment_proof') ?? $request->file('proof_file');
-        if (!$file) {
-            return back()->withErrors(['payment_proof' => 'Please provide a valid payment proof file (JPG, PNG, PDF).']);
-        }
-
-        $invoice = $order->invoice;
-        if (!$invoice) {
-            $invoice = Invoice::create([
-                'order_id'       => $order->id,
-                'user_id'        => $order->user_id,
-                'invoice_number' => 'INV-' . strtoupper(uniqid()),
-                'amount'         => $order->grand_total,
-                'status'         => InvoiceStatus::Unpaid,
-            ]);
-        }
-
-        $payment = $invoice->payments()->where('status', PaymentStatus::Pending)->first();
-        if (!$payment) {
-            $payment = Payment::create([
-                'invoice_id'       => $invoice->id,
-                'user_id'          => $order->user_id,
-                'reference_number' => 'PAY-' . strtoupper(uniqid()),
-                'payment_method'   => 'bank_transfer',
-                'payment_gateway'  => 'manual',
-                'amount'           => $order->grand_total,
-                'status'           => PaymentStatus::Pending,
-            ]);
-        }
-
-        $filename = 'proof_' . $payment->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs('payment-proofs', $filename, 'public');
-
-        $notesParts = array_filter([
-            $request->input('notes'),
-            $request->filled('sender_bank') ? "Bank: {$request->input('sender_bank')}" : null,
-            $request->filled('sender_name') ? "Sender: {$request->input('sender_name')}" : null,
-        ]);
-        $notes = !empty($notesParts) ? implode(' | ', $notesParts) : null;
-
-        $payment->update([
-            'proof_path'          => $path,
-            'proof_original_name' => $file->getClientOriginalName(),
-            'proof_uploaded_at'   => now(),
-            'proof_notes'         => $notes,
-            'transaction_id'      => $request->input('payment_reference') ?: $payment->transaction_id,
-        ]);
-
-        ActivityLogger::log(
-            action: 'ORG_PAYMENT_SUBMITTED',
-            description: "Submitted payment proof for order #{$order->order_number} (Ref: {$payment->reference_number})",
-            subject: $payment,
-            properties: [
-                'organization_id'  => $organization->id,
-                'payment_id'       => $payment->id,
-                'reference_number' => $payment->reference_number,
-                'amount'           => $payment->amount,
-                'uploaded_by'      => $request->user()->id,
-            ]
-        );
-
-        return back()->with('status', 'Payment proof submitted successfully. Awaiting Finance verification and approval.');
     }
 }

@@ -14,8 +14,36 @@
         </a>
     </div>
 
+    <!-- Flash message -->
+    @if(session('status'))
+    <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium flex items-center gap-2">
+        <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>{{ session('status') }}</span>
+    </div>
+    @endif
+
+    <!-- Validation Errors -->
+    @if($errors->any())
+    <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs space-y-1">
+        @foreach($errors->all() as $error)
+            <p class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{{ $error }}</span>
+            </p>
+        @endforeach
+    </div>
+    @endif
+
     @php
-        $statusValue = is_object($order->status) ? $order->status->value : $order->status;
+        $orderStatus = is_object($order->status) ? $order->status : \App\Modules\Commerce\Domain\Enums\OrderStatus::tryFrom((string) $order->status);
+        $statusValue = is_object($order->status) ? $order->status->value : (string) $order->status;
+        $isPaid = $statusValue === 'paid' || $statusValue === 'completed' || $orderStatus === \App\Modules\Commerce\Domain\Enums\OrderStatus::Completed;
+        $isPending = $statusValue === 'pending' || $statusValue === 'pending_payment' || $orderStatus === \App\Modules\Commerce\Domain\Enums\OrderStatus::Pending;
+        $payment = $payment ?? $order->invoice?->payments()->latest()->first();
     @endphp
 
     <!-- Order Header Card -->
@@ -29,17 +57,17 @@
                 </p>
             </div>
             <div>
-                @if($statusValue === 'paid')
+                @if($isPaid)
                     <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shadow-xs">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         PAID &amp; PROVISIONED
                     </span>
-                @elseif($statusValue === 'pending_payment')
+                @elseif($isPending)
                     <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-xs">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         PENDING PAYMENT
                     </span>
-                @elseif($statusValue === 'cancelled')
+                @elseif($statusValue === 'cancelled' || $orderStatus === \App\Modules\Commerce\Domain\Enums\OrderStatus::Cancelled)
                     <span class="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shadow-xs">
                         CANCELLED
                     </span>
@@ -136,7 +164,7 @@
             </div>
         </div>
 
-        @if($statusValue === 'paid')
+        @if($isPaid)
             <!-- Success / Entitlement Provisioned Banner -->
             <div class="p-5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
@@ -154,7 +182,7 @@
                     Go to Seat Entitlements &rarr;
                 </a>
             </div>
-        @elseif($statusValue === 'pending_payment')
+        @elseif($isPending)
             <!-- Payment Instructions & Upload Proof -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <!-- Payment Instructions -->
@@ -179,50 +207,135 @@
                         </div>
                     </div>
 
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                        ⚡ After transferring, upload your payment receipt below so Finance can verify and unlock seats.
-                    </p>
+                    <div class="p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-100 dark:border-indigo-900/30 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                        <span class="font-bold text-indigo-900 dark:text-indigo-300 block">Payment Instructions:</span>
+                        <p>1. Transfer the exact amount of <strong class="text-indigo-600 dark:text-indigo-400 font-mono">Rp {{ number_format($order->grand_total, 0, ',', '.') }}</strong>.</p>
+                        <p>2. Upload your transfer receipt below so Finance can verify and unlock seats.</p>
+                    </div>
                 </div>
 
-                <!-- Proof Upload Form -->
+                <!-- Proof Section -->
                 <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
-                    <div>
-                        <h3 class="font-bold text-sm text-slate-900 dark:text-white">Upload Payment Receipt</h3>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">JPG, PNG, or PDF up to 5MB</p>
-                    </div>
-
-                    <form method="POST" action="{{ route('organization.purchases.proof', [$organization->slug, $order]) }}" enctype="multipart/form-data" class="space-y-3">
-                        @csrf
-
+                    @if($payment && $payment->proof_path)
+                        <!-- Post-Upload State -->
                         <div>
-                            <label for="payment_proof" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                                Proof of Transfer <span class="text-rose-500">*</span>
-                            </label>
-                            <input type="file" id="payment_proof" name="payment_proof" accept="image/*,application/pdf" required
-                                   class="w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                            <h3 class="font-bold text-sm text-slate-900 dark:text-white">Payment Proof Uploaded</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Evidence file is submitted for Finance verification</p>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label for="sender_bank" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Sender Bank</label>
-                                <input type="text" id="sender_bank" name="sender_bank" placeholder="e.g. BCA / Mandiri" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                        <div class="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 space-y-2 text-xs">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold">
+                                    <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>Awaiting Finance Verification</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                    Pending Approval
+                                </span>
                             </div>
-                            <div>
-                                <label for="sender_name" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Sender Name</label>
-                                <input type="text" id="sender_name" name="sender_name" placeholder="e.g. Finance Team" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                            </div>
+                            <p class="text-slate-600 dark:text-slate-300 font-mono text-[11px] truncate">
+                                File: {{ $payment->proof_original_name ?? 'payment_proof.pdf' }}
+                            </p>
+                            <p class="text-slate-500 dark:text-slate-400 text-[11px]">
+                                Uploaded: {{ $payment->proof_uploaded_at?->format('d M Y, H:i') ?? 'Recently' }}
+                            </p>
+                            @if($payment->proof_notes)
+                                <p class="text-slate-700 dark:text-slate-300 mt-1.5 p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-emerald-200/50 dark:border-emerald-900/30 text-[11px]">
+                                    Notes: {{ $payment->proof_notes }}
+                                </p>
+                            @endif
                         </div>
 
+                        <div class="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                            <a href="{{ route('organization.purchases.proof.view', [$organization->slug, $order]) }}" target="_blank" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                View Uploaded Proof
+                            </a>
+
+                            <button type="button" onclick="document.getElementById('replace-proof-container').classList.toggle('hidden')" class="w-full sm:w-auto px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                Replace Proof
+                            </button>
+                        </div>
+
+                        <!-- Replace Proof Collapsible Form -->
+                        <div id="replace-proof-container" class="hidden pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                            <form method="POST" action="{{ route('organization.purchases.proof', [$organization->slug, $order]) }}" enctype="multipart/form-data" class="space-y-3">
+                                @csrf
+                                <div>
+                                    <label for="proof_replace" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                        Select New Payment Receipt <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="file" id="proof_replace" name="proof" accept=".jpeg,.png,.jpg,.pdf" required
+                                           class="w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                                    <span class="text-[11px] text-slate-400 dark:text-slate-500 block mt-1">Accepted: JPG, PNG, PDF up to 5MB</span>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label for="sender_bank_rep" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Sender Bank</label>
+                                        <input type="text" id="sender_bank_rep" name="sender_bank" placeholder="e.g. BCA / Mandiri" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label for="sender_name_rep" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Sender Name</label>
+                                        <input type="text" id="sender_name_rep" name="sender_name" placeholder="e.g. Finance Team" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="payment_ref_rep" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Transfer Ref / Transaction ID</label>
+                                    <input type="text" id="payment_ref_rep" name="payment_reference" placeholder="e.g. TRX-928374" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                </div>
+
+                                <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    Update Payment Proof
+                                </button>
+                            </form>
+                        </div>
+                    @else
+                        <!-- Pre-Upload State Form -->
                         <div>
-                            <label for="payment_reference" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Transfer Ref / Transaction ID</label>
-                            <input type="text" id="payment_reference" name="payment_reference" placeholder="e.g. TRX-928374" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                            <h3 class="font-bold text-sm text-slate-900 dark:text-white">Upload Payment Receipt</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">No payment proof uploaded yet. JPG, PNG, or PDF up to 5MB</p>
                         </div>
 
-                        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                            Submit Payment Proof
-                        </button>
-                    </form>
+                        <form method="POST" action="{{ route('organization.purchases.proof', [$organization->slug, $order]) }}" enctype="multipart/form-data" class="space-y-3">
+                            @csrf
+
+                            <div>
+                                <label for="proof" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                    Proof of Transfer <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="file" id="proof" name="proof" accept=".jpeg,.png,.jpg,.pdf,image/*,application/pdf" required
+                                       class="w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                                <span class="text-[11px] text-slate-400 dark:text-slate-500 block mt-1">Accepted: JPG, PNG, PDF up to 5MB</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label for="sender_bank" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Sender Bank</label>
+                                    <input type="text" id="sender_bank" name="sender_bank" placeholder="e.g. BCA / Mandiri" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                </div>
+                                <div>
+                                    <label for="sender_name" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Sender Name</label>
+                                    <input type="text" id="sender_name" name="sender_name" placeholder="e.g. Finance Team" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="payment_reference" class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Transfer Ref / Transaction ID</label>
+                                <input type="text" id="payment_reference" name="payment_reference" placeholder="e.g. TRX-928374" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                            </div>
+
+                            <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                Submit Payment Proof
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
         @endif
