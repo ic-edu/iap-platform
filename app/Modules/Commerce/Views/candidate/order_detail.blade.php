@@ -42,7 +42,7 @@
                                 </td>
                                 <td class="p-4 text-center font-bold text-slate-900 dark:text-white">{{ $item->quantity }}</td>
                                 <td class="p-4 text-right text-slate-600 dark:text-slate-300">IDR {{ number_format($item->price) }}</td>
-                                <td class="p-4 text-right font-bold text-slate-900 dark:text-white">IDR {{ number_format($item->total) }}</td>
+                                <td class="p-4 text-right font-bold text-slate-900 dark:text-white">IDR {{ number_format($item->quantity * $item->price) }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -56,6 +56,26 @@
                     <span>Subtotal</span>
                     <span class="font-semibold text-slate-900 dark:text-white">IDR {{ number_format($order->subtotal) }}</span>
                 </div>
+
+                @if($order->discount > 0 || $order->coupon)
+                    <div class="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <div class="flex items-center gap-1.5">
+                            <span>Voucher Discount ({{ $order->coupon?->code }})</span>
+                            @if($order->coupon?->campaign)
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-normal">
+                                    {{ $order->coupon->campaign->name }}
+                                </span>
+                            @endif
+                        </div>
+                        <span>- IDR {{ number_format($order->discount) }}</span>
+                    </div>
+
+                    <div class="flex justify-between text-slate-600 dark:text-slate-400">
+                        <span>Taxable Subtotal</span>
+                        <span class="font-semibold text-slate-900 dark:text-white">IDR {{ number_format($order->subtotal - $order->discount) }}</span>
+                    </div>
+                @endif
+
                 <div class="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Tax (11%)</span>
                     <span class="font-semibold text-slate-900 dark:text-white">IDR {{ number_format($order->tax) }}</span>

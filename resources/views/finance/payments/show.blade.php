@@ -93,7 +93,7 @@
                                 <td class="p-4 text-center font-bold text-slate-900 dark:text-white font-mono">
                                     {{ $item->quantity }}
                                 </td>
-                                <td class="p-4 text-right font-bold text-slate-900 dark:text-white">IDR {{ number_format($item->total) }}</td>
+                                <td class="p-4 text-right font-bold text-slate-900 dark:text-white font-mono">IDR {{ number_format($item->quantity * $item->price) }}</td>
                             </tr>
                             @endforeach
                         @endif
@@ -120,6 +120,10 @@
                                 </div>
                             </td>
                             <td class="p-3.5 text-right font-bold font-mono">- IDR {{ number_format($payment->invoice->order->discount) }}</td>
+                        </tr>
+                        <tr class="text-slate-600 dark:text-slate-400">
+                            <td colspan="3" class="p-3.5 text-right font-semibold">Taxable Subtotal</td>
+                            <td class="p-3.5 text-right font-bold text-slate-900 dark:text-white font-mono">IDR {{ number_format($payment->invoice->order->subtotal - $payment->invoice->order->discount) }}</td>
                         </tr>
                         @endif
                         <tr>

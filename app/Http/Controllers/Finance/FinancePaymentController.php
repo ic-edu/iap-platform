@@ -118,7 +118,7 @@ class FinancePaymentController extends Controller
      */
     public function show(Request $request, Payment $payment): View
     {
-        $payment->loadMissing(['user', 'invoice.order.items.product.test']);
+        $payment->loadMissing(['user', 'invoice.order.items.product.test', 'invoice.order.coupon.campaign', 'invoice.order.organization']);
 
         return view('finance.payments.show', compact('payment'));
     }

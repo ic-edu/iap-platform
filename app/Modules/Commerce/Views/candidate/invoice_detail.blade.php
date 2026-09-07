@@ -81,7 +81,7 @@
                                         <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ strtoupper($item->product?->product_type ?? 'assessment') }} Package</span>
                                     </td>
                                     <td class="p-4 text-center font-bold text-slate-900 dark:text-white">{{ $item->quantity }}</td>
-                                    <td class="p-4 text-right font-bold text-slate-900 dark:text-white">IDR {{ number_format($item->total) }}</td>
+                                    <td class="p-4 text-right font-bold text-slate-900 dark:text-white">IDR {{ number_format($item->quantity * $item->price) }}</td>
                                 </tr>
                                 @endforeach
                             @endif
@@ -97,6 +97,16 @@
                         <span>Subtotal:</span>
                         <span class="font-semibold text-slate-900 dark:text-white">IDR {{ number_format($invoice->order?->subtotal ?? ($invoice->amount / 1.11)) }}</span>
                     </div>
+                    @if($invoice->order && ($invoice->order->discount > 0 || $invoice->order->coupon))
+                    <div class="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span>Voucher Discount ({{ $invoice->order->coupon?->code }}):</span>
+                        <span>- IDR {{ number_format($invoice->order->discount) }}</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600 dark:text-slate-400">
+                        <span>Taxable Subtotal:</span>
+                        <span class="font-semibold text-slate-900 dark:text-white">IDR {{ number_format($invoice->order->subtotal - $invoice->order->discount) }}</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between text-slate-600 dark:text-slate-400">
                         <span>Tax (11% VAT):</span>
                         <span class="font-semibold text-slate-900 dark:text-white">IDR {{ number_format($invoice->order?->tax ?? ($invoice->amount - ($invoice->amount / 1.11))) }}</span>

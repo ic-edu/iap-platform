@@ -58,28 +58,32 @@
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                            <th class="p-4">Assessment Package</th>
-                            <th class="p-4 text-center">Allocated Seats</th>
+                            <th class="p-4">Package</th>
+                            <th class="p-4 text-center">Seat Quantity</th>
                             <th class="p-4 text-right">Unit Price</th>
-                            <th class="p-4 text-right">Total</th>
+                            <th class="p-4 text-right">Line Subtotal</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         @foreach($order->items as $item)
                             <tr>
                                 <td class="p-4">
-                                    <span class="font-bold text-slate-900 dark:text-white block text-sm">{{ $item->product_name }}</span>
-                                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">Product ID: {{ $item->product_id }}</span>
+                                    <span class="font-bold text-slate-900 dark:text-white block text-sm">{{ $item->product?->title ?? 'Package Item' }}</span>
+                                    @if($item->product?->product_type)
+                                        <span class="inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 mt-1">
+                                            {{ ucfirst(str_replace('_', ' ', $item->product->product_type)) }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="p-4 text-center">
                                     <span class="font-bold text-slate-900 dark:text-white text-sm">{{ $item->quantity }}</span>
-                                    <span class="text-[11px] text-slate-500 block">candidate seats</span>
+                                    <span class="text-[11px] text-slate-500 block">seats</span>
                                 </td>
                                 <td class="p-4 text-right text-slate-600 dark:text-slate-300 font-mono">
                                     Rp {{ number_format($item->price, 0, ',', '.') }}
                                 </td>
                                 <td class="p-4 text-right font-bold text-slate-900 dark:text-white font-mono">
-                                    Rp {{ number_format($item->total, 0, ',', '.') }}
+                                    Rp {{ number_format($item->quantity * $item->price, 0, ',', '.') }}
                                 </td>
                             </tr>
                         @endforeach
@@ -88,19 +92,45 @@
             </div>
         </div>
 
-        <!-- Financial Calculation -->
-        <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+        <!-- Order Summary & Financial Calculation -->
+        <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800 space-y-2.5 text-xs">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Order Summary</h3>
+
             <div class="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Subtotal ({{ $order->items->sum('quantity') }} seats)</span>
                 <span class="font-mono font-semibold text-slate-900 dark:text-white">Rp {{ number_format($order->subtotal, 0, ',', '.') }}</span>
             </div>
-            @if($order->tax > 0)
-                <div class="flex justify-between text-slate-600 dark:text-slate-400">
-                    <span>Tax (PPN 11%)</span>
-                    <span class="font-mono font-semibold text-slate-900 dark:text-white">Rp {{ number_format($order->tax, 0, ',', '.') }}</span>
+
+            @if($order->discount > 0 || $order->coupon)
+                <div class="flex justify-between items-start text-emerald-700 dark:text-emerald-400">
+                    <div>
+                        <div class="font-semibold flex items-center gap-1.5">
+                            <span>Voucher {{ $order->coupon?->code }}</span>
+                            @if($order->coupon && $order->coupon->type === 'percentage')
+                                <span>({{ $order->coupon->value }}% OFF)</span>
+                            @endif
+                        </div>
+                        @if($order->coupon?->campaign)
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                                Campaign: {{ $order->coupon->campaign->name }}
+                            </span>
+                        @endif
+                    </div>
+                    <span class="font-mono font-bold">-Rp {{ number_format($order->discount, 0, ',', '.') }}</span>
+                </div>
+
+                <div class="flex justify-between text-slate-600 dark:text-slate-400 pt-1 border-t border-dashed border-slate-200 dark:border-slate-800">
+                    <span>Taxable Subtotal</span>
+                    <span class="font-mono font-semibold text-slate-900 dark:text-white">Rp {{ number_format($order->subtotal - $order->discount, 0, ',', '.') }}</span>
                 </div>
             @endif
-            <div class="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-base font-black text-slate-900 dark:text-white">
+
+            <div class="flex justify-between text-slate-600 dark:text-slate-400">
+                <span>VAT / PPN (11%)</span>
+                <span class="font-mono font-semibold text-slate-900 dark:text-white">Rp {{ number_format($order->tax, 0, ',', '.') }}</span>
+            </div>
+
+            <div class="flex justify-between pt-2.5 border-t border-slate-200 dark:border-slate-800 text-base font-black text-slate-900 dark:text-white">
                 <span>Total Amount Due</span>
                 <span class="font-mono text-indigo-600 dark:text-indigo-400">Rp {{ number_format($order->grand_total, 0, ',', '.') }}</span>
             </div>

@@ -271,7 +271,7 @@ class CandidateCommerceController extends Controller
             abort(403, 'Unauthorized access to invoice.');
         }
 
-        $invoice->loadMissing(['order.items.product.test', 'payments']);
+        $invoice->loadMissing(['order.items.product.test', 'order.coupon.campaign', 'payments']);
 
         // Ensure a pending payment record exists for candidate action
         $payment = $invoice->payments()->latest()->first();
