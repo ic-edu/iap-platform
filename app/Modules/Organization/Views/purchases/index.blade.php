@@ -15,7 +15,7 @@
 
         <a href="{{ route('organization.purchases.create', $organization->slug) }}" class="w-full sm:w-auto px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition flex items-center justify-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Purchase Assessment Seats
+            Purchase Seats
         </a>
     </div>
 
@@ -97,9 +97,9 @@
                                 <div class="flex flex-col items-center justify-center">
                                     <svg class="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                                     <p class="font-medium">No purchase orders found</p>
-                                    <p class="text-xs mt-1">Purchase assessment seats to allocate tests to candidate members.</p>
+                                    <p class="text-xs mt-1">Purchase package seats and allocate them to eligible candidate members. Assessment access is assigned separately.</p>
                                     <a href="{{ route('organization.purchases.create', $organization->slug) }}" class="mt-4 px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition">
-                                        Purchase Assessment Seats
+                                        Purchase Seats
                                     </a>
                                 </div>
                             </td>

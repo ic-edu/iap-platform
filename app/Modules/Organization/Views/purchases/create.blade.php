@@ -1,6 +1,6 @@
 @extends('organization::layouts.organization', [
-    'title' => 'Purchase Assessment Seats',
-    'heading' => 'Order Assessment Seats',
+    'title' => 'Purchase Seats',
+    'heading' => 'Order Package Seats',
     'subheading' => 'Select an assessment package and specify number of seats for your organization'
 ])
 

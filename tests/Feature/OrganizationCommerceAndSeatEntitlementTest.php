@@ -525,4 +525,29 @@ class OrganizationCommerceAndSeatEntitlementTest extends TestCase
         // Candidate dashboard shows 0 active test assignments because O3 is not yet connected
         $this->assertEquals(0, CandidateTestAssignment::where('user_id', $this->candidateA1->id)->count());
     }
+
+    public function test_o2_copy_01_and_02_purchase_page_cta_and_empty_state_copy_normalized(): void
+    {
+        // View purchases index with empty state
+        $response = $this->actingAs($this->coordinatorA)
+            ->get(route('organization.purchases', $this->organizationA->slug));
+
+        $response->assertOk();
+        // O2-COPY-01: CTA no longer says "Purchase Assessment Seats", uses "Purchase Seats"
+        $response->assertDontSee('Purchase Assessment Seats');
+        $response->assertSee('Purchase Seats');
+
+        // O2-COPY-02: Empty state does not state that seat purchase allocates tests
+        $response->assertDontSee('Purchase assessment seats to allocate tests to candidate members.');
+        $response->assertSee('Purchase package seats and allocate them to eligible candidate members. Assessment access is assigned separately.');
+
+        // View entitlements index with empty state
+        $entitlementsRes = $this->actingAs($this->coordinatorA)
+            ->get(route('organization.entitlements', $this->organizationA->slug));
+
+        $entitlementsRes->assertOk();
+        $entitlementsRes->assertDontSee('Purchase Assessment Seats');
+        $entitlementsRes->assertSee('Purchase Seats');
+        $entitlementsRes->assertSee('Purchase package seats and allocate them to eligible candidate members. Assessment access is assigned separately.');
+    }
 }
