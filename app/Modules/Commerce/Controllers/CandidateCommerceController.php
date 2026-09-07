@@ -5,11 +5,15 @@ namespace App\Modules\Commerce\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Commerce\Application\BillingEngine;
 use App\Modules\Commerce\Application\CheckoutEngine;
+use App\Modules\Commerce\Application\CommerceQuoteService;
+use App\Modules\Commerce\Application\CouponEngine;
 use App\Modules\Commerce\Application\PricingEngine;
 use App\Modules\Commerce\Domain\Models\Invoice;
 use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Models\Payment;
 use App\Modules\Commerce\Domain\Models\Product;
+use App\Services\ActivityLogger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +24,9 @@ class CandidateCommerceController extends Controller
     public function __construct(
         protected CheckoutEngine $checkoutEngine,
         protected BillingEngine $billingEngine,
-        protected PricingEngine $pricingEngine
+        protected PricingEngine $pricingEngine,
+        protected CommerceQuoteService $quoteService,
+        protected CouponEngine $couponEngine
     ) {}
 
     /**
@@ -119,6 +125,32 @@ class CandidateCommerceController extends Controller
     }
 
     /**
+     * Authoritative JSON quote calculation endpoint for Candidate checkout.
+     */
+    public function quote(Request $request, Product $product): JsonResponse
+    {
+        if (!$this->isProductPurchasable($product)) {
+            return response()->json(['error' => 'This product is not available for purchase.'], 404);
+        }
+
+        $validated = $request->validate([
+            'voucher_code' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $voucherCode = $validated['voucher_code'] ?? null;
+
+        $quote = $this->quoteService->getQuote(
+            product: $product,
+            quantity: 1,
+            voucherCode: $voucherCode,
+            user: $request->user(),
+            organization: null
+        );
+
+        return response()->json($quote);
+    }
+
+    /**
      * Process Candidate Checkout.
      */
     public function processCheckout(Request $request, Product $product): RedirectResponse
@@ -129,13 +161,51 @@ class CandidateCommerceController extends Controller
 
         $user = $request->user();
 
+        $validated = $request->validate([
+            'voucher_code' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $voucherCode = !empty($validated['voucher_code']) ? trim($validated['voucher_code']) : null;
+        $coupon = null;
+
+        if ($voucherCode) {
+            $validation = $this->couponEngine->validateCoupon($voucherCode, $product, $user, null);
+            if (!$validation['valid']) {
+                return back()->withErrors(['voucher_code' => $validation['reason'] ?? 'Invalid voucher code.'])->withInput();
+            }
+            $coupon = $validation['coupon'];
+        }
+
         // 1. Execute Checkout via CheckoutEngine
-        $result = $this->checkoutEngine->checkout($user, $product);
+        $result = $this->checkoutEngine->checkout(
+            user: $user,
+            product: $product,
+            quantity: 1,
+            coupon: $coupon,
+            organization: null
+        );
+
         $order = $result['order'];
         $invoice = $result['invoice'];
 
         // 2. Automatically create initial pending payment record
         $payment = $this->billingEngine->createPayment($invoice, 'manual_transfer');
+
+        ActivityLogger::log(
+            action: 'ORDER_CREATED',
+            description: "Created order #{$order->order_number} for '{$product->title}'" . ($coupon ? " (Voucher: {$coupon->code})" : ''),
+            subject: $order,
+            properties: [
+                'order_id'     => $order->id,
+                'order_number' => $order->order_number,
+                'product_id'   => $product->id,
+                'coupon_id'    => $coupon?->id,
+                'subtotal'     => $order->subtotal,
+                'discount'     => $order->discount,
+                'tax'          => $order->tax,
+                'grand_total'  => $order->grand_total,
+            ]
+        );
 
         return redirect()->route('candidate.invoices.show', $invoice->id)
             ->with('status', "Order {$order->order_number} created successfully. Please follow the instructions below to complete your payment.");
@@ -148,7 +218,7 @@ class CandidateCommerceController extends Controller
     {
         $user = $request->user();
         $orders = Order::where('user_id', $user->id)
-            ->with(['items.product', 'invoice.payments'])
+            ->with(['items.product', 'invoice.payments', 'coupon.campaign'])
             ->latest()
             ->paginate(10);
 
@@ -167,7 +237,7 @@ class CandidateCommerceController extends Controller
             abort(403, 'Unauthorized access to order.');
         }
 
-        $order->loadMissing(['items.product.test', 'invoice.payments']);
+        $order->loadMissing(['items.product.test', 'invoice.payments', 'coupon.campaign']);
 
         /** @var view-string $viewName */
         $viewName = 'commerce::candidate.order_detail';

@@ -46,6 +46,7 @@ Route::middleware(['web', 'auth', 'org.context'])
         // Purchases & Billing
         Route::get('/purchases', [OrganizationCommerceController::class, 'purchases'])->name('purchases');
         Route::get('/purchases/create', [OrganizationCommerceController::class, 'createPurchase'])->name('purchases.create');
+        Route::post('/purchases/quote', [OrganizationCommerceController::class, 'quote'])->name('purchases.quote');
         Route::post('/purchases', [OrganizationCommerceController::class, 'storePurchase'])->name('purchases.store');
         Route::get('/purchases/{order}', [OrganizationCommerceController::class, 'showOrder'])->name('purchases.show');
         Route::post('/purchases/{order}/proof', [OrganizationCommerceController::class, 'uploadProof'])->name('purchases.proof');

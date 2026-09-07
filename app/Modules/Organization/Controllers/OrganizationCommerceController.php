@@ -5,6 +5,8 @@ namespace App\Modules\Organization\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Commerce\Application\BillingEngine;
 use App\Modules\Commerce\Application\CheckoutEngine;
+use App\Modules\Commerce\Application\CommerceQuoteService;
+use App\Modules\Commerce\Application\CouponEngine;
 use App\Modules\Commerce\Domain\Enums\InvoiceStatus;
 use App\Modules\Commerce\Domain\Enums\OrderStatus;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
@@ -17,6 +19,7 @@ use App\Modules\Organization\Enums\MembershipStatus;
 use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Models\Organization;
 use App\Services\ActivityLogger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -26,7 +29,9 @@ class OrganizationCommerceController extends Controller
 {
     public function __construct(
         protected CheckoutEngine $checkoutEngine,
-        protected BillingEngine $billingEngine
+        protected BillingEngine $billingEngine,
+        protected CommerceQuoteService $quoteService,
+        protected CouponEngine $couponEngine
     ) {}
 
     /**
@@ -35,7 +40,7 @@ class OrganizationCommerceController extends Controller
     public function purchases(Organization $organization): View
     {
         $orders = $organization->orders()
-            ->with(['items.product', 'invoice.payments'])
+            ->with(['items.product', 'invoice.payments', 'coupon.campaign'])
             ->latest()
             ->paginate(15);
 
@@ -54,6 +59,36 @@ class OrganizationCommerceController extends Controller
         $products = Product::where('is_active', true)->orderBy('price')->get();
 
         return view('organization::purchases.create', compact('organization', 'products'));
+    }
+
+    /**
+     * Authoritative JSON quote calculation endpoint for Organization checkout.
+     */
+    public function quote(Request $request, Organization $organization): JsonResponse
+    {
+        if ($organization->status !== OrganizationStatus::Active) {
+            return response()->json(['error' => 'Purchases are only permitted for active organizations.'], 403);
+        }
+
+        $validated = $request->validate([
+            'product_id'   => ['required', 'exists:products,id'],
+            'quantity'     => ['required', 'integer', 'min:1', 'max:10000'],
+            'voucher_code' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $product = Product::findOrFail($validated['product_id']);
+        $quantity = (int) $validated['quantity'];
+        $voucherCode = $validated['voucher_code'] ?? null;
+
+        $quote = $this->quoteService->getQuote(
+            product: $product,
+            quantity: $quantity,
+            voucherCode: $voucherCode,
+            user: $request->user(),
+            organization: $organization
+        );
+
+        return response()->json($quote);
     }
 
     /**
@@ -77,18 +112,29 @@ class OrganizationCommerceController extends Controller
         }
 
         $validated = $request->validate([
-            'product_id' => ['required', 'exists:products,id'],
-            'quantity'   => ['required', 'integer', 'min:1', 'max:10000'],
+            'product_id'   => ['required', 'exists:products,id'],
+            'quantity'     => ['required', 'integer', 'min:1', 'max:10000'],
+            'voucher_code' => ['nullable', 'string', 'max:50'],
         ]);
 
         $product = Product::findOrFail($validated['product_id']);
         $quantity = (int) $validated['quantity'];
+        $voucherCode = !empty($validated['voucher_code']) ? trim($validated['voucher_code']) : null;
+
+        $coupon = null;
+        if ($voucherCode) {
+            $validation = $this->couponEngine->validateCoupon($voucherCode, $product, $user, $organization);
+            if (!$validation['valid']) {
+                return back()->withErrors(['voucher_code' => $validation['reason'] ?? 'Invalid voucher code.'])->withInput();
+            }
+            $coupon = $validation['coupon'];
+        }
 
         $result = $this->checkoutEngine->checkout(
             user: $user,
             product: $product,
             quantity: $quantity,
-            coupon: null,
+            coupon: $coupon,
             organization: $organization
         );
 
@@ -100,7 +146,7 @@ class OrganizationCommerceController extends Controller
 
         ActivityLogger::log(
             action: 'ORG_ORDER_CREATED',
-            description: "Created institutional order #{$order->order_number} for {$quantity} seats of '{$product->title}'",
+            description: "Created institutional order #{$order->order_number} for {$quantity} seats of '{$product->title}'" . ($coupon ? " (Voucher: {$coupon->code})" : ''),
             subject: $order,
             properties: [
                 'organization_id' => $organization->id,
@@ -108,6 +154,10 @@ class OrganizationCommerceController extends Controller
                 'order_number'    => $order->order_number,
                 'product_id'      => $product->id,
                 'quantity'        => $quantity,
+                'coupon_id'       => $coupon?->id,
+                'subtotal'        => $order->subtotal,
+                'discount'        => $order->discount,
+                'tax'             => $order->tax,
                 'grand_total'     => $order->grand_total,
                 'initiated_by'    => $user->id,
             ]
@@ -126,7 +176,7 @@ class OrganizationCommerceController extends Controller
             abort(403, 'Order does not belong to this organization.');
         }
 
-        $order->loadMissing(['items.product', 'invoice.payments']);
+        $order->loadMissing(['items.product', 'invoice.payments', 'coupon.campaign']);
         $invoice = $order->invoice;
         $payment = $invoice?->payments->first();
 

@@ -7,19 +7,95 @@
 @section('content')
 <div class="max-w-4xl space-y-6" x-data="{
     selectedProductId: '{{ old('product_id', $products->first()?->id ?? '') }}',
-    products: {{ json_encode($products->map(fn($p) => ['id' => $p->id, 'title' => $p->title, 'price' => (float)$p->price, 'type' => $p->product_type, 'description' => $p->description])) }},
+    products: {{ json_encode($products->map(fn($p) => ['id' => $p->id, 'title' => $p->title, 'price' => (float)$p->price, 'type' => $p->product_type, 'description' => $p->description, 'family' => $p->assessment_family])) }},
     quantity: {{ old('quantity', 10) }},
+    voucherCode: '{{ old('voucher_code', '') }}',
+    appliedVoucher: null,
+    voucherError: null,
+    voucherLoading: false,
+    quoteData: null,
+
     get selectedProduct() {
         return this.products.find(p => p.id === this.selectedProductId) || this.products[0] || null;
     },
     get unitPrice() {
         return this.selectedProduct ? this.selectedProduct.price : 0;
     },
-    get totalPrice() {
+    get baseSubtotal() {
         return this.unitPrice * (this.quantity > 0 ? this.quantity : 0);
+    },
+    get discountAmount() {
+        return this.quoteData ? this.quoteData.discount : 0;
+    },
+    get taxableSubtotal() {
+        return this.quoteData ? this.quoteData.taxable_amount : Math.max(0, this.baseSubtotal - this.discountAmount);
+    },
+    get taxAmount() {
+        return this.quoteData ? this.quoteData.tax : Math.round(this.taxableSubtotal * 0.11);
+    },
+    get grandTotal() {
+        return this.quoteData ? this.quoteData.grand_total : (this.taxableSubtotal + this.taxAmount);
     },
     formatRupiah(number) {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+    },
+    async fetchQuote() {
+        if (!this.selectedProduct || this.quantity < 1) return;
+        this.voucherLoading = true;
+        this.voucherError = null;
+
+        try {
+            const response = await fetch('{{ route('organization.purchases.quote', $organization->slug) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    product_id: this.selectedProductId,
+                    quantity: this.quantity,
+                    voucher_code: this.voucherCode ? this.voucherCode.trim() : null
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                this.quoteData = data;
+                if (data.voucher && data.voucher.applied) {
+                    this.appliedVoucher = data.voucher;
+                    this.voucherError = null;
+                } else if (data.voucher && data.voucher.reason) {
+                    this.appliedVoucher = null;
+                    this.voucherError = data.voucher.reason;
+                } else {
+                    this.appliedVoucher = null;
+                    this.voucherError = null;
+                }
+            } else {
+                this.voucherError = data.error || 'Failed to validate quote.';
+                this.appliedVoucher = null;
+            }
+        } catch (e) {
+            console.error('Quote fetch error', e);
+        } finally {
+            this.voucherLoading = false;
+        }
+    },
+    applyVoucher() {
+        if (!this.voucherCode || this.voucherCode.trim().length === 0) return;
+        this.fetchQuote();
+    },
+    removeVoucher() {
+        this.voucherCode = '';
+        this.appliedVoucher = null;
+        this.voucherError = null;
+        this.fetchQuote();
+    },
+    init() {
+        this.$watch('selectedProductId', () => this.fetchQuote());
+        this.$watch('quantity', () => this.fetchQuote());
+        this.fetchQuote();
     }
 }">
     <!-- Back button -->
@@ -30,18 +106,29 @@
         </a>
     </div>
 
+    @if ($errors->any())
+        <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-medium space-y-1">
+            <span class="font-bold block">Please resolve the following errors:</span>
+            <ul class="list-disc pl-5 space-y-0.5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('organization.purchases.store', $organization->slug) }}" class="space-y-6">
         @csrf
 
         <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-6">
             <div>
-                <h2 class="text-base font-bold text-slate-900 dark:text-white">1. Select Assessment Product</h2>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Choose the assessment or test package you want to purchase seats for</p>
+                <h2 class="text-base font-bold text-slate-900 dark:text-white">1. Select Package / Product</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Choose the commercial package you want to purchase seats for</p>
             </div>
 
             @if($products->isEmpty())
                 <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
-                    No active assessment products found in the catalog. Please contact the platform administrator.
+                    No active commercial packages found in the catalog. Please contact the platform administrator.
                 </div>
             @else
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -100,6 +187,50 @@
                 </div>
             </div>
 
+            <hr class="border-slate-100 dark:border-slate-800">
+
+            <!-- 3. Promotional Voucher Section -->
+            <div>
+                <h2 class="text-base font-bold text-slate-900 dark:text-white">3. Promotional Voucher (Optional)</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Enter an institutional campaign promo code to apply a discount</p>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <input type="text" id="voucher_code" name="voucher_code" x-model="voucherCode" placeholder="e.g. TOEIC-K7M4PX or PROMOTOEIC-UAT"
+                               @keydown.enter.prevent="applyVoucher()"
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-mono uppercase focus:outline-hidden focus:ring-2 focus:ring-indigo-500">
+                    </div>
+
+                    <button type="button" @click="applyVoucher()" :disabled="voucherLoading || !voucherCode"
+                            class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5">
+                        <span x-show="!voucherLoading">Apply</span>
+                        <span x-show="voucherLoading">Checking...</span>
+                    </button>
+                </div>
+
+                <!-- Success State Banner -->
+                <div x-show="appliedVoucher && appliedVoucher.applied" x-transition class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <span>✓</span>
+                        <span>
+                            Voucher <strong class="font-mono" x-text="appliedVoucher ? appliedVoucher.code : ''"></strong> applied:
+                            <span class="font-bold" x-text="appliedVoucher && appliedVoucher.type === 'percentage' ? appliedVoucher.value + '% OFF' : 'IDR ' + new Intl.NumberFormat('id-ID').format(appliedVoucher ? appliedVoucher.value : 0) + ' OFF'"></span>
+                        </span>
+                    </div>
+                    <button type="button" @click="removeVoucher()" class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
+                        Remove
+                    </button>
+                </div>
+
+                <!-- Error State Banner -->
+                <div x-show="voucherError" x-transition class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span x-text="voucherError"></span>
+                </div>
+            </div>
+
             <div>
                 <label for="notes" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Order Remarks / Department Reference (Optional)
@@ -109,13 +240,13 @@
             </div>
         </div>
 
-        <!-- Order Summary & Confirmation Box -->
+        <!-- Order Summary & Confirmation Box (with Full VAT Parity) -->
         <div class="bg-indigo-900/10 dark:bg-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 p-6 space-y-4">
             <h3 class="font-bold text-sm text-indigo-950 dark:text-indigo-200">Order Summary</h3>
 
-            <div class="space-y-2 text-sm">
+            <div class="space-y-2.5 text-xs sm:text-sm">
                 <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
-                    <span>Selected Assessment:</span>
+                    <span>Selected Package:</span>
                     <span class="font-semibold text-slate-900 dark:text-white" x-text="selectedProduct ? selectedProduct.title : '-'"></span>
                 </div>
                 <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
@@ -126,10 +257,34 @@
                     <span>Unit Price:</span>
                     <span class="font-semibold text-slate-900 dark:text-white" x-text="formatRupiah(unitPrice)"></span>
                 </div>
-                <hr class="border-indigo-200/60 dark:border-indigo-800/60">
+                <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <span>Base Subtotal:</span>
+                    <span class="font-semibold text-slate-900 dark:text-white" x-text="formatRupiah(baseSubtotal)"></span>
+                </div>
+
+                <!-- Voucher Discount Line -->
+                <template x-if="discountAmount > 0">
+                    <div class="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span>Voucher Discount (<span x-text="appliedVoucher ? appliedVoucher.code : ''"></span>):</span>
+                        <span x-text="'- ' + formatRupiah(discountAmount)"></span>
+                    </div>
+                </template>
+
+                <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <span>Taxable Subtotal:</span>
+                    <span class="font-semibold text-slate-900 dark:text-white" x-text="formatRupiah(taxableSubtotal)"></span>
+                </div>
+
+                <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <span>Value Added Tax (11% VAT):</span>
+                    <span class="font-semibold text-slate-900 dark:text-white" x-text="formatRupiah(taxAmount)"></span>
+                </div>
+
+                <hr class="border-indigo-200/60 dark:border-indigo-800/60 my-2">
+
                 <div class="flex items-center justify-between text-base font-bold text-indigo-950 dark:text-indigo-100">
                     <span>Total Order Amount:</span>
-                    <span class="text-lg text-indigo-600 dark:text-indigo-400" x-text="formatRupiah(totalPrice)"></span>
+                    <span class="text-xl text-indigo-600 dark:text-indigo-400" x-text="formatRupiah(grandTotal)"></span>
                 </div>
             </div>
 
