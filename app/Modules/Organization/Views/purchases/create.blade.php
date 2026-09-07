@@ -219,7 +219,7 @@
                             <span class="font-bold" x-text="appliedVoucher && appliedVoucher.type === 'percentage' ? appliedVoucher.value + '% OFF' : 'IDR ' + new Intl.NumberFormat('id-ID').format(appliedVoucher ? appliedVoucher.value : 0) + ' OFF'"></span>
                         </span>
                     </div>
-                    <button type="button" @click="removeVoucher()" aria-label="Remove Voucher" class="px-2.5 py-1 text-[11px] font-semibold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 cursor-pointer flex-shrink-0">
+                    <button type="button" @click="removeVoucher()" aria-label="Remove Voucher" class="px-2.5 py-1 text-[11px] font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-transparent hover:bg-red-500/10 dark:hover:bg-red-500/20 border border-red-300 dark:border-red-500/40 hover:border-red-400 dark:hover:border-red-500/60 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 cursor-pointer flex-shrink-0">
                         Remove Voucher
                     </button>
                 </div>

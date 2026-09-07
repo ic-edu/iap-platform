@@ -128,25 +128,29 @@ class CommerceVoucherRemoveActionTest extends TestCase
         $candResponse->assertSee('aria-label="Remove Voucher"', false);
     }
 
-    public function test_vui_remove_03_action_uses_small_solid_red_danger_styling(): void
+    public function test_vui_remove_03_action_uses_outlined_red_styling_not_solid_red_fill(): void
     {
         // 1. Organization Checkout View
         $orgResponse = $this->actingAs($this->coordinatorUser)
             ->get(route('organization.purchases.create', $this->organization->slug));
         $orgResponse->assertOk();
-        $orgResponse->assertSee('bg-red-600', false);
-        $orgResponse->assertSee('hover:bg-red-700', false);
-        $orgResponse->assertSee('text-white', false);
+        $orgResponse->assertSee('border-red-300', false);
+        $orgResponse->assertSee('text-red-600', false);
+        $orgResponse->assertSee('bg-transparent', false);
+        $orgResponse->assertSee('hover:bg-red-500/10', false);
         $orgResponse->assertSee('rounded-lg', false);
+        $orgResponse->assertDontSee('bg-red-600', false);
 
         // 2. Candidate Checkout View
         $candResponse = $this->actingAs($this->candidateUser)
             ->get(route('candidate.checkout.show', $this->product->id));
         $candResponse->assertOk();
-        $candResponse->assertSee('bg-red-600', false);
-        $candResponse->assertSee('hover:bg-red-700', false);
-        $candResponse->assertSee('text-white', false);
+        $candResponse->assertSee('border-red-300', false);
+        $candResponse->assertSee('text-red-600', false);
+        $candResponse->assertSee('bg-transparent', false);
+        $candResponse->assertSee('hover:bg-red-500/10', false);
         $candResponse->assertSee('rounded-lg', false);
+        $candResponse->assertDontSee('bg-red-600', false);
     }
 
     public function test_vui_remove_04_quote_endpoint_without_voucher_recalculates_canonical_quote(): void
