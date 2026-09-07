@@ -328,7 +328,7 @@ class RaDashboardVoucherOperationsSnapshotTest extends TestCase
 
         $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
         $response->assertOk();
-        $response->assertSee('No vouchers configured yet.');
+        $response->assertSee('No currently redeemable vouchers.');
         $response->assertViewHas('activeVouchersCount', 0);
         $response->assertViewHas('scheduledVouchersCount', 0);
         $response->assertViewHas('expiredVouchersCount', 0);

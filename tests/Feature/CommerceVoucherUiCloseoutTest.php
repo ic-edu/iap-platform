@@ -140,7 +140,7 @@ class CommerceVoucherUiCloseoutTest extends TestCase
         $this->assertStringContainsString('25% OFF', $content);
         
         // Panel header still has the canonical section CTA
-        $response->assertSee('View Commercial Catalog &rarr;', false);
+        $response->assertSee('View Commercial Catalog');
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -180,5 +180,168 @@ class CommerceVoucherUiCloseoutTest extends TestCase
         // Per-row Manage link exists and points to campaigns.show
         $this->assertStringContainsString(route('admin.commerce.campaigns.show', $campaign->id), $content);
         $this->assertStringContainsString('Manage &rarr;', $content);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VUI-CONSOLIDATE: Merged Commercial Snapshot + Current Vouchers Section
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    public function test_vui_consolidate_01_ra_dashboard_renders_one_commercial_and_voucher_snapshot_parent_section(): void
+    {
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $content = $response->getContent();
+        $this->assertStringContainsString('id="commercial-voucher-snapshot"', $content);
+        $this->assertStringContainsString('Commercial &amp; Voucher Snapshot', $content);
+    }
+
+    public function test_vui_consolidate_02_all_four_voucher_kpi_values_remain_rendered(): void
+    {
+        Coupon::create([
+            'code'        => 'ACTIVE99',
+            'type'        => 'percentage',
+            'value'       => 20,
+            'usage_limit' => 10,
+            'used_count'  => 4,
+            'valid_from'  => now()->subDay(),
+            'valid_until' => now()->addDays(5),
+            'is_active'   => true,
+        ]);
+
+        Coupon::create([
+            'code'        => 'SCHED99',
+            'type'        => 'percentage',
+            'value'       => 15,
+            'usage_limit' => 10,
+            'used_count'  => 0,
+            'valid_from'  => now()->addDays(2),
+            'valid_until' => now()->addDays(10),
+            'is_active'   => true,
+        ]);
+
+        Coupon::create([
+            'code'        => 'EXP99',
+            'type'        => 'percentage',
+            'value'       => 10,
+            'usage_limit' => 10,
+            'used_count'  => 6,
+            'valid_from'  => now()->subDays(10),
+            'valid_until' => now()->subDay(),
+            'is_active'   => true,
+        ]);
+
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $response->assertSee('Active Vouchers');
+        $response->assertSee('Scheduled Vouchers');
+        $response->assertSee('Expired Vouchers');
+        $response->assertSee('Total Redemptions');
+    }
+
+    public function test_vui_consolidate_03_current_vouchers_subsection_remains_rendered(): void
+    {
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $content = $response->getContent();
+        $this->assertStringContainsString('Current Vouchers', $content);
+    }
+
+    public function test_vui_consolidate_04_exactly_one_view_commercial_catalog_cta_in_snapshot_context(): void
+    {
+        Coupon::create([
+            'code'        => 'SINGLECATCTA',
+            'type'        => 'percentage',
+            'value'       => 20,
+            'usage_limit' => 10,
+            'used_count'  => 1,
+            'is_active'   => true,
+        ]);
+
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $html = $response->getContent();
+
+        // Extract the section #commercial-voucher-snapshot
+        $start = strpos($html, 'id="commercial-voucher-snapshot"');
+        $this->assertNotFalse($start);
+        $end = strpos($html, '</section>', $start);
+        $this->assertNotFalse($end);
+
+        $sectionHtml = substr($html, $start, $end - $start);
+        $ctaCount = substr_count($sectionHtml, 'View Commercial Catalog');
+
+        $this->assertEquals(1, $ctaCount, 'Exactly ONE View Commercial Catalog CTA must exist in the consolidated Commercial Snapshot context');
+    }
+
+    public function test_vui_consolidate_05_canonical_cta_points_to_commerce_catalog_route(): void
+    {
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $html = $response->getContent();
+        $start = strpos($html, 'id="commercial-voucher-snapshot"');
+        $end = strpos($html, '</section>', $start);
+        $sectionHtml = substr($html, $start, $end - $start);
+
+        $this->assertStringContainsString(route('admin.commerce.index'), $sectionHtml);
+    }
+
+    public function test_vui_consolidate_06_voucher_preview_renders_code_discount_status_validity_redemptions(): void
+    {
+        Coupon::create([
+            'code'        => 'PREVIEWDETAIL',
+            'type'        => 'percentage',
+            'value'       => 30,
+            'usage_limit' => 50,
+            'used_count'  => 7,
+            'valid_from'  => now()->subDays(2),
+            'valid_until' => now()->addDays(12),
+            'is_active'   => true,
+        ]);
+
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $response->assertSee('PREVIEWDETAIL');
+        $response->assertSee('30% OFF');
+        $response->assertSee('ACTIVE');
+        $response->assertSee('7 redemptions');
+    }
+
+    public function test_vui_consolidate_07_kpi_cards_remain_non_clickable(): void
+    {
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $html = $response->getContent();
+        $start = strpos($html, 'id="commercial-voucher-snapshot"');
+        $end = strpos($html, '</section>', $start);
+        $sectionHtml = substr($html, $start, $end - $start);
+
+        // Verify KPI cards are not wrapped in anchor tags
+        $this->assertStringNotContainsString('<a href="' . route('admin.commerce.index') . '" class="group block p-5', $sectionHtml);
+        $this->assertStringNotContainsString('<a href="' . route('admin.commerce.index') . '" class="p-5 bg-white', $sectionHtml);
+    }
+
+    public function test_vui_consolidate_08_zero_current_voucher_state_does_not_introduce_duplicate_cta(): void
+    {
+        Coupon::query()->forceDelete();
+
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $response->assertSee('No currently redeemable vouchers.');
+
+        $html = $response->getContent();
+        $start = strpos($html, 'id="commercial-voucher-snapshot"');
+        $end = strpos($html, '</section>', $start);
+        $sectionHtml = substr($html, $start, $end - $start);
+
+        $ctaCount = substr_count($sectionHtml, 'View Commercial Catalog');
+        $this->assertEquals(1, $ctaCount, 'Zero state must NOT introduce a second View Commercial Catalog CTA');
     }
 }

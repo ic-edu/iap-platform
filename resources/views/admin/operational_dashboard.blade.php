@@ -125,19 +125,16 @@
 
         </div>
 
-        {{-- Voucher Activity Panel --}}
-        <div class="rounded-xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 shadow-sm p-5">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
-                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                    <span>🎟️</span> Current Vouchers
-                </h3>
-                <a href="{{ route('admin.commerce.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold">View Commercial Catalog &rarr;</a>
-            </div>
+        {{-- Current Vouchers Subsection --}}
+        <div class="pt-1">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5 flex items-center gap-1.5">
+                <span>🎟️</span>
+                <span>Current Vouchers</span>
+            </h3>
 
             @if($recentVouchers->isEmpty())
-            <div class="py-8 text-center border border-dashed border-slate-200 dark:border-slate-800/80 rounded-xl bg-slate-50 dark:bg-slate-900/40">
-                <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">No vouchers configured yet.</p>
-                <a href="{{ route('admin.commerce.index') }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">View Commercial Catalog &rarr;</a>
+            <div class="py-6 text-center border border-dashed border-slate-200 dark:border-slate-800/80 rounded-xl bg-slate-50 dark:bg-slate-900/40">
+                <p class="text-xs text-slate-500 dark:text-slate-400">No currently redeemable vouchers.</p>
             </div>
             @else
             <div class="space-y-2.5">
@@ -151,7 +148,7 @@
                             default     => 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
                         };
                     @endphp
-                    <div class="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="p-3.5 rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
                                 <span class="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">{{ $voucher->code }}</span>

@@ -213,7 +213,7 @@ class CrossRoleCommercialVoucherDashboardAlignmentTest extends TestCase
         $response->assertSee('PREVIEW2026');
         $response->assertSee('20% OFF');
         $response->assertSee('ACTIVE');
-        $response->assertSee('View Commercial Catalog &rarr;', false);
+        $response->assertSee('View Commercial Catalog');
     }
 
     public function test_ra_cv_03_ra_commercial_catalog_cta_remains_functional(): void
