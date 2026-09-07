@@ -157,8 +157,9 @@
     @endif
 
     <!-- Primary Action Hub Cards -->
-    <div class="grid sm:grid-cols-2 gap-5 mb-8">
-        {{-- Card 1: PAYMENT --}}
+    <div class="grid {{ (!isset($institutionalMemberships) || $institutionalMemberships->isEmpty()) ? 'sm:grid-cols-2' : 'grid-cols-1' }} gap-5 mb-8">
+        {{-- Card 1: PAYMENT (Standalone Candidates Only) --}}
+        @if(!isset($institutionalMemberships) || $institutionalMemberships->isEmpty())
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col justify-between gap-6 shadow-sm">
             <div class="space-y-3">
                 <div class="flex items-center gap-3">
@@ -197,6 +198,7 @@
                 </a>
             </div>
         </div>
+        @endif
 
         {{-- Card 2: DIGITAL CERTIFICATES --}}
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col justify-between gap-6 shadow-sm">
