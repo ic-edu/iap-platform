@@ -550,4 +550,65 @@ class OrganizationCommerceAndSeatEntitlementTest extends TestCase
         $entitlementsRes->assertSee('Purchase Seats');
         $entitlementsRes->assertSee('Purchase package seats and allocate them to eligible candidate members. Assessment access is assigned separately.');
     }
+
+    public function test_o2_cta_state_aware_visibility_for_zero_and_existing_orders(): void
+    {
+        $createRoute = route('organization.purchases.create', $this->organizationA->slug);
+
+        // STATE A: ZERO ORDERS (O2-CTA-01, O2-CTA-02, O2-CTA-05)
+        $this->assertEquals(0, Order::where('organization_id', $this->organizationA->id)->count());
+
+        $zeroRes = $this->actingAs($this->coordinatorA)
+            ->get(route('organization.purchases', $this->organizationA->slug));
+
+        $zeroRes->assertOk();
+        $zeroContent = $zeroRes->getContent();
+
+        // O2-CTA-02: Empty state message and CTA are rendered
+        $zeroRes->assertSee('No purchase orders found');
+        $zeroRes->assertSee('Purchase package seats and allocate them to eligible candidate members. Assessment access is assigned separately.');
+        $zeroRes->assertSee($createRoute);
+
+        // Count occurrences of Purchase Seats button link in the page (should be exactly 1 in empty state)
+        $zeroMatches = substr_count($zeroContent, 'href="' . $createRoute . '"');
+        $this->assertEquals(1, $zeroMatches, 'Only 1 Purchase Seats CTA (in empty state) should be rendered when order count is 0.');
+
+        // STATE B: EXISTING ORDERS (O2-CTA-03, O2-CTA-04, O2-CTA-05, O2-CTA-06)
+        $order = Order::create([
+            'organization_id' => $this->organizationA->id,
+            'user_id'         => $this->coordinatorA->id,
+            'order_number'    => 'ORD-UAT-CTA-001',
+            'status'          => OrderStatus::Pending,
+            'subtotal'        => 150000.0,
+            'tax'             => 16500.0,
+            'grand_total'     => 166500.0,
+        ]);
+
+        OrderItem::create([
+            'order_id'     => $order->id,
+            'product_id'   => $this->product->id,
+            'product_name' => $this->product->title,
+            'price'        => 150000.0,
+            'quantity'     => 10,
+            'total'        => 1500000.0,
+        ]);
+
+        $orderRes = $this->actingAs($this->coordinatorA)
+            ->get(route('organization.purchases', $this->organizationA->slug));
+
+        $orderRes->assertOk();
+        $orderContent = $orderRes->getContent();
+
+        // O2-CTA-03: Header Purchase Seats CTA IS rendered when count > 0
+        $orderRes->assertSee('Order History (1)');
+        $orderRes->assertSee('ORD-UAT-CTA-001');
+
+        // O2-CTA-04: Empty-state CTA is NOT rendered
+        $orderRes->assertDontSee('No purchase orders found');
+        $orderRes->assertDontSee('Purchase package seats and allocate them to eligible candidate members. Assessment access is assigned separately.');
+
+        // Count occurrences of Purchase Seats button link in the page (should be exactly 1 in header)
+        $orderMatches = substr_count($orderContent, 'href="' . $createRoute . '"');
+        $this->assertEquals(1, $orderMatches, 'Only 1 Purchase Seats CTA (in header) should be rendered when order count > 0.');
+    }
 }

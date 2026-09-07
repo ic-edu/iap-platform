@@ -13,10 +13,12 @@
             <p class="text-xs text-slate-500 dark:text-slate-400">Institutional orders made for {{ $organization->name }}</p>
         </div>
 
+        @if($orders->total() > 0)
         <a href="{{ route('organization.purchases.create', $organization->slug) }}" class="w-full sm:w-auto px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition flex items-center justify-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Purchase Seats
         </a>
+        @endif
     </div>
 
     <!-- Orders Table -->
