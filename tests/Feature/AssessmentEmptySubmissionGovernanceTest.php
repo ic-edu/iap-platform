@@ -406,7 +406,7 @@ class AssessmentEmptySubmissionGovernanceTest extends TestCase
                 'notes' => 'Quality standards verified.',
             ]);
 
-        $approveRes->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
+        $approveRes->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id]));
         $approveRes->assertSessionHas('success');
 
         $test->refresh();

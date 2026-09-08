@@ -323,13 +323,9 @@ class AssessmentTimelineAndPublicationUXTest extends TestCase
             'is_published' => false,
         ]);
 
-        // In RM Assessment Review workspace
+        // In RM Assessment Review workspace -> redirects to publications center
         $resReview = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $this->test->id));
-        $resReview->assertStatus(200);
-        $resReview->assertSee('✓ ASSESSMENT APPROVED');
-        $resReview->assertSee('NOT PUBLISHED');
-        $resReview->assertSee('Publish Assessment');
-        $resReview->assertSee(route('admin.publications.assessments.publish', $this->test->id));
+        $resReview->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $this->test->id]));
 
         // In Assessment Approval Queue
         $resQueue = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval', ['status' => 'ready_for_publication']));
@@ -391,12 +387,9 @@ class AssessmentTimelineAndPublicationUXTest extends TestCase
             'is_published' => true,
         ]);
 
-        // In RM Review workspace
+        // In RM Review workspace -> redirects to publications center
         $resReview = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $this->test->id));
-        $resReview->assertStatus(200);
-        $resReview->assertSee('● PUBLISHED / LIVE');
-        $resReview->assertSee('Unpublish Assessment');
-        $resReview->assertSee(route('admin.publications.assessments.unpublish', $this->test->id));
+        $resReview->assertRedirect(route('admin.publications.assessments', ['status' => 'published', 'highlight' => $this->test->id]));
 
         // In Publication Queue
         $resPub = $this->actingAs($this->repoManager)->get(route('admin.publications.assessments'));

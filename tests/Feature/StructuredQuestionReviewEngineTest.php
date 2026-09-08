@@ -147,7 +147,7 @@ class StructuredQuestionReviewEngineTest extends TestCase
 
         // Approve attempt -> SUCCESS under Review by Exception
         $resApproveSuccess = $this->actingAs($this->repoManager)->post(route('admin.repository-manager.assessment-approve', $test->id));
-        $resApproveSuccess->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
+        $resApproveSuccess->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id]));
 
         $test->refresh();
         $this->assertEquals('approved', $test->status);

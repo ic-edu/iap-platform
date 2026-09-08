@@ -95,7 +95,7 @@
                                 </span>
                             @elseif($item->status === 'approved')
                                 <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                                    ✓ Approved (Governance Complete)
+                                    ✓ Approved — Ready to Publish
                                 </span>
                             @else
                                 <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
@@ -117,9 +117,6 @@
                                 </span>
                             @elseif($item->status === 'approved' && !$item->is_published)
                                 <div class="flex items-center justify-end gap-2">
-                                    <a href="{{ route('admin.repository-manager.assessment-review', $item->id) }}" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1">
-                                        Review
-                                    </a>
                                     <form action="{{ route('admin.publications.assessments.publish', $item->id) }}" method="POST" class="inline"
                                           onsubmit="event.preventDefault(); iapConfirm({ title: 'Publish Assessment Live?', message: 'Publish \'{{ addslashes($item->title) }}\' live? Candidates will be able to access this assessment.', confirmText: 'Publish Assessment', variant: 'success', form: this });">
                                         @csrf
@@ -130,9 +127,6 @@
                                 </div>
                             @elseif($item->is_published || $item->status === 'published')
                                 <div class="flex items-center justify-end gap-2">
-                                    <a href="{{ route('admin.repository-manager.assessment-review', $item->id) }}" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1">
-                                        Review
-                                    </a>
                                     <form action="{{ route('admin.publications.assessments.unpublish', $item->id) }}" method="POST" class="inline"
                                           onsubmit="event.preventDefault(); iapConfirm({ title: 'Unpublish Assessment?', message: 'Unpublish \'{{ addslashes($item->title) }}\'? Candidates will lose access.', confirmText: 'Unpublish Assessment', variant: 'warning', form: this });">
                                         @csrf

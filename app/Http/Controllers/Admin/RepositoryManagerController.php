@@ -839,8 +839,18 @@ class RepositoryManagerController extends Controller
     /**
      * Review assessment details with Question Review Items & Progress (TASK 1, 3).
      */
-    public function assessmentReview(Test $test): View
+    public function assessmentReview(Test $test): View|RedirectResponse
     {
+        if ($test->status === 'approved' && !$test->is_published) {
+            return redirect()->route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id])
+                ->with('status', 'This assessment has already been approved and is ready for publication.');
+        }
+
+        if ($test->is_published || $test->status === 'published') {
+            return redirect()->route('admin.publications.assessments', ['status' => 'published', 'highlight' => $test->id])
+                ->with('status', 'This assessment has already been published live.');
+        }
+
         $test->load([
             'creator',
             'sections.testQuestions.question.questionBank',
@@ -890,6 +900,16 @@ class RepositoryManagerController extends Controller
      */
     public function markQuestionReviewed(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse|\Illuminate\Http\JsonResponse
     {
+        if ($test->status === 'approved' || $test->is_published || $test->status === 'published') {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Review mutation blocked: Assessment is already approved or published.',
+                ], 403);
+            }
+            return redirect()->back()->with('error', 'Review mutation blocked: Assessment is already approved or published.');
+        }
+
         $user = $request->user();
 
         \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
@@ -926,6 +946,16 @@ class RepositoryManagerController extends Controller
      */
     public function requestQuestionRevision(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse|\Illuminate\Http\JsonResponse
     {
+        if ($test->status === 'approved' || $test->is_published || $test->status === 'published') {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Review mutation blocked: Assessment is already approved or published.',
+                ], 403);
+            }
+            return redirect()->back()->with('error', 'Review mutation blocked: Assessment is already approved or published.');
+        }
+
         $user = $request->user();
 
         $validated = $request->validate([
@@ -996,6 +1026,13 @@ class RepositoryManagerController extends Controller
      */
     public function approveAssessment(Request $request, Test $test): RedirectResponse
     {
+        if ($test->status === 'approved' || $test->is_published || $test->status === 'published') {
+            return redirect()->route('admin.publications.assessments', [
+                'status' => $test->is_published ? 'published' : 'approved',
+                'highlight' => $test->id
+            ])->with('error', 'Assessment is already approved or published.');
+        }
+
         $user = $request->user();
 
         $test->load(['sections.testQuestions']);
@@ -1064,7 +1101,7 @@ class RepositoryManagerController extends Controller
             }
         }
 
-        return redirect()->route('admin.repository-manager.assessment-review', $test->id)
+        return redirect()->route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id])
             ->with('success', "Assessment '{$test->title}' approved successfully and is ready for publication.");
     }
 
@@ -1073,6 +1110,10 @@ class RepositoryManagerController extends Controller
      */
     public function requestRevisionAssessment(Request $request, Test $test): RedirectResponse
     {
+        if ($test->status === 'approved' || $test->is_published || $test->status === 'published') {
+            return redirect()->back()->with('error', 'Cannot request revision: Assessment is already approved or published.');
+        }
+
         $user = $request->user();
         $note = $request->input('notes', 'Revision requested by Repository Manager.');
 
@@ -1134,6 +1175,10 @@ class RepositoryManagerController extends Controller
      */
     public function archiveAssessment(Request $request, Test $test): RedirectResponse
     {
+        if ($test->status === 'approved' || $test->is_published || $test->status === 'published') {
+            return redirect()->back()->with('error', 'Cannot archive/reject: Assessment is already approved or published.');
+        }
+
         $user = $request->user();
         $note = $request->input('notes', 'Assessment submission rejected and moved to Archived.');
 

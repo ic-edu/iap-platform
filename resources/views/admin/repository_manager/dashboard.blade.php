@@ -52,11 +52,18 @@
                     {{ $pendingAssessmentsCount }}
                 </a>
             </div>
-            <div class="flex justify-between items-center text-[10px] pt-1.5 border-t border-slate-100 dark:border-slate-800">
-                <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold no-underline">Assessment Queue →</a>
-                <a href="{{ route('admin.publications.assessments') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-bold no-underline" title="View Assessments ready for publication">
-                    Ready to Publish ({{ $readyForPublicationCount ?? 0 }}) →
-                </a>
+            <div class="flex flex-col gap-1 text-[10px] pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                <div class="flex justify-between items-center">
+                    <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold no-underline">Assessment Queue →</a>
+                    <a href="{{ route('admin.publications.assessments') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-bold no-underline" title="View Assessments ready for publication">
+                        Ready to Publish ({{ $readyForPublicationCount ?? 0 }}) →
+                    </a>
+                </div>
+                <div class="pt-1 border-t border-slate-100/60 dark:border-slate-800/60">
+                    <a href="{{ route('admin.repository-manager.assessment-requests.index') }}" class="text-sky-600 dark:text-sky-400 hover:underline font-bold no-underline flex items-center justify-between">
+                        <span>Request Intake Queue →</span>
+                    </a>
+                </div>
             </div>
         </div>
 

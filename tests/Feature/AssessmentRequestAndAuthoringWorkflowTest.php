@@ -387,7 +387,7 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
             'notes' => 'Meets institutional quality standards.',
         ]);
 
-        $response->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
+        $response->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id]));
         $test->refresh();
         $this->assertEquals('approved', $test->status);
         $this->assertFalse((bool) $test->is_published);

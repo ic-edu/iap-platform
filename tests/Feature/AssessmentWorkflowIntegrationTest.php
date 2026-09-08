@@ -136,7 +136,7 @@ class AssessmentWorkflowIntegrationTest extends TestCase
             'notes' => 'Meets academic quality guidelines.',
         ]);
 
-        $resApprove->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
+        $resApprove->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id]));
 
         $test->refresh();
         $this->assertEquals('approved', $test->status);
@@ -282,9 +282,9 @@ class AssessmentWorkflowIntegrationTest extends TestCase
             ]);
 
         $test->refresh();
-        // Repository Manager sees non-clickable badge "Governance Complete" in approved queue
+        // Repository Manager sees non-clickable badge "✓ Approved — Ready to Publish" in approved queue
         $resApprovedQueue = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval', ['status' => 'approved']));
-        $resApprovedQueue->assertSee('Governance Complete');
+        $resApprovedQueue->assertSee('Approved — Ready to Publish');
 
         // 6. Repository Manager publishes assessment -> status = published, is_published = true
         $this->actingAs($this->repoManager)

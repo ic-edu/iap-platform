@@ -185,7 +185,7 @@ class AssessmentLifecycleConsolidationTest extends TestCase
                 'notes' => 'Meets institutional quality guidelines.',
             ]);
 
-        $res->assertRedirect(route('admin.repository-manager.assessment-review', $test->id));
+        $res->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id]));
         $test->refresh();
         $this->assertEquals('approved', $test->status);
         $this->assertFalse((bool) $test->is_published);
@@ -249,39 +249,36 @@ class AssessmentLifecycleConsolidationTest extends TestCase
         $res = $this->actingAs($this->repoManager)
             ->get(route('admin.repository-manager.assessment-review', $test->id));
 
-        $res->assertStatus(200);
-        $res->assertSee('Governance Approved');
-        $res->assertSee('Publish Assessment');
-        $res->assertDontSee('Unpublish Assessment');
+        $res->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id]));
+        $res->assertSessionHas('status', 'This assessment has already been approved and is ready for publication.');
     }
 
     public function test_06_approved_assessment_enters_central_publication_queue(): void
     {
         $test = $this->createAssessment('approved', false);
-
-        $res = $this->actingAs($this->repoManager)
-            ->get(route('admin.publications.assessments'));
-
+        $res = $this->actingAs($this->repoManager)->get(route('admin.publications.assessments', ['status' => 'approved']));
         $res->assertStatus(200);
         $res->assertSee($test->title);
-        $res->assertSee('Publish');
+    }
+
+    public function test_07_ready_for_publication_shows_only_approved_tests(): void
+    {
+        $approvedTest = $this->createAssessment('approved', false);
+        $pendingTest = $this->createAssessment('pending_approval', false);
+
+        $res = $this->actingAs($this->repoManager)->get(route('admin.publications.assessments', ['status' => 'approved']));
+        $res->assertStatus(200);
+        $res->assertSee($approvedTest->title);
+        $res->assertDontSee($pendingTest->title);
     }
 
     /*
      * -------------------------------------------------------------
-     * SECTION 46: CTA STATE TESTS (TEST 07 - TEST 14)
+     * SECTION 46: STATE-AWARE CTA VISIBILITY IN REVIEW (TEST 08 - TEST 14)
      * -------------------------------------------------------------
      */
 
-    public function test_07_draft_assessment_review_shows_no_publish_or_unpublish(): void
-    {
-        $test = $this->createAssessment('draft', false);
-        $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
-        $res->assertDontSee('🚀 Publish Assessment');
-        $res->assertDontSee('⏸️ Unpublish Assessment');
-    }
-
-    public function test_08_pending_approval_assessment_shows_approve_and_no_publish(): void
+    public function test_08_pending_approval_shows_no_publish_or_unpublish(): void
     {
         $test = $this->createAssessment('pending_approval', false);
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
@@ -302,28 +299,28 @@ class AssessmentLifecycleConsolidationTest extends TestCase
     {
         $test = $this->createAssessment('approved', false);
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
-        $res->assertSee('Publish Assessment');
+        $res->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id]));
     }
 
     public function test_11_approved_does_not_show_unpublish(): void
     {
         $test = $this->createAssessment('approved', false);
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
-        $res->assertDontSee('Unpublish Assessment');
+        $res->assertRedirect(route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id]));
     }
 
     public function test_12_published_shows_unpublish(): void
     {
         $test = $this->createAssessment('published', true);
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
-        $res->assertSee('Unpublish Assessment');
+        $res->assertRedirect(route('admin.publications.assessments', ['status' => 'published', 'highlight' => $test->id]));
     }
 
     public function test_13_published_does_not_show_publish(): void
     {
         $test = $this->createAssessment('published', true);
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
-        $res->assertDontSee('🚀 Publish Assessment');
+        $res->assertRedirect(route('admin.publications.assessments', ['status' => 'published', 'highlight' => $test->id]));
     }
 
     public function test_14_archived_shows_neither_publish_nor_unpublish(): void
