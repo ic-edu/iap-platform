@@ -33,10 +33,9 @@ class AssessmentRequestController extends Controller
         $requests = $query->latest()->paginate(15);
         $teachers = User::role('teacher')->where('status', 'active')->get();
 
-        // Query eligible paid candidates for RA request form
-        $eligibleCandidates = User::role('student')
-            ->where('status', 'active')
-            ->whereHas('orders.invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]))
+        // Query eligible candidates (B2C Paid + B2B Active Seat Allocations) for RA request form
+        $eligibleCandidates = app(\App\Services\AssessmentRequestEligibilityService::class)
+            ->getEligibleCandidatesQuery()
             ->orderBy('name')
             ->get();
 
@@ -76,19 +75,17 @@ class AssessmentRequestController extends Controller
                     ->with('error', "User '{$candidate->name}' is not a registered candidate.");
             }
 
-            $isPaidEligible = User::where('id', $candidate->id)
-                ->whereHas('orders.invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]))
-                ->exists();
+            $isEligible = app(\App\Services\AssessmentRequestEligibilityService::class)->isCandidateEligible($candidate);
 
-            if (!$isPaidEligible) {
+            if (!$isEligible) {
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', "Candidate '{$candidate->name}' is not Paid Eligible. Special Mock Test requests require a confirmed paid transaction.");
+                    ->with('error', "Candidate '{$candidate->name}' is not Paid Eligible. Special Mock Test requests require a confirmed paid transaction or an active institutional seat allocation.");
             }
         }
 
-        // Duplicate Request Guard: Prevent duplicate pending brief for the same requirement & candidate
-        $duplicateQuery = AssessmentRequest::where('status', 'pending')
+        // Duplicate Request Guard: Prevent duplicate active brief (pending or draft_created) for the same requirement & candidate
+        $duplicateQuery = AssessmentRequest::whereIn('status', ['pending', 'draft_created'])
             ->where('test_type', $validated['test_type'])
             ->where('title', $validated['title']);
 

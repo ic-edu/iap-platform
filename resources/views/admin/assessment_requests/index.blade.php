@@ -94,7 +94,11 @@
                             {{ $req->requested_deadline ? $req->requested_deadline->format('M d, Y') : 'No deadline' }}
                         </td>
                         <td class="px-4 py-3.5">
-                            @if($req->status === 'draft_created')
+                            @if($req->status === 'completed')
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                    COMPLETED
+                                </span>
+                            @elseif($req->status === 'draft_created')
                                 <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                     DRAFT CREATED
                                 </span>
@@ -160,22 +164,23 @@
             @csrf
             <div>
                 <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Assessment Title / Need <span class="text-rose-500">*</span></label>
-                <input type="text" name="title" required placeholder="e.g. TOEIC Listening &amp; Reading for SMK Perhotelan" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
+                <input type="text" name="title" value="{{ old('title', request('title')) }}" required placeholder="e.g. TOEIC Listening &amp; Reading for SMK Perhotelan" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Assessment Type <span class="text-rose-500">*</span></label>
                     <select name="test_type" required class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
-                        <option value="toeic">TOEIC</option>
-                        <option value="toefl">TOEFL</option>
-                        <option value="ielts">IELTS</option>
-                        <option value="general">General</option>
+                        @php $selType = old('test_type', request('test_type', 'toeic')); @endphp
+                        <option value="toeic" {{ $selType === 'toeic' ? 'selected' : '' }}>TOEIC</option>
+                        <option value="toefl" {{ $selType === 'toefl' ? 'selected' : '' }}>TOEFL</option>
+                        <option value="ielts" {{ $selType === 'ielts' ? 'selected' : '' }}>IELTS</option>
+                        <option value="general" {{ $selType === 'general' ? 'selected' : '' }}>General</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Target Deadline (Optional)</label>
-                    <input type="date" name="requested_deadline" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
+                    <input type="date" name="requested_deadline" value="{{ old('requested_deadline', request('requested_deadline')) }}" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
                 </div>
             </div>
 
@@ -183,20 +188,21 @@
                 <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Target Candidate (Optional / Paid Candidate Requirement)</label>
                 <select name="candidate_id" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
                     <option value="">-- General / Unassigned Institutional Requirement --</option>
+                    @php $selCandidate = old('candidate_id', request('candidate_id')); @endphp
                     @foreach($eligibleCandidates ?? [] as $cand)
-                    <option value="{{ $cand->id }}">{{ $cand->name }} ({{ $cand->email }}) — Paid Eligible</option>
+                    <option value="{{ $cand->id }}" {{ (string)$selCandidate === (string)$cand->id ? 'selected' : '' }}>{{ $cand->name }} ({{ $cand->email }}) — Eligible</option>
                     @endforeach
                 </select>
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Program / Institutional Context</label>
-                <input type="text" name="program_context" placeholder="e.g. SMK Pariwisata &amp; Perhotelan Semester 1 Placement" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
+                <input type="text" name="program_context" value="{{ old('program_context', request('program_context')) }}" placeholder="e.g. SMK Pariwisata &amp; Perhotelan Semester 1 Placement" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Operational Notes &amp; Skill Requirements</label>
-                <textarea name="notes" rows="3" placeholder="Describe skill emphasis, sections, target student level..." class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors"></textarea>
+                <textarea name="notes" rows="3" placeholder="Describe skill emphasis, sections, target student level..." class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">{{ old('notes', request('notes')) }}</textarea>
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
@@ -301,5 +307,11 @@ function closeAssignDraftModal(e) {
         }
     }
 }
+
+@if(request()->hasAny(['candidate_id', 'test_type', 'program_context', 'title', 'auto_open']))
+document.addEventListener('DOMContentLoaded', function() {
+    openCreateRequestModal();
+});
+@endif
 </script>
 @endsection

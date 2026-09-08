@@ -85,6 +85,11 @@ class OrganizationMembership extends Model
         );
     }
 
+    public function seatAllocations(): HasMany
+    {
+        return $this->hasMany(OrganizationSeatAllocation::class, 'organization_membership_id');
+    }
+
     public function isOwner(): bool
     {
         return $this->role === MembershipRole::Owner;

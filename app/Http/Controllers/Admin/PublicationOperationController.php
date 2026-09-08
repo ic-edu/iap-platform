@@ -123,10 +123,40 @@ class PublicationOperationController extends Controller
             abort(403, 'Cannot publish: Assessment Test must be approved before publication and not already published.');
         }
 
-        $test->update([
-            'status' => 'published',
-            'is_published' => true,
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($test, $actor) {
+            $test->update([
+                'status' => 'published',
+                'is_published' => true,
+            ]);
+
+            // Request Status Closure (GAP 2)
+            if ($test->assessment_request_id) {
+                $assessmentRequest = $test->assessmentRequest;
+                if ($assessmentRequest && $assessmentRequest->status !== 'completed') {
+                    $assessmentRequest->update([
+                        'status' => 'completed',
+                    ]);
+
+                    // Notify Requesting RA (GAP 3)
+                    $requester = $assessmentRequest->requester;
+                    if ($requester && (int) $requester->id !== (int) $actor->id) {
+                        try {
+                            $requester->notify(new EnterpriseSystemNotification(
+                                title: 'Requested Mock Test Published',
+                                message: "The requested Mock Test \"{$test->title}\" is now published and available for candidate assignment.",
+                                type: 'ASSESSMENT_REQUEST_COMPLETED',
+                                priority: 'HIGH',
+                                entityType: 'test',
+                                entityId: (string) $test->id,
+                                targetUrl: route('admin.tests.index', ['tab' => 'mock_tests'])
+                            ));
+                        } catch (\Throwable $e) {
+                            // Silently handle in dev
+                        }
+                    }
+                }
+            }
+        });
 
         ActivityLogger::log(
             'PUBLISH',
