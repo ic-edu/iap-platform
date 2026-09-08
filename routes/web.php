@@ -185,6 +185,11 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
     Route::get('/admin/dashboard', [SuperAdminDashboardController::class, 'adminIndex'])
         ->name('admin.dashboard');
 
+    // Institutional Assessment Assignments (O3 RA Operational Assignment)
+    Route::post('/admin/institutional-seat-allocations/{allocation}/assign-assessment', [\App\Http\Controllers\Admin\AdminOperationalDashboardController::class, 'assignInstitutionalSeat'])
+        ->middleware('role:admin|super-admin')
+        ->name('admin.institutional-seats.assign');
+
     // Candidate Management Workspace (Dedicated Candidate Operations)
     Route::prefix('admin/candidates')->middleware('role:admin|super-admin')->group(function () {
         Route::get('/', [UserController::class, 'candidates'])->name('admin.candidates.index');

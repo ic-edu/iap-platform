@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Assessment\Engines\AssignmentEngine;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
@@ -14,6 +15,8 @@ use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Services\VoucherOperationalSummary;
 use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Models\Organization;
+use App\Modules\Organization\Models\OrganizationSeatAllocation;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -23,7 +26,7 @@ class AdminOperationalDashboardController extends Controller
      * Display Admin Operational Dashboard (/admin/dashboard).
      * Operational Admin Workspace: Candidate Management, Assessment Assignments, Payment Eligibility.
      */
-    public function index(Request $request): View|\Illuminate\Http\RedirectResponse
+    public function index(Request $request): View|RedirectResponse
     {
         $user = $request->user();
         if ($user && $user->hasRole('repository-manager') && ! $user->hasRole(['admin', 'super-admin'])) {
@@ -94,6 +97,30 @@ class AdminOperationalDashboardController extends Controller
             }
         }
 
+        // INSTITUTIONAL ACTION PANEL: Active Seat Allocations Awaiting RA Assessment Assignment (O3)
+        $institutionalSeatsAwaitingAssignment = OrganizationSeatAllocation::with([
+            'membership.user',
+            'membership.groups',
+            'entitlement.product',
+            'entitlement.organization',
+            'entitlement.orderItem.order',
+        ])
+        ->where('status', 'active')
+        ->whereDoesntHave('testAssignments', fn($q) => $q->where('status', 'active'))
+        ->whereHas('entitlement', fn($q) => $q->where('status', 'active'))
+        ->whereHas('membership', fn($q) => $q->where('status', 'active'))
+        ->latest('allocated_at')
+        ->get();
+
+        $assignmentEngine = app(AssignmentEngine::class);
+        $eligibleTestsByProduct = [];
+        foreach ($institutionalSeatsAwaitingAssignment as $allocation) {
+            $product = $allocation->entitlement?->product;
+            if ($product && !isset($eligibleTestsByProduct[$product->id])) {
+                $eligibleTestsByProduct[$product->id] = $assignmentEngine->getEligibleTestsForPackage($product);
+            }
+        }
+
         // Recent Active Assignments (Live Database Records)
         $recentAssignments = CandidateTestAssignment::with(['user', 'test', 'assignedBy'])
             ->latest('assigned_at')
@@ -114,18 +141,46 @@ class AdminOperationalDashboardController extends Controller
         $voucherSummary = VoucherOperationalSummary::get();
 
         return view('admin.operational_dashboard', array_merge([
-            'totalCandidates'             => $totalCandidates,
-            'paidEligibleCandidatesCount' => $paidEligibleCandidatesCount,
-            'activeAssignmentsCount'      => $activeAssignmentsCount,
-            'completedAttemptsCount'      => $completedAttemptsCount,
-            'inProgressAttemptsCount'     => $inProgressAttemptsCount,
-            'totalCertificatesIssued'     => $totalCertificatesIssued,
-            'pendingOrganizationsCount'   => $pendingOrganizationsCount,
-            'activeOrganizationsCount'    => $activeOrganizationsCount,
-            'actionRequiredCandidates'    => $actionRequiredCandidates,
-            'recentAssignments'           => $recentAssignments,
-            'availableTests'              => $availableTests,
-            'unreadNotificationsCount'    => $unreadNotificationsCount,
+            'totalCandidates'                      => $totalCandidates,
+            'paidEligibleCandidatesCount'          => $paidEligibleCandidatesCount,
+            'activeAssignmentsCount'               => $activeAssignmentsCount,
+            'completedAttemptsCount'               => $completedAttemptsCount,
+            'inProgressAttemptsCount'              => $inProgressAttemptsCount,
+            'totalCertificatesIssued'              => $totalCertificatesIssued,
+            'pendingOrganizationsCount'            => $pendingOrganizationsCount,
+            'activeOrganizationsCount'             => $activeOrganizationsCount,
+            'actionRequiredCandidates'             => $actionRequiredCandidates,
+            'institutionalSeatsAwaitingAssignment' => $institutionalSeatsAwaitingAssignment,
+            'eligibleTestsByProduct'               => $eligibleTestsByProduct,
+            'recentAssignments'                    => $recentAssignments,
+            'availableTests'                       => $availableTests,
+            'unreadNotificationsCount'             => $unreadNotificationsCount,
         ], $voucherSummary));
+    }
+
+    /**
+     * Assign a published assessment to an active institutional seat allocation (O3).
+     */
+    public function assignInstitutionalSeat(
+        Request $request,
+        OrganizationSeatAllocation $allocation,
+        AssignmentEngine $assignmentEngine
+    ): RedirectResponse {
+        $request->validate([
+            'test_id' => ['required', 'string', 'exists:tests,id'],
+        ]);
+
+        $test = Test::findOrFail($request->input('test_id'));
+
+        try {
+            $assignment = $assignmentEngine->assignFromOrganizationSeat($allocation, $test, $request->user());
+
+            $candidateName = $allocation->membership?->user?->name ?? 'Candidate';
+            $memberId = $allocation->membership?->member_id ? " ({$allocation->membership->member_id})" : '';
+
+            return redirect()->back()->with('status', "Successfully assigned {$test->title} to {$candidateName}{$memberId}.");
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 }

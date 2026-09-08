@@ -364,6 +364,104 @@
         @endif
     </section>
 
+    {{-- Institutional Action Panel: Active Organization Seats Awaiting RA Assessment Assignment (O3) --}}
+    <section id="institutional-action-queue" class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 mb-4 gap-2">
+            <div class="flex items-center gap-2.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Institutional Seats Awaiting Assessment Assignment</h2>
+                <span class="ra-status-badge bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs px-2.5 py-0.5">
+                    {{ count($institutionalSeatsAwaitingAssignment) }} Active Seat(s)
+                </span>
+            </div>
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">B2B Institutional Seat Pool &bull; RA Controlled</span>
+        </div>
+
+        @if(count($institutionalSeatsAwaitingAssignment) === 0)
+        <div class="py-3.5 px-4 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40 flex items-center justify-center gap-2 text-xs text-slate-400">
+            <span class="text-base">🎉</span>
+            <strong class="text-slate-700 dark:text-slate-300 font-semibold">All Clear:</strong>
+            <span>No active institutional seats are currently waiting for assessment assignment.</span>
+        </div>
+        @else
+        <div class="divide-y divide-slate-800/80">
+            @foreach($institutionalSeatsAwaitingAssignment as $allocation)
+                @php
+                    $candidateUser = $allocation->membership?->user;
+                    $org = $allocation->entitlement?->organization;
+                    $product = $allocation->entitlement?->product;
+                    $order = $allocation->entitlement?->orderItem?->order;
+                    $groups = $allocation->membership?->groups ?? collect();
+                    $eligibleTests = $eligibleTestsByProduct[$product?->id] ?? collect();
+                @endphp
+                <div class="py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-900/40 px-3 rounded-lg transition-colors">
+                    <div class="flex items-start gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            {{ strtoupper(substr($candidateUser?->name ?? 'CA', 0, 2)) }}
+                        </div>
+                        <div class="min-w-0 space-y-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $candidateUser?->name ?? 'Candidate' }}</p>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                                    {{ $allocation->membership?->member_id ?? 'No NIM' }}
+                                </span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                    {{ $org?->name ?? 'Organization' }}
+                                </span>
+                                @foreach($groups as $grp)
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700">
+                                    👥 {{ $grp->name }}
+                                </span>
+                                @endforeach
+                            </div>
+                            <div class="text-xs text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span>Email: <strong class="text-slate-300 font-medium">{{ $candidateUser?->email }}</strong></span>
+                                <span>&bull;</span>
+                                <span>Package: <strong class="text-emerald-400 font-medium">{{ $product?->name }}</strong></span>
+                                @if($product?->assessment_family)
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    {{ strtoupper($product->assessment_family) }}
+                                </span>
+                                @endif
+                                <span>&bull;</span>
+                                <span>Allocated: <strong class="text-slate-300 font-medium">{{ \Carbon\Carbon::parse($allocation->allocated_at)->diffForHumans() }}</strong></span>
+                                @if($order)
+                                <span>&bull;</span>
+                                <span>Order: <strong class="text-indigo-400 font-mono text-[11px]">{{ $order->order_number }}</strong></span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        @if($eligibleTests->isEmpty())
+                            <div class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-1.5">
+                                <span>⚠️</span>
+                                <span>No published {{ strtoupper(is_object($product?->assessment_family) ? $product->assessment_family->value : ($product?->assessment_family ?? 'compatible')) }} tests</span>
+                            </div>
+                        @else
+                            <form action="{{ route('admin.institutional-seats.assign', $allocation->id) }}" method="POST" class="flex items-center gap-2">
+                                @csrf
+                                <select name="test_id" required class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 min-w-[200px]">
+                                    <option value="" disabled selected>Select Published Assessment...</option>
+                                    @foreach($eligibleTests as $test)
+                                        <option value="{{ $test->id }}">
+                                            {{ $test->title }} ({{ strtoupper(is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5">
+                                    <span>🎯 Assign Assessment</span>
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        @endif
+    </section>
+
     {{-- Two Column Layout: Recent Active Assignments & Assessment Inventory --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
