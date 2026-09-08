@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $assigned_by
  * @property string|null $payment_id
  * @property string|null $order_id
+ * @property string|null $organization_seat_allocation_id
  * @property string $status
  * @property int $max_attempts
  * @property int $attempts_count
@@ -27,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $completed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property \App\Modules\Organization\Models\OrganizationSeatAllocation|null $seatAllocation
  */
 class CandidateTestAssignment extends Model
 {
@@ -45,6 +47,7 @@ class CandidateTestAssignment extends Model
         'assigned_by',
         'payment_id',
         'order_id',
+        'organization_seat_allocation_id',
         'status',
         'max_attempts',
         'attempts_count',
@@ -88,6 +91,11 @@ class CandidateTestAssignment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class, 'order_id');
+    }
+
+    public function seatAllocation(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Organization\Models\OrganizationSeatAllocation::class, 'organization_seat_allocation_id');
     }
 
     public function attempts(): HasMany

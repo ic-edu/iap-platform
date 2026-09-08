@@ -103,12 +103,50 @@ class OrganizationSeatAllocator
      */
     public function release(OrganizationSeatAllocation $allocation, User $actor): OrganizationSeatAllocation
     {
+        $organizationId = $allocation->entitlement?->organization_id;
+
+        // Authorization check
+        $isAuthorized = $actor->hasRole(['admin', 'super-admin']) || OrganizationMembership::where('organization_id', $organizationId)
+            ->where('user_id', $actor->id)
+            ->whereIn('role', [MembershipRole::Owner, MembershipRole::Admin, MembershipRole::Coordinator])
+            ->where('status', MembershipStatus::Active)
+            ->exists();
+
+        if (!$isAuthorized) {
+            throw new InvalidArgumentException('Actor is not authorized to release seats for this organization.');
+        }
+
         if ($allocation->status === SeatAllocationStatus::Released) {
             return $allocation;
         }
 
         return DB::transaction(function () use ($allocation, $actor) {
             $locked = OrganizationSeatAllocation::where('id', $allocation->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status === SeatAllocationStatus::Released) {
+                return $locked;
+            }
+
+            // Check linked assessment assignments
+            $activeAssignments = \App\Modules\Assessment\Models\CandidateTestAssignment::where('organization_seat_allocation_id', $locked->id)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($activeAssignments as $assignment) {
+                $hasStartedAttempt = $assignment->attempts_count > 0 || $assignment->attempts()->exists();
+                if ($hasStartedAttempt) {
+                    throw new InvalidArgumentException('Cannot release seat allocation: candidate has already started or completed assessment attempts.');
+                }
+            }
+
+            // Unassign unattempted assignments
+            foreach ($activeAssignments as $assignment) {
+                $assignment->update([
+                    'status' => 'unassigned',
+                ]);
+                event(new \App\Modules\Assessment\Events\AssignmentRevoked($assignment));
+            }
 
             $locked->update([
                 'status'      => SeatAllocationStatus::Released,

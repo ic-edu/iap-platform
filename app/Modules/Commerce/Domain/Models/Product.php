@@ -162,6 +162,14 @@ class Product extends Model
     }
 
     /**
+     * Get product name attribute alias for title.
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->title ?? '';
+    }
+
+    /**
      * Canonical validation rules for Product creation/updating.
      *
      * @return array<string, array<int, mixed>>

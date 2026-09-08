@@ -114,4 +114,12 @@ class OrganizationMembership extends Model
     {
         return $this->status === MembershipStatus::Active;
     }
+
+    /**
+     * Get member_id attribute alias for member_identifier.
+     */
+    public function getMemberIdAttribute(): ?string
+    {
+        return $this->member_identifier;
+    }
 }

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -23,6 +25,8 @@ use Illuminate\Support\Carbon;
  * @property OrganizationEntitlement $entitlement
  * @property OrganizationMembership $membership
  * @property User|null $allocatedBy
+ * @property \Illuminate\Database\Eloquent\Collection<int, \App\Modules\Assessment\Models\CandidateTestAssignment> $testAssignments
+ * @property \App\Modules\Assessment\Models\CandidateTestAssignment|null $activeTestAssignment
  */
 class OrganizationSeatAllocation extends Model
 {
@@ -61,6 +65,17 @@ class OrganizationSeatAllocation extends Model
     public function allocatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'allocated_by');
+    }
+
+    public function testAssignments(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Assessment\Models\CandidateTestAssignment::class, 'organization_seat_allocation_id');
+    }
+
+    public function activeTestAssignment(): HasOne
+    {
+        return $this->hasOne(\App\Modules\Assessment\Models\CandidateTestAssignment::class, 'organization_seat_allocation_id')
+            ->where('status', 'active');
     }
 
     public function isActive(): bool

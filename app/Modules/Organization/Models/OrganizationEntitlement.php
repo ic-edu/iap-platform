@@ -97,9 +97,19 @@ class OrganizationEntitlement extends Model
         return $this->activeAllocations()->count();
     }
 
+    public function getAllocatedSeatsAttribute(): int
+    {
+        return $this->allocatedSeatsCount();
+    }
+
     public function availableSeatsCount(): int
     {
         return max(0, $this->total_seats - $this->allocatedSeatsCount());
+    }
+
+    public function getAvailableSeatsAttribute(): int
+    {
+        return $this->availableSeatsCount();
     }
 
     public function hasAvailableSeats(): bool

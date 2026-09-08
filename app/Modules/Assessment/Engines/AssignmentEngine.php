@@ -12,6 +12,13 @@ use App\Modules\Commerce\Domain\Enums\OrderStatus;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Models\Payment;
+use App\Modules\Commerce\Domain\Models\Product;
+use App\Modules\Organization\Enums\EntitlementStatus;
+use App\Modules\Organization\Enums\MembershipStatus;
+use App\Modules\Organization\Enums\SeatAllocationStatus;
+use App\Modules\Organization\Models\OrganizationSeatAllocation;
+use App\Services\ActivityLogger;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class AssignmentEngine
@@ -270,5 +277,186 @@ class AssignmentEngine
         event(new AssignmentRevoked($attempt));
 
         return $attempt;
+    }
+
+    /**
+     * Assign a published test to a candidate holding an active institutional seat allocation (RA action).
+     *
+     * @throws InvalidArgumentException
+     */
+    public function assignFromOrganizationSeat(
+        OrganizationSeatAllocation $allocation,
+        Test $test,
+        User $assignedBy
+    ): CandidateTestAssignment {
+        // 1. Authorize actor: Routine institutional assignment must be performed by Operational Admin / RA
+        if (!$assignedBy->hasRole(['admin', 'super-admin'])) {
+            throw new InvalidArgumentException("Unauthorized: Only Operational Admin / RA can assign institutional assessments.");
+        }
+
+        // 2. Candidate resolution & role validation
+        $candidate = $allocation->membership?->user;
+        if (!$candidate) {
+            throw new InvalidArgumentException("Invalid candidate user for seat allocation.");
+        }
+
+        if (!$candidate->hasRole('student') || $candidate->hasRole(['teacher', 'repository-manager', 'super-admin', 'finance', 'organization-coordinator'])) {
+            throw new InvalidArgumentException("User '{$candidate->name}' does not have candidate/student role.");
+        }
+
+        // 3. Seat allocation, membership, and entitlement lifecycle status validation
+        if ($allocation->status !== SeatAllocationStatus::Active) {
+            $statusVal = is_object($allocation->status) ? $allocation->status->value : $allocation->status;
+            throw new InvalidArgumentException("Cannot assign assessment. Seat allocation is {$statusVal}.");
+        }
+
+        if ($allocation->membership?->status !== MembershipStatus::Active) {
+            $mStatus = is_object($allocation->membership?->status) ? $allocation->membership->status->value : $allocation->membership?->status;
+            throw new InvalidArgumentException("Cannot assign assessment. Candidate membership is {$mStatus}.");
+        }
+
+        if ($allocation->entitlement?->status !== EntitlementStatus::Active) {
+            $eStatus = is_object($allocation->entitlement?->status) ? $allocation->entitlement->status->value : $allocation->entitlement?->status;
+            throw new InvalidArgumentException("Cannot assign assessment. Organization entitlement is {$eStatus}.");
+        }
+
+        // 4. Tenant boundary validation
+        if ((string) $allocation->membership?->organization_id !== (string) $allocation->entitlement?->organization_id) {
+            throw new InvalidArgumentException("Cross-organization violation: Candidate does not belong to the entitlement organization.");
+        }
+
+        // 5. Test publication and mode gating
+        if (!$test->isPublished()) {
+            $label = $test->isRealTest() ? 'Mock Test' : 'Assessment';
+            throw new InvalidArgumentException("Cannot assign unpublished {$label} '{$test->title}'. {$label} must be published first.");
+        }
+
+        if ($test->isSimulator()) {
+            throw new InvalidArgumentException("Test Simulator '{$test->title}' uses open candidate access and does not support manual candidate assignment.");
+        }
+
+        // 6. Product & Family compatibility validation
+        $product = $allocation->entitlement?->product;
+        if (!$product) {
+            throw new InvalidArgumentException("No product linked to this entitlement.");
+        }
+
+        if ($product->test_id && (string) $product->test_id !== (string) $test->id) {
+            throw new InvalidArgumentException("Assessment '{$test->title}' does not match the product specific test requirement.");
+        }
+
+        $testFamily = is_object($test->test_type) ? strtolower($test->test_type->value) : strtolower((string) $test->test_type);
+        $productFamily = $product->getEffectiveFamily();
+        if (!$product->test_id && $productFamily && $testFamily !== $productFamily) {
+            throw new InvalidArgumentException("Incompatible Assessment: Package family '{$productFamily}' does not match test family '{$testFamily}'.");
+        }
+
+        // 7. Atomic assignment creation with idempotency and lock protection
+        return DB::transaction(function () use ($allocation, $test, $candidate, $assignedBy) {
+            $lockedAlloc = OrganizationSeatAllocation::where('id', $allocation->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedAlloc->status !== SeatAllocationStatus::Active) {
+                throw new InvalidArgumentException("Cannot assign assessment. Seat allocation is {$lockedAlloc->status->value}.");
+            }
+
+            $sourceOrder = $lockedAlloc->entitlement?->orderItem?->order ?? $lockedAlloc->entitlement?->order;
+            $sourcePayment = $sourceOrder?->invoice?->payments()
+                ->where(function ($q) {
+                    $q->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
+                      ->orWhereIn('status', ['success', 'paid']);
+                })
+                ->first();
+
+            // Check if active assignment already exists for this seat allocation
+            $existingSeatAssignment = CandidateTestAssignment::where('organization_seat_allocation_id', $lockedAlloc->id)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingSeatAssignment) {
+                throw new InvalidArgumentException("Active assessment assignment already exists for this institutional seat allocation.");
+            }
+
+            $assignment = CandidateTestAssignment::where('user_id', $candidate->id)
+                ->where('test_id', $test->id)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->first();
+
+            if ($assignment) {
+                $assignment->update([
+                    'assigned_by'                     => $assignedBy->id,
+                    'payment_id'                      => $sourcePayment?->id ?? $assignment->payment_id,
+                    'order_id'                        => $sourceOrder?->id ?? $assignment->order_id,
+                    'organization_seat_allocation_id' => $lockedAlloc->id,
+                    'assigned_at'                     => now(),
+                ]);
+            } else {
+                $assignment = CandidateTestAssignment::create([
+                    'user_id'                         => $candidate->id,
+                    'test_id'                         => $test->id,
+                    'assigned_by'                     => $assignedBy->id,
+                    'payment_id'                      => $sourcePayment?->id,
+                    'order_id'                        => $sourceOrder?->id,
+                    'organization_seat_allocation_id' => $lockedAlloc->id,
+                    'status'                          => 'active',
+                    'max_attempts'                    => 2,
+                    'attempts_count'                  => 0,
+                    'assigned_at'                     => now(),
+                ]);
+            }
+
+            event(new TestAssigned($assignment));
+
+            ActivityLogger::log(
+                action: 'CANDIDATE_ASSIGNED',
+                description: "Assigned candidate '{$candidate->name}' to test '{$test->title}' from institutional seat",
+                subject: $assignment,
+                properties: [
+                    'organization_id'                 => $lockedAlloc->entitlement?->organization_id,
+                    'organization_seat_allocation_id' => $lockedAlloc->id,
+                    'order_id'                        => $sourceOrder?->id,
+                    'candidate_id'                    => $candidate->id,
+                    'test_id'                         => $test->id,
+                    'assigned_by'                     => $assignedBy->id,
+                ]
+            );
+
+            return $assignment;
+        });
+    }
+
+    /**
+     * Get all eligible published real tests matching a package's family or test_id.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Test>
+     */
+    public function getEligibleTestsForPackage(Product $product)
+    {
+        if ($product->test_id) {
+            return Test::published()
+                ->where('id', $product->test_id)
+                ->where(function ($q) {
+                    $q->where('assessment_mode', 'real_test')
+                      ->orWhere('assessment_mode', '!=', 'simulator');
+                })
+                ->get();
+        }
+
+        $family = $product->getEffectiveFamily();
+        if (!$family) {
+            return collect();
+        }
+
+        return Test::published()
+            ->where(function ($q) use ($family) {
+                $q->where('test_type', $family)
+                  ->orWhere('test_type', strtoupper($family));
+            })
+            ->where(function ($q) {
+                $q->where('assessment_mode', 'real_test')
+                  ->orWhere('assessment_mode', '!=', 'simulator');
+            })
+            ->get();
     }
 }
