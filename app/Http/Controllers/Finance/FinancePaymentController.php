@@ -48,7 +48,7 @@ class FinancePaymentController extends Controller
         $failedCount = Payment::validCommerce()->where('status', PaymentStatus::Failed)->count();
 
         $pageTitle = 'Payment & Invoice Reports';
-        $pageSubtitle = 'Review transaction history, invoice records, and candidate payment proofs.';
+        $pageSubtitle = 'Review transaction history, invoice records, and payment proofs.';
 
         return view('finance.payments.index', [
             'payments'      => $payments,
@@ -169,8 +169,17 @@ class FinancePaymentController extends Controller
             ]
         );
 
+        $order = $payment->invoice?->order;
+        if ($order?->organization) {
+            $seats = (int) ($order->items->sum('quantity') ?: 1);
+            $seatStr = $seats === 1 ? "1 seat entitlement has" : "{$seats} seat entitlements have";
+            $statusMsg = "Payment {$payment->reference_number} confirmed successfully. {$seatStr} been provisioned for {$order->organization->name}.";
+        } else {
+            $statusMsg = "Payment {$payment->reference_number} confirmed successfully. Candidate {$payment->user?->name} is now Paid & Eligible.";
+        }
+
         return redirect()->route('finance.payments.show', $payment->id)
-            ->with('status', "Payment {$payment->reference_number} confirmed successfully. Candidate {$payment->user?->name} is now Paid & Eligible.");
+            ->with('status', $statusMsg);
     }
 
     /**

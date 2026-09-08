@@ -174,7 +174,7 @@ class FinanceQueueAndReportRoutingTest extends TestCase
         $response = $this->actingAs($this->financeUser)->get(route('finance.payments.index'));
         $response->assertStatus(200);
         $response->assertSee('Payment &amp; Invoice Reports', false);
-        $response->assertSee('Review transaction history, invoice records, and candidate payment proofs.');
+        $response->assertSee('Review transaction history, invoice records, and payment proofs.');
     }
 
     public function test_07_pending_payments_redirects_with_custom_status(): void

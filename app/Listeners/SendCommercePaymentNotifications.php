@@ -17,7 +17,9 @@ class SendCommercePaymentNotifications
     public function handlePaymentCreated(PaymentCreated $event): void
     {
         try {
-            $payment = $event->payment->loadMissing(['user', 'invoice.order.items.product']);
+            $payment = $event->payment->loadMissing(['user', 'invoice.order.items.product', 'invoice.order.organization']);
+            $order = $payment->invoice?->order;
+            $org = $order?->organization;
             $candidateName = $payment->user?->name ?? 'Candidate';
             $candidateEmail = $payment->user?->email ?? '';
             $packageTitle = $this->resolvePackageTitle($payment);
@@ -25,14 +27,22 @@ class SendCommercePaymentNotifications
 
             $financeOfficers = User::role('finance')->get();
 
+            if ($org) {
+                $title = '💳 New Institutional Payment Pending Review';
+                $message = "Organization {$org->name} (Purchaser: {$candidateName}, {$candidateEmail}) submitted payment #{$payment->reference_number} for {$packageTitle} (IDR {$formattedAmount}). Verification required.";
+            } else {
+                $title = '💳 New Candidate Payment Pending Review';
+                $message = "Candidate {$candidateName} ({$candidateEmail}) submitted payment #{$payment->reference_number} for {$packageTitle} (IDR {$formattedAmount}). Verification required.";
+            }
+
             foreach ($financeOfficers as $financeUser) {
                 if ($this->hasExistingNotification($financeUser, 'Payment', (string) $payment->id, 'PAYMENT_PENDING')) {
                     continue;
                 }
 
                 $financeUser->notify(new EnterpriseSystemNotification(
-                    title: '💳 New Candidate Payment Pending Review',
-                    message: "Candidate {$candidateName} ({$candidateEmail}) submitted payment #{$payment->reference_number} for {$packageTitle} (IDR {$formattedAmount}). Verification required.",
+                    title: $title,
+                    message: $message,
                     type: 'PAYMENT_PENDING',
                     priority: 'HIGH',
                     entityType: 'Payment',
@@ -49,27 +59,37 @@ class SendCommercePaymentNotifications
     }
 
     /**
-     * Handle PaymentConfirmed event: Notify Candidate of confirmation and Operational Admin (RA) of eligibility.
+     * Handle PaymentConfirmed event: Notify Candidate/Purchaser of confirmation and Operational Admin (RA) of eligibility/provisioning.
      */
     public function handlePaymentConfirmed(PaymentConfirmed $event): void
     {
         try {
-            $payment = $event->payment->loadMissing(['user', 'invoice.order.items.product']);
+            $payment = $event->payment->loadMissing(['user', 'invoice.order.items.product', 'invoice.order.organization']);
             $candidate = $payment->user;
+            $order = $payment->invoice?->order;
+            $org = $order?->organization;
             $candidateName = $candidate?->name ?? 'Candidate';
             $packageTitle = $this->resolvePackageTitle($payment);
             $formattedAmount = number_format((float) $payment->amount);
 
-            // 1. Notify Candidate Owner
+            // 1. Notify Candidate / Purchaser Owner
             if ($candidate && !$this->hasExistingNotification($candidate, 'Payment', (string) $payment->id, 'PAYMENT_CONFIRMED')) {
+                if ($org) {
+                    $userMsg = "Your payment #{$payment->reference_number} for {$packageTitle} (IDR {$formattedAmount}) has been verified and confirmed. Seat entitlements have been provisioned for {$org->name}.";
+                    $targetUrl = route('organization.purchases.show', [$org->slug, $order->id]);
+                } else {
+                    $userMsg = "Your payment #{$payment->reference_number} for {$packageTitle} (IDR {$formattedAmount}) has been verified and confirmed.";
+                    $targetUrl = route('candidate.payments.show', $payment->id);
+                }
+
                 $candidate->notify(new EnterpriseSystemNotification(
                     title: '🎉 Payment Confirmed',
-                    message: "Your payment #{$payment->reference_number} for {$packageTitle} (IDR {$formattedAmount}) has been verified and confirmed.",
+                    message: $userMsg,
                     type: 'PAYMENT_CONFIRMED',
                     priority: 'HIGH',
                     entityType: 'Payment',
                     entityId: (string) $payment->id,
-                    targetUrl: route('candidate.payments.show', $payment->id)
+                    targetUrl: $targetUrl
                 ));
             }
 
@@ -81,9 +101,17 @@ class SendCommercePaymentNotifications
                     continue;
                 }
 
+                if ($org) {
+                    $adminTitle = '✅ Institutional Payment Confirmed — Entitlements Provisioned';
+                    $adminMsg = "Institutional payment #{$payment->reference_number} for {$org->name} ({$packageTitle}) has been confirmed and seat entitlements are provisioned.";
+                } else {
+                    $adminTitle = '✅ Candidate Payment Confirmed — Paid & Eligible';
+                    $adminMsg = "Candidate {$candidateName} has paid for {$packageTitle} (#{$payment->reference_number}) and is now Paid & Eligible.";
+                }
+
                 $adminUser->notify(new EnterpriseSystemNotification(
-                    title: '✅ Candidate Payment Confirmed — Paid & Eligible',
-                    message: "Candidate {$candidateName} has paid for {$packageTitle} (#{$payment->reference_number}) and is now Paid & Eligible.",
+                    title: $adminTitle,
+                    message: $adminMsg,
                     type: 'PAYMENT_CONFIRMED',
                     priority: 'HIGH',
                     entityType: 'Payment',

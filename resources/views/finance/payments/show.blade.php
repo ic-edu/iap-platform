@@ -41,13 +41,16 @@
         {{-- Metadata Grid --}}
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800">
             <div>
-                <span class="text-slate-400 uppercase font-bold text-[10px] block tracking-wider">Candidate / Payer</span>
                 @if($payment->invoice?->order?->organization)
+                    <span class="text-slate-400 uppercase font-bold text-[10px] block tracking-wider">Institutional Purchaser</span>
                     <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 mt-1 mb-0.5">
                         <span>Institution: {{ $payment->invoice->order->organization->name }}</span>
                     </div>
+                    <span class="font-bold text-slate-900 dark:text-white text-sm block mt-1">{{ $payment->user?->name ?? 'Purchaser' }}</span>
+                @else
+                    <span class="text-slate-400 uppercase font-bold text-[10px] block tracking-wider">Candidate / Payer</span>
+                    <span class="font-bold text-slate-900 dark:text-white text-sm block mt-1">{{ $payment->user?->name ?? 'Candidate' }}</span>
                 @endif
-                <span class="font-bold text-slate-900 dark:text-white text-sm block mt-1">{{ $payment->user?->name ?? 'Candidate' }}</span>
                 <span class="text-slate-500 dark:text-slate-400 font-mono">{{ $payment->user?->email }}</span>
             </div>
             <div>
@@ -160,7 +163,7 @@
                 </div>
                 @if($payment->proof_notes)
                 <div class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-emerald-200/60 dark:border-emerald-900/40 text-xs text-slate-700 dark:text-slate-300">
-                    <span class="font-bold text-slate-900 dark:text-white block mb-0.5">Candidate Notes:</span>
+                    <span class="font-bold text-slate-900 dark:text-white block mb-0.5">Payment Notes:</span>
                     <p>{{ $payment->proof_notes }}</p>
                 </div>
                 @endif
@@ -168,7 +171,7 @@
             @else
             <div class="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
                 <span>⚠️</span>
-                <span>No bank transfer receipt has been uploaded by the candidate yet. Verification can proceed if transfer was verified directly via bank mutations.</span>
+                <span>No payment proof has been uploaded yet. Verification can proceed if transfer was verified directly via bank mutations.</span>
             </div>
             @endif
         </div>
@@ -185,9 +188,15 @@
                         <span class="text-base">✅</span>
                         <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">Confirm &amp; Approve Payment</h3>
                     </div>
+                    @if($payment->invoice?->order?->organization)
                     <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Approving sets Payment to <strong>Success</strong>, Invoice to <strong>Paid</strong>, Order to <strong>Completed</strong>, and activates the candidate as <strong>Paid &amp; Eligible</strong>.
+                        Approving confirms the payment, marks the invoice as paid and the order as completed, and provisions the purchased seat entitlements for the organization.
                     </p>
+                    @else
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        Approving confirms the payment, marks the invoice as paid and the order as completed, and activates the candidate as Paid &amp; Eligible according to the existing Candidate commerce workflow.
+                    </p>
+                    @endif
 
                     <form action="{{ route('finance.payments.approve', $payment->id) }}" method="POST" class="space-y-3 pt-2">
                         @csrf
@@ -197,7 +206,11 @@
                         </div>
 
                         <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-md shadow-emerald-600/20 cursor-pointer">
-                            ✓ Approve Payment &amp; Grant Eligibility
+                            @if($payment->invoice?->order?->organization)
+                                ✓ Approve Payment &amp; Provision Entitlements
+                            @else
+                                ✓ Approve Payment &amp; Grant Eligibility
+                            @endif
                         </button>
                     </form>
                 </div>

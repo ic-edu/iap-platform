@@ -11,7 +11,7 @@
                 </svg>
                 <span>{{ $pageTitle ?? 'Payment & Invoice Reports' }}</span>
             </h1>
-            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">{{ $pageSubtitle ?? 'Review transaction history, invoice records, and financial breakdowns.' }}</p>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">{{ $pageSubtitle ?? 'Review transaction history, invoice records, and payment proofs.' }}</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('finance.dashboard') }}" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors border border-slate-300 dark:border-slate-700">
@@ -81,7 +81,7 @@
             <div class="sm:col-span-4">
                 <label for="search" class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Search Identifier</label>
                 <div class="relative">
-                    <input type="text" name="search" id="search" value="{{ $search ?? '' }}" placeholder="Candidate, Ref #, Invoice, TXN ID..." class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 pl-8 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
+                    <input type="text" name="search" id="search" value="{{ $search ?? '' }}" placeholder="Customer, Ref #, Invoice, TXN ID..." class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 pl-8 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500">
                     <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
@@ -226,7 +226,7 @@
                 <thead class="bg-slate-100 dark:bg-slate-950 border-b border-slate-300 dark:border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400">
                     <tr>
                         <th class="px-5 py-4">Payment Ref</th>
-                        <th class="px-5 py-4">Candidate / Student</th>
+                        <th class="px-5 py-4">Customer / Payer</th>
                         <th class="px-5 py-4">Package / Items</th>
                         <th class="px-5 py-4">Financial Breakdown</th>
                         <th class="px-5 py-4">Invoice Ref</th>
