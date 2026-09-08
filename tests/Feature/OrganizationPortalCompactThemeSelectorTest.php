@@ -64,7 +64,7 @@ class OrganizationPortalCompactThemeSelectorTest extends TestCase
             ->get(route('organization.dashboard', $this->organization->slug));
 
         $response->assertStatus(200);
-        $response->assertSee('Theme &amp; Appearance', false);
+        $response->assertSee('<span>Appearance</span>', false);
         $response->assertSee('role="group" aria-label="Theme selector"', false);
 
         // Verify button IDs
@@ -78,7 +78,7 @@ class OrganizationPortalCompactThemeSelectorTest extends TestCase
         $response->assertSee("onclick=\"setIapTheme('system')\"", false);
 
         // Verify SVG elements exist inside the selector
-        $response->assertSee('<svg class="w-4 h-4 shrink-0"', false);
+        $response->assertSee('<svg class="w-3.5 h-3.5 shrink-0"', false);
     }
 
     /**

@@ -89,7 +89,7 @@ class OrganizationPortalThemeIntegrationTest extends TestCase
             ->get(route('organization.dashboard', $this->organization->slug));
 
         $response->assertStatus(200);
-        $response->assertSee('Theme &amp; Appearance', false);
+        $response->assertSee('<span>Appearance</span>', false);
         $response->assertSee('role="group" aria-label="Theme selector"', false);
         $response->assertSee('id="theme-btn-light"', false);
         $response->assertSee('id="theme-btn-dark"', false);
