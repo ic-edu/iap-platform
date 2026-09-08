@@ -56,6 +56,31 @@ class CommerceController extends Controller
             ->take(10)
             ->get();
 
+        if (auth()->user()?->hasRole('super-admin')) {
+            $pendingPriceChangeRequests = PriceChangeRequest::with(['product', 'requester'])
+                ->where('status', 'pending')
+                ->latest()
+                ->get();
+
+            /** @var view-string $saViewName */
+            $saViewName = 'commerce::super_admin_governance';
+
+            return view($saViewName, compact(
+                'products',
+                'categories',
+                'tests',
+                'assessmentFamilies',
+                'totalProductsCount',
+                'activePackagesCount',
+                'pendingPriceChangeCount',
+                'couponsCount',
+                'coupons',
+                'campaignsCount',
+                'campaigns',
+                'pendingPriceChangeRequests'
+            ));
+        }
+
         /** @var view-string $viewName */
         $viewName = 'commerce::index';
 

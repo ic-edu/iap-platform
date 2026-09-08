@@ -197,8 +197,8 @@ class NavigationService
                     'badge' => null,
                 ],
                 [
-                    'section' => 'Commerce',
-                    'label' => 'Commercial Catalog',
+                    'section' => 'Governance',
+                    'label' => 'Commercial Governance',
                     'route' => 'admin.commerce.index',
                     'icon' => 'shopping-bag',
                     'permission' => null,

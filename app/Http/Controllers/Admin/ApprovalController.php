@@ -673,6 +673,10 @@ class ApprovalController extends Controller
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
+        if ($priceChangeRequest->requested_by === $actor->id) {
+            abort(403, 'Approver separation rule: You cannot approve your own price change proposal.');
+        }
+
         if ($priceChangeRequest->status !== 'pending') {
             return back()->withErrors(['error' => "Cannot approve request. Status is already {$priceChangeRequest->status}."]);
         }

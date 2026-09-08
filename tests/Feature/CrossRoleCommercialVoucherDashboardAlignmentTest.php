@@ -255,7 +255,8 @@ class CrossRoleCommercialVoucherDashboardAlignmentTest extends TestCase
     {
         $response = $this->actingAs($this->superAdmin)->get(route('admin.commerce.index'));
         $response->assertOk();
-        $response->assertSee('Assessment Package &amp; Commercial Catalog', false);
+        $response->assertSee('Commercial Governance &amp; Approvals', false);
+        $response->assertSee('Package Catalog Oversight (Read-Only)');
     }
 
     public function test_fi_cv_01_and_02_fi_dashboard_renders_commercial_voucher_snapshot_read_only(): void
