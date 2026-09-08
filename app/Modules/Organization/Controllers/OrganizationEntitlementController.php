@@ -28,7 +28,7 @@ class OrganizationEntitlementController extends Controller
     public function index(Organization $organization): View
     {
         $entitlements = $organization->entitlements()
-            ->with(['product', 'orderItem', 'allocations'])
+            ->with(['product', 'orderItem.order', 'allocations'])
             ->latest()
             ->paginate(15);
 
@@ -73,12 +73,13 @@ class OrganizationEntitlementController extends Controller
             ->with(['user', 'groups'])
             ->get();
 
-        return view('organization::entitlements.show', compact(
-            'organization',
-            'entitlement',
-            'allocations',
-            'eligibleMemberships'
-        ));
+        return view('organization::entitlements.show', [
+            'organization'        => $organization,
+            'entitlement'         => $entitlement,
+            'allocations'         => $allocations,
+            'eligibleMemberships' => $eligibleMemberships,
+            'eligibleCandidates'  => $eligibleMemberships,
+        ]);
     }
 
     /**

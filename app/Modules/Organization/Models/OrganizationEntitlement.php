@@ -2,6 +2,7 @@
 
 namespace App\Modules\Organization\Models;
 
+use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Models\OrderItem;
 use App\Modules\Commerce\Domain\Models\Product;
 use App\Modules\Organization\Enums\EntitlementStatus;
@@ -27,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Organization $organization
  * @property OrderItem $orderItem
+ * @property Order|null $order
  * @property Product $product
  */
 class OrganizationEntitlement extends Model
@@ -65,6 +67,14 @@ class OrganizationEntitlement extends Model
     public function orderItem(): BelongsTo
     {
         return $this->belongsTo(OrderItem::class, 'order_item_id');
+    }
+
+    /**
+     * Resolve the source Order through the associated OrderItem.
+     */
+    public function getOrderAttribute(): ?Order
+    {
+        return $this->orderItem?->order;
     }
 
     public function product(): BelongsTo

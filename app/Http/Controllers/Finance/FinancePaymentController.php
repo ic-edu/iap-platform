@@ -172,8 +172,8 @@ class FinancePaymentController extends Controller
         $order = $payment->invoice?->order;
         if ($order?->organization) {
             $seats = (int) ($order->items->sum('quantity') ?: 1);
-            $seatStr = $seats === 1 ? "1 seat entitlement has" : "{$seats} seat entitlements have";
-            $statusMsg = "Payment {$payment->reference_number} confirmed successfully. {$seatStr} been provisioned for {$order->organization->name}.";
+            $seatWord = $seats === 1 ? '1 seat' : "{$seats} seats";
+            $statusMsg = "Payment {$payment->reference_number} confirmed successfully. An entitlement pool with {$seatWord} has been provisioned for {$order->organization->name}.";
         } else {
             $statusMsg = "Payment {$payment->reference_number} confirmed successfully. Candidate {$payment->user?->name} is now Paid & Eligible.";
         }

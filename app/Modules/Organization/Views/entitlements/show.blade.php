@@ -34,7 +34,18 @@
                     {{ $entitlement->product?->title ?? 'Assessment Product' }}
                 </h1>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Order Ref: <span class="font-mono">{{ $entitlement->order?->order_number ?? '—' }}</span> &bull; Provisioned: {{ $entitlement->created_at->format('d M Y, H:i') }}
+                    @php
+                        $sourceOrder = $entitlement->orderItem?->order ?? $entitlement->order;
+                    @endphp
+                    Order Ref:
+                    @if($sourceOrder)
+                        <a href="{{ route('organization.purchases.show', [$organization->slug, $sourceOrder->id]) }}" class="font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                            {{ $sourceOrder->order_number }}
+                        </a>
+                    @else
+                        <span class="font-mono">—</span>
+                    @endif
+                    &bull; Provisioned: {{ $entitlement->created_at->format('d M Y, H:i') }}
                 </p>
             </div>
 

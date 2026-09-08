@@ -97,8 +97,17 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-4 text-xs font-mono text-slate-500">
-                                {{ $entitlement->order?->order_number ?? '—' }}
+                            <td class="py-3.5 px-4 text-xs font-mono">
+                                @php
+                                    $sourceOrder = $entitlement->orderItem?->order ?? $entitlement->order;
+                                @endphp
+                                @if($sourceOrder)
+                                    <a href="{{ route('organization.purchases.show', [$organization->slug, $sourceOrder->id]) }}" class="font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                                        {{ $sourceOrder->order_number }}
+                                    </a>
+                                @else
+                                    <span class="text-slate-400 dark:text-slate-500">—</span>
+                                @endif
                             </td>
                             <td class="py-3.5 px-6 text-right">
                                 <a href="{{ route('organization.entitlements.show', [$organization->slug, $entitlement->id]) }}" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition">

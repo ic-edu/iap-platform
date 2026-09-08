@@ -158,6 +158,7 @@ class FinanceInstitutionalPaymentApprovalTest extends TestCase
      */
     protected function createInstitutionalOrderAndPayment(int $quantity = 3): array
     {
+        $uniqueSuffix = strtoupper(\Illuminate\Support\Str::random(4));
         $unitPrice = 85000;
         $subtotal = $unitPrice * $quantity; // 255,000
         $discount = (float) round($subtotal * 0.10); // 25,500
@@ -166,7 +167,7 @@ class FinanceInstitutionalPaymentApprovalTest extends TestCase
         $grandTotal = $taxable + $tax; // 254,745
 
         $order = Order::create([
-            'order_number'    => 'ORD-20260907-TEST',
+            'order_number'    => 'ORD-20260907-' . $uniqueSuffix,
             'organization_id' => $this->organization->id,
             'user_id'         => $this->purchaserUser->id,
             'coupon_id'       => $this->coupon->id,
@@ -188,7 +189,7 @@ class FinanceInstitutionalPaymentApprovalTest extends TestCase
         $invoice = Invoice::create([
             'order_id'       => $order->id,
             'user_id'        => $this->purchaserUser->id,
-            'invoice_number' => 'INV-20260907-TEST',
+            'invoice_number' => 'INV-20260907-' . $uniqueSuffix,
             'amount'         => $grandTotal,
             'status'         => InvoiceStatus::Unpaid,
             'due_date'       => now()->addDays(7),
@@ -200,7 +201,7 @@ class FinanceInstitutionalPaymentApprovalTest extends TestCase
             'amount'           => $grandTotal,
             'payment_method'   => 'manual_bank_transfer',
             'payment_gateway'  => 'manual_transfer',
-            'reference_number' => 'PAY-20260907-TEST',
+            'reference_number' => 'PAY-20260907-' . $uniqueSuffix,
             'status'           => PaymentStatus::Pending,
         ]);
 
@@ -282,7 +283,7 @@ class FinanceInstitutionalPaymentApprovalTest extends TestCase
             ]);
 
         $response->assertRedirect(route('finance.payments.show', $payment->id));
-        $response->assertSessionHas('status', "Payment {$payment->reference_number} confirmed successfully. 3 seat entitlements have been provisioned for {$this->organization->name}.");
+        $response->assertSessionHas('status', "Payment {$payment->reference_number} confirmed successfully. An entitlement pool with 3 seats has been provisioned for {$this->organization->name}.");
 
         // Assert exactly 1 entitlement created
         $entitlements = OrganizationEntitlement::where('organization_id', $this->organization->id)->get();
@@ -439,7 +440,7 @@ class FinanceInstitutionalPaymentApprovalTest extends TestCase
         $raNotif = $this->raUser->notifications()->first();
         $this->assertNotNull($raNotif);
         $this->assertEquals('✅ Institutional Payment Confirmed — Entitlements Provisioned', $raNotif->data['title']);
-        $this->assertStringContainsString('Institutional payment #PAY-20260907-TEST for iC.edu UAT University (TOEIC Mock Test Package) has been confirmed and seat entitlements are provisioned.', $raNotif->data['message']);
+        $this->assertStringContainsString("Institutional payment #{$paymentOrg->reference_number} for iC.edu UAT University (TOEIC Mock Test Package) has been confirmed and seat entitlements are provisioned.", $raNotif->data['message']);
 
         // 3. Candidate Notification on PaymentCreated & PaymentConfirmed
         $fixtureB2c = $this->createCandidateOrderAndPayment();
@@ -475,5 +476,107 @@ class FinanceInstitutionalPaymentApprovalTest extends TestCase
         $response->assertSee('Review transaction history, invoice records, and payment proofs.');
         $response->assertSee('Customer, Ref #, Invoice, TXN ID...');
         $response->assertSee('Customer / Payer');
+    }
+
+    public function test_fa_10_singular_flash_message_for_one_seat(): void
+    {
+        $fixture = $this->createInstitutionalOrderAndPayment(1);
+        $payment = $fixture['payment'];
+
+        $response = $this->actingAs($this->financeUser)
+            ->post(route('finance.payments.approve', $payment->id), [
+                'transaction_id' => 'BCA-SINGULAR-01',
+            ]);
+
+        $response->assertRedirect(route('finance.payments.show', $payment->id));
+        $response->assertSessionHas('status', "Payment {$payment->reference_number} confirmed successfully. An entitlement pool with 1 seat has been provisioned for {$this->organization->name}.");
+    }
+
+    public function test_o2_prov_01_entitlement_list_renders_source_order_reference(): void
+    {
+        $fixture = $this->createInstitutionalOrderAndPayment(3);
+        $payment = $fixture['payment'];
+        $order = $fixture['order'];
+
+        // Approve payment to create entitlement
+        $this->actingAs($this->financeUser)
+            ->post(route('finance.payments.approve', $payment->id));
+
+        $entitlement = OrganizationEntitlement::where('organization_id', $this->organization->id)->first();
+        $this->assertNotNull($entitlement);
+        $this->assertEquals($order->order_number, $entitlement->order?->order_number);
+
+        // View Entitlement List as Coordinator
+        $response = $this->actingAs($this->purchaserUser)
+            ->get(route('organization.entitlements', $this->organization->slug));
+
+        $response->assertOk();
+        $response->assertSee($order->order_number);
+        $response->assertSee(route('organization.purchases.show', [$this->organization->slug, $order->id]));
+
+        // View Entitlement Detail as Coordinator
+        $showResponse = $this->actingAs($this->purchaserUser)
+            ->get(route('organization.entitlements.show', [$this->organization->slug, $entitlement->id]));
+
+        $showResponse->assertOk();
+        $showResponse->assertSee($order->order_number);
+        $showResponse->assertSee(route('organization.purchases.show', [$this->organization->slug, $order->id]));
+    }
+
+    public function test_o2_prov_02_multiple_orders_retain_independent_order_references(): void
+    {
+        // 1. Order A
+        $fixtureA = $this->createInstitutionalOrderAndPayment(5);
+        $paymentA = $fixtureA['payment'];
+        $orderA = $fixtureA['order'];
+        $this->actingAs($this->financeUser)->post(route('finance.payments.approve', $paymentA->id));
+
+        // 2. Order B
+        $fixtureB = $this->createInstitutionalOrderAndPayment(10);
+        $paymentB = $fixtureB['payment'];
+        $orderB = $fixtureB['order'];
+        // Ensure distinct order number
+        $orderB->update(['order_number' => 'ORD-20260907-DISTINCT']);
+        $this->actingAs($this->financeUser)->post(route('finance.payments.approve', $paymentB->id));
+
+        $entitlements = OrganizationEntitlement::where('organization_id', $this->organization->id)->get();
+        $this->assertCount(2, $entitlements);
+
+        // View Entitlements List
+        $response = $this->actingAs($this->purchaserUser)
+            ->get(route('organization.entitlements', $this->organization->slug));
+
+        $response->assertOk();
+        $response->assertSee($orderA->order_number);
+        $response->assertSee('ORD-20260907-DISTINCT');
+    }
+
+    public function test_o2_prov_03_coordinator_cannot_access_other_organization_order_detail(): void
+    {
+        $otherOrg = Organization::create([
+            'name'              => 'Other University',
+            'legal_name'        => 'PT Other University',
+            'slug'              => 'other-university',
+            'organization_type' => OrganizationType::University,
+            'status'            => OrganizationStatus::Active,
+            'email'             => 'contact@other.edu',
+        ]);
+
+        $otherOrder = Order::create([
+            'order_number'    => 'ORD-OTHER-9999',
+            'organization_id' => $otherOrg->id,
+            'user_id'         => $this->purchaserUser->id,
+            'subtotal'        => 85000,
+            'discount'        => 0,
+            'tax'             => 9350,
+            'grand_total'     => 94350,
+            'status'          => OrderStatus::Pending,
+        ]);
+
+        // Purchaser belongs to Organization A, attempts to view Organization B's order in Org A tenant context
+        $response = $this->actingAs($this->purchaserUser)
+            ->get(route('organization.purchases.show', [$this->organization->slug, $otherOrder->id]));
+
+        $response->assertStatus(403);
     }
 }
