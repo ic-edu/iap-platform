@@ -300,17 +300,16 @@ class AssessmentTimelineAndPublicationUXTest extends TestCase
             'is_published' => false,
         ]);
 
-        // Command Center exposes Ready to Publish link
+        // Command Center exposes Assessment Governance CTA
         $resDash = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
         $resDash->assertStatus(200);
-        $resDash->assertSee('Ready to Publish');
-        $resDash->assertSee(route('admin.publications.assessments'));
+        $resDash->assertSee('Assessment Governance');
+        $resDash->assertSee(route('admin.repository-manager.assessment-governance'));
 
-        // Assessment Approval queue exposes Ready for Publication button
+        // Assessment Governance queue exposes Ready to Publish tab
         $resApproval = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval'));
         $resApproval->assertStatus(200);
-        $resApproval->assertSee('Publication Queue');
-        $resApproval->assertSee(route('admin.publications.assessments'));
+        $resApproval->assertSee('Ready to Publish');
     }
 
     /**
@@ -391,8 +390,8 @@ class AssessmentTimelineAndPublicationUXTest extends TestCase
         $resReview = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $this->test->id));
         $resReview->assertRedirect(route('admin.publications.assessments', ['status' => 'published', 'highlight' => $this->test->id]));
 
-        // In Publication Queue
-        $resPub = $this->actingAs($this->repoManager)->get(route('admin.publications.assessments'));
+        // In Publication Queue (published tab)
+        $resPub = $this->actingAs($this->repoManager)->get(route('admin.publications.assessments', ['tab' => 'published']));
         $resPub->assertStatus(200);
         $resPub->assertSee('Unpublish');
         $resPub->assertSee(route('admin.publications.assessments.unpublish', $this->test->id));

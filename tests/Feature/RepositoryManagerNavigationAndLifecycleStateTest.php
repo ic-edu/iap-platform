@@ -88,29 +88,32 @@ class RepositoryManagerNavigationAndLifecycleStateTest extends TestCase
     }
 
     /**
-     * RM-NAV-01: RM dashboard Card 2 exposes Request Intake Queue link to canonical route.
+     * RM-NAV-01: RM dashboard Card 2 exposes primary CTA to canonical Assessment Governance workspace.
      */
-    public function test_rm_nav_01_dashboard_card_2_exposes_request_intake_queue_link(): void
+    public function test_rm_nav_01_dashboard_card_2_exposes_assessment_governance_workspace_link(): void
     {
         $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
 
         $res->assertStatus(200);
-        $res->assertSee(route('admin.repository-manager.assessment-requests.index'));
-        $res->assertSee('Request Intake Queue →');
+        $res->assertSee(route('admin.repository-manager.assessment-governance'));
+        $res->assertSee('Open Assessment Governance');
     }
 
     /**
-     * RM-NAV-02: RM dashboard Card 2 retains Assessment Queue and Ready to Publish links.
+     * RM-NAV-02: Assessment Governance workspace exposes Request Intake, Pending Review, Ready to Publish, and Published tabs.
      */
-    public function test_rm_nav_02_dashboard_card_2_retains_assessment_and_publication_links(): void
+    public function test_rm_nav_02_assessment_governance_workspace_exposes_all_lifecycle_tabs(): void
     {
-        $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.dashboard'));
+        $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-governance'));
 
         $res->assertStatus(200);
-        $res->assertSee(route('admin.repository-manager.assessment-approval'));
-        $res->assertSee('Assessment Queue →');
-        $res->assertSee(route('admin.publications.assessments'));
+        $res->assertSee('Assessment Governance Workspace');
+        $res->assertSee('Request Intake');
+        $res->assertSee('Pending Review');
         $res->assertSee('Ready to Publish');
+        $res->assertSee('Published');
+        $res->assertSee(route('admin.repository-manager.assessment-governance', ['tab' => 'request-intake']));
+        $res->assertSee(route('admin.repository-manager.assessment-governance', ['tab' => 'ready-to-publish']));
     }
 
     /**
@@ -268,7 +271,7 @@ class RepositoryManagerNavigationAndLifecycleStateTest extends TestCase
         $resQueue = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-approval'));
         $resQueue->assertStatus(200);
         $resQueue->assertSee(route('admin.repository-manager.assessment-review', $test->id));
-        $resQueue->assertSee('Review &amp; Governance', false);
+        $resQueue->assertSee('Smart Review');
 
         $resReview = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
         $resReview->assertStatus(200);

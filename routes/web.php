@@ -326,7 +326,8 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
         Route::post('/revisions/{revisionRequest}/request-changes', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionChanges'])->name('admin.repository-manager.revisions.request-changes');
         Route::post('/revisions/{revisionRequest}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectRevision'])->name('admin.repository-manager.revisions.reject');
 
-        // SPRINT 10.2 & Sprint 11.5 Continuous Improvement: Assessment Approval & Review Routes
+        // SPRINT 10.2 & Sprint 11.5 Continuous Improvement: Assessment Governance Workspace & Review Routes
+        Route::get('/assessment-governance', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentGovernance'])->name('admin.repository-manager.assessment-governance');
         Route::get('/assessments', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentApprovalCenter'])->name('admin.repository-manager.assessment-approval');
         Route::get('/assessments/{test}/review', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentReview'])
             ->name('admin.repository-manager.assessment-review');

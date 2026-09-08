@@ -97,9 +97,9 @@ class RepositoryManagerMissionControlTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Question Bank Governance');
-        $response->assertSee('Assessment Approval');
+        $response->assertSee('Assessment Governance');
         $response->assertSee('Governance Queue →');
-        $response->assertSee('Assessment Queue →');
+        $response->assertSee('Open Assessment Governance');
         $response->assertSee('Media Queue →');
         $response->assertSee('Duplicate Center →');
         $response->assertSee('Total Repositories →');
@@ -108,8 +108,8 @@ class RepositoryManagerMissionControlTest extends TestCase
 
         // Question Bank Governance KPI target must be Question Banks Approval Queue
         $response->assertSee(route('admin.repository-manager.questions-approval'));
-        // Assessment Approval KPI target must be Assessment Approval Queue
-        $response->assertSee(route('admin.repository-manager.assessment-approval'));
+        // Assessment Governance KPI target must be Assessment Governance Workspace
+        $response->assertSee(route('admin.repository-manager.assessment-governance'));
     }
 
     /**
@@ -123,10 +123,10 @@ class RepositoryManagerMissionControlTest extends TestCase
 
         // 1. Question Bank Governance CTA points to questions approval route
         $questionsApprovalUrl = route('admin.repository-manager.questions-approval');
-        $assessmentApprovalUrl = route('admin.repository-manager.assessment-approval');
+        $assessmentGovernanceUrl = route('admin.repository-manager.assessment-governance');
 
         $response->assertSee($questionsApprovalUrl);
-        $response->assertSee($assessmentApprovalUrl);
+        $response->assertSee($assessmentGovernanceUrl);
 
         // 2. Open Repository Governance Queue CTA points to questions approval route
         $response->assertSee('⚡ Open Repository Governance Queue');
@@ -175,7 +175,7 @@ class RepositoryManagerMissionControlTest extends TestCase
         // KPI card remains the authoritative navigation entry
         $response->assertSee('Question Bank Governance');
         $response->assertSee(route('admin.repository-manager.questions-approval'));
-        $response->assertSee('Assessment Approval');
-        $response->assertSee(route('admin.repository-manager.assessment-approval'));
+        $response->assertSee('Assessment Governance');
+        $response->assertSee(route('admin.repository-manager.assessment-governance'));
     }
 }

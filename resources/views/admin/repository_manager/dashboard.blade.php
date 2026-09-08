@@ -41,29 +41,29 @@
             <div class="text-[10px] text-slate-400 font-bold">Governance Queue →</div>
         </a>
 
-        {{-- Card 2: Assessment Approval & Publication --}}
+        {{-- Card 2: Assessment Governance (Unified Lifecycle Mission Control) --}}
         <div class="gov-card p-4 flex flex-col justify-between hover:border-sky-500 transition-all group" style="min-height: 120px;">
             <div class="flex justify-between items-center">
-                <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hover:text-sky-600 dark:hover:text-sky-400 no-underline">Assessment Approval</a>
+                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-sky-600 dark:group-hover:text-sky-400">Assessment Governance</span>
                 <span class="text-lg">📋</span>
             </div>
             <div class="my-1">
-                <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-2xl font-black text-sky-600 dark:text-sky-400 no-underline hover:opacity-80">
-                    {{ $pendingAssessmentsCount }}
-                </a>
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl font-black text-sky-600 dark:text-sky-400">
+                        {{ $pendingAssessmentsCount }}
+                    </span>
+                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                        Pending Review
+                    </span>
+                </div>
+                <div class="text-[10px] font-bold {{ ($readyForPublicationCount ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400' }} mt-0.5">
+                    {{ $readyForPublicationCount ?? 0 }} Ready to Publish
+                </div>
             </div>
-            <div class="flex flex-col gap-1 text-[10px] pt-1.5 border-t border-slate-100 dark:border-slate-800">
-                <div class="flex justify-between items-center">
-                    <a href="{{ route('admin.repository-manager.assessment-approval') }}" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold no-underline">Assessment Queue →</a>
-                    <a href="{{ route('admin.publications.assessments') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline font-bold no-underline" title="View Assessments ready for publication">
-                        Ready to Publish ({{ $readyForPublicationCount ?? 0 }}) →
-                    </a>
-                </div>
-                <div class="pt-1 border-t border-slate-100/60 dark:border-slate-800/60">
-                    <a href="{{ route('admin.repository-manager.assessment-requests.index') }}" class="text-sky-600 dark:text-sky-400 hover:underline font-bold no-underline flex items-center justify-between">
-                        <span>Request Intake Queue →</span>
-                    </a>
-                </div>
+            <div class="pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                <a href="{{ route('admin.repository-manager.assessment-governance') }}" class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-bold no-underline flex items-center justify-between">
+                    <span>Open Assessment Governance →</span>
+                </a>
             </div>
         </div>
 

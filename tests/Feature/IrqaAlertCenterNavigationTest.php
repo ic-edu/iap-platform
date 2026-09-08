@@ -143,7 +143,7 @@ class IrqaAlertCenterNavigationTest extends TestCase
             ->get(route('admin.repository-manager.assessment-approval'));
 
         $response->assertStatus(200);
-        $response->assertSee('Assessment Approval');
+        $response->assertSee('Assessment Governance');
         $response->assertSee('Assessment Test Pending');
     }
 

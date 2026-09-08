@@ -17,9 +17,11 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use App\Models\RepositoryRevisionRequest;
 use App\Models\RepositoryRevisionItem;
-use App\Notifications\EnterpriseSystemNotification;
+use App\Models\AssessmentRequest;
+use App\Models\User;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
+use App\Notifications\EnterpriseSystemNotification;
 use App\Services\AssessmentWorkflowService;
 
 class RepositoryManagerController extends Controller
@@ -794,46 +796,140 @@ class RepositoryManagerController extends Controller
     }
 
     /**
-     * Display Assessment Approval Queue for Repository Manager (TASK 1).
+     * Canonical Assessment Governance Workspace for Repository Manager.
+     * Consolidates Request Intake, Pending Review, Ready to Publish, and Published Registry.
      */
-    public function assessmentApprovalCenter(Request $request): View
+    public function assessmentGovernance(Request $request, AssessmentWorkflowService $workflowService): View
     {
-        $status = $request->query('status', 'pending');
+        $actor = $request->user();
+        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+            abort(403, 'Assessment governance workspace is strictly reserved for Repository Managers.');
+        }
 
-        $query = Test::with(['creator', 'sections.testQuestions']);
-
-        if ($status !== 'all') {
-            if ($status === 'pending') {
-                $query->whereIn('status', ['pending', 'pending_approval']);
-            } elseif ($status === 'ready_for_publication') {
-                $query->where('status', 'approved')->where('is_published', false);
-            } elseif ($status === 'published') {
-                $query->where(function ($q) {
-                    $q->where('status', 'published')->orWhere('is_published', true);
-                });
+        // Resolve active lifecycle tab with backward-compatible aliases
+        $rawTab = $request->input('tab', $request->input('status'));
+        if (!$rawTab) {
+            if ($request->routeIs('admin.publications.assessments')) {
+                $rawTab = 'ready-to-publish';
+            } elseif ($request->routeIs('admin.repository-manager.assessment-approval')) {
+                $rawTab = 'pending-review';
             } else {
-                $query->where('status', $status);
+                $rawTab = 'request-intake';
             }
         }
 
-        $assessments = $query->latest()->paginate(15);
-        $pendingCount = Test::whereIn('status', ['pending', 'pending_approval'])->count();
-        $approvedCount = Test::where('status', 'approved')->count();
-        $readyForPublicationCount = Test::where('status', 'approved')->where('is_published', false)->count();
+        $activeTab = match ($rawTab) {
+            'requests', 'request-intake', 'intake' => 'request-intake',
+            'pending', 'pending-review', 'review', 'needs_revision', 'needs-revision' => 'pending-review',
+            'publish', 'ready-to-publish', 'ready_for_publication', 'approved' => 'ready-to-publish',
+            'published' => 'published',
+            default => 'request-intake',
+        };
+
+        $search = $request->query('search');
+
+        // Canonical counts (Single Source of Truth)
+        $requestIntakeCount = AssessmentRequest::count();
+        $pendingReviewCount = Test::whereIn('status', ['pending', 'pending_approval'])->count();
+        $readyToPublishCount = Test::where('status', 'approved')->where('is_published', false)->count();
         $publishedCount = Test::where(function ($q) {
             $q->where('status', 'published')->orWhere('is_published', true);
         })->count();
         $needsRevisionCount = Test::whereIn('status', ['needs_revision', 'revision_requested', 'rejected'])->count();
 
-        return view('admin.repository_manager.assessment_approval', compact(
+        // 1. Request Intake dataset
+        $requestsQuery = AssessmentRequest::with(['requester', 'candidate', 'test.assignedTeacher']);
+        if ($search) {
+            $requestsQuery->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('program_context', 'like', "%{$search}%");
+            });
+        }
+        $assessmentRequests = $requestsQuery->latest()->paginate(15, ['*'], 'requests_page')->withQueryString();
+        $teachers = ($activeTab === 'request-intake' && \Spatie\Permission\Models\Role::where('name', 'teacher')->exists())
+            ? User::role('teacher')->where('status', 'active')->get()
+            : collect();
+
+        // Eligible candidates for draft/mock test context
+        $eligibleCandidates = ($activeTab === 'request-intake' && \Spatie\Permission\Models\Role::where('name', 'student')->exists())
+            ? app(\App\Services\AssessmentRequestEligibilityService::class)
+                ->getEligibleCandidatesQuery()
+                ->orderBy('name')
+                ->get()
+            : collect();
+
+        // 2. Pending Review dataset (Only genuine pending review tests, NO approved tests)
+        $reviewQuery = Test::with(['creator', 'sections.testQuestions'])
+            ->whereIn('status', ['pending', 'pending_approval']);
+        if ($search) {
+            $reviewQuery->where('title', 'like', "%{$search}%");
+        }
+        $pendingReviewAssessments = $reviewQuery->latest()->paginate(15, ['*'], 'review_page')->withQueryString();
+
+        // Read-only needs revision oversight
+        $needsRevisionAssessments = Test::with(['creator', 'sections.testQuestions'])
+            ->whereIn('status', ['needs_revision', 'revision_requested', 'rejected'])
+            ->latest()
+            ->get();
+
+        // 3. Ready to Publish dataset (Approved + Unpublished only)
+        $publishQuery = Test::with(['creator', 'sections.testQuestions'])
+            ->where('status', 'approved')
+            ->where('is_published', false);
+        if ($search) {
+            $publishQuery->where('title', 'like', "%{$search}%");
+        }
+        $readyToPublishAssessments = $publishQuery->latest()->paginate(15, ['*'], 'publish_page')->withQueryString();
+
+        // 4. Published Registry dataset
+        $publishedQuery = Test::with(['creator', 'sections.testQuestions'])
+            ->where(function ($q) {
+                $q->where('status', 'published')->orWhere('is_published', true);
+            });
+        if ($search) {
+            $publishedQuery->where('title', 'like', "%{$search}%");
+        }
+        $publishedAssessments = $publishedQuery->latest()->paginate(15, ['*'], 'published_page')->withQueryString();
+
+        // Legacy compatibility variables for tests asserting on approval queue
+        $assessments = match ($activeTab) {
+            'ready-to-publish' => $readyToPublishAssessments,
+            'published'        => $publishedAssessments,
+            default            => $pendingReviewAssessments,
+        };
+        $status = $activeTab;
+        $pendingCount = $pendingReviewCount;
+        $approvedCount = $readyToPublishCount;
+
+        return view('admin.repository_manager.assessment_governance', compact(
+            'activeTab',
+            'search',
+            'requestIntakeCount',
+            'pendingReviewCount',
+            'readyToPublishCount',
+            'publishedCount',
+            'needsRevisionCount',
+            'assessmentRequests',
+            'teachers',
+            'eligibleCandidates',
+            'pendingReviewAssessments',
+            'needsRevisionAssessments',
+            'readyToPublishAssessments',
+            'publishedAssessments',
+            // Legacy compatibility vars:
             'assessments',
             'status',
             'pendingCount',
-            'approvedCount',
-            'readyForPublicationCount',
-            'publishedCount',
-            'needsRevisionCount'
+            'approvedCount'
         ));
+    }
+
+    /**
+     * Display Assessment Approval Queue for Repository Manager (Backward-Compatible Endpoint).
+     */
+    public function assessmentApprovalCenter(Request $request, AssessmentWorkflowService $workflowService): View
+    {
+        return $this->assessmentGovernance($request, $workflowService);
     }
 
     /**

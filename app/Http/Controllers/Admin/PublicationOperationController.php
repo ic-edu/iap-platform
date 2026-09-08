@@ -48,31 +48,23 @@ class PublicationOperationController extends Controller
     }
 
     /**
-     * Display Assessment Publication Queue (ADMIN-OPS-001 Section 4).
-     *
-     * Real relationship hierarchy (no questions() on Test):
-     * Test → sections() → testQuestions()
+     * Display Assessment Publication Queue (Delegates to Unified Assessment Governance Workspace).
      */
     public function assessmentsQueue(Request $request): View
     {
-        $query = Test::with(['creator', 'sections.testQuestions']);
-
-        if ($search = $request->input('search')) {
-            $query->where('title', 'like', "%{$search}%");
+        $actor = $request->user();
+        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+            abort(403, 'Assessment publication queue is strictly reserved for Repository Managers.');
         }
 
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        } else {
-            $query->where(function ($q) {
-                $q->whereIn('status', ['approved', 'published', 'archived', 'pending_archive_approval'])
-                  ->orWhere('is_published', true);
-            });
+        if (!$request->has('tab') && !$request->has('status')) {
+            $request->merge(['tab' => 'ready-to-publish']);
         }
 
-        $assessments = $query->latest()->paginate(10)->withQueryString();
-
-        return view('admin.publications.assessments', compact('assessments'));
+        return app(\App\Http\Controllers\Admin\RepositoryManagerController::class)->assessmentGovernance(
+            $request,
+            app(\App\Services\AssessmentWorkflowService::class)
+        );
     }
 
     /**

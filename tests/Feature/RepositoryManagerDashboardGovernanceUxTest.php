@@ -74,7 +74,7 @@ class RepositoryManagerDashboardGovernanceUxTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertDontSee('Pending Question Banks');
-        $response->assertSee('Assessment Approval');
+        $response->assertSee('Assessment Governance');
         $response->assertSee('Pending Media');
         $response->assertSee('Repository Explorer');
     }
