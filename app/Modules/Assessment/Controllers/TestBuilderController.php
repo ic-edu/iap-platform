@@ -329,7 +329,7 @@ class TestBuilderController extends Controller
     /**
      * Display Assessment Detail page for Teacher (TASK 1, 5, 8).
      */
-    public function show(Request $request, Test $test): View
+    public function show(Request $request, Test $test): View|RedirectResponse
     {
         $user = $request->user();
 
@@ -338,6 +338,28 @@ class TestBuilderController extends Controller
             $assignedCandidates = $test->assignments()->with(['user', 'assignedBy'])->latest('assigned_at')->get();
             $availableStudents = $test->isSimulator() ? collect() : app(\App\Modules\Assessment\Engines\AssignmentEngine::class)->getEligibleCandidates($test);
             return view('assessment::admin_show', compact('test', 'assignedCandidates', 'availableStudents'));
+        }
+
+        // Repository Manager Governance: Prevent RM from accessing Teacher authoring surface
+        if ($user && $user->hasRole('repository-manager') && !$user->hasRole('teacher')) {
+            $assessmentRequest = $test->assessmentRequest ?? \App\Models\AssessmentRequest::where('test_id', $test->id)->first();
+            if ($assessmentRequest) {
+                return redirect()->route('admin.repository-manager.assessment-requests.assessment-show', $assessmentRequest->id);
+            }
+
+            if (in_array($test->status, ['pending_approval', 'approved', 'needs_revision', 'revision_requested'])) {
+                return redirect()->route('admin.repository-manager.assessment-review', $test->id);
+            }
+
+            abort(403, 'Repository Managers inspect governed drafts via the Assessment Request Intake Queue.');
+        }
+
+        // Super Admin Governance (when not acting as Teacher): Redirect to RM inspection if linked to a request
+        if ($user && $user->hasRole('super-admin') && !$user->hasRole('teacher')) {
+            $assessmentRequest = $test->assessmentRequest ?? \App\Models\AssessmentRequest::where('test_id', $test->id)->first();
+            if ($assessmentRequest) {
+                return redirect()->route('admin.repository-manager.assessment-requests.assessment-show', $assessmentRequest->id);
+            }
         }
 
         if ($user && $user->hasRole('teacher') && (int) $test->created_by !== (int) $user->id && (int) $test->assigned_to !== (int) $user->id) {

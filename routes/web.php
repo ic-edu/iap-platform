@@ -343,6 +343,7 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
         // Assessment Requests Intake Queue
         Route::get('/assessment-requests', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'index'])->name('admin.repository-manager.assessment-requests.index');
         Route::post('/assessment-requests/{assessmentRequest}/create-draft', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'createDraft'])->name('admin.repository-manager.assessment-requests.create-draft');
+        Route::get('/assessment-requests/{assessmentRequest}/assessment', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'showDraftAssessment'])->name('admin.repository-manager.assessment-requests.assessment-show');
 
         // Backward compatibility redirect for legacy double-prefixed URI
         Route::get('/repository-manager/assessments/{test}', function ($test) {

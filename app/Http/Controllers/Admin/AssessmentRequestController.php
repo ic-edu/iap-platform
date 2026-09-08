@@ -198,4 +198,46 @@ class AssessmentRequestController extends Controller
         return redirect()->route('admin.repository-manager.assessment-requests.index')
             ->with('status', "Draft assessment '{$test->title}' created and assigned to Teacher {$teacher->name}.");
     }
+
+    /**
+     * Repository Manager inspects governed assessment draft in read-only mode.
+     */
+    public function showDraftAssessment(Request $request, AssessmentRequest $assessmentRequest): View
+    {
+        $user = $request->user();
+
+        if (!$user || (!$user->hasRole('repository-manager') && !$user->hasRole('super-admin'))) {
+            abort(403, 'Unauthorized access to repository draft inspection.');
+        }
+
+        if (!$assessmentRequest->test_id) {
+            abort(404, 'No draft assessment has been generated for this request yet.');
+        }
+
+        $test = $assessmentRequest->test;
+
+        if (!$test) {
+            abort(404, 'Associated assessment draft record not found.');
+        }
+
+        // Strict Bidirectional Provenance Verification
+        if ((string) $assessmentRequest->test_id !== (string) $test->id) {
+            abort(403, 'Mismatched assessment request provenance.');
+        }
+
+        if ($test->assessment_request_id && (string) $test->assessment_request_id !== (string) $assessmentRequest->id) {
+            abort(403, 'Mismatched assessment request provenance.');
+        }
+
+        $assessmentRequest->load(['requester', 'candidate']);
+        $test->load([
+            'sections.testQuestions.question.choices',
+            'sections.testQuestions.question.questionBank',
+            'sections.mediaAssets',
+            'creator',
+            'assignedTeacher',
+        ]);
+
+        return view('admin.repository_manager.assessment_draft_inspection', compact('assessmentRequest', 'test'));
+    }
 }

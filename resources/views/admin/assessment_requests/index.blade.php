@@ -128,9 +128,15 @@
                                 📝 Create Draft &amp; Assign
                             </button>
                             @elseif($req->test)
-                            <a href="{{ route('admin.tests.show', $req->test->id) }}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1">
-                                👁 View Assessment
-                            </a>
+                                @if($isRm)
+                                <a href="{{ route('admin.repository-manager.assessment-requests.assessment-show', $req->id) }}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1">
+                                    👁 View Assessment
+                                </a>
+                                @else
+                                <a href="{{ route('admin.tests.show', $req->test->id) }}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1">
+                                    👁 View Assessment
+                                </a>
+                                @endif
                             @else
                             <span class="text-slate-400 text-xs">Awaiting RM</span>
                             @endif

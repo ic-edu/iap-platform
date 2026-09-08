@@ -185,7 +185,7 @@
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Assessment Type</label>
                             <select name="test_type" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm font-semibold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                                <option value="toeic" {{ $test->test_type === 'toeic' ? 'selected' : '' }}>TOEIC Simulation</option>
+                                <option value="toeic" {{ $test->test_type === 'toeic' ? 'selected' : '' }}>TOEIC</option>
                                 <option value="toefl" {{ $test->test_type === 'toefl' ? 'selected' : '' }}>TOEFL iBT / ITP</option>
                                 <option value="ielts" {{ $test->test_type === 'ielts' ? 'selected' : '' }}>IELTS Academic</option>
                                 <option value="general" {{ $test->test_type === 'general' ? 'selected' : '' }}>General English</option>
