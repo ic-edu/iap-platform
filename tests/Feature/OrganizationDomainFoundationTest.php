@@ -869,9 +869,26 @@ class OrganizationDomainFoundationTest extends TestCase
         $this->assertEquals($this->superAdmin->id, $org->reviewed_by);
         $this->assertNotNull($org->reviewed_at);
 
-        // APR-05: RA can suspend active organization
-        $susResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.suspend', $org->id));
-        $susResp->assertRedirect();
+        // APR-05: RA direct suspend is blocked, RA requests suspension, SA approves
+        $blockedResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.suspend', $org->id));
+        $blockedResp->assertSessionHasErrors('error');
+        $this->assertEquals(OrganizationStatus::Active, $org->fresh()->status);
+
+        // RA requests suspension
+        $reqResp = $this->actingAs($this->adminRA)->post(route('admin.organizations.request-suspension', $org->id), [
+            'reason' => 'Contract breach under investigation',
+            'notes'  => 'Flagged by legal team',
+        ]);
+        $reqResp->assertRedirect();
+        $this->assertTrue($org->fresh()->hasPendingSuspension());
+        $this->assertEquals(OrganizationStatus::Active, $org->fresh()->status);
+
+        $suspRequest = $org->fresh()->pendingSuspensionRequest;
+        $this->assertNotNull($suspRequest);
+
+        // Super Admin approves suspension
+        $apprSuspResp = $this->actingAs($this->superAdmin)->post(route('admin.approvals.organizations.suspensions.approve', $suspRequest->id));
+        $apprSuspResp->assertRedirect();
         $org->refresh();
         $this->assertEquals(OrganizationStatus::Suspended, $org->status);
 

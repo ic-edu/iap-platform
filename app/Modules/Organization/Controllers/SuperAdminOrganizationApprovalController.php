@@ -7,11 +7,13 @@ use App\Models\User;
 use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Models\Organization;
 use App\Modules\Organization\Models\OrganizationGroup;
+use App\Modules\Organization\Models\OrganizationSuspensionRequest;
 use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SuperAdminOrganizationApprovalController extends Controller
@@ -41,7 +43,7 @@ class SuperAdminOrganizationApprovalController extends Controller
 
         $activeOrganizations = Organization::query()
             ->whereIn('status', [OrganizationStatus::Active, OrganizationStatus::Suspended, OrganizationStatus::Archived])
-            ->with(['submitter', 'reviewer'])
+            ->with(['submitter', 'reviewer', 'pendingSuspensionRequest'])
             ->withCount(['memberships', 'groups'])
             ->latest()
             ->paginate(15)
@@ -53,12 +55,19 @@ class SuperAdminOrganizationApprovalController extends Controller
             ->latest('submitted_at')
             ->get();
 
+        $pendingSuspensionRequests = OrganizationSuspensionRequest::query()
+            ->where('status', 'pending')
+            ->with(['organization', 'requester'])
+            ->latest()
+            ->get();
+
         return view('organization::admin.approvals.organizations', compact(
             'pendingOrganizations',
             'revisionOrganizations',
             'rejectedOrganizations',
             'activeOrganizations',
-            'pendingGroups'
+            'pendingGroups',
+            'pendingSuspensionRequests'
         ));
     }
 
@@ -244,5 +253,109 @@ class SuperAdminOrganizationApprovalController extends Controller
         );
 
         return back()->with('status', "Group '{$group->name}' has been approved and activated.");
+    }
+
+    /**
+     * Approve an organization suspension request.
+     */
+    public function approveSuspension(Request $request, OrganizationSuspensionRequest $suspensionRequest): RedirectResponse
+    {
+        if (! $suspensionRequest->isPending()) {
+            return back()->withErrors(['error' => 'Suspension request has already been processed.']);
+        }
+
+        $organization = $suspensionRequest->organization;
+        $user = $request->user();
+
+        DB::transaction(function () use ($suspensionRequest, $organization, $user, $request) {
+            $suspensionRequest->update([
+                'status'         => 'approved',
+                'reviewed_by'    => $user->id,
+                'reviewed_at'    => now(),
+                'decision_notes' => $request->input('decision_notes', 'Suspension approved by Super Admin.'),
+            ]);
+
+            $organization->update([
+                'status' => OrganizationStatus::Suspended,
+            ]);
+
+            ActivityLogger::log(
+                action: 'ORG_SUSPENSION_APPROVED',
+                description: "Super Admin approved suspension for organization '{$organization->name}'",
+                subject: $organization,
+                properties: [
+                    'organization_id' => $organization->id,
+                    'request_id'      => $suspensionRequest->id,
+                    'reviewed_by'     => $user->id,
+                ]
+            );
+        });
+
+        if ($suspensionRequest->requester) {
+            try {
+                $suspensionRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'Organization Suspension Approved',
+                    message: "Suspension request for '{$organization->name}' has been approved by Super Admin {$user->name}. Organization is now Suspended.",
+                    type: 'ORGANIZATION_SUSPENSION_APPROVED',
+                    priority: 'HIGH',
+                    entityType: 'organization',
+                    entityId: (string) $organization->id,
+                    targetUrl: route('admin.organizations.index')
+                ));
+            } catch (\Throwable $e) {}
+        }
+
+        return back()->with('status', "Organization '{$organization->name}' has been suspended.");
+    }
+
+    /**
+     * Reject an organization suspension request.
+     */
+    public function rejectSuspension(Request $request, OrganizationSuspensionRequest $suspensionRequest): RedirectResponse
+    {
+        if (! $suspensionRequest->isPending()) {
+            return back()->withErrors(['error' => 'Suspension request has already been processed.']);
+        }
+
+        $validated = $request->validate([
+            'rejection_reason' => ['required', 'string', 'min:3', 'max:1000'],
+        ]);
+
+        $organization = $suspensionRequest->organization;
+        $user = $request->user();
+
+        $suspensionRequest->update([
+            'status'         => 'rejected',
+            'reviewed_by'    => $user->id,
+            'reviewed_at'    => now(),
+            'decision_notes' => trim($validated['rejection_reason']),
+        ]);
+
+        ActivityLogger::log(
+            action: 'ORG_SUSPENSION_REJECTED',
+            description: "Super Admin rejected suspension for organization '{$organization->name}': {$validated['rejection_reason']}",
+            subject: $organization,
+            properties: [
+                'organization_id'  => $organization->id,
+                'request_id'       => $suspensionRequest->id,
+                'rejection_reason' => $validated['rejection_reason'],
+            ]
+        );
+
+        if ($suspensionRequest->requester) {
+            try {
+                $suspensionRequest->requester->notify(new EnterpriseSystemNotification(
+                    title: 'Organization Suspension Rejected',
+                    message: "Suspension request for '{$organization->name}' was rejected by Super Admin {$user->name}. Reason: {$validated['rejection_reason']}",
+                    type: 'ORGANIZATION_SUSPENSION_REJECTED',
+                    priority: 'HIGH',
+                    entityType: 'organization',
+                    entityId: (string) $organization->id,
+                    targetUrl: route('admin.organizations.index')
+                ));
+            } catch (\Throwable $e) {}
+        }
+
+        return back()->with('status', "Suspension request for '{$organization->name}' has been rejected. Organization remains Active.");
     }
 }

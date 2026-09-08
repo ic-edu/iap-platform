@@ -10,6 +10,11 @@
             <span class="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 rounded-full text-xs font-semibold">
                 {{ $pendingOrganizations->count() }} Pending Organizations
             </span>
+            @if(isset($pendingSuspensionRequests) && $pendingSuspensionRequests->count() > 0)
+                <span class="px-3 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 rounded-full text-xs font-semibold">
+                    {{ $pendingSuspensionRequests->count() }} Suspension Requests
+                </span>
+            @endif
             @if($pendingGroups->count() > 0)
                 <span class="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-full text-xs font-semibold">
                     {{ $pendingGroups->count() }} Pending Groups
@@ -133,7 +138,101 @@
         </div>
     </div>
 
-    <!-- SECTION 2: Pending Institutional Groups Queue (if any) -->
+    <!-- SECTION 2: Pending Suspension Requests Queue -->
+    <div class="mb-8 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div class="p-4 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                Pending Suspension Requests
+            </h2>
+            <span class="text-xs text-slate-500 dark:text-slate-400">{{ isset($pendingSuspensionRequests) ? $pendingSuspensionRequests->count() : 0 }} awaiting review</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/30 text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">
+                        <th class="py-3 px-4">Organization</th>
+                        <th class="py-3 px-4">Type</th>
+                        <th class="py-3 px-4">Requested By</th>
+                        <th class="py-3 px-4">Requested At</th>
+                        <th class="py-3 px-4">Reason &amp; Notes</th>
+                        <th class="py-3 px-4">Current Status</th>
+                        <th class="py-3 px-4 text-right">Governance Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    @if(isset($pendingSuspensionRequests))
+                        @forelse($pendingSuspensionRequests as $suspReq)
+                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                                <td class="py-3 px-4">
+                                    <div class="font-bold text-slate-900 dark:text-white">{{ $suspReq->organization?->name }}</div>
+                                    <div class="text-[11px] text-slate-500 font-mono">/organization/{{ $suspReq->organization?->slug }}</div>
+                                </td>
+                                <td class="py-3 px-4 text-slate-600 dark:text-slate-400 capitalize">{{ $suspReq->organization?->organization_type?->label() }}</td>
+                                <td class="py-3 px-4 text-slate-700 dark:text-slate-300">
+                                    {{ $suspReq->requester?->name ?? 'Registration Admin' }}
+                                </td>
+                                <td class="py-3 px-4 text-slate-600 dark:text-slate-400">
+                                    {{ $suspReq->created_at->diffForHumans() }}
+                                </td>
+                                <td class="py-3 px-4 max-w-xs">
+                                    <div class="font-semibold text-rose-600 dark:text-rose-400">{{ $suspReq->reason }}</div>
+                                    @if($suspReq->notes)
+                                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{{ $suspReq->notes }}</div>
+                                    @endif
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                                        {{ $suspReq->organization?->status?->label() ?? 'Active' }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                                    <!-- Approve Suspension Form -->
+                                    <form method="POST" action="{{ route('admin.approvals.organizations.suspensions.approve', $suspReq->id) }}" class="inline">
+                                        @csrf
+                                        <button type="submit" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded shadow transition-colors">
+                                            Approve Suspension
+                                        </button>
+                                    </form>
+
+                                    <!-- Reject Suspension Modal Trigger -->
+                                    <button type="button" onclick="document.getElementById('reject-suspension-modal-{{ $suspReq->id }}').classList.remove('hidden')" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold rounded shadow transition-colors">
+                                        Reject
+                                    </button>
+
+                                    <!-- Reject Suspension Modal -->
+                                    <div id="reject-suspension-modal-{{ $suspReq->id }}" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 text-left whitespace-normal">
+                                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl">
+                                            <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-1">Reject Suspension Request</h3>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Provide reason for rejecting the suspension request for <strong>{{ $suspReq->organization?->name }}</strong>. The organization will remain Active.</p>
+                                            <form method="POST" action="{{ route('admin.approvals.organizations.suspensions.reject', $suspReq->id) }}">
+                                                @csrf
+                                                <div class="mb-4">
+                                                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Rejection Reason *</label>
+                                                    <textarea name="rejection_reason" rows="3" required placeholder="e.g. Compliance evidence verified, suspension not warranted..." class="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-xs text-slate-900 dark:text-white focus:border-rose-500 focus:outline-none"></textarea>
+                                                </div>
+                                                <div class="flex justify-end gap-2">
+                                                    <button type="button" onclick="document.getElementById('reject-suspension-modal-{{ $suspReq->id }}').classList.add('hidden')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-lg">Cancel</button>
+                                                    <button type="submit" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg shadow">Confirm Rejection</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="py-8 text-center text-slate-500 text-xs">No pending organization suspension requests.</td>
+                            </tr>
+                        @endforelse
+                    @endif
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION 3: Pending Institutional Groups Queue (if any) -->
     @if($pendingGroups->count() > 0)
         <div class="mb-8 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
             <div class="p-4 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
@@ -178,7 +277,7 @@
         </div>
     @endif
 
-    <!-- SECTION 3: Active & Managed Organizations Overview -->
+    <!-- SECTION 4: Active & Managed Organizations Overview -->
     <div class="bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
         <div class="p-4 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -211,6 +310,11 @@
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $org->isActive() ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30' : 'bg-slate-500/20 text-slate-700 dark:text-slate-400 border border-slate-500/30' }}">
                                     {{ $org->status->label() }}
                                 </span>
+                                @if($org->hasPendingSuspension())
+                                    <span class="block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                        ⏳ Suspension Pending
+                                    </span>
+                                @endif
                             </td>
                             <td class="py-3 px-4 text-slate-600 dark:text-slate-400">
                                 {{ $org->reviewer?->name ?? 'System' }}

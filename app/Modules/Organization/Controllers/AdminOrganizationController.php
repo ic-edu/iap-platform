@@ -10,6 +10,7 @@ use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Enums\OrganizationType;
 use App\Modules\Organization\Models\Organization;
 use App\Modules\Organization\Models\OrganizationInvitation;
+use App\Modules\Organization\Models\OrganizationSuspensionRequest;
 use App\Modules\Organization\Notifications\OrganizationInvitationNotification;
 use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
@@ -39,6 +40,7 @@ class AdminOrganizationController extends Controller
                 'reviewer',
                 'primaryCoordinatorMembership.user',
                 'primaryCoordinatorInvitation.inviter',
+                'pendingSuspensionRequest',
             ])
             ->when($statusFilter && $statusFilter !== 'all', fn($q) => $q->where('status', $statusFilter))
             ->when($typeFilter && $typeFilter !== 'all', fn($q) => $q->where('organization_type', $typeFilter))
@@ -536,24 +538,73 @@ class AdminOrganizationController extends Controller
     }
 
     /**
-     * Suspend an active organization.
+     * Request suspension for an Active Organization (Requires Super Admin Approval).
+     */
+     public function requestSuspension(Request $request, Organization $organization): RedirectResponse
+     {
+         if (! $organization->isActive()) {
+             return back()->withErrors(['error' => 'Suspension can only be requested for Active organizations.']);
+         }
+
+         if ($organization->hasPendingSuspension()) {
+             return back()->withErrors(['error' => "A suspension request is already pending Super Admin approval for '{$organization->name}'."]);
+         }
+
+         $validated = $request->validate([
+             'reason' => ['required', 'string', 'min:3', 'max:1000'],
+             'notes'  => ['nullable', 'string', 'max:1000'],
+         ]);
+
+         $reason = trim($validated['reason']);
+         if (empty($reason)) {
+             return back()->withErrors(['error' => 'A valid suspension reason is required.']);
+         }
+
+         $suspensionRequest = OrganizationSuspensionRequest::create([
+             'organization_id' => $organization->id,
+             'requested_by'    => Auth::id(),
+             'reason'          => $reason,
+             'notes'           => isset($validated['notes']) && filled($validated['notes']) ? trim($validated['notes']) : null,
+             'status'          => 'pending',
+         ]);
+
+         ActivityLogger::log(
+             action: 'ORG_SUSPENSION_REQUESTED',
+             description: "Registration Admin requested suspension for organization '{$organization->name}': {$reason}",
+             subject: $organization,
+             properties: [
+                 'organization_id' => $organization->id,
+                 'request_id'      => $suspensionRequest->id,
+                 'reason'          => $reason,
+                 'notes'           => $suspensionRequest->notes,
+             ]
+         );
+
+         $user = $request->user();
+         $superAdmins = User::role('super-admin')->get();
+         foreach ($superAdmins as $sa) {
+             try {
+                 $sa->notify(new EnterpriseSystemNotification(
+                     title: 'Organization Suspension Request',
+                     message: "Registration Admin " . ($user?->name ?? 'Admin') . " requested suspension for '{$organization->name}'. Reason: {$reason}",
+                     type: 'ORGANIZATION_SUSPENSION_REQUESTED',
+                     priority: 'HIGH',
+                     entityType: 'organization',
+                     entityId: (string) $organization->id,
+                     targetUrl: route('admin.approvals.organizations')
+                 ));
+             } catch (\Throwable $e) {}
+         }
+
+         return back()->with('status', "Suspension request for '{$organization->name}' submitted for Super Admin review.");
+     }
+
+    /**
+     * Suspend an active organization (Restricted from direct execution).
      */
     public function suspend(Request $request, Organization $organization): RedirectResponse
     {
-        if (! $organization->isActive()) {
-            return back()->withErrors(['error' => 'Only active organizations can be suspended.']);
-        }
-
-        $organization->update(['status' => OrganizationStatus::Suspended]);
-
-        ActivityLogger::log(
-            action: 'ORG_SUSPENDED',
-            description: "Registration Admin suspended organization '{$organization->name}'",
-            subject: $organization,
-            properties: ['organization_id' => $organization->id]
-        );
-
-        return back()->with('status', "Organization '{$organization->name}' has been suspended.");
+        return back()->withErrors(['error' => 'Direct suspension by Operational Admin is restricted. Please submit a formal suspension request for Super Admin approval.']);
     }
 
     /**
@@ -578,7 +629,7 @@ class AdminOrganizationController extends Controller
     }
 
     /**
-     * Toggle Organization status (backward compatibility / quick toggle).
+     * Toggle Organization status (backward compatibility / governed guard).
      */
     public function toggleStatus(Request $request, Organization $organization): RedirectResponse
     {

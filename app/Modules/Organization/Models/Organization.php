@@ -181,6 +181,23 @@ class Organization extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function suspensionRequests(): HasMany
+    {
+        return $this->hasMany(OrganizationSuspensionRequest::class, 'organization_id');
+    }
+
+    public function pendingSuspensionRequest(): HasOne
+    {
+        return $this->hasOne(OrganizationSuspensionRequest::class, 'organization_id')
+            ->where('status', 'pending')
+            ->latestOfMany();
+    }
+
+    public function hasPendingSuspension(): bool
+    {
+        return $this->suspensionRequests()->where('status', 'pending')->exists();
+    }
+
     public function isDraft(): bool
     {
         return $this->status === OrganizationStatus::Draft;

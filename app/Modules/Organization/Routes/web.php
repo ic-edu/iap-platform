@@ -77,6 +77,7 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin'])
         Route::post('/{organization}/invite-coordinator', [AdminOrganizationController::class, 'inviteCoordinator'])->name('invite-coordinator');
         Route::post('/{organization}/invitations/{invitation}/resend', [AdminOrganizationController::class, 'resendCoordinatorInvitation'])->name('invitations.resend');
         Route::post('/{organization}/invitations/{invitation}/revoke', [AdminOrganizationController::class, 'revokeCoordinatorInvitation'])->name('invitations.revoke');
+        Route::post('/{organization}/request-suspension', [AdminOrganizationController::class, 'requestSuspension'])->name('request-suspension');
         Route::post('/{organization}/toggle-status', [AdminOrganizationController::class, 'toggleStatus'])->name('toggle-status');
         Route::post('/{organization}/suspend', [AdminOrganizationController::class, 'suspend'])->name('suspend');
         Route::post('/{organization}/activate', [AdminOrganizationController::class, 'activate'])->name('activate');
@@ -92,4 +93,6 @@ Route::middleware(['web', 'auth', 'role:super-admin'])
         Route::post('/{organization}/reject', [SuperAdminOrganizationApprovalController::class, 'rejectOrganization'])->name('admin.approvals.organizations.reject');
         Route::post('/{organization}/archive', [SuperAdminOrganizationApprovalController::class, 'approveArchive'])->name('admin.approvals.organizations.archive');
         Route::post('/groups/{group}/approve', [SuperAdminOrganizationApprovalController::class, 'approveGroup'])->name('admin.approvals.organizations.groups.approve');
+        Route::post('/suspensions/{suspensionRequest}/approve', [SuperAdminOrganizationApprovalController::class, 'approveSuspension'])->name('admin.approvals.organizations.suspensions.approve');
+        Route::post('/suspensions/{suspensionRequest}/reject', [SuperAdminOrganizationApprovalController::class, 'rejectSuspension'])->name('admin.approvals.organizations.suspensions.reject');
     });
