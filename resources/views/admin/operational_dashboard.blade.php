@@ -435,9 +435,25 @@
 
                     <div class="flex items-center gap-3 flex-shrink-0">
                         @if($eligibleTests->isEmpty())
-                            <div class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-1.5">
-                                <span>⚠️</span>
-                                <span>No published {{ strtoupper(is_object($product?->assessment_family) ? $product->assessment_family->value : ($product?->assessment_family ?? 'compatible')) }} tests</span>
+                            @php
+                                $familyCode = is_object($product?->assessment_family) ? $product->assessment_family->value : ($product?->assessment_family ?? 'toeic');
+                                $groupContext = $groups->isNotEmpty() ? ' — ' . $groups->pluck('name')->join(', ') : '';
+                                $progContext = trim(($org?->name ?? 'Organization') . $groupContext);
+                                $defaultReqTitle = strtoupper($familyCode) . ' Mock Test';
+                            @endphp
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <div class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-1.5">
+                                    <span>⚠️</span>
+                                    <span>No published {{ strtoupper($familyCode) }} tests</span>
+                                </div>
+                                <a href="{{ route('admin.assessment-requests.index', [
+                                    'candidate_id'    => $candidateUser?->id,
+                                    'test_type'       => $familyCode,
+                                    'program_context' => $progContext,
+                                    'title'           => $defaultReqTitle,
+                                ]) }}" class="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-bold border border-indigo-500/30 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <span>📋 Request Mock Test</span>
+                                </a>
                             </div>
                         @else
                             <form action="{{ route('admin.institutional-seats.assign', $allocation->id) }}" method="POST" class="flex items-center gap-2">

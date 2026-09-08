@@ -103,11 +103,7 @@ class TestBuilderController extends Controller
             $countBase = clone $adminQuery;
             $mockTestsCount = (clone $countBase)
                 ->where('assessment_mode', 'real_test')
-                ->where(function ($q) {
-                    $q->where('status', 'published')
-                      ->orWhere('status', 'approved')
-                      ->orWhere('is_published', true);
-                })
+                ->published()
                 ->count();
 
             $simulatorsCount = (clone $countBase)
@@ -117,13 +113,9 @@ class TestBuilderController extends Controller
             if ($tab === 'simulators') {
                 $adminQuery->where('assessment_mode', 'simulator');
             } else {
-                // Mock Tests: Strictly assessment_mode = real_test and published/approved live
+                // Mock Tests: Strictly assessment_mode = real_test and canonically published
                 $adminQuery->where('assessment_mode', 'real_test')
-                    ->where(function ($q) {
-                        $q->where('status', 'published')
-                          ->orWhere('status', 'approved')
-                          ->orWhere('is_published', true);
-                    });
+                    ->published();
             }
 
             $tests = $adminQuery->latest('updated_at')->paginate(10)->withQueryString();
