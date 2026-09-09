@@ -217,10 +217,10 @@ class TeacherAudioGroupAuthoringUiTest extends TestCase
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertOk();
-        $response->assertSee('QUESTION 1 OF 3', false);
-        $response->assertSee('QUESTION 2 OF 3', false);
-        $response->assertSee('QUESTION 3 OF 3', false);
-        $response->assertDontSee('QUESTION 4 OF 3', false);
+        $response->assertSee('Question 1 of 3', false);
+        $response->assertSee('Question 2 of 3', false);
+        $response->assertSee('Question 3 of 3', false);
+        $response->assertDontSee('Question 4 of 3', false);
     }
 
     /** @test */

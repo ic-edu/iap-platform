@@ -689,7 +689,11 @@ test('12. Teacher assessment view renders Part 3 audio group authoring modal wit
     $response->assertSee('Conversation Script / Transcript (Optional)');
     $response->assertSee('placeholder:text-slate-500 dark:placeholder:text-slate-400', false);
 
-    // P3-UI-04: Child question stems and choice helpers
+    // P3-UI-04: Child question stems, step badges, and choice helpers
+    $response->assertSee('Question 1 of 3');
+    $response->assertSee('Question 2 of 3');
+    $response->assertSee('Question 3 of 3');
+    $response->assertSee('bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300', false);
     $response->assertSee('Question 1 Prompt / Stem');
     $response->assertSee('Answer Choices (A–D) &amp; Correct Answer', false);
     $response->assertSee('Select radio for correct answer');
@@ -697,4 +701,34 @@ test('12. Teacher assessment view renders Part 3 audio group authoring modal wit
     // P3-UI-05: Badges and progress
     $response->assertSee('Progress: 0 / 3 Complete');
     $response->assertSee('LISTENING • PART 3');
+});
+
+test('13. Part 4 Talks section shares grouped listening authoring without visual regression', function () {
+    $test = Test::create([
+        'title'            => 'TOEIC Mock Test Group Part 4 UAT',
+        'slug'             => 'toeic-mock-test-group-part4-uat-' . uniqid(),
+        'test_type'        => 'toeic',
+        'assessment_mode'  => 'simulator',
+        'duration_minutes' => 120,
+        'pass_score'       => 500,
+        'created_by'       => $this->teacher->id,
+        'status'           => 'draft',
+    ]);
+
+    $section = TestSection::create([
+        'test_id'          => $test->id,
+        'title'            => 'Part 4: Talks',
+        'section_type'     => 'listening',
+        'order'            => 4,
+        'duration_minutes' => 30,
+    ]);
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $test->id));
+    $response->assertStatus(200);
+
+    // Grouped listening modal is available for Part 4
+    $response->assertSee('create-audio-group-modal', false);
+    $response->assertSee('Question 1 of 3');
+    $response->assertSee('Question 2 of 3');
+    $response->assertSee('Question 3 of 3');
 });

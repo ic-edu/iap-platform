@@ -237,10 +237,10 @@ class TeacherProgressiveAudioGroupAuthoringTest extends TestCase
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertOk();
-        $response->assertSee('QUESTION 1 OF 3');
-        $response->assertSee('QUESTION 2 OF 3');
-        $response->assertSee('QUESTION 3 OF 3');
-        $response->assertDontSee('QUESTION 4 OF 4');
+        $response->assertSee('Question 1 of 3');
+        $response->assertSee('Question 2 of 3');
+        $response->assertSee('Question 3 of 3');
+        $response->assertDontSee('Question 4 of 3');
     }
 
     public function test_06_modal_does_not_have_dynamic_add_or_remove_slot_controls(): void

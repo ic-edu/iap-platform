@@ -2024,11 +2024,11 @@
                     {{-- Question Panel Header --}}
                     <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-black px-2 py-0.5 rounded bg-indigo-600 text-white">QUESTION {{ $i + 1 }} OF 3</span>
-                            <span id="ag-q{{ $i }}-status-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">○ Incomplete</span>
+                            <span class="text-xs font-bold px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">Question {{ $i + 1 }} of 3</span>
+                            <span id="ag-q{{ $i }}-status-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">○ Incomplete</span>
                         </div>
-                        <div id="ag-q{{ $i }}-diff-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
-                            <span id="ag-q{{ $i }}-diff-dot" class="w-2 h-2 rounded-full bg-slate-500 dark:bg-slate-400"></span>
+                        <div id="ag-q{{ $i }}-diff-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+                            <span id="ag-q{{ $i }}-diff-dot" class="w-1.5 h-1.5 rounded-full bg-slate-500 dark:bg-slate-400"></span>
                             <span id="ag-q{{ $i }}-diff-text">Waiting for input</span>
                         </div>
                     </div>
@@ -4535,10 +4535,10 @@
             const statusBadge = document.getElementById(`ag-q${i}-status-badge`);
             if (statusBadge) {
                 if (isSlotComplete) {
-                    statusBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700';
+                    statusBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700';
                     statusBadge.textContent = '✓ Complete';
                 } else {
-                    statusBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700';
+                    statusBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700';
                     statusBadge.textContent = '○ Incomplete';
                 }
             }
@@ -4551,8 +4551,8 @@
             if (!badge || !text || !dot) continue;
 
             if (!hasAudio && choices.length === 0 && !prompt) {
-                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700';
-                dot.className = 'w-2 h-2 rounded-full bg-slate-500 dark:bg-slate-400';
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-slate-500 dark:bg-slate-400';
                 text.textContent = 'Waiting for input';
             } else if (hasAudio && choices.length >= 4 && prompt.length > 5) {
                 let totalWords = choices.reduce((acc, c) => acc + c.split(/\s+/).filter(Boolean).length, 0);
@@ -4560,19 +4560,19 @@
                 let level = (avg >= 7 || prompt.split(/\s+/).length >= 15) ? 'Hard' : ((avg <= 4 && prompt.split(/\s+/).length <= 8) ? 'Easy' : 'Medium');
 
                 if (level === 'Easy') {
-                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-700';
-                    dot.className = 'w-2 h-2 rounded-full bg-emerald-600';
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-700';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-600';
                 } else if (level === 'Hard') {
-                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-300 dark:bg-rose-950/50 dark:text-rose-200 dark:border-rose-800';
-                    dot.className = 'w-2 h-2 rounded-full bg-rose-600';
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-300 dark:bg-rose-950/50 dark:text-rose-200 dark:border-rose-800';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-rose-600';
                 } else {
-                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800';
-                    dot.className = 'w-2 h-2 rounded-full bg-amber-600';
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800';
+                    dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-600';
                 }
                 text.textContent = `Final — ${level}`;
             } else {
-                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800';
-                dot.className = 'w-2 h-2 rounded-full bg-amber-600';
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-600';
                 text.textContent = 'Provisional — Medium';
             }
         }
