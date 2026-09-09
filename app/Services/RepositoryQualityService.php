@@ -69,8 +69,9 @@ class RepositoryQualityService
                     $questionsWithoutExplanation++;
                 }
 
-                // Check prompt
-                if (empty(trim($q->prompt ?? ''))) {
+                // Check prompt (TOEIC Part 1, 2, 6 prompts are optional)
+                $isToeicNonPromptPart = (ToeicQuestionValidator::isToeic($bank) || ToeicQuestionValidator::isToeic($q)) && !ToeicQuestionValidator::requiresPrompt($q->part_number);
+                if (!$isToeicNonPromptPart && empty(trim($q->prompt ?? ''))) {
                     $incompleteQuestions++;
                     $warnings[] = "Incomplete question found (ID: {$q->id}) - missing prompt";
                 }

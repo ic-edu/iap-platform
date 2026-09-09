@@ -250,7 +250,7 @@ html.dark .fre-progress-fill, html[data-theme="dark"] .fre-progress-fill {
                     </span>
                     @endif
                 </div>
-                <textarea name="prompt" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" required>{{ old('prompt', $question->prompt ?? '') }}</textarea>
+                <textarea name="prompt" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Question prompt (optional for Part 1/2)...">{{ old('prompt', $question->prompt ?? '') }}</textarea>
             </div>
 
             {{-- 3. Question Type & Difficulty & Points Section --}}
@@ -382,12 +382,15 @@ html.dark .fre-progress-fill, html[data-theme="dark"] .fre-progress-fill {
                             <textarea name="reference_answer_text" rows="3" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter optional model reference answer or grading rubric guidelines...">{{ old('reference_answer_text', $question->reference_answer ?? '') }}</textarea>
                         </div>
                     @elseif($isChoiceBased)
+                        @php
+                            $isAudioOnlyPart = in_array((int) ($curPart ?? 0), [1, 2], true);
+                        @endphp
                         @if($question->choices->count() > 0)
                             @foreach($question->choices as $cIdx => $choice)
                             <div class="flex items-center gap-3 mb-2.5">
                                 <input type="radio" name="correct_choice_id" value="{{ $choice->id }}" {{ $choice->is_correct ? 'checked' : '' }} style="accent-color:#10b981;width:1.2rem;height:1.2rem;" title="Mark as Correct Choice">
                                 <span class="font-extrabold text-indigo-600 dark:text-indigo-400 w-6">{{ $choice->label ?? chr(65 + $cIdx) }}.</span>
-                                <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-sm" required>
+                                <input type="text" name="choices[{{ $choice->id }}][content]" value="{{ old('choices.'.$choice->id.'.content', $choice->content) }}" class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 text-sm" placeholder="{{ $isAudioOnlyPart ? 'Optional response transcript...' : 'Option ' . ($choice->label ?? chr(65 + $cIdx)) . ' content...' }}" {{ $isAudioOnlyPart ? '' : 'required' }}>
                                 <input type="hidden" name="choices[{{ $choice->id }}][label]" value="{{ $choice->label ?? chr(65 + $cIdx) }}">
                             </div>
                             @endforeach

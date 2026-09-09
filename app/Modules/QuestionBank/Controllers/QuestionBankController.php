@@ -810,9 +810,11 @@ class QuestionBankController extends Controller
         }
 
         $isToeic = ToeicQuestionValidator::isToeic($questionBank) || $request->filled('part_number');
+        $rawPartNumber = $request->input('part_number');
+        $promptRule = ToeicQuestionValidator::requiresPrompt($rawPartNumber) ? ['required', 'string'] : ['nullable', 'string'];
 
         $validated = $request->validate([
-            'prompt'                => ['required', 'string'],
+            'prompt'                => $promptRule,
             'question_type'         => ['required', 'string'],
             'difficulty'            => ['required', 'string'],
             'points'                => ['nullable', 'integer', 'min:1'],
@@ -838,7 +840,7 @@ class QuestionBankController extends Controller
 
         if ($request->filled('part_number')) {
             $toeicData = $request->all();
-            $toeicData['prompt'] = $validated['prompt'];
+            $toeicData['prompt'] = $validated['prompt'] ?? '';
             $toeicData['difficulty'] = $validated['difficulty'];
             ToeicQuestionValidator::validate($toeicData);
             $partNumber = (int) $request->input('part_number');
@@ -857,7 +859,7 @@ class QuestionBankController extends Controller
             'audio_media_asset_id'  => $validated['audio_media_asset_id'] ?? null,
             'passage_id'            => $validated['passage_id'] ?? null,
             'image_url'             => $validated['image_url'] ?? null,
-            'prompt'                => $validated['prompt'],
+            'prompt'                => $validated['prompt'] ?? '',
             'section'               => $section ?: 'reading',
             'part_number'           => $partNumber,
             'question_type'         => $qType,
@@ -1196,9 +1198,11 @@ class QuestionBankController extends Controller
         }
 
         $isToeic = ($questionBank && ToeicQuestionValidator::isToeic($questionBank)) || ToeicQuestionValidator::isToeic($question) || $request->filled('part_number');
+        $rawPartNumber = $request->input('part_number') ?? $question->part_number;
+        $promptRule = ToeicQuestionValidator::requiresPrompt($rawPartNumber) ? ['required', 'string'] : ['nullable', 'string'];
 
         $validated = $request->validate([
-            'prompt'                => ['required', 'string'],
+            'prompt'                => $promptRule,
             'question_type'         => ['required', 'string'],
             'difficulty'            => ['required', 'string'],
             'points'                => ['nullable', 'integer', 'min:1'],
@@ -1224,7 +1228,7 @@ class QuestionBankController extends Controller
 
         if ($request->filled('part_number')) {
             $toeicData = $request->all();
-            $toeicData['prompt'] = $validated['prompt'];
+            $toeicData['prompt'] = $validated['prompt'] ?? '';
             $toeicData['difficulty'] = $validated['difficulty'];
             ToeicQuestionValidator::validate($toeicData, $question);
             $partNumber = (int) $request->input('part_number');
@@ -1237,7 +1241,7 @@ class QuestionBankController extends Controller
         $qType = $validated['question_type'] === 'single_choice' ? 'multiple_choice' : $validated['question_type'];
 
         $updateData = [
-            'prompt'        => $validated['prompt'],
+            'prompt'        => $validated['prompt'] ?? '',
             'passage_id'    => $validated['passage_id'] ?? $question->passage_id,
             'image_url'     => $validated['image_url'] ?? $question->image_url,
             'section'       => $section ?: 'reading',
@@ -1435,14 +1439,17 @@ class QuestionBankController extends Controller
         if (in_array($qType, ['single_choice', 'multiple_choice', 'listening', 'reading'])) {
             $choices = $validated['choices'] ?? [];
             $correctIdx = $validated['correct_choice'] ?? null;
+            $isAudioOnlyChoice = ToeicQuestionValidator::isAudioOnlyChoicePart($question->part_number);
 
             foreach ($choices as $idx => $choiceData) {
-                if (!empty($choiceData['content']) || !empty($choiceData['label'])) {
+                if ($isAudioOnlyChoice && $question->part_number == 1 && $idx >= 4) break;
+                if ($isAudioOnlyChoice && $question->part_number == 2 && $idx >= 3) break;
+                if ($isAudioOnlyChoice || !empty($choiceData['content']) || !empty($choiceData['label'])) {
                     QuestionChoice::create([
                         'question_id' => (string) $question->id,
                         'label'       => $choiceData['label'] ?? chr(65 + (int)$idx),
                         'content'     => $choiceData['content'] ?? '',
-                        'is_correct'  => ((string) $idx === (string) $correctIdx),
+                        'is_correct'  => ((string) $idx === (string) $correctIdx) || (!empty($choiceData['is_correct'])),
                     ]);
                 }
             }

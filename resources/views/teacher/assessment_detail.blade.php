@@ -1406,8 +1406,8 @@
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Question Prompt / Stem <span class="text-rose-500">*</span></label>
-                <textarea name="prompt" required rows="3" oninput="updateCreateModalAutoDifficulty()" placeholder="Enter the complete question prompt..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                <label id="create-q-prompt-label" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Question Prompt / Stem</label>
+                <textarea id="create-q-prompt" name="prompt" rows="3" oninput="updateCreateModalAutoDifficulty()" placeholder="Enter question prompt..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
             </div>
 
             {{-- Auto-Difficulty Status Area (Read-Only) --}}
@@ -3099,6 +3099,20 @@
         const choiceInput3 = choiceRow3 ? choiceRow3.querySelector('input[type="text"]') : null;
         const choicesLabel = document.getElementById('create-q-choices-label');
         const choicesHint = document.getElementById('create-q-choices-hint');
+        const promptInput = document.getElementById('create-q-prompt') || document.querySelector('#create-authored-question-form textarea[name="prompt"]');
+        const promptLabel = document.getElementById('create-q-prompt-label');
+
+        if (promptInput) {
+            if (part === 1 || part === 2 || part === 6) {
+                promptInput.removeAttribute('required');
+                if (promptLabel) promptLabel.innerHTML = 'Question Prompt / Stem <span class="text-slate-400 font-normal lowercase">(Optional for Part ' + part + ')</span>';
+                promptInput.placeholder = (part === 1) ? 'Optional statement transcript...' : ((part === 2) ? 'Optional question transcript...' : 'Enter prompt if applicable...');
+            } else {
+                promptInput.setAttribute('required', 'required');
+                if (promptLabel) promptLabel.innerHTML = 'Question Prompt / Stem <span class="text-rose-500">*</span>';
+                promptInput.placeholder = 'Enter the complete question prompt...';
+            }
+        }
 
         if (part === 1) {
             if (choiceRow3) choiceRow3.style.display = 'flex';
@@ -3197,16 +3211,16 @@
             if (!hasAudio && choices.length === 0 && !prompt) {
                 status = 'pending';
                 text.textContent = 'Waiting for required inputs';
-                hintMsg = 'Attach audio or prompt and enter 3 responses.';
-            } else if (choices.length >= 3 && (prompt || hasAudio)) {
+                hintMsg = 'Attach audio for Part 2 Question–Response.';
+            } else if (hasAudio || (choices.length >= 3 && prompt)) {
                 status = 'final';
                 level = prompt.toLowerCase().match(/^(when|where|who|what time)\b/) ? 'Easy' : (prompt.toLowerCase().match(/^(why don\'t|could you|would you)\b/) ? 'Medium' : 'Hard');
                 text.textContent = `Final — ${level}`;
-                hintMsg = `Part 2 specified (Audio/Prompt + ${choices.length} choices). Auto-detected: ${level}.`;
+                hintMsg = `Part 2 fully specified (Audio Question–Response). Auto-detected: ${level}.`;
             } else {
                 status = 'provisional';
                 text.textContent = 'Provisional — Medium';
-                hintMsg = `Partially complete (Waiting for 3 responses / audio).`;
+                hintMsg = `Partially complete (Waiting for audio attachment).`;
             }
         } else if (partVal >= 3 && partVal <= 4) {
             if (!hasAudio && choices.length === 0 && !prompt) {

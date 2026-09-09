@@ -75,6 +75,50 @@ class ToeicQuestionValidator
     }
 
     /**
+     * Determine if a TOEIC part is audio-only for choice content (Part 1 and Part 2).
+     */
+    public static function isAudioOnlyChoicePart(int|string|null $partNumber): bool
+    {
+        return in_array((int) $partNumber, [1, 2], true);
+    }
+
+    /**
+     * Determine whether an item or context requires choice text.
+     */
+    public static function requiresChoiceText(mixed $context, int|string|null $partNumber = null): bool
+    {
+        if ($partNumber !== null) {
+            return !self::isAudioOnlyChoicePart($partNumber);
+        }
+
+        if ($context instanceof Question) {
+            return !self::isAudioOnlyChoicePart($context->part_number);
+        }
+
+        if (is_array($context) && isset($context['part_number'])) {
+            return !self::isAudioOnlyChoicePart($context['part_number']);
+        }
+
+        return true;
+    }
+
+    /**
+     * Determine whether an item or context is an audio-only choice item (Part 1 and Part 2).
+     */
+    public static function isAudioOnlyChoiceItem(mixed $context, int|string|null $partNumber = null): bool
+    {
+        return !self::requiresChoiceText($context, $partNumber);
+    }
+
+    /**
+     * Determine if a TOEIC part requires prompt text (Part 1, 2, and 6 prompts are optional).
+     */
+    public static function requiresPrompt(int|string|null $partNumber): bool
+    {
+        return !in_array((int) $partNumber, [1, 2, 6], true);
+    }
+
+    /**
      * Check TOEIC question rules without throwing.
      * Returns an array: ['is_valid' => bool, 'errors' => string[], 'section' => string, 'part_number' => int]
      *

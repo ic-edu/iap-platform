@@ -526,25 +526,24 @@ test('TEST 14: Generic Section edit return works', function () {
 test('TEST 15: Validation failure remains on editor', function () {
     $q = Question::create([
         'prompt'        => 'Valid stem',
-        'section'       => SectionType::Listening,
-        'part_number'   => 2,
+        'section'       => SectionType::Reading,
+        'part_number'   => 5,
         'question_type' => QuestionType::MultipleChoice,
         'difficulty'    => DifficultyLevel::Medium,
-        'audio_url'     => 'https://example.com/audio/p2.mp3',
         'points'        => 1,
     ]);
-    TestQuestion::create(['test_section_id' => $this->part2Section->id, 'question_id' => $q->id, 'order' => 1, 'points' => 1]);
+    TestQuestion::create(['test_section_id' => $this->part5Section->id, 'question_id' => $q->id, 'order' => 1, 'points' => 1]);
 
     $response = $this->actingAs($this->teacher)->put(route('teacher.tests.update-question', [
         'test'     => $this->toeicTest->id,
         'question' => $q->id,
     ]), [
-        'prompt'         => '', // Empty prompt fails validation
-        'part_number'    => 2,
-        'section'        => 'listening',
+        'prompt'         => '', // Empty prompt fails validation for Part 5
+        'part_number'    => 5,
+        'section'        => 'reading',
         'question_type'  => 'multiple_choice',
         'correct_choice' => '0',
-        'choices'        => ['', '', ''],
+        'choices'        => ['A', 'B', 'C', 'D'],
     ]);
 
     $response->assertSessionHasErrors(['prompt']);
@@ -553,38 +552,37 @@ test('TEST 15: Validation failure remains on editor', function () {
 test('TEST 16: Return context survives validation failure', function () {
     $q = Question::create([
         'prompt'        => 'Valid stem',
-        'section'       => SectionType::Listening,
-        'part_number'   => 2,
+        'section'       => SectionType::Reading,
+        'part_number'   => 5,
         'question_type' => QuestionType::MultipleChoice,
         'difficulty'    => DifficultyLevel::Medium,
-        'audio_url'     => 'https://example.com/audio/p2.mp3',
         'points'        => 1,
     ]);
-    TestQuestion::create(['test_section_id' => $this->part2Section->id, 'question_id' => $q->id, 'order' => 1, 'points' => 1]);
+    TestQuestion::create(['test_section_id' => $this->part5Section->id, 'question_id' => $q->id, 'order' => 1, 'points' => 1]);
 
     $response = $this->actingAs($this->teacher)->from(route('teacher.tests.edit-question', [
         'test'           => $this->toeicTest->id,
         'question'       => $q->id,
-        'return_section' => $this->part2Section->id,
+        'return_section' => $this->part5Section->id,
         'return_focus'   => 'question-card-' . $q->id,
     ]))->put(route('teacher.tests.update-question', [
         'test'     => $this->toeicTest->id,
         'question' => $q->id,
     ]), [
         'prompt'         => '',
-        'part_number'    => 2,
-        'section'        => 'listening',
+        'part_number'    => 5,
+        'section'        => 'reading',
         'question_type'  => 'multiple_choice',
         'correct_choice' => '0',
-        'choices'        => ['', '', ''],
-        'return_section' => $this->part2Section->id,
+        'choices'        => ['A', 'B', 'C', 'D'],
+        'return_section' => $this->part5Section->id,
         'return_focus'   => 'question-card-' . $q->id,
     ]);
 
     $response->assertRedirect(route('teacher.tests.edit-question', [
         'test'           => $this->toeicTest->id,
         'question'       => $q->id,
-        'return_section' => $this->part2Section->id,
+        'return_section' => $this->part5Section->id,
         'return_focus'   => 'question-card-' . $q->id,
     ]));
 });

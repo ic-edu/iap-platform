@@ -593,10 +593,12 @@ class TestBuilderController extends Controller
         }
 
         $isToeic = ToeicQuestionValidator::isToeic($test) || $request->filled('part_number');
+        $rawPartNumber = $request->input('part_number');
+        $promptRule = ToeicQuestionValidator::requiresPrompt($rawPartNumber) ? ['required', 'string'] : ['nullable', 'string'];
 
         $validated = $request->validate([
             'test_section_id' => ['required', 'exists:test_sections,id'],
-            'prompt'          => ['required', 'string'],
+            'prompt'          => $promptRule,
             'question_type'   => ['required', 'string'],
             'difficulty'      => ['nullable', 'string'],
             'points'          => ['nullable', 'integer', 'min:1'],
@@ -627,7 +629,7 @@ class TestBuilderController extends Controller
             }
 
             $toeicData = $request->all();
-            $toeicData['prompt'] = $validated['prompt'];
+            $toeicData['prompt'] = $validated['prompt'] ?? '';
             $toeicData['difficulty'] = $detection['difficulty_level'];
             ToeicQuestionValidator::validate($toeicData);
             $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
@@ -659,11 +661,12 @@ class TestBuilderController extends Controller
 
         $choices = [];
         $hasCorrect = false;
+        $isAudioOnlyChoice = ToeicQuestionValidator::isAudioOnlyChoicePart($partNumber);
         if (!empty($validated['choices'])) {
             foreach ($validated['choices'] as $idx => $choiceText) {
                 if ($partNumber === 1 && count($choices) >= 4) break;
                 if ($partNumber === 2 && count($choices) >= 3) break;
-                if (!in_array($partNumber, [1, 2], true) && empty(trim((string)$choiceText))) continue;
+                if (!$isAudioOnlyChoice && empty(trim((string)$choiceText))) continue;
                 $isCorrect = (!is_null($correctChoice) && $correctChoice !== '' && (string) $idx === (string) $correctChoice);
                 if ($isCorrect) {
                     $hasCorrect = true;
@@ -683,7 +686,7 @@ class TestBuilderController extends Controller
         }
 
         $this->builderService->createAssessmentQuestion($section, [
-            'prompt'                 => $validated['prompt'],
+            'prompt'                 => $validated['prompt'] ?? '',
             'section'                => $sectionType,
             'part_number'            => $partNumber,
             'question_type'          => $validated['question_type'],
@@ -1316,9 +1319,11 @@ class TestBuilderController extends Controller
         }
 
         $isToeic = ToeicQuestionValidator::isToeic($test) || ToeicQuestionValidator::isToeic($question) || $request->filled('part_number');
+        $rawPartNumber = $request->input('part_number') ?? $question->part_number;
+        $promptRule = ToeicQuestionValidator::requiresPrompt($rawPartNumber) ? ['required', 'string'] : ['nullable', 'string'];
 
         $validated = $request->validate([
-            'prompt'               => ['required', 'string'],
+            'prompt'               => $promptRule,
             'question_type'        => ['nullable', 'string'],
             'difficulty'           => ['nullable', 'string'],
             'explanation'          => ['nullable', 'string'],
@@ -1339,7 +1344,7 @@ class TestBuilderController extends Controller
 
         if ($request->filled('part_number')) {
             $toeicData = $request->all();
-            $toeicData['prompt'] = $validated['prompt'];
+            $toeicData['prompt'] = $validated['prompt'] ?? '';
             $toeicData['difficulty'] = $detection['difficulty_level'];
             ToeicQuestionValidator::validate($toeicData, $question);
             $partNumber = (int) $request->input('part_number');
@@ -1353,7 +1358,7 @@ class TestBuilderController extends Controller
         }
 
         // Reuse existing Question ID (TASK 3 & TASK 9)
-        $question->prompt = $validated['prompt'];
+        $question->prompt = $validated['prompt'] ?? '';
         if (isset($validated['question_type'])) $question->question_type = $validated['question_type'];
         $question->difficulty = $detection['difficulty_level'];
         $question->difficulty_score = $detection['difficulty_score'];
@@ -1402,13 +1407,15 @@ class TestBuilderController extends Controller
             $validIdx = 0;
             $hasCorrect = false;
             $existingChoices = $question->choices()->get();
-            $isPart1 = ((int) ($question->part_number ?? $request->input('part_number')) === 1);
-            $isPart2 = ((int) ($question->part_number ?? $request->input('part_number')) === 2);
+            $effectivePart = $question->part_number ?? $request->input('part_number');
+            $isAudioOnlyChoice = ToeicQuestionValidator::isAudioOnlyChoicePart($effectivePart);
+            $isPart1 = ((int) $effectivePart === 1);
+            $isPart2 = ((int) $effectivePart === 2);
 
             foreach ($choicesData as $idx => $choiceText) {
                 if ($isPart1 && $validIdx >= 4) break;
                 if ($isPart2 && $validIdx >= 3) break;
-                if (!$isPart1 && !$isPart2 && empty(trim((string)$choiceText))) continue;
+                if (!$isAudioOnlyChoice && empty(trim((string)$choiceText))) continue;
 
                 $isCorrect = (!is_null($correctChoiceIndex) && $correctChoiceIndex !== '' && (string) $idx === (string) $correctChoiceIndex);
                 if ($isCorrect) {

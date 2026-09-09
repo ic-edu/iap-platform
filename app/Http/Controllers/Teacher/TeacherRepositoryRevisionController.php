@@ -228,14 +228,15 @@ class TeacherRepositoryRevisionController extends Controller
         $isChoiceType = !in_array($qTypeVal, $nonChoiceTypes, true);
 
         if ($isChoiceType) {
+            $isAudioOnlyChoice = ToeicQuestionValidator::isAudioOnlyChoicePart($partNumber);
             if ($request->has('choices')) {
                 $correctChoiceId = $request->input('correct_choice_id');
                 foreach ($request->input('choices', []) as $cId => $cData) {
-                    if (!empty($cData['content'])) {
+                    if ($isAudioOnlyChoice || !empty($cData['content'])) {
                         $proposedChoices[] = [
                             'id' => $cId,
                             'label' => $cData['label'] ?? 'A',
-                            'content' => $cData['content'],
+                            'content' => $cData['content'] ?? '',
                             'is_correct' => ((string) $correctChoiceId === (string) $cId) || (isset($cData['is_correct']) && $cData['is_correct'] == '1'),
                         ];
                     }

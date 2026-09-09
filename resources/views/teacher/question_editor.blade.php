@@ -44,8 +44,8 @@
             </div>
 
             <div>
-                <label style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Prompt Stem Text</label>
-                <textarea name="prompt" rows="4" required oninput="updateEditorAutoDifficulty()" style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;line-height:1.5;">{{ old('prompt', $question->prompt) }}</textarea>
+                <label id="eq-prompt-label" style="display:block;font-size:.85rem;font-weight:700;color:#334155;margin-bottom:.4rem;">Prompt Stem Text</label>
+                <textarea name="prompt" id="eq-prompt" rows="4" oninput="updateEditorAutoDifficulty()" style="width:100%;padding:.75rem;background:#ffffff;border:1px solid #cbd5e1;border-radius:.6rem;color:#0f172a;font-size:.9rem;line-height:1.5;">{{ old('prompt', $question->prompt) }}</textarea>
             </div>
 
             @php
@@ -321,7 +321,7 @@
                         status = 'Pending';
                         text.textContent = 'Pending: Waiting for inputs';
                         dotColor = '#94a3b8';
-                    } else if (choices.length >= 3 && (prompt || hasAudio)) {
+                    } else if (hasAudio || (choices.length >= 3 && prompt)) {
                         status = 'Final';
                         level = prompt.toLowerCase().match(/^(when|where|who|what time)\b/) ? 'Easy' : (prompt.toLowerCase().match(/^(why don\'t|could you|would you)\b/) ? 'Medium' : 'Hard');
                         dotColor = level === 'Easy' ? '#10b981' : (level === 'Hard' ? '#f43f5e' : '#f59e0b');
@@ -411,6 +411,18 @@
                 const addChoiceBtn = document.getElementById('eq-add-choice-btn') || document.querySelector('button[onclick="addChoiceRow()"]');
                 const titleLabel = document.getElementById('eq-choices-title');
                 const helperSpan = document.getElementById('eq-choices-helper');
+                const promptInput = document.getElementById('eq-prompt') || document.querySelector('#edit-question-form textarea[name="prompt"]');
+                const promptLabel = document.getElementById('eq-prompt-label');
+
+                if (promptInput) {
+                    if (part === 1 || part === 2 || part === 6) {
+                        promptInput.removeAttribute('required');
+                        if (promptLabel) promptLabel.innerHTML = 'Prompt Stem Text <span style="font-size:.72rem;color:#64748b;font-weight:500;">(Optional for Part ' + part + ')</span>';
+                    } else {
+                        promptInput.setAttribute('required', 'required');
+                        if (promptLabel) promptLabel.innerHTML = 'Prompt Stem Text <span style="color:#f43f5e;">*</span>';
+                    }
+                }
 
                 if (part === 1) {
                     if (titleLabel) titleLabel.textContent = 'STATEMENTS & CORRECT ANSWER';
@@ -430,6 +442,7 @@
                     document.querySelectorAll('.btn-remove-choice').forEach(btn => btn.style.display = 'none');
                     document.querySelectorAll('#choices-container input[type="text"]').forEach(input => {
                         input.placeholder = 'Optional statement transcript...';
+                        input.removeAttribute('required');
                     });
                     reindexChoices();
                 } else if (part === 2) {
@@ -437,7 +450,11 @@
                     if (helperSpan) helperSpan.textContent = 'Candidates hear the three responses in the audio and select A, B, or C. Response transcripts are optional authoring metadata and are not shown during the test.';
                     if (addChoiceBtn) addChoiceBtn.style.display = 'none';
                     const choiceRows = document.querySelectorAll('#choices-container .choice-row');
-                    if (choiceRows.length > 3) {
+                    if (choiceRows.length < 3) {
+                        for (let i = choiceRows.length; i < 3; i++) {
+                            addChoiceRow();
+                        }
+                    } else if (choiceRows.length > 3) {
                         for (let i = 3; i < choiceRows.length; i++) {
                             choiceRows[i].remove();
                         }
@@ -445,6 +462,7 @@
                     document.querySelectorAll('.btn-remove-choice').forEach(btn => btn.style.display = 'none');
                     document.querySelectorAll('#choices-container input[type="text"]').forEach(input => {
                         input.placeholder = 'Optional response transcript...';
+                        input.removeAttribute('required');
                     });
                     reindexChoices();
                 } else {
