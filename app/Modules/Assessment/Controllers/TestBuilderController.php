@@ -629,6 +629,17 @@ class TestBuilderController extends Controller
             }
 
             $toeicData = $request->all();
+            if ($partNumber === 2 && isset($toeicData['choices']) && is_array($toeicData['choices']) && count($toeicData['choices']) === 4) {
+                $c3 = $toeicData['choices'][3] ?? null;
+                $text3 = is_array($c3) ? ($c3['content'] ?? ($c3['choice_text'] ?? '')) : (string) ($c3 ?? '');
+                $corr = $toeicData['correct_choice'] ?? null;
+                if (empty(trim($text3)) && (string) $corr !== '3') {
+                    $toeicData['choices'] = array_slice($toeicData['choices'], 0, 3);
+                    if (isset($validated['choices'])) {
+                        $validated['choices'] = array_slice($validated['choices'], 0, 3);
+                    }
+                }
+            }
             $toeicData['prompt'] = $validated['prompt'] ?? '';
             $toeicData['difficulty'] = $detection['difficulty_level'];
             ToeicQuestionValidator::validate($toeicData);
@@ -675,6 +686,7 @@ class TestBuilderController extends Controller
                     'label'      => chr(65 + count($choices)),
                     'content'    => $choiceText ?? '',
                     'is_correct' => $isCorrect,
+                    'order'      => count($choices) + 1,
                 ];
             }
         }
@@ -699,9 +711,9 @@ class TestBuilderController extends Controller
             'points'                 => $validated['points'] ?? 1,
             'explanation'            => $validated['explanation'] ?? null,
             'media_asset_id'         => $validated['media_asset_id'] ?? null,
-            'image_media_asset_id'   => $validated['image_media_asset_id'] ?? null,
+            'image_media_asset_id'   => ((int) $partNumber === 2) ? null : ($validated['image_media_asset_id'] ?? null),
             'audio_media_asset_id'   => $validated['audio_media_asset_id'] ?? null,
-            'image_url'              => $validated['image_url'] ?? null,
+            'image_url'              => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? null),
             'audio_url'              => $validated['audio_url'] ?? null,
             'passage_id'             => $validated['passage_id'] ?? null,
             'passage_text'           => $validated['passage_text'] ?? null,
@@ -1344,10 +1356,21 @@ class TestBuilderController extends Controller
 
         if ($request->filled('part_number')) {
             $toeicData = $request->all();
+            $partNumber = (int) $request->input('part_number');
+            if ($partNumber === 2 && isset($toeicData['choices']) && is_array($toeicData['choices']) && count($toeicData['choices']) === 4) {
+                $c3 = $toeicData['choices'][3] ?? null;
+                $text3 = is_array($c3) ? ($c3['content'] ?? ($c3['choice_text'] ?? '')) : (string) ($c3 ?? '');
+                $corr = $toeicData['correct_choice'] ?? null;
+                if (empty(trim($text3)) && (string) $corr !== '3') {
+                    $toeicData['choices'] = array_slice($toeicData['choices'], 0, 3);
+                    if (isset($validated['choices'])) {
+                        $validated['choices'] = array_slice($validated['choices'], 0, 3);
+                    }
+                }
+            }
             $toeicData['prompt'] = $validated['prompt'] ?? '';
             $toeicData['difficulty'] = $detection['difficulty_level'];
             ToeicQuestionValidator::validate($toeicData, $question);
-            $partNumber = (int) $request->input('part_number');
             $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
             $question->part_number = $partNumber;
             $question->section = $sectionType;
@@ -1370,14 +1393,21 @@ class TestBuilderController extends Controller
         if (isset($validated['passage_id'])) $question->passage_id = $validated['passage_id'];
         if (isset($validated['passage_text'])) $question->passage_text = $validated['passage_text'];
 
-        if ($request->has('image_media_asset_id')) {
-            $question->image_media_asset_id = $request->input('image_media_asset_id') ?: null;
+        $effectivePart = $question->part_number ?? $request->input('part_number');
+        if ((int) $effectivePart === 2) {
+            $question->image_url = null;
+            $question->image_media_asset_id = null;
+        } else {
+            if ($request->has('image_media_asset_id')) {
+                $question->image_media_asset_id = $request->input('image_media_asset_id') ?: null;
+            }
+            if ($request->has('image_url')) {
+                $question->image_url = $request->input('image_url') ?: null;
+            }
         }
+
         if ($request->has('audio_media_asset_id')) {
             $question->audio_media_asset_id = $request->input('audio_media_asset_id') ?: null;
-        }
-        if ($request->has('image_url')) {
-            $question->image_url = $request->input('image_url') ?: null;
         }
         if ($request->has('audio_url')) {
             $question->audio_url = $request->input('audio_url') ?: null;

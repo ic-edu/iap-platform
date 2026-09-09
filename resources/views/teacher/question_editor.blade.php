@@ -107,11 +107,11 @@
             </div>
 
             {{-- Question Media Section --}}
-            <div style="background:#f8fafc;padding:1.1rem;border-radius:.75rem;border:1px solid #e2e8f0;">
+            <div id="eq-media-section" style="background:#f8fafc;padding:1.1rem;border-radius:.75rem;border:1px solid #e2e8f0;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
                     <div>
-                        <span style="font-size:.85rem;font-weight:800;color:#0f172a;display:block;">🖼️ / 🎧 Question Media Attachments</span>
-                        <span style="font-size:.75rem;color:#64748b;">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
+                        <span id="eq-media-title" style="font-size:.85rem;font-weight:800;color:#0f172a;display:block;">🖼️ / 🎧 Question Media Attachments</span>
+                        <span id="eq-media-hint" style="font-size:.75rem;color:#64748b;">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
                     </div>
                     <button type="button" onclick="openQuestionMediaPicker()" style="padding:.4rem .85rem;background:#4f46e5;color:#fff;border:none;border-radius:.45rem;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
                         📎 + Attach Media
@@ -424,7 +424,22 @@
                     }
                 }
 
+                const imgPreviewCard = document.getElementById('eq-preview-image-card');
+                const imgEmptyCard = document.getElementById('eq-empty-image-card');
+                const imgUrlInput = document.getElementById('eq-image-url');
+                const mediaTitle = document.getElementById('eq-media-title');
+                const mediaHint = document.getElementById('eq-media-hint');
+
                 if (part === 1) {
+                    if (mediaTitle) mediaTitle.innerHTML = '🖼️ / 🎧 Question Media <span style="color:#e11d48;font-weight:800;">* (Photograph & Audio Required)</span>';
+                    if (mediaHint) mediaHint.textContent = 'Part 1 (Photographs) requires both an Image/Photograph attachment and an Audio prompt.';
+                    if (imgPreviewCard && imgUrlInput && imgUrlInput.value) {
+                        imgPreviewCard.style.display = 'flex';
+                        if (imgEmptyCard) imgEmptyCard.style.display = 'none';
+                    } else if (imgEmptyCard) {
+                        imgEmptyCard.style.display = 'flex';
+                    }
+
                     if (titleLabel) titleLabel.textContent = 'STATEMENTS & CORRECT ANSWER';
                     if (helperSpan) helperSpan.textContent = 'Candidates hear the four statements in the audio and select A, B, C, or D. Statement transcripts are optional authoring metadata and are not shown during the test.';
                     if (addChoiceBtn) addChoiceBtn.style.display = 'none';
@@ -446,6 +461,12 @@
                     });
                     reindexChoices();
                 } else if (part === 2) {
+                    if (imgPreviewCard) imgPreviewCard.style.display = 'none';
+                    if (imgEmptyCard) imgEmptyCard.style.display = 'none';
+                    if (imgUrlInput) imgUrlInput.value = '';
+                    if (mediaTitle) mediaTitle.innerHTML = '🎧 Question Audio Prompt <span style="color:#e11d48;font-weight:800;">* (Required for Part 2)</span>';
+                    if (mediaHint) mediaHint.textContent = 'Part 2 (Question–Response) is audio-delivered. Spoken question and 3 choices are in the audio file. Photograph/Image is not applicable.';
+
                     if (titleLabel) titleLabel.textContent = 'Responses & Correct Answer Selection';
                     if (helperSpan) helperSpan.textContent = 'Candidates hear the three responses in the audio and select A, B, or C. Response transcripts are optional authoring metadata and are not shown during the test.';
                     if (addChoiceBtn) addChoiceBtn.style.display = 'none';
@@ -466,6 +487,15 @@
                     });
                     reindexChoices();
                 } else {
+                    if (mediaTitle) mediaTitle.innerHTML = '🖼️ / 🎧 Question Media Attachments (Optional)';
+                    if (mediaHint) mediaHint.textContent = 'Attach Question-level Photo (Image) and/or Audio Prompt if applicable.';
+                    if (imgPreviewCard && imgUrlInput && imgUrlInput.value) {
+                        imgPreviewCard.style.display = 'flex';
+                        if (imgEmptyCard) imgEmptyCard.style.display = 'none';
+                    } else if (imgEmptyCard) {
+                        imgEmptyCard.style.display = 'flex';
+                    }
+
                     if (titleLabel) titleLabel.textContent = 'Choices & Correct Answer Selection';
                     if (helperSpan) helperSpan.textContent = 'Select exactly one radio button on the left to set the correct answer.';
                     if (addChoiceBtn) addChoiceBtn.style.display = 'inline-block';

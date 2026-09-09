@@ -1433,10 +1433,10 @@
             </div>
 
             {{-- Question Media Section --}}
-            <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
+            <div id="create-q-media-section" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
                 <div>
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 block">🖼️ / 🎧 Question Media (Optional)</span>
-                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
+                    <span id="create-q-media-title" class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 block">🖼️ / 🎧 Question Media (Optional)</span>
+                    <span id="create-q-media-hint" class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Attach Question-level Photo (Image) and/or Audio Prompt (e.g. TOEIC Part 1 Photographs).</span>
                 </div>
 
                 <input type="hidden" id="q-media-asset-id" name="media_asset_id" value="">
@@ -1445,77 +1445,83 @@
 
                 {{-- Attached Media Previews --}}
                 <div id="q-attached-media-container" class="flex flex-col gap-2.5 mt-2">
-                    {{-- Image preview card --}}
-                    <div id="q-preview-image-card" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 items-center justify-between shadow-sm">
-                        <div class="flex items-center gap-3">
-                            <img id="q-preview-image-thumb" src="" alt="Thumbnail" class="w-12 h-12 object-cover rounded-lg border border-slate-200 dark:border-slate-700">
-                            <div>
-                                <span class="text-xs font-bold text-sky-700 dark:text-sky-300 block">🖼️ Attached Image (Photograph)</span>
-                                <span id="q-preview-image-title" class="text-[11px] text-slate-600 dark:text-slate-400 max-w-xs truncate block"></span>
+                    {{-- Image Controls Wrapper --}}
+                    <div id="q-image-controls-wrapper" class="flex flex-col gap-2.5">
+                        {{-- Image preview card --}}
+                        <div id="q-preview-image-card" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 items-center justify-between shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <img id="q-preview-image-thumb" src="" alt="Thumbnail" class="w-12 h-12 object-cover rounded-lg border border-slate-200 dark:border-slate-700">
+                                <div>
+                                    <span class="text-xs font-bold text-sky-700 dark:text-sky-300 block">🖼️ Attached Image (Photograph)</span>
+                                    <span id="q-preview-image-title" class="text-[11px] text-slate-600 dark:text-slate-400 max-w-xs truncate block"></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="previewQuestionModalMedia('create', 'image')" class="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded-lg text-xs font-bold">
+                                    👁️ Preview
+                                </button>
+                                <button type="button" onclick="openQuestionMediaPicker('create', 'image')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
+                                    Change
+                                </button>
+                                <button type="button" onclick="removeQuestionAttachedMedia('create', 'image')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-lg text-xs font-bold">
+                                    ✕ Remove
+                                </button>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="previewQuestionModalMedia('create', 'image')" class="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded-lg text-xs font-bold">
-                                👁️ Preview
-                            </button>
-                            <button type="button" onclick="openQuestionMediaPicker('create', 'image')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
-                                Change
-                            </button>
-                            <button type="button" onclick="removeQuestionAttachedMedia('create', 'image')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-lg text-xs font-bold">
-                                ✕ Remove
+
+                        {{-- Image empty placeholder --}}
+                        <div id="q-empty-image-card" class="flex items-center justify-between bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-xl">🖼️</span>
+                                <div>
+                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Question Photograph / Image</span>
+                                    <span class="text-[11px] text-slate-500 dark:text-slate-400">No image attached</span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="openQuestionMediaPicker('create', 'image')" class="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded-xl text-xs font-bold">
+                                + Attach Image
                             </button>
                         </div>
                     </div>
 
-                    {{-- Image empty placeholder --}}
-                    <div id="q-empty-image-card" class="flex items-center justify-between bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3">
-                        <div class="flex items-center gap-2.5">
-                            <span class="text-xl">🖼️</span>
-                            <div>
-                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Question Photograph / Image</span>
-                                <span class="text-[11px] text-slate-500 dark:text-slate-400">No image attached</span>
+                    {{-- Audio Controls Wrapper --}}
+                    <div id="q-audio-controls-wrapper" class="flex flex-col gap-2.5">
+                        {{-- Audio preview card --}}
+                        <div id="q-preview-audio-card" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 items-center justify-between shadow-sm">
+                            <div class="flex items-center gap-3 flex-1">
+                                <span class="text-xl">🎧</span>
+                                <div class="flex-1">
+                                    <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 block">🎵 Attached Audio Prompt</span>
+                                    <span id="q-preview-audio-title" class="text-[11px] text-slate-600 dark:text-slate-400 max-w-xs truncate block mb-1"></span>
+                                    <audio id="q-preview-audio-player" controls class="h-7 w-full max-w-xs" src=""></audio>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="previewQuestionModalMedia('create', 'audio')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
+                                    👁️ Preview
+                                </button>
+                                <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
+                                    Change
+                                </button>
+                                <button type="button" onclick="removeQuestionAttachedMedia('create', 'audio')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-lg text-xs font-bold">
+                                    ✕ Remove
+                                </button>
                             </div>
                         </div>
-                        <button type="button" onclick="openQuestionMediaPicker('create', 'image')" class="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 rounded-xl text-xs font-bold">
-                            + Attach Image
-                        </button>
-                    </div>
 
-                    {{-- Audio preview card --}}
-                    <div id="q-preview-audio-card" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 items-center justify-between shadow-sm">
-                        <div class="flex items-center gap-3 flex-1">
-                            <span class="text-xl">🎧</span>
-                            <div class="flex-1">
-                                <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 block">🎵 Attached Audio Prompt</span>
-                                <span id="q-preview-audio-title" class="text-[11px] text-slate-600 dark:text-slate-400 max-w-xs truncate block mb-1"></span>
-                                <audio id="q-preview-audio-player" controls class="h-7 w-full max-w-xs" src=""></audio>
+                        {{-- Audio empty placeholder --}}
+                        <div id="q-empty-audio-card" class="flex items-center justify-between bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-xl">🎧</span>
+                                <div>
+                                    <span id="q-empty-audio-title" class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Question Audio Prompt</span>
+                                    <span class="text-[11px] text-slate-500 dark:text-slate-400">No audio attached</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="previewQuestionModalMedia('create', 'audio')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
-                                👁️ Preview
-                            </button>
-                            <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-lg text-xs font-bold">
-                                Change
-                            </button>
-                            <button type="button" onclick="removeQuestionAttachedMedia('create', 'audio')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-lg text-xs font-bold">
-                                ✕ Remove
+                            <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-xs font-bold">
+                                + Attach Audio
                             </button>
                         </div>
-                    </div>
-
-                    {{-- Audio empty placeholder --}}
-                    <div id="q-empty-audio-card" class="flex items-center justify-between bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3">
-                        <div class="flex items-center gap-2.5">
-                            <span class="text-xl">🎧</span>
-                            <div>
-                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Question Audio Prompt</span>
-                                <span class="text-[11px] text-slate-500 dark:text-slate-400">No audio attached</span>
-                            </div>
-                        </div>
-                        <button type="button" onclick="openQuestionMediaPicker('create', 'audio')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-xs font-bold">
-                            + Attach Audio
-                        </button>
                     </div>
                 </div>
             </div>
@@ -3095,8 +3101,17 @@
             }
         }
 
+        const imgControlsWrapper = document.getElementById('q-image-controls-wrapper');
+        const imgCard = document.getElementById('q-preview-image-card');
+        const imgEmpty = document.getElementById('q-empty-image-card');
+        const imgUrlInput = document.getElementById('q-image-url');
+        const mediaTitle = document.getElementById('create-q-media-title');
+        const mediaHint = document.getElementById('create-q-media-hint');
+        const audioEmptyTitle = document.getElementById('q-empty-audio-title');
+
         const choiceRow3 = document.getElementById('create-choice-row-3');
         const choiceInput3 = choiceRow3 ? choiceRow3.querySelector('input[type="text"]') : null;
+        const choiceRadio3 = choiceRow3 ? choiceRow3.querySelector('input[type="radio"]') : null;
         const choicesLabel = document.getElementById('create-q-choices-label');
         const choicesHint = document.getElementById('create-q-choices-hint');
         const promptInput = document.getElementById('create-q-prompt') || document.querySelector('#create-authored-question-form textarea[name="prompt"]');
@@ -3115,44 +3130,102 @@
         }
 
         if (part === 1) {
+            // Part 1: Photograph REQUIRED, Audio REQUIRED, 4 choices A/B/C/D
+            if (imgControlsWrapper) imgControlsWrapper.style.display = 'flex';
+            if (mediaTitle) mediaTitle.innerHTML = '🖼️ / 🎧 Question Media <span class="text-rose-500 font-extrabold">* (Photograph & Audio Required)</span>';
+            if (mediaHint) mediaHint.textContent = 'Part 1 (Photographs) requires both an Image/Photograph attachment and an Audio prompt.';
+            if (audioEmptyTitle) audioEmptyTitle.innerHTML = 'Question Audio Prompt <span class="text-rose-500 font-extrabold">* (Required)</span>';
+
             if (choiceRow3) choiceRow3.style.display = 'flex';
+            if (choiceInput3) {
+                choiceInput3.disabled = false;
+                choiceInput3.removeAttribute('required');
+            }
+            if (choiceRadio3) {
+                choiceRadio3.disabled = false;
+            }
             if (choicesLabel) choicesLabel.textContent = 'STATEMENTS & CORRECT ANSWER';
             if (choicesHint) choicesHint.textContent = 'Candidates hear the four statements in the audio and select A, B, C, or D. Statement transcripts are optional authoring metadata and are not shown during the test.';
             for (let i = 0; i < 4; i++) {
                 const row = document.getElementById(`create-choice-row-${i}`);
                 const inp = row ? row.querySelector('input[type="text"]') : null;
+                const rad = row ? row.querySelector('input[type="radio"]') : null;
                 if (inp) {
+                    inp.disabled = false;
                     inp.placeholder = 'Optional statement transcript...';
                     inp.removeAttribute('required');
                 }
+                if (rad) {
+                    rad.disabled = false;
+                }
             }
         } else if (part === 2) {
+            // Part 2: Audio REQUIRED, Image NOT APPLICABLE, exactly 3 choices A/B/C (D disabled & removed from submit)
+            if (imgControlsWrapper) imgControlsWrapper.style.display = 'none';
+            if (imgCard) { imgCard.classList.add('hidden'); imgCard.style.display = 'none'; }
+            if (imgEmpty) { imgEmpty.classList.add('hidden'); imgEmpty.style.display = 'none'; }
+            if (imgUrlInput) imgUrlInput.value = '';
+
+            if (mediaTitle) mediaTitle.innerHTML = '🎧 Audio Prompt <span class="text-rose-500 font-extrabold">* Required for Part 2</span>';
+            if (mediaHint) mediaHint.textContent = 'Part 2 (Question–Response) is audio-delivered. Spoken question and 3 choices are in the audio file. Photograph/Image is not applicable.';
+            if (audioEmptyTitle) audioEmptyTitle.innerHTML = 'Question Audio Prompt <span class="text-rose-500 font-extrabold">* (Required)</span>';
+
             if (choiceRow3) choiceRow3.style.display = 'none';
             if (choiceInput3) {
                 choiceInput3.value = '';
+                choiceInput3.disabled = true;
                 choiceInput3.removeAttribute('required');
             }
+            if (choiceRadio3) {
+                choiceRadio3.disabled = true;
+                if (choiceRadio3.checked) {
+                    choiceRadio3.checked = false;
+                }
+            }
+
             if (choicesLabel) choicesLabel.textContent = 'Responses & Correct Answer (Part 2 — Listening)';
             if (choicesHint) choicesHint.textContent = 'Candidates hear the three responses in the audio and select A, B, or C. Response transcripts are optional authoring metadata and are not shown during the test.';
             for (let i = 0; i < 3; i++) {
                 const row = document.getElementById(`create-choice-row-${i}`);
                 const inp = row ? row.querySelector('input[type="text"]') : null;
+                const rad = row ? row.querySelector('input[type="radio"]') : null;
                 if (inp) {
+                    inp.disabled = false;
                     inp.placeholder = 'Optional response transcript...';
                     inp.removeAttribute('required');
                 }
+                if (rad) {
+                    rad.disabled = false;
+                }
             }
         } else {
+            // Parts 3-7: Standard Media & 4 Choices
+            if (imgControlsWrapper) imgControlsWrapper.style.display = 'flex';
+            if (mediaTitle) mediaTitle.innerHTML = '🖼️ / 🎧 Question Media (Optional)';
+            if (mediaHint) mediaHint.textContent = 'Attach Question-level Photo (Image) and/or Audio Prompt if applicable.';
+            if (audioEmptyTitle) audioEmptyTitle.innerHTML = 'Question Audio Prompt';
+
             if (choiceRow3) choiceRow3.style.display = 'flex';
+            if (choiceInput3) {
+                choiceInput3.disabled = false;
+            }
+            if (choiceRadio3) {
+                choiceRadio3.disabled = false;
+            }
             if (choicesLabel) choicesLabel.textContent = 'Multiple Choice Options & Correct Answer';
             if (choicesHint) choicesHint.textContent = 'Select exactly one radio button as the correct answer.';
             for (let i = 0; i < 4; i++) {
                 const row = document.getElementById(`create-choice-row-${i}`);
                 const inp = row ? row.querySelector('input[type="text"]') : null;
+                const rad = row ? row.querySelector('input[type="radio"]') : null;
                 const lbl = String.fromCharCode(65 + i);
                 if (inp) {
+                    inp.disabled = false;
                     inp.placeholder = `Option ${lbl} text`;
                     if (i < 2) inp.setAttribute('required', 'required');
+                }
+                if (rad) {
+                    rad.disabled = false;
                 }
             }
         }

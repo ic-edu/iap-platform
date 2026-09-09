@@ -840,10 +840,21 @@ class QuestionBankController extends Controller
 
         if ($request->filled('part_number')) {
             $toeicData = $request->all();
+            $partNumber = (int) $request->input('part_number');
+            if ($partNumber === 2 && isset($toeicData['choices']) && is_array($toeicData['choices']) && count($toeicData['choices']) === 4) {
+                $c3 = $toeicData['choices'][3] ?? null;
+                $text3 = is_array($c3) ? ($c3['content'] ?? ($c3['choice_text'] ?? '')) : (string) ($c3 ?? '');
+                $corr = $toeicData['correct_choice'] ?? null;
+                if (empty(trim($text3)) && (string) $corr !== '3') {
+                    $toeicData['choices'] = array_slice($toeicData['choices'], 0, 3);
+                    if (isset($validated['choices'])) {
+                        $validated['choices'] = array_slice($validated['choices'], 0, 3);
+                    }
+                }
+            }
             $toeicData['prompt'] = $validated['prompt'] ?? '';
             $toeicData['difficulty'] = $validated['difficulty'];
             ToeicQuestionValidator::validate($toeicData);
-            $partNumber = (int) $request->input('part_number');
             $section = ToeicQuestionValidator::deriveSection($partNumber);
         } else {
             $partNumber = $validated['part_number'] ?? null;
@@ -855,10 +866,10 @@ class QuestionBankController extends Controller
         $question = Question::create([
             'question_bank_id'      => $questionBank->id,
             'media_asset_id'        => $validated['media_asset_id'] ?? null,
-            'image_media_asset_id'  => $validated['image_media_asset_id'] ?? null,
+            'image_media_asset_id'  => ((int) $partNumber === 2) ? null : ($validated['image_media_asset_id'] ?? null),
             'audio_media_asset_id'  => $validated['audio_media_asset_id'] ?? null,
             'passage_id'            => $validated['passage_id'] ?? null,
-            'image_url'             => $validated['image_url'] ?? null,
+            'image_url'             => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? null),
             'prompt'                => $validated['prompt'] ?? '',
             'section'               => $section ?: 'reading',
             'part_number'           => $partNumber,
@@ -1228,10 +1239,21 @@ class QuestionBankController extends Controller
 
         if ($request->filled('part_number')) {
             $toeicData = $request->all();
+            $partNumber = (int) $request->input('part_number');
+            if ($partNumber === 2 && isset($toeicData['choices']) && is_array($toeicData['choices']) && count($toeicData['choices']) === 4) {
+                $c3 = $toeicData['choices'][3] ?? null;
+                $text3 = is_array($c3) ? ($c3['content'] ?? ($c3['choice_text'] ?? '')) : (string) ($c3 ?? '');
+                $corr = $toeicData['correct_choice'] ?? null;
+                if (empty(trim($text3)) && (string) $corr !== '3') {
+                    $toeicData['choices'] = array_slice($toeicData['choices'], 0, 3);
+                    if (isset($validated['choices'])) {
+                        $validated['choices'] = array_slice($validated['choices'], 0, 3);
+                    }
+                }
+            }
             $toeicData['prompt'] = $validated['prompt'] ?? '';
             $toeicData['difficulty'] = $validated['difficulty'];
             ToeicQuestionValidator::validate($toeicData, $question);
-            $partNumber = (int) $request->input('part_number');
             $section = ToeicQuestionValidator::deriveSection($partNumber);
         } else {
             $partNumber = $validated['part_number'] ?? $question->part_number;
@@ -1243,7 +1265,7 @@ class QuestionBankController extends Controller
         $updateData = [
             'prompt'        => $validated['prompt'] ?? '',
             'passage_id'    => $validated['passage_id'] ?? $question->passage_id,
-            'image_url'     => $validated['image_url'] ?? $question->image_url,
+            'image_url'     => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? $question->image_url),
             'section'       => $section ?: 'reading',
             'part_number'   => $partNumber,
             'question_type' => $qType,
@@ -1257,8 +1279,13 @@ class QuestionBankController extends Controller
         if ($request->has('media_asset_id')) {
             $updateData['media_asset_id'] = $request->input('media_asset_id') ?: null;
         }
-        if ($request->has('image_media_asset_id')) {
-            $updateData['image_media_asset_id'] = $request->input('image_media_asset_id') ?: null;
+        if ((int) $partNumber === 2) {
+            $updateData['image_media_asset_id'] = null;
+            $updateData['image_url'] = null;
+        } else {
+            if ($request->has('image_media_asset_id')) {
+                $updateData['image_media_asset_id'] = $request->input('image_media_asset_id') ?: null;
+            }
         }
         if ($request->has('audio_media_asset_id')) {
             $updateData['audio_media_asset_id'] = $request->input('audio_media_asset_id') ?: null;

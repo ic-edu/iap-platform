@@ -113,7 +113,7 @@ test('TOEIC-P2-03: Part 2 rejects 4 choices (choice D forbidden) and rejects few
         'part_number'    => 2,
         'audio_url'      => 'https://example.com/audio/p2.mp3',
         'correct_choice' => 0,
-        'choices'        => ['', '', '', ''],
+        'choices'        => ['Option A', 'Option B', 'Option C', 'Option D'],
     ]);
     expect($check4['is_valid'])->toBeFalse();
     expect($check4['errors'])->toHaveKey('choices');
@@ -305,4 +305,129 @@ test('TOEIC-P2-09: RepositoryQualityService does not flag valid Part 2 item as i
     expect($report['scores']['questions'])->toEqual(100);
     $warnings = collect($report['warnings']);
     expect($warnings->filter(fn($w) => str_contains($w, 'missing prompt') || str_contains($w, 'incomplete') || str_contains($w, 'answer choices'))->isEmpty())->toBeTrue();
+});
+
+// P2-LIVE-01: Actual browser-shaped trailing blank D payload => normalized => SAVE PASS
+test('P2-LIVE-01: Actual browser-shaped trailing blank D payload is normalized to 3 choices and saves successfully', function () {
+    $response = $this->actingAs($this->teacher)->post(route('teacher.tests.create-question', $this->test->id), [
+        'test_section_id' => $this->listeningSection->id,
+        'part_number'     => 2,
+        'prompt'          => '',
+        'question_type'   => 'multiple_choice',
+        'audio_url'       => $this->audioAsset->path,
+        'correct_choice'  => 1, // B
+        'choices'         => ['', '', '', ''], // 4th trailing blank choice from browser form
+    ]);
+
+    $response->assertRedirect();
+    $savedQ = Question::where('part_number', 2)->latest('id')->first();
+    expect($savedQ)->not->toBeNull();
+    expect($savedQ->choices)->toHaveCount(3);
+    expect($savedQ->choices->pluck('label')->toArray())->toEqual(['A', 'B', 'C']);
+    expect($savedQ->choices->where('is_correct', true)->first()->label)->toEqual('B');
+});
+
+// P2-LIVE-02: Direct A/B/C-only payload => PASS
+test('P2-LIVE-02: Direct 3-choice A/B/C payload saves cleanly', function () {
+    $response = $this->actingAs($this->teacher)->post(route('teacher.tests.create-question', $this->test->id), [
+        'test_section_id' => $this->listeningSection->id,
+        'part_number'     => 2,
+        'prompt'          => '',
+        'question_type'   => 'multiple_choice',
+        'audio_url'       => $this->audioAsset->path,
+        'correct_choice'  => 2, // C
+        'choices'         => ['', '', ''],
+    ]);
+
+    $response->assertRedirect();
+    $savedQ = Question::where('part_number', 2)->latest('id')->first();
+    expect($savedQ->choices)->toHaveCount(3);
+    expect($savedQ->choices->where('is_correct', true)->first()->label)->toEqual('C');
+});
+
+// P2-LIVE-03: Non-empty D => FAIL
+test('P2-LIVE-03: Non-empty fourth choice D strictly fails Part 2 validation', function () {
+    $check = ToeicQuestionValidator::check([
+        'part_number'    => 2,
+        'audio_url'      => 'https://example.com/audio/p2.mp3',
+        'correct_choice' => 0,
+        'choices'        => ['', '', '', 'Fourth spoken transcript'],
+    ]);
+
+    expect($check['is_valid'])->toBeFalse();
+    expect($check['errors'])->toHaveKey('choices');
+});
+
+// P2-LIVE-04: D selected correct => FAIL
+test('P2-LIVE-04: Choice D selected as correct answer strictly fails Part 2 validation', function () {
+    $check = ToeicQuestionValidator::check([
+        'part_number'    => 2,
+        'audio_url'      => 'https://example.com/audio/p2.mp3',
+        'correct_choice' => 3, // D is forbidden
+        'choices'        => ['', '', '', ''],
+    ]);
+
+    expect($check['is_valid'])->toBeFalse();
+});
+
+// P2-LIVE-05: Correct B remains B after normalization => PASS
+test('P2-LIVE-05: Correct choice B mapping remains intact after phantom D normalization', function () {
+    $response = $this->actingAs($this->teacher)->post(route('teacher.tests.create-question', $this->test->id), [
+        'test_section_id' => $this->listeningSection->id,
+        'part_number'     => 2,
+        'prompt'          => '',
+        'question_type'   => 'multiple_choice',
+        'audio_url'       => $this->audioAsset->path,
+        'correct_choice'  => '1', // B
+        'choices'         => ['', '', '', ''],
+    ]);
+
+    $response->assertRedirect();
+    $q = Question::where('part_number', 2)->latest('id')->first();
+    expect($q->choices)->toHaveCount(3);
+    $correct = $q->choices->where('is_correct', true)->first();
+    expect($correct->label)->toEqual('B');
+});
+
+// P2-LIVE-06: Part 2 without audio => FAIL
+test('P2-LIVE-06: Part 2 without audio attachment fails validation', function () {
+    $check = ToeicQuestionValidator::check([
+        'part_number'    => 2,
+        'audio_url'      => null,
+        'correct_choice' => 0,
+        'choices'        => ['', '', ''],
+    ]);
+
+    expect($check['is_valid'])->toBeFalse();
+    expect($check['errors'])->toHaveKey('audio_url');
+});
+
+// P2-LIVE-07 & P2-LIVE-08: Authoring UI contracts
+test('P2-LIVE-07 & 08: Authoring UI modal markup contains Part 2 specific media controls and audio required hints', function () {
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+    $response->assertStatus(200);
+    $response->assertSee('id="create-q-media-section"', false);
+    $response->assertSee('id="q-image-controls-wrapper"', false);
+    $response->assertSee('id="q-audio-controls-wrapper"', false);
+    $response->assertSee('Required for Part 2');
+});
+
+// P2-LIVE-15: Part switch scenario and stale image sanitization
+test('P2-LIVE-15: Part 2 creation sanitizes image_url to null even if stale image was submitted in payload', function () {
+    $response = $this->actingAs($this->teacher)->post(route('teacher.tests.create-question', $this->test->id), [
+        'test_section_id' => $this->listeningSection->id,
+        'part_number'     => 2,
+        'prompt'          => '',
+        'question_type'   => 'multiple_choice',
+        'audio_url'       => $this->audioAsset->path,
+        'image_url'       => 'https://example.com/stale-image-from-part1.jpg',
+        'correct_choice'  => 0,
+        'choices'         => ['', '', '', ''],
+    ]);
+
+    $response->assertRedirect();
+    $savedQ = Question::where('part_number', 2)->latest('id')->first();
+    expect($savedQ->image_url)->toBeNull();
+    expect($savedQ->image_media_asset_id)->toBeNull();
+    expect($savedQ->audio_url)->toEqual($this->audioAsset->path);
 });

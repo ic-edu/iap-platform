@@ -250,6 +250,12 @@ class TeacherRepositoryRevisionController extends Controller
                     'is_correct' => $request->has('new_choice_is_correct'),
                 ];
             }
+            if ((int) $partNumber === 2 && count($proposedChoices) === 4) {
+                $c3 = $proposedChoices[3];
+                if (empty(trim($c3['content'] ?? '')) && empty($c3['is_correct'])) {
+                    $proposedChoices = array_slice($proposedChoices, 0, 3);
+                }
+            }
         }
 
         $mediaAssetId = $question->media_asset_id;

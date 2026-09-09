@@ -125,13 +125,16 @@ class TestBuilderService
         ]);
 
         if (!empty($data['choices']) && is_array($data['choices'])) {
+            $cOrder = 1;
             foreach ($data['choices'] as $choice) {
                 \App\Modules\QuestionBank\Models\QuestionChoice::create([
                     'question_id' => $question->id,
-                    'label'       => $choice['label'] ?? 'A',
+                    'label'       => $choice['label'] ?? chr(64 + $cOrder),
                     'content'     => $choice['content'] ?? '',
                     'is_correct'  => !empty($choice['is_correct']),
+                    'order'       => $choice['order'] ?? $cOrder,
                 ]);
+                $cOrder++;
             }
         }
 
