@@ -650,3 +650,51 @@ test('11. Non-TOEIC tests and questions remain unaffected by audio group rules',
     // Non-TOEIC question without part_number is not toeic
     expect(ToeicQuestionValidator::isToeic($toeflQuestion))->toBeFalse();
 });
+
+test('12. Teacher assessment view renders Part 3 audio group authoring modal with high contrast theme tokens (P3-UI-01..05)', function () {
+    $test = Test::create([
+        'title'            => 'TOEIC Mock Test Group UAT',
+        'slug'             => 'toeic-mock-test-group-uat-' . uniqid(),
+        'test_type'        => 'toeic',
+        'assessment_mode'  => 'simulator',
+        'duration_minutes' => 120,
+        'pass_score'       => 500,
+        'created_by'       => $this->teacher->id,
+        'status'           => 'draft',
+    ]);
+
+    $section = TestSection::create([
+        'test_id'          => $test->id,
+        'title'            => 'Part 3: Conversations',
+        'section_type'     => 'listening',
+        'order'            => 3,
+        'duration_minutes' => 30,
+    ]);
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $test->id));
+    $response->assertStatus(200);
+
+    // P3-UI-01: Modal header and helper text
+    $response->assertSee('Create Audio Question Group');
+    $response->assertSee('TOEIC Part 3/4 uses exactly 3 questions per audio group.');
+    $response->assertSee('text-slate-600 dark:text-slate-300', false);
+
+    // P3-UI-02: Shared audio stimulus helper and empty state
+    $response->assertSee('This audio will be shared by all 3 questions in this group.');
+    $response->assertSee('No shared audio attached yet');
+    $response->assertSee('text-slate-900 dark:text-slate-100', false);
+
+    // P3-UI-03: Labels and placeholders
+    $response->assertSee('Group Title (Optional)');
+    $response->assertSee('Conversation Script / Transcript (Optional)');
+    $response->assertSee('placeholder:text-slate-500 dark:placeholder:text-slate-400', false);
+
+    // P3-UI-04: Child question stems and choice helpers
+    $response->assertSee('Question 1 Prompt / Stem');
+    $response->assertSee('Answer Choices (A–D) &amp; Correct Answer', false);
+    $response->assertSee('Select radio for correct answer');
+
+    // P3-UI-05: Badges and progress
+    $response->assertSee('Progress: 0 / 3 Complete');
+    $response->assertSee('LISTENING • PART 3');
+});

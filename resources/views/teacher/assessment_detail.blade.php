@@ -1913,15 +1913,15 @@
                     <span id="ag-modal-title">Create Audio Question Group</span>
                 </div>
                 <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <span id="ag-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold"></span>
-                    <span id="ag-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">LISTENING • PART 3</span>
-                    <span id="ag-header-progress" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">Progress: 0 / 3 Complete</span>
+                    <span id="ag-target-section-title" class="text-xs text-indigo-700 dark:text-indigo-300 font-bold"></span>
+                    <span id="ag-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800/40">LISTENING • PART 3</span>
+                    <span id="ag-header-progress" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">Progress: 0 / 3 Complete</span>
                 </div>
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-medium">
                     TOEIC Part 3/4 uses exactly 3 questions per audio group. You may save your progress before all 3 questions are complete.
                 </div>
             </div>
-            <button type="button" onclick="closeCreateAudioGroupModal()" aria-label="Close audio group modal" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <button type="button" onclick="closeCreateAudioGroupModal()" aria-label="Close audio group modal" class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
@@ -1940,12 +1940,12 @@
             <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                        <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <div class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                             <span>🎧</span>
                             <span>Shared Audio Stimulus</span>
-                            <span class="text-rose-500">*</span>
+                            <span class="text-rose-600 dark:text-rose-400">*</span>
                         </div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-medium">
                             This audio will be shared by all 3 questions in this group.
                         </div>
                     </div>
@@ -1953,12 +1953,12 @@
 
                 {{-- Empty State (No audio chosen yet) --}}
                 <div id="ag-empty-audio-card" class="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2">
-                    <div class="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <div class="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-700 dark:text-indigo-300">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
                     </div>
                     <div>
-                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">No shared audio attached yet</div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Choose from My Media, Institutional Library, or upload new audio (MP3, M4A, WAV).</div>
+                        <div class="text-xs font-bold text-slate-900 dark:text-slate-100">No shared audio attached yet</div>
+                        <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-medium">Choose from My Media, Institutional Library, or upload new audio (MP3, M4A, WAV).</div>
                     </div>
                     <button type="button" onclick="openQuestionMediaPicker('audio-group', 'audio')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-sm inline-flex items-center gap-1.5 transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -1970,21 +1970,21 @@
                 <div id="ag-preview-audio-card" class="hidden bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/60 rounded-xl p-3 shadow-sm space-y-2">
                     <div class="flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 text-xl">
+                            <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-700 dark:text-indigo-300 shrink-0 text-xl">
                                 🎵
                             </div>
                             <div class="min-w-0 text-left">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">SHARED AUDIO</span>
+                                    <span class="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800/40">SHARED AUDIO</span>
                                 </div>
                                 <div id="ag-preview-audio-title" class="text-xs font-extrabold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md mt-0.5"></div>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                            <button type="button" onclick="openQuestionMediaPicker('audio-group', 'audio')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+                            <button type="button" onclick="openQuestionMediaPicker('audio-group', 'audio')" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">
                                 Change Audio
                             </button>
-                            <button type="button" onclick="removeAudioGroupAttachedMedia()" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-lg border border-rose-200 dark:border-rose-900/40 transition-colors" title="Remove audio">
+                            <button type="button" onclick="removeAudioGroupAttachedMedia()" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-lg border border-rose-200 dark:border-rose-900/40 transition-colors" title="Remove audio">
                                 Clear
                             </button>
                         </div>
@@ -1997,25 +1997,25 @@
                 {{-- Optional Group Title & Audio Script --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div>
-                        <label for="ag-title" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <label for="ag-title" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                             Group Title (Optional)
                         </label>
-                        <input type="text" name="title" id="ag-title" placeholder="e.g. Office Meeting Conversation, Airport Announcement" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <input type="text" name="title" id="ag-title" placeholder="e.g. Office Meeting Conversation, Airport Announcement" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
                     <div>
-                        <label for="ag-audio-script" id="ag-script-label" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <label for="ag-audio-script" id="ag-script-label" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                             Conversation Script / Transcript (Optional)
                         </label>
-                        <input type="text" name="audio_script" id="ag-audio-script" placeholder="Enter dialogue transcript or audio script..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <input type="text" name="audio_script" id="ag-audio-script" placeholder="Enter dialogue transcript or audio script..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
                 </div>
             </div>
 
             {{-- 2. Exactly 3 Child Question Panels --}}
             <div class="space-y-4">
-                <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                <div class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center justify-between">
                     <span>Child Questions</span>
-                    <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 lowercase">Questions 1, 2, 3</span>
+                    <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 lowercase">Questions 1, 2, 3</span>
                 </div>
 
                 @for($i = 0; $i < 3; $i++)
@@ -2025,36 +2025,36 @@
                     <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-black px-2 py-0.5 rounded bg-indigo-600 text-white">QUESTION {{ $i + 1 }} OF 3</span>
-                            <span id="ag-q{{ $i }}-status-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">○ Incomplete</span>
+                            <span id="ag-q{{ $i }}-status-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">○ Incomplete</span>
                         </div>
-                        <div id="ag-q{{ $i }}-diff-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
-                            <span id="ag-q{{ $i }}-diff-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                        <div id="ag-q{{ $i }}-diff-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+                            <span id="ag-q{{ $i }}-diff-dot" class="w-2 h-2 rounded-full bg-slate-500 dark:bg-slate-400"></span>
                             <span id="ag-q{{ $i }}-diff-text">Waiting for input</span>
                         </div>
                     </div>
 
                     {{-- Question Prompt --}}
                     <div>
-                        <label for="ag-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <label for="ag-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                             Question {{ $i + 1 }} Prompt / Stem
                         </label>
-                        <textarea name="questions[{{ $i }}][prompt]" id="ag-q{{ $i }}-prompt" rows="2" oninput="updateAudioGroupAutoDifficulty()" placeholder="e.g. What does the woman suggest the man do?" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                        <textarea name="questions[{{ $i }}][prompt]" id="ag-q{{ $i }}-prompt" rows="2" oninput="updateAudioGroupAutoDifficulty()" placeholder="e.g. What does the woman suggest the man do?" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
                     </div>
 
                     {{-- Answer Choices (A, B, C, D) --}}
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
-                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
                                 Answer Choices (A–D) &amp; Correct Answer
                             </label>
-                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Select radio for correct answer</span>
+                            <span class="text-xs text-slate-600 dark:text-slate-300 font-semibold">Select radio for correct answer</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             @foreach(['A', 'B', 'C', 'D'] as $cIdx => $optLabel)
                             <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
                                 <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="ag-q{{ $i }}-correct-{{ $cIdx }}" {{ $cIdx === 0 ? 'checked' : '' }} onchange="updateAudioGroupAutoDifficulty()" class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
-                                <span class="text-xs font-black text-slate-700 dark:text-slate-300 w-4">{{ $optLabel }}</span>
-                                <input type="text" name="questions[{{ $i }}][choices][]" id="ag-q{{ $i }}-choice-{{ $cIdx }}" oninput="updateAudioGroupAutoDifficulty()" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                                <span class="text-xs font-black text-slate-900 dark:text-white w-4">{{ $optLabel }}</span>
+                                <input type="text" name="questions[{{ $i }}][choices][]" id="ag-q{{ $i }}-choice-{{ $cIdx }}" oninput="updateAudioGroupAutoDifficulty()" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                             </div>
                             @endforeach
                         </div>
@@ -2062,10 +2062,10 @@
 
                     {{-- Optional Explanation --}}
                     <div>
-                        <label for="ag-q{{ $i }}-explanation" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <label for="ag-q{{ $i }}-explanation" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                             Answer Explanation / Rationale (Optional)
                         </label>
-                        <input type="text" name="questions[{{ $i }}][explanation]" id="ag-q{{ $i }}-explanation" placeholder="Explain why the correct answer is right..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <input type="text" name="questions[{{ $i }}][explanation]" id="ag-q{{ $i }}-explanation" placeholder="Explain why the correct answer is right..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
                 </div>
                 @endfor
@@ -2073,7 +2073,7 @@
 
             {{-- 3. Action Footer --}}
             <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onclick="closeCreateAudioGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
+                <button type="button" onclick="closeCreateAudioGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
                     Cancel
                 </button>
                 <button type="submit" id="ag-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
@@ -2096,15 +2096,15 @@
                     <span id="pg-modal-title">Create Text Completion Group</span>
                 </div>
                 <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <span id="pg-target-section-title" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold"></span>
-                    <span id="pg-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">READING • PART 6</span>
-                    <span id="pg-count-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">4 Child Questions</span>
+                    <span id="pg-target-section-title" class="text-xs text-indigo-700 dark:text-indigo-300 font-bold"></span>
+                    <span id="pg-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800/40">READING • PART 6</span>
+                    <span id="pg-count-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">4 Child Questions</span>
                 </div>
-                <div id="pg-helper-text" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                <div id="pg-helper-text" class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-medium">
                     One text is shared by exactly 4 questions.
                 </div>
             </div>
-            <button type="button" onclick="closeCreatePassageGroupModal()" aria-label="Close passage group modal" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <button type="button" onclick="closeCreatePassageGroupModal()" aria-label="Close passage group modal" class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
@@ -2121,32 +2121,32 @@
             <div id="pg-set-type-wrapper" class="hidden bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-3.5 space-y-2">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-black uppercase tracking-wider text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
-                        <span>📑</span> PASSAGE SET TYPE <span class="text-rose-500">*</span>
+                        <span>📑</span> PASSAGE SET TYPE <span class="text-rose-600 dark:text-rose-400">*</span>
                     </span>
-                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Controls documents &amp; question count</span>
+                    <span class="text-[11px] text-slate-600 dark:text-slate-300 font-medium">Controls documents &amp; question count</span>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <button type="button" id="pg-type-btn-single" onclick="setPassageSetType('single')" class="flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left bg-white dark:bg-slate-900 border-indigo-600 shadow-sm">
                         <div class="flex items-center gap-2 font-black text-xs text-indigo-700 dark:text-indigo-300">
                             <span>📄</span> Single Passage
                         </div>
-                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium leading-tight">
+                        <div class="text-[10px] text-slate-600 dark:text-slate-300 mt-1 font-medium leading-tight">
                             1 Document • 2 to 4 Questions
                         </div>
                     </button>
                     <button type="button" id="pg-type-btn-double" onclick="setPassageSetType('double')" class="flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-indigo-400">
-                        <div class="flex items-center gap-2 font-black text-xs text-slate-700 dark:text-slate-300">
+                        <div class="flex items-center gap-2 font-black text-xs text-slate-800 dark:text-slate-200">
                             <span>📄📄</span> Double Passage
                         </div>
-                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium leading-tight">
+                        <div class="text-[10px] text-slate-600 dark:text-slate-300 mt-1 font-medium leading-tight">
                             2 Documents • Exactly 5 Questions
                         </div>
                     </button>
                     <button type="button" id="pg-type-btn-triple" onclick="setPassageSetType('triple')" class="flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-indigo-400">
-                        <div class="flex items-center gap-2 font-black text-xs text-slate-700 dark:text-slate-300">
+                        <div class="flex items-center gap-2 font-black text-xs text-slate-800 dark:text-slate-200">
                             <span>📄📄📄</span> Triple Passage
                         </div>
-                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium leading-tight">
+                        <div class="text-[10px] text-slate-600 dark:text-slate-300 mt-1 font-medium leading-tight">
                             3 Documents • Exactly 5 Questions
                         </div>
                     </button>
@@ -2157,29 +2157,29 @@
             <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4">
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                        <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <div class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                             <span>📄</span>
                             <span id="pg-stimulus-heading">Text / Passage Stimulus</span>
-                            <span class="text-rose-500">*</span>
+                            <span class="text-rose-600 dark:text-rose-400">*</span>
                         </div>
-                        <div id="pg-stimulus-subheading" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <div id="pg-stimulus-subheading" class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-medium">
                             This text is shared by all 4 questions in this group.
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <label for="pg-group-title" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <label for="pg-group-title" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                         Group Title (Optional)
                     </label>
-                    <input type="text" name="title" id="pg-group-title" placeholder="e.g. Training Course Announcement, Customer Email, Staff Memo..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                    <input type="text" name="title" id="pg-group-title" placeholder="e.g. Training Course Announcement, Customer Email, Staff Memo..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                 </div>
 
                 {{-- Document Tabs for Double/Triple --}}
                 <div id="pg-doc-tabs-bar" class="hidden flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
                     <button type="button" id="pg-doc-tab-btn-0" onclick="switchPassageDocTab(0)" class="px-3 py-1.5 rounded-lg text-xs font-black border bg-indigo-600 text-white border-indigo-600 shadow-sm transition-all">Document 1</button>
-                    <button type="button" id="pg-doc-tab-btn-1" onclick="switchPassageDocTab(1)" class="px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 transition-all">Document 2</button>
-                    <button type="button" id="pg-doc-tab-btn-2" onclick="switchPassageDocTab(2)" class="hidden px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 transition-all">Document 3</button>
+                    <button type="button" id="pg-doc-tab-btn-1" onclick="switchPassageDocTab(1)" class="px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-indigo-300 transition-all">Document 2</button>
+                    <button type="button" id="pg-doc-tab-btn-2" onclick="switchPassageDocTab(2)" class="hidden px-3 py-1.5 rounded-lg text-xs font-black border bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-indigo-300 transition-all">Document 3</button>
                 </div>
 
                 {{-- Document Panels (Up to 3) --}}
@@ -2198,10 +2198,10 @@
                         </div>
                         {{-- Document Type Selector --}}
                         <div class="flex items-center gap-1.5">
-                            <label for="pg-doc-{{ $d }}-type" class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Type:</label>
+                            <label for="pg-doc-{{ $d }}-type" class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Type:</label>
                             <select name="passages[{{ $d }}][document_type]" id="pg-doc-{{ $d }}-type" class="px-2.5 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200">
                                 <option value="article">Article / Report</option>
-                                <option value="email">E-mail</option>
+                                <option value="email">Email</option>
                                 <option value="memo">Memo</option>
                                 <option value="advertisement">Advertisement</option>
                                 <option value="notice">Notice / Announcement</option>
@@ -2218,45 +2218,45 @@
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label for="pg-doc-{{ $d }}-title" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label for="pg-doc-{{ $d }}-title" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                                 Document Title (Optional)
                             </label>
-                            <input type="text" name="passages[{{ $d }}][title]" id="pg-doc-{{ $d }}-title" placeholder="e.g. Flight Schedule, Customer Feedback..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                            <input type="text" name="passages[{{ $d }}][title]" id="pg-doc-{{ $d }}-title" placeholder="e.g. Flight Schedule, Customer Feedback..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                         </div>
 
                         {{-- Content Mode Selector (Only Part 7) --}}
                         <div id="pg-doc-{{ $d }}-mode-selector-wrap" class="hidden">
-                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            <label class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                                 Content Stimulus Format
                             </label>
                             <div class="grid grid-cols-3 gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
                                 <button type="button" id="pg-doc-{{ $d }}-mode-text-btn" onclick="setPassageDocContentMode({{ $d }}, 'text')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-indigo-600 text-white shadow-sm transition-all">Text</button>
-                                <button type="button" id="pg-doc-{{ $d }}-mode-image-btn" onclick="setPassageDocContentMode({{ $d }}, 'image')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all">Visual Image</button>
-                                <button type="button" id="pg-doc-{{ $d }}-mode-text_image-btn" onclick="setPassageDocContentMode({{ $d }}, 'text_image')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-all">Text + Image</button>
+                                <button type="button" id="pg-doc-{{ $d }}-mode-image-btn" onclick="setPassageDocContentMode({{ $d }}, 'image')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold text-slate-800 dark:text-slate-200 hover:text-indigo-600 transition-all">Visual Image</button>
+                                <button type="button" id="pg-doc-{{ $d }}-mode-text_image-btn" onclick="setPassageDocContentMode({{ $d }}, 'text_image')" class="px-2 py-1 rounded-lg text-[11px] font-extrabold text-slate-800 dark:text-slate-200 hover:text-indigo-600 transition-all">Text + Image</button>
                             </div>
                         </div>
                     </div>
 
                     {{-- Passage Text Input --}}
                     <div id="pg-doc-{{ $d }}-text-wrap">
-                        <label for="pg-doc-{{ $d }}-content" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Passage Text <span class="text-rose-500" id="pg-doc-{{ $d }}-text-req">*</span>
+                        <label for="pg-doc-{{ $d }}-content" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                            Passage Text <span class="text-rose-600 dark:text-rose-400" id="pg-doc-{{ $d }}-text-req">*</span>
                         </label>
-                        <textarea name="passages[{{ $d }}][content]" id="{{ $d === 0 ? 'pg-passage-content' : 'pg-doc-' . $d . '-content' }}" rows="5" placeholder="Enter reading passage text..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                        <textarea name="passages[{{ $d }}][content]" id="{{ $d === 0 ? 'pg-passage-content' : 'pg-doc-' . $d . '-content' }}" rows="5" placeholder="Enter reading passage text..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
                     </div>
 
                     {{-- Visual Document Image Attachment --}}
                     <div id="pg-doc-{{ $d }}-image-wrap" class="hidden space-y-2">
-                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                            Attached Visual Document Stimulus <span class="text-rose-500">*</span>
+                        <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Attached Visual Document Stimulus <span class="text-rose-600 dark:text-rose-400">*</span>
                         </label>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                        <div class="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
                             Attach candidate-readable visual document (e.g. advertisement layout, form, timetable, invoice).
                         </div>
                         {{-- Empty state --}}
                         <div id="pg-doc-{{ $d }}-empty-image-card" class="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-center">
                             <svg class="w-8 h-8 text-indigo-500 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">No visual document attached</span>
+                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">No visual document attached</span>
                             <button type="button" onclick="openQuestionMediaPicker('passage-{{ $d }}', 'image')" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
                                 <span>🖼</span> Attach Visual Document
                             </button>
@@ -2264,15 +2264,15 @@
                         {{-- Attached state --}}
                         <div id="pg-doc-{{ $d }}-preview-image-card" class="hidden flex items-center justify-between p-3 bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl">
                             <div class="flex items-center gap-3">
-                                <img id="pg-doc-{{ $d }}-preview-image-thumb" src="" alt="Attached Document" class="w-16 h-16 object-contain rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+                                <img id="pg-doc-{{ $d }}-preview-image-thumb" src="" alt="Attached Document" class="w-16 h-16 object-contain rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
                                 <div>
                                     <div id="pg-doc-{{ $d }}-preview-image-title" class="text-xs font-bold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-sm">Document.png</div>
-                                    <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800">Visual Document Attached</span>
+                                    <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-700">Visual Document Attached</span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button type="button" onclick="previewAssetModal(document.getElementById('pg-doc-{{ $d }}-media-asset-id').value, document.getElementById('pg-doc-{{ $d }}-preview-image-title').textContent, 'image', document.getElementById('pg-doc-{{ $d }}-image-url').value)" class="px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-colors">Preview</button>
-                                <button type="button" onclick="removePassageDocMedia({{ $d }})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200 transition-colors">Remove</button>
+                                <button type="button" onclick="previewAssetModal(document.getElementById('pg-doc-{{ $d }}-media-asset-id').value, document.getElementById('pg-doc-{{ $d }}-preview-image-title').textContent, 'image', document.getElementById('pg-doc-{{ $d }}-image-url').value)" class="px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 transition-colors">Preview</button>
+                                <button type="button" onclick="removePassageDocMedia({{ $d }})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:text-rose-300 rounded-lg text-xs font-bold border border-rose-300 dark:border-rose-900 transition-colors">Remove</button>
                             </div>
                         </div>
                     </div>
@@ -2283,7 +2283,7 @@
             {{-- 2. Child Questions Panel (2 to 5 Questions) --}}
             <div class="space-y-4">
                 <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
-                    <div class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <div class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         <span>📝</span>
                         <span id="pg-questions-heading">Child Questions (Exactly 4 Questions Required)</span>
                     </div>
@@ -2308,31 +2308,31 @@
                     {{-- Question Prompt / Stem --}}
                     <div>
                         <div class="flex justify-between items-center mb-1">
-                            <label for="pg-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                                <span id="pg-q{{ $i }}-prompt-label">Question Note / Blank Context (Optional)</span> <span class="text-rose-500 hidden" id="pg-q{{ $i }}-prompt-req">*</span>
+                            <label for="pg-q{{ $i }}-prompt" class="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                                <span id="pg-q{{ $i }}-prompt-label">Question Note / Blank Context (Optional)</span> <span class="text-rose-600 dark:text-rose-400 hidden" id="pg-q{{ $i }}-prompt-req">*</span>
                             </label>
-                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium" id="pg-q{{ $i }}-prompt-note">Optional note</span>
+                            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-medium" id="pg-q{{ $i }}-prompt-note">Optional note</span>
                         </div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mb-1" id="pg-q{{ $i }}-prompt-help">
+                        <div class="text-[11px] text-slate-600 dark:text-slate-300 mb-1" id="pg-q{{ $i }}-prompt-help">
                             The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.
                         </div>
-                        <textarea name="questions[{{ $i }}][prompt]" id="pg-q{{ $i }}-prompt" rows="2" placeholder="e.g. What is suggested about the advertisement?" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+                        <textarea name="questions[{{ $i }}][prompt]" id="pg-q{{ $i }}-prompt" rows="2" placeholder="e.g. What is suggested about the advertisement?" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
                     </div>
 
                     {{-- Answer Choices (A, B, C, D) --}}
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
-                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                                Answer Choices (A–D) &amp; Correct Answer <span class="text-rose-500">*</span>
+                            <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                                Answer Choices (A–D) &amp; Correct Answer <span class="text-rose-600 dark:text-rose-400">*</span>
                             </label>
-                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Select radio for correct answer</span>
+                            <span class="text-xs text-slate-600 dark:text-slate-300 font-semibold">Select radio for correct answer</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             @foreach(['A', 'B', 'C', 'D'] as $cIdx => $optLabel)
                             <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
                                 <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="pg-q{{ $i }}-correct-{{ $cIdx }}" {{ $cIdx === 0 ? 'checked' : '' }} class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
-                                <span class="text-xs font-black text-slate-700 dark:text-slate-300 w-4">{{ $optLabel }}</span>
-                                <input type="text" name="questions[{{ $i }}][choices][]" id="pg-q{{ $i }}-choice-{{ $cIdx }}" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                                <span class="text-xs font-black text-slate-900 dark:text-white w-4">{{ $optLabel }}</span>
+                                <input type="text" name="questions[{{ $i }}][choices][]" id="pg-q{{ $i }}-choice-{{ $cIdx }}" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                             </div>
                             @endforeach
                         </div>
@@ -2340,10 +2340,10 @@
 
                     {{-- Optional Explanation --}}
                     <div>
-                        <label for="pg-q{{ $i }}-explanation" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <label for="pg-q{{ $i }}-explanation" class="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                             Answer Explanation / Rationale (Optional)
                         </label>
-                        <input type="text" name="questions[{{ $i }}][explanation]" id="pg-q{{ $i }}-explanation" placeholder="Explain why the correct answer is right..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <input type="text" name="questions[{{ $i }}][explanation]" id="pg-q{{ $i }}-explanation" placeholder="Explain why the correct answer is right..." class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                     </div>
                 </div>
                 @endfor
@@ -2351,7 +2351,7 @@
 
             {{-- 3. Action Footer --}}
             <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onclick="closeCreatePassageGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
+                <button type="button" onclick="closeCreatePassageGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
                     Cancel
                 </button>
                 <button type="submit" id="pg-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
@@ -2373,11 +2373,11 @@
                     <span id="pg-prev-modal-title">Reading Passage Documents</span>
                 </div>
                 <div class="flex items-center gap-2 mt-1 flex-wrap">
-                    <span id="pg-prev-badge-type" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">Single Passage</span>
-                    <span id="pg-prev-badge-docs" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">1 Document</span>
+                    <span id="pg-prev-badge-type" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800/40">Single Passage</span>
+                    <span id="pg-prev-badge-docs" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">1 Document</span>
                 </div>
             </div>
-            <button type="button" onclick="closePassageGroupPreviewModal()" aria-label="Close preview" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <button type="button" onclick="closePassageGroupPreviewModal()" aria-label="Close preview" class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
@@ -2389,7 +2389,7 @@
         </div>
 
         <div class="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
-            <button type="button" onclick="closePassageGroupPreviewModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
+            <button type="button" onclick="closePassageGroupPreviewModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
                 Close Preview
             </button>
         </div>
@@ -4535,10 +4535,10 @@
             const statusBadge = document.getElementById(`ag-q${i}-status-badge`);
             if (statusBadge) {
                 if (isSlotComplete) {
-                    statusBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800';
+                    statusBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700';
                     statusBadge.textContent = '✓ Complete';
                 } else {
-                    statusBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700';
+                    statusBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700';
                     statusBadge.textContent = '○ Incomplete';
                 }
             }
@@ -4551,8 +4551,8 @@
             if (!badge || !text || !dot) continue;
 
             if (!hasAudio && choices.length === 0 && !prompt) {
-                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
-                dot.className = 'w-2 h-2 rounded-full bg-slate-400';
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700';
+                dot.className = 'w-2 h-2 rounded-full bg-slate-500 dark:bg-slate-400';
                 text.textContent = 'Waiting for input';
             } else if (hasAudio && choices.length >= 4 && prompt.length > 5) {
                 let totalWords = choices.reduce((acc, c) => acc + c.split(/\s+/).filter(Boolean).length, 0);
@@ -4560,19 +4560,19 @@
                 let level = (avg >= 7 || prompt.split(/\s+/).length >= 15) ? 'Hard' : ((avg <= 4 && prompt.split(/\s+/).length <= 8) ? 'Easy' : 'Medium');
 
                 if (level === 'Easy') {
-                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
-                    dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-700';
+                    dot.className = 'w-2 h-2 rounded-full bg-emerald-600';
                 } else if (level === 'Hard') {
-                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800';
-                    dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-300 dark:bg-rose-950/50 dark:text-rose-200 dark:border-rose-800';
+                    dot.className = 'w-2 h-2 rounded-full bg-rose-600';
                 } else {
-                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
-                    dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+                    badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800';
+                    dot.className = 'w-2 h-2 rounded-full bg-amber-600';
                 }
                 text.textContent = `Final — ${level}`;
             } else {
-                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
-                dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+                badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800';
+                dot.className = 'w-2 h-2 rounded-full bg-amber-600';
                 text.textContent = 'Provisional — Medium';
             }
         }
@@ -4582,9 +4582,9 @@
         if (headerProg) {
             headerProg.textContent = `Progress: ${completeCount} / 3 Complete`;
             if (completeCount === 3) {
-                headerProg.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800';
+                headerProg.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700';
             } else {
-                headerProg.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700';
+                headerProg.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700';
             }
         }
 
