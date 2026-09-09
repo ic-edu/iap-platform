@@ -355,7 +355,7 @@ test('TEST 13 - forced child Question failure rolls back PassageGroup + Passage'
             'questions'    => [
                 ['prompt' => '', 'choices' => ['A1', 'B1', 'C1', 'D1'], 'correct_choice' => 0],
                 ['prompt' => '', 'choices' => ['A2', 'B2', 'C2', 'D2'], 'correct_choice' => 1],
-                ['prompt' => '', 'choices' => ['A3', 'B3'], 'correct_choice' => 0], // Invalid 2 choices in Part 6 -> triggers validation exception
+                ['prompt' => '', 'choices' => ['A3', 'B3', 'C3', 'D3'], 'correct_choice' => 2, 'audio_url' => 'https://example.com/forbidden.mp3'], // Forbidden audio in Part 6 -> triggers validation exception
                 ['prompt' => '', 'choices' => ['A4', 'B4', 'C4', 'D4'], 'correct_choice' => 3],
             ],
         ]);
@@ -381,8 +381,7 @@ test('TEST 14 - no orphan PassageGroup remains', function () {
             'questions'    => [
                 ['prompt' => '', 'choices' => ['A1', 'B1', 'C1', 'D1'], 'correct_choice' => 0],
                 ['prompt' => '', 'choices' => ['A2', 'B2', 'C2', 'D2'], 'correct_choice' => 1],
-                ['prompt' => '', 'choices' => ['A3', 'B3', 'C3', 'D3'], 'correct_choice' => 2],
-                // Missing 4th question -> fails 4-question invariant
+                ['prompt' => '', 'choices' => ['A3', 'B3', 'C3', 'D3'], 'correct_choice' => 2, 'audio_url' => 'https://example.com/forbidden.mp3'],
             ],
         ]);
     } catch (\Throwable $e) {
@@ -405,9 +404,9 @@ test('TEST 15 - no orphan Passage remains', function () {
                 ['title' => 'Doc 1', 'content' => 'Content [131]-[134]', 'document_type' => 'article'],
             ],
             'questions'    => [
-                ['prompt' => '', 'choices' => ['A1', 'B1', 'C1', 'D1'], 'correct_choice' => null], // Missing correct answer
+                ['prompt' => '', 'choices' => ['A1', 'B1', 'C1', 'D1'], 'correct_choice' => 0],
                 ['prompt' => '', 'choices' => ['A2', 'B2', 'C2', 'D2'], 'correct_choice' => 1],
-                ['prompt' => '', 'choices' => ['A3', 'B3', 'C3', 'D3'], 'correct_choice' => 2],
+                ['prompt' => '', 'choices' => ['A3', 'B3', 'C3', 'D3'], 'correct_choice' => 2, 'audio_url' => 'https://example.com/forbidden.mp3'],
                 ['prompt' => '', 'choices' => ['A4', 'B4', 'C4', 'D4'], 'correct_choice' => 3],
             ],
         ]);

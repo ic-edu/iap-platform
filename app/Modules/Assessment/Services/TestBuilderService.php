@@ -152,11 +152,12 @@ class TestBuilderService
      * Helper to determine if a submitted child question is complete according to TOEIC standards.
      *
      * @param array<string, mixed> $qData
+     * @param int $partNumber
      * @return bool
      */
-    public function isChildComplete(array $qData): bool
+    public function isChildComplete(array $qData, int $partNumber = 0): bool
     {
-        if (empty(trim((string) ($qData['prompt'] ?? '')))) {
+        if (!in_array($partNumber, [2, 6], true) && empty(trim((string) ($qData['prompt'] ?? '')))) {
             return false;
         }
 
@@ -461,13 +462,23 @@ class TestBuilderService
         $passageType = $data['passage_type'] ?? 'single';
         $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
 
-        // Run validation
-        ToeicQuestionValidator::validatePassageGroup([
-            'part_number'  => $partNumber,
-            'passage_type' => $passageType,
-        ], $data['passages'] ?? [], $data['questions'] ?? []);
+        // Validate required stimulus
+        $passages = $data['passages'] ?? [];
+        if (empty($passages)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'passages' => ['Passage group requires at least one passage stimulus.'],
+            ]);
+        }
+        if ($partNumber === 6) {
+            $hasText = !empty(trim((string) ($passages[0]['content'] ?? '')));
+            if (!$hasText) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'passages.0.content' => ['Passage text is required before saving a Part 6 Text Completion group.'],
+                ]);
+            }
+        }
 
-        return DB::transaction(function () use ($section, $test, $data, $partNumber, $passageType, $sectionType) {
+        return DB::transaction(function () use ($section, $test, $data, $partNumber, $passageType, $sectionType, $passages) {
             $passageGroup = PassageGroup::create([
                 'test_id'          => $test?->id,
                 'title'            => $data['title'] ?? ('Part ' . $partNumber . ' ' . ucfirst($passageType) . ' Passage Group (' . ($test?->title ?? 'Assessment') . ')'),
@@ -478,7 +489,18 @@ class TestBuilderService
                 'created_by'       => $test?->created_by,
             ]);
 
-            $passages = $data['passages'] ?? [];
+            if ($partNumber === 7) {
+                ToeicQuestionValidator::validatePassageGroup($data, $passages, $data['questions'] ?? []);
+            } else {
+                foreach ($data['questions'] ?? [] as $q) {
+                    if (!empty($q['audio_url']) || !empty($q['media_asset_id'])) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'audio_url' => ['Audio is not allowed in Part 6 questions.'],
+                        ]);
+                    }
+                }
+            }
+
             $pIdx = 1;
             foreach ($passages as $pData) {
                 Passage::create([
@@ -497,6 +519,10 @@ class TestBuilderService
 
             $questions = $data['questions'] ?? [];
             foreach ($questions as $qData) {
+                if (!$this->isChildComplete($qData, $partNumber)) {
+                    continue;
+                }
+
                 $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
                     'part_number'  => $partNumber,
                     'passage_type' => $passageType,
@@ -544,7 +570,7 @@ class TestBuilderService
                 ]);
             }
 
-            return $passageGroup;
+            return $passageGroup->fresh(['questions.choices', 'passages']);
         });
     }
 
@@ -558,13 +584,23 @@ class TestBuilderService
         $sectionType = ToeicQuestionValidator::deriveSection($partNumber);
         $test = $passageGroup->test ?? $section?->test;
 
-        // Run domain validation
-        ToeicQuestionValidator::validatePassageGroup([
-            'part_number'  => $partNumber,
-            'passage_type' => $passageType,
-        ], $data['passages'] ?? [], $data['questions'] ?? []);
+        if (!$section && $test) {
+            $section = $test->sections()->where('order', $partNumber)->first()
+                ?? $test->sections()->where('section_type', 'reading')->first()
+                ?? $test->sections()->first();
+        }
 
-        return DB::transaction(function () use ($passageGroup, $data, $partNumber, $passageType, $sectionType, $section, $test) {
+        $passagesData = $data['passages'] ?? [];
+        if ($partNumber === 6) {
+            $firstContent = $passagesData[0]['content'] ?? ($passageGroup->passages()->first()?->content ?? '');
+            if (empty(trim((string) $firstContent))) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'passages.0.content' => ['Passage text is required for Part 6 Text Completion.'],
+                ]);
+            }
+        }
+
+        return DB::transaction(function () use ($passageGroup, $data, $partNumber, $passageType, $sectionType, $section, $test, $passagesData) {
             $passageGroup->update([
                 'title'            => $data['title'] ?? $passageGroup->title,
                 'part_number'      => $partNumber,
@@ -572,8 +608,19 @@ class TestBuilderService
                 'context_metadata' => $data['context_metadata'] ?? $passageGroup->context_metadata,
             ]);
 
+            if ($partNumber === 7) {
+                ToeicQuestionValidator::validatePassageGroup($data, $passagesData, $data['questions'] ?? []);
+            } else {
+                foreach ($data['questions'] ?? [] as $q) {
+                    if (!empty($q['audio_url']) || !empty($q['media_asset_id'])) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'audio_url' => ['Audio is not allowed in Part 6 questions.'],
+                        ]);
+                    }
+                }
+            }
+
             // Update Passages
-            $passagesData = $data['passages'] ?? [];
             $existingPassages = $passageGroup->passages()->orderBy('order_in_group', 'asc')->get()->keyBy('id');
             $pIdx = 1;
             $keptPassageIds = [];
@@ -617,61 +664,111 @@ class TestBuilderService
 
             // Update Questions
             $questionsData = $data['questions'] ?? [];
-            $existingQuestions = $passageGroup->questions()->orderBy('id', 'asc')->get()->keyBy('id');
-            $qIdx = 0;
+            $existingQuestions = $passageGroup->questions()->with('choices')->orderBy('created_at', 'asc')->get()->keyBy('id');
+            $existingList = $passageGroup->questions()->with('choices')->orderBy('created_at', 'asc')->get()->values();
             $keptQuestionIds = [];
 
-            foreach ($questionsData as $qData) {
+            foreach ($questionsData as $slotIdx => $qData) {
                 $qId = $qData['id'] ?? null;
-                $matchedQuestion = $qId ? $existingQuestions->get($qId) : $existingQuestions->values()->get($qIdx);
+                $matchedQuestion = null;
 
-                $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
-                    'part_number'  => $partNumber,
-                    'passage_type' => $passageType,
-                    'passage_text' => $passagesData[0]['content'] ?? null,
-                ]));
+                if ($qId && isset($existingQuestions[$qId])) {
+                    $matchedQuestion = $existingQuestions[$qId];
+                } elseif (isset($existingList[$slotIdx])) {
+                    $matchedQuestion = $existingList[$slotIdx];
+                }
 
+                $isComplete = $this->isChildComplete($qData, $partNumber);
                 $prompt = $qData['prompt'] ?? '';
 
                 if ($matchedQuestion) {
-                    $matchedQuestion->update([
-                        'prompt'                 => $prompt,
-                        'section'                => $sectionType,
-                        'part_number'            => $partNumber,
-                        'question_type'          => 'multiple_choice',
-                        'difficulty'             => $qDetect['difficulty_level'],
-                        'difficulty_score'       => $qDetect['difficulty_score'],
-                        'difficulty_status'      => $qDetect['difficulty_status'],
-                        'difficulty_source'      => 'auto',
-                        'difficulty_factors'     => $qDetect['difficulty_factors'],
-                        'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
-                        'explanation'            => $qData['explanation'] ?? $matchedQuestion->explanation,
-                    ]);
+                    $keptQuestionIds[] = $matchedQuestion->id;
+                    if ($isComplete) {
+                        $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
+                            'part_number'  => $partNumber,
+                            'passage_type' => $passageType,
+                            'passage_text' => $passagesData[0]['content'] ?? null,
+                        ]), $matchedQuestion);
 
-                    // Update choices
-                    $correctChoiceIdx = $qData['correct_choice'] ?? 0;
-                    $choices = $qData['choices'] ?? [];
-                    $existingChoices = $matchedQuestion->choices()->orderBy('order', 'asc')->get();
+                        $matchedQuestion->update([
+                            'prompt'                 => $prompt,
+                            'section'                => $sectionType,
+                            'part_number'            => $partNumber,
+                            'question_type'          => 'multiple_choice',
+                            'difficulty'             => $qDetect['difficulty_level'],
+                            'difficulty_score'       => $qDetect['difficulty_score'],
+                            'difficulty_status'      => $qDetect['difficulty_status'],
+                            'difficulty_source'      => 'auto',
+                            'difficulty_factors'     => $qDetect['difficulty_factors'],
+                            'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
+                            'explanation'            => $qData['explanation'] ?? $matchedQuestion->explanation,
+                        ]);
 
-                    if ($existingChoices->count() === count($choices) && count($choices) === 4) {
-                        foreach ($choices as $cIdx => $choice) {
-                            $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
-                            $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
-                            $existingChoices[$cIdx]->update([
-                                'label'       => chr(65 + $cIdx),
-                                'content'     => $content,
-                                'choice_text' => $content,
-                                'is_correct'  => $isCorrect,
-                                'order'       => $cIdx + 1,
-                            ]);
+                        $correctChoiceIdx = $qData['correct_choice'] ?? 0;
+                        $choices = $qData['choices'] ?? [];
+                        $existingChoices = $matchedQuestion->choices()->orderBy('order', 'asc')->get();
+
+                        if ($existingChoices->count() === count($choices) && count($choices) === 4) {
+                            foreach ($choices as $cIdx => $choice) {
+                                $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                                $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                                $existingChoices[$cIdx]->update([
+                                    'label'       => chr(65 + $cIdx),
+                                    'content'     => $content,
+                                    'choice_text' => $content,
+                                    'is_correct'  => $isCorrect,
+                                    'order'       => $cIdx + 1,
+                                ]);
+                            }
+                        } else {
+                            $matchedQuestion->choices()->delete();
+                            foreach ($choices as $cIdx => $choice) {
+                                $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                                $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                                QuestionChoice::create([
+                                    'question_id' => $matchedQuestion->id,
+                                    'label'       => chr(65 + $cIdx),
+                                    'content'     => $content,
+                                    'choice_text' => $content,
+                                    'is_correct'  => $isCorrect,
+                                    'order'       => $cIdx + 1,
+                                ]);
+                            }
                         }
-                    } else {
-                        $matchedQuestion->choices()->delete();
+                    }
+                } else {
+                    if ($isComplete) {
+                        $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
+                            'part_number'  => $partNumber,
+                            'passage_type' => $passageType,
+                            'passage_text' => $passagesData[0]['content'] ?? null,
+                        ]));
+
+                        $newQuestion = Question::create([
+                            'question_bank_id'       => null,
+                            'passage_group_id'       => $passageGroup->id,
+                            'prompt'                 => $prompt,
+                            'section'                => $sectionType,
+                            'part_number'            => $partNumber,
+                            'question_type'          => 'multiple_choice',
+                            'difficulty'             => $qDetect['difficulty_level'],
+                            'difficulty_score'       => $qDetect['difficulty_score'],
+                            'difficulty_status'      => $qDetect['difficulty_status'],
+                            'difficulty_source'      => 'auto',
+                            'difficulty_factors'     => $qDetect['difficulty_factors'],
+                            'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
+                            'points'                 => 1,
+                            'explanation'            => $qData['explanation'] ?? null,
+                        ]);
+                        $keptQuestionIds[] = $newQuestion->id;
+
+                        $correctChoiceIdx = $qData['correct_choice'] ?? 0;
+                        $choices = $qData['choices'] ?? [];
                         foreach ($choices as $cIdx => $choice) {
                             $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
                             $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
                             QuestionChoice::create([
-                                'question_id' => $matchedQuestion->id,
+                                'question_id' => $newQuestion->id,
                                 'label'       => chr(65 + $cIdx),
                                 'content'     => $content,
                                 'choice_text' => $content,
@@ -679,71 +776,35 @@ class TestBuilderService
                                 'order'       => $cIdx + 1,
                             ]);
                         }
-                    }
-                    $keptQuestionIds[] = $matchedQuestion->id;
-                } else {
-                    $newQuestion = Question::create([
-                        'question_bank_id'       => null,
-                        'passage_group_id'       => $passageGroup->id,
-                        'prompt'                 => $prompt,
-                        'section'                => $sectionType,
-                        'part_number'            => $partNumber,
-                        'question_type'          => 'multiple_choice',
-                        'difficulty'             => $qDetect['difficulty_level'],
-                        'difficulty_score'       => $qDetect['difficulty_score'],
-                        'difficulty_status'      => $qDetect['difficulty_status'],
-                        'difficulty_source'      => 'auto',
-                        'difficulty_factors'     => $qDetect['difficulty_factors'],
-                        'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
-                        'points'                 => 1,
-                        'explanation'            => $qData['explanation'] ?? null,
-                    ]);
 
-                    $correctChoiceIdx = $qData['correct_choice'] ?? 0;
-                    $choices = $qData['choices'] ?? [];
-                    foreach ($choices as $cIdx => $choice) {
-                        $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
-                        $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
-                        QuestionChoice::create([
-                            'question_id' => $newQuestion->id,
-                            'label'       => chr(65 + $cIdx),
-                            'content'     => $content,
-                            'choice_text' => $content,
-                            'is_correct'  => $isCorrect,
-                            'order'       => $cIdx + 1,
-                        ]);
+                        if ($section) {
+                            $nextOrder = (TestQuestion::where('test_section_id', $section->id)->max('order') ?? 0) + 1;
+                            TestQuestion::create([
+                                'test_section_id' => $section->id,
+                                'question_id'     => $newQuestion->id,
+                                'order'           => $nextOrder,
+                                'points'          => 1,
+                            ]);
+                        }
                     }
-
-                    if ($section) {
-                        $nextOrder = (TestQuestion::where('test_section_id', $section->id)->max('order') ?? 0) + 1;
-                        TestQuestion::create([
-                            'test_section_id' => $section->id,
-                            'question_id'     => $newQuestion->id,
-                            'order'           => $nextOrder,
-                            'points'          => 1,
-                        ]);
-                    }
-                    $keptQuestionIds[] = $newQuestion->id;
                 }
-                $qIdx++;
             }
 
             // Clean up removed questions
-            foreach ($existingQuestions as $exId => $exQ) {
-                if (!in_array($exId, $keptQuestionIds, true)) {
-                    $exQ->testQuestions()->delete();
+            foreach ($existingQuestions as $exQId => $exQ) {
+                if (!in_array($exQId, $keptQuestionIds, true)) {
+                    TestQuestion::where('question_id', $exQId)->delete();
                     $exQ->choices()->delete();
                     $exQ->delete();
                 }
             }
 
-            return $passageGroup->fresh(['passages', 'questions.choices']);
+            return $passageGroup->fresh(['questions.choices', 'passages']);
         });
     }
 
     /**
-     * Delete an Assessment-authored Shared Passage Group and its child questions and placements atomically.
-     * Note: Repository-owned Passages/Questions and referenced MediaAssets are preserved.
+     * Delete an Assessment-authored Shared Passage Group and its child questions.
      */
     public function deletePassageGroup(Test $test, PassageGroup $passageGroup): bool
     {
@@ -1166,6 +1227,22 @@ class TestBuilderService
                 $completeCount = $ag->questions->filter(fn($q) => $q->isCompleteChild())->count();
                 foreach ($agCheck['errors'] as $agErrKey => $agErrMsg) {
                     $errors[] = "{$partLabel} - '{$groupTitle}' (Progress: {$completeCount}/3 complete): {$agErrMsg}";
+                }
+            }
+        }
+
+        // Structural Rule 5: TOEIC Passage Group Completeness Check (Part 6 & Part 7)
+        $testPassageGroups = PassageGroup::where('test_id', (string) $test->id)->with(['questions.choices', 'passages'])->get();
+        foreach ($testPassageGroups as $pg) {
+            $pgCheck = ToeicQuestionValidator::checkPassageGroup($pg);
+            if (!$pgCheck['is_valid']) {
+                $isPart6 = (int)$pg->part_number === 6;
+                $partLabel = $isPart6 ? 'Part 6 Text Completion' : 'Part 7 Reading Comprehension';
+                $groupTitle = $pg->title ?: 'Passage Group';
+                $completeCount = $pg->questions->filter(fn($q) => $q->isCompleteChild())->count();
+                $expectedCount = $isPart6 ? 4 : ($pg->passage_type === 'single' ? '2-4' : 5);
+                foreach ($pgCheck['errors'] as $pgErrKey => $pgErrMsg) {
+                    $errors[] = "{$partLabel} - '{$groupTitle}' (Progress: {$completeCount}/{$expectedCount} complete): {$pgErrMsg}";
                 }
             }
         }

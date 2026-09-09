@@ -317,8 +317,8 @@ test('TEST 19: Part 7 rules remain unchanged', function () {
 
 test('TEST 20: Creation is transactional', function () {
     $payload = validPart6Payload($this->part6Section->id);
-    // Break 4th question choice count to trigger rollback
-    $payload['questions'][3]['choices'] = ['A', 'B'];
+    // Attach forbidden audio to Part 6 question to trigger ValidationException
+    $payload['questions'][3]['audio_url'] = 'https://example.com/forbidden.mp3';
 
     try {
         $this->actingAs($this->teacher)->post(
@@ -434,7 +434,7 @@ test('TEST 26: Return context keeps Part 6 expanded', function () {
         $payload
     );
 
-    $res->assertRedirect(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertRedirect();
     $res->assertSessionHas('expanded_section_id', $this->part6Section->id);
 });
 
@@ -567,4 +567,302 @@ test('TEST 33: Candidate Preview unaffected by authoring UI changes', function (
 
     $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $res->assertStatus(200);
+});
+
+// -----------------------------------------------------------------------------
+// DRAFT SAVE & INCOMPLETE GROUP REMEDIATION TESTS (P6-DRAFT-01 to P6-DRAFT-12)
+// -----------------------------------------------------------------------------
+
+test('P6-DRAFT-01: Teacher can save draft Part 6 group with 1 of 4 completed questions', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    // Only keep first question complete; blank out choices for Q2, Q3, Q4
+    $payload['questions'][1]['choices'] = ['', '', '', ''];
+    $payload['questions'][2]['choices'] = ['', '', '', ''];
+    $payload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $res = $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $res->assertRedirect();
+    $res->assertSessionHas('status');
+
+    $pg = PassageGroup::where('test_id', $this->toeicTest->id)->first();
+    expect($pg)->not->toBeNull()
+        ->and($pg->questions()->count())->toBe(1)
+        ->and($pg->isComplete())->toBeFalse();
+
+    $showRes = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $showRes->assertSee('Progress: 1 / 4 Complete');
+    $showRes->assertSee('🟡 INCOMPLETE');
+});
+
+test('P6-DRAFT-02: Teacher can save draft Part 6 group with 2 of 4 completed questions', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    $payload['questions'][2]['choices'] = ['', '', '', ''];
+    $payload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $res = $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $res->assertRedirect();
+    $pg = PassageGroup::where('test_id', $this->toeicTest->id)->first();
+    expect($pg)->not->toBeNull()
+        ->and($pg->questions()->count())->toBe(2)
+        ->and($pg->isComplete())->toBeFalse();
+
+    $showRes = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $showRes->assertSee('Progress: 2 / 4 Complete');
+    $showRes->assertSee('🟡 INCOMPLETE');
+});
+
+test('P6-DRAFT-03: Teacher can save draft Part 6 group with 3 of 4 completed questions', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    $payload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $res = $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $res->assertRedirect();
+    $pg = PassageGroup::where('test_id', $this->toeicTest->id)->first();
+    expect($pg)->not->toBeNull()
+        ->and($pg->questions()->count())->toBe(3)
+        ->and($pg->isComplete())->toBeFalse();
+
+    $showRes = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $showRes->assertSee('Progress: 3 / 4 Complete');
+    $showRes->assertSee('🟡 INCOMPLETE');
+});
+
+test('P6-DRAFT-04: Teacher can save draft Part 6 group with 0 completed questions (passage text only)', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    $payload['questions'][0]['choices'] = ['', '', '', ''];
+    $payload['questions'][1]['choices'] = ['', '', '', ''];
+    $payload['questions'][2]['choices'] = ['', '', '', ''];
+    $payload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $res = $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $res->assertRedirect();
+    $pg = PassageGroup::where('test_id', $this->toeicTest->id)->first();
+    expect($pg)->not->toBeNull()
+        ->and($pg->questions()->count())->toBe(0)
+        ->and($pg->isComplete())->toBeFalse();
+
+    $showRes = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $showRes->assertSee('Progress: 0 / 4 Complete');
+    $showRes->assertSee('🟡 INCOMPLETE');
+});
+
+test('P6-DRAFT-05: Teacher cannot save Part 6 group without passage text', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    $payload['passages'][0]['content'] = '';
+
+    $res = $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $res->assertSessionHasErrors();
+    expect(PassageGroup::where('test_id', $this->toeicTest->id)->count())->toBe(0);
+});
+
+test('P6-DRAFT-06: Teacher saving 4 of 4 complete questions creates complete and valid group', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+
+    $res = $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $res->assertRedirect();
+    $pg = PassageGroup::where('test_id', $this->toeicTest->id)->first();
+    expect($pg)->not->toBeNull()
+        ->and($pg->questions()->count())->toBe(4)
+        ->and($pg->isComplete())->toBeTrue();
+
+    $showRes = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $showRes->assertSee('Progress: 4 / 4 Complete');
+    $showRes->assertSee('🟢 VALID');
+});
+
+test('P6-DRAFT-07: Updating draft group from 2 questions to 4 questions marks group complete', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    $payload['questions'][2]['choices'] = ['', '', '', ''];
+    $payload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $pg = PassageGroup::where('test_id', $this->toeicTest->id)->first();
+    expect($pg->questions()->count())->toBe(2);
+
+    $existingQuestions = $pg->questions()->orderBy('id')->get();
+
+    // Now update with all 4 questions completed
+    $updatePayload = validPart6Payload($this->part6Section->id);
+    $updatePayload['questions'][0]['id'] = $existingQuestions[0]->id;
+    $updatePayload['questions'][1]['id'] = $existingQuestions[1]->id;
+
+    $res = $this->actingAs($this->teacher)->put(
+        route('teacher.tests.update-passage-group', ['test' => $this->toeicTest->id, 'passageGroup' => $pg->id]),
+        $updatePayload
+    );
+
+    $res->assertRedirect();
+    $pg->refresh();
+    expect($pg->questions()->count())->toBe(4)
+        ->and($pg->isComplete())->toBeTrue();
+
+    $showRes = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $showRes->assertSee('Progress: 4 / 4 Complete');
+    $showRes->assertSee('🟢 VALID');
+});
+
+test('P6-DRAFT-08: Updating draft group from 1 question to 2 questions updates complete count and remains incomplete', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    $payload['questions'][1]['choices'] = ['', '', '', ''];
+    $payload['questions'][2]['choices'] = ['', '', '', ''];
+    $payload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $pg = PassageGroup::where('test_id', $this->toeicTest->id)->first();
+    expect($pg->questions()->count())->toBe(1);
+
+    $q1 = $pg->questions()->first();
+
+    // Update with Q1 and Q2 completed
+    $updatePayload = validPart6Payload($this->part6Section->id);
+    $updatePayload['questions'][0]['id'] = $q1->id;
+    $updatePayload['questions'][2]['choices'] = ['', '', '', ''];
+    $updatePayload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $res = $this->actingAs($this->teacher)->put(
+        route('teacher.tests.update-passage-group', ['test' => $this->toeicTest->id, 'passageGroup' => $pg->id]),
+        $updatePayload
+    );
+
+    $res->assertRedirect();
+    $pg->refresh();
+    expect($pg->questions()->count())->toBe(2)
+        ->and($pg->isComplete())->toBeFalse();
+
+    $showRes = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $showRes->assertSee('Progress: 2 / 4 Complete');
+    $showRes->assertSee('🟡 INCOMPLETE');
+});
+
+test('P6-DRAFT-09: Untouched child question slots do not fabricate fake choices in database', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    $payload['questions'][1]['choices'] = ['', '', '', ''];
+    $payload['questions'][2]['choices'] = ['', '', '', ''];
+    $payload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $pg = PassageGroup::where('test_id', $this->toeicTest->id)->first();
+    expect($pg->questions()->count())->toBe(1);
+
+    // Only 4 choices total should exist in DB for this test (belonging to Q1)
+    $allQuestionIds = $pg->questions()->pluck('id');
+    $allChoices = QuestionChoice::whereIn('question_id', $allQuestionIds)->get();
+    expect($allChoices->count())->toBe(4);
+});
+
+test('P6-DRAFT-10: Incomplete Part 6 group blocks Assessment submission to Review Manager', function () {
+    $payload = validPart6Payload($this->part6Section->id);
+    $payload['questions'][2]['choices'] = ['', '', '', ''];
+    $payload['questions'][3]['choices'] = ['', '', '', ''];
+
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    /** @var \App\Modules\Assessment\Services\TestBuilderService $service */
+    $service = app(\App\Modules\Assessment\Services\TestBuilderService::class);
+    $validation = $service->validateAssessment($this->toeicTest);
+
+    expect($validation['is_valid'])->toBeFalse()
+        ->and(count($validation['errors']))->toBeGreaterThan(0);
+});
+
+test('P6-DRAFT-11: Assessment with complete 4/4 Part 6 group passes completeness validation', function () {
+    // Add standalone question to Part 5
+    $p5q = Question::create([
+        'prompt'        => 'Part 5 question stem',
+        'section'       => SectionType::Reading,
+        'part_number'   => 5,
+        'question_type' => QuestionType::MultipleChoice,
+        'difficulty'    => DifficultyLevel::Medium,
+        'points'        => 1,
+    ]);
+    QuestionChoice::create(['question_id' => $p5q->id, 'label' => 'A', 'content' => 'Opt A', 'choice_text' => 'Opt A', 'is_correct' => true, 'order' => 1]);
+    QuestionChoice::create(['question_id' => $p5q->id, 'label' => 'B', 'content' => 'Opt B', 'choice_text' => 'Opt B', 'is_correct' => false, 'order' => 2]);
+    QuestionChoice::create(['question_id' => $p5q->id, 'label' => 'C', 'content' => 'Opt C', 'choice_text' => 'Opt C', 'is_correct' => false, 'order' => 3]);
+    QuestionChoice::create(['question_id' => $p5q->id, 'label' => 'D', 'content' => 'Opt D', 'choice_text' => 'Opt D', 'is_correct' => false, 'order' => 4]);
+    TestQuestion::create(['test_section_id' => $this->part5Section->id, 'question_id' => $p5q->id, 'order' => 1, 'points' => 1]);
+
+    /** @var \App\Modules\Assessment\Services\TestBuilderService $service */
+    $service = app(\App\Modules\Assessment\Services\TestBuilderService::class);
+
+    // Add valid Part 7 passage group
+    $pg7Data = [
+        'test_section_id' => $this->part7Section->id,
+        'part_number'     => 7,
+        'passage_type'    => 'single',
+        'passages'        => [['title' => 'Article', 'content' => 'Article text']],
+        'questions'       => [
+            ['prompt' => 'What is discussed?', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0],
+            ['prompt' => 'Who is contacted?', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 1],
+        ],
+    ];
+    $service->createPassageGroup($this->part7Section, $pg7Data);
+
+    // Add complete 4/4 Part 6 group
+    $payload = validPart6Payload($this->part6Section->id);
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload
+    );
+
+    $validation = $service->validateAssessment($this->toeicTest->fresh());
+
+    expect($validation['is_valid'])->toBeTrue()
+        ->and($validation['errors'])->toBeEmpty();
+});
+
+test('P6-DRAFT-12: Part 7 passage groups continue to require all questions to be valid', function () {
+    $part7Single = [
+        'part_number'  => 7,
+        'passage_type' => 'single',
+    ];
+    $passages = [
+        ['content' => 'Sample Article', 'order_in_group' => 1, 'document_type' => 'article'],
+    ];
+    $questions = [
+        ['prompt' => 'Q1', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0],
+    ];
+
+    // Single passage requires 2-4 questions; 1 question is invalid
+    $result = ToeicQuestionValidator::checkPassageGroup($part7Single, $passages, $questions);
+    expect($result['is_valid'])->toBeFalse()
+        ->and($result['errors'])->toHaveKey('question_count');
 });

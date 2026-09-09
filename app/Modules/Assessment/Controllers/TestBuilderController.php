@@ -914,28 +914,52 @@ class TestBuilderController extends Controller
             'passages.*.content_mode'  => ['nullable', 'string'],
             'passages.*.document_type' => ['nullable', 'string'],
             'passages.*.order_in_group'=> ['nullable', 'integer'],
-            'questions'        => ['required', 'array', 'min:2', 'max:5'],
+            'questions'        => ['required', 'array', 'min:1', 'max:5'],
             'questions.*.id'             => ['nullable', 'string'],
             'questions.*.prompt'         => ['nullable', 'string'],
             'questions.*.difficulty'     => ['nullable', 'string'],
             'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['required', 'array', 'size:4'],
-            'questions.*.correct_choice' => ['required'],
+            'questions.*.choices'        => ['nullable', 'array'],
+            'questions.*.correct_choice' => ['nullable'],
+            'questions.*.audio_url'      => ['nullable', 'string'],
+            'questions.*.media_asset_id' => ['nullable', 'string'],
         ]);
+
+        if ((int) $validated['part_number'] === 6) {
+            $hasPassageText = !empty(trim((string) ($validated['passages'][0]['content'] ?? '')));
+            if (!$hasPassageText) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'passages.0.content' => ['Passage text is required before saving a Part 6 Text Completion group.'],
+                ]);
+            }
+        }
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
 
         try {
-            $this->builderService->createPassageGroup($section, $validated);
+            $passageGroup = $this->builderService->createPassageGroup($section, $validated);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->route('teacher.tests.show', array_filter([
                 'test'    => $test->id,
                 'section' => $section->id,
-            ]))->withErrors($e->validator ?: $e->errors())->withInput()->with('expanded_section_id', $section->id);
+            ]))
+                ->withErrors($e->validator ?: $e->getMessageBag())
+                ->withInput()
+                ->with('expanded_section_id', $section->id);
         }
 
+        $partNum = (int) $validated['part_number'];
+        $isPart6 = $partNum === 6;
+        $groupTypeName = $isPart6 ? 'Text Completion' : 'Passage';
+        $completeCount = $passageGroup->questions->filter(fn($q) => $q->isCompleteChild())->count();
+        $targetCount = $isPart6 ? 4 : $passageGroup->questions->count();
+
+        $statusMsg = $passageGroup->isComplete()
+            ? "Part {$partNum} {$groupTypeName} Group successfully created and attached to '{$section->title}'."
+            : "Part {$partNum} {$groupTypeName} Group draft saved to '{$section->title}' ({$completeCount}/{$targetCount} Complete).";
+
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Part {$validated['part_number']} " . ucfirst($validated['passage_type']) . " Passage Group successfully created and attached to '{$section->title}'.")
+            ->with('status', $statusMsg)
             ->with('expanded_section_id', $section->id);
     }
 
@@ -969,13 +993,15 @@ class TestBuilderController extends Controller
             'passages.*.content_mode'  => ['nullable', 'string'],
             'passages.*.document_type' => ['nullable', 'string'],
             'passages.*.order_in_group'=> ['nullable', 'integer'],
-            'questions'        => ['required', 'array', 'min:2', 'max:5'],
+            'questions'        => ['required', 'array', 'min:1', 'max:5'],
             'questions.*.id'             => ['nullable', 'string'],
             'questions.*.prompt'         => ['nullable', 'string'],
             'questions.*.difficulty'     => ['nullable', 'string'],
             'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['required', 'array', 'size:4'],
-            'questions.*.correct_choice' => ['required'],
+            'questions.*.choices'        => ['nullable', 'array'],
+            'questions.*.correct_choice' => ['nullable'],
+            'questions.*.audio_url'      => ['nullable', 'string'],
+            'questions.*.media_asset_id' => ['nullable', 'string'],
         ]);
 
         $section = null;
@@ -986,17 +1012,29 @@ class TestBuilderController extends Controller
         try {
             $updatedGroup = $this->builderService->updatePassageGroup($passageGroup, $validated, $section);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->route('teacher.tests.show', array_filter([
+            $errRedirect = redirect()->route('teacher.tests.show', array_filter([
                 'test'    => $test->id,
                 'section' => $section?->id,
-            ]))->withErrors($e->validator ?: $e->errors())->withInput();
+            ]))
+                ->withErrors($e->validator ?: $e->getMessageBag())
+                ->withInput();
+
+            if ($section) {
+                $errRedirect->with('expanded_section_id', $section->id);
+            }
+
+            return $errRedirect;
         }
 
-        $partNum = $updatedGroup->part_number;
-        $groupTypeName = ((int) $partNum === 6) ? 'Text Completion' : 'Reading Passage';
+        $partNum = (int) $updatedGroup->part_number;
+        $isPart6 = $partNum === 6;
+        $groupTypeName = $isPart6 ? 'Text Completion' : 'Reading Passage';
+        $completeCount = $updatedGroup->questions->filter(fn($q) => $q->isCompleteChild())->count();
+        $targetCount = $isPart6 ? 4 : $updatedGroup->questions->count();
+
         $statusMsg = $updatedGroup->isComplete()
             ? "Part {$partNum} {$groupTypeName} Group saved successfully."
-            : "Part {$partNum} {$groupTypeName} Group updated.";
+            : "Part {$partNum} {$groupTypeName} Group draft updated ({$completeCount}/{$targetCount} Complete).";
 
         $redirect = redirect()->route('teacher.tests.show', array_filter([
             'test'    => $test->id,

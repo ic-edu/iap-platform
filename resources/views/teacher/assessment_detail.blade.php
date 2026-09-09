@@ -950,7 +950,7 @@
                                                                     'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
                                                                     default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
                                                                 };
-                                                                $isLastPq = ($pqIdx === count($pgSortedQuestions) - 1);
+                                                                $isLastPq = ($pqIdx === count($pgSortedQuestions) - 1) && (!$isPart6 || count($pgSortedQuestions) === 4);
                                                             @endphp
                                                             <div id="question-card-{{ $pq->id }}" class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
                                                                 <span class="text-slate-400 font-mono">{{ $isLastPq ? '└──' : '├──' }}</span>
@@ -967,6 +967,18 @@
                                                                 @endif
                                                             </div>
                                                         @endforeach
+                                                        @if($isPart6 && count($pgSortedQuestions) < 4)
+                                                            @for($missingIdx = count($pgSortedQuestions); $missingIdx < 4; $missingIdx++)
+                                                                @php
+                                                                    $isLastMissing = ($missingIdx === 3);
+                                                                @endphp
+                                                                <div class="flex items-center gap-2 flex-wrap rounded-lg p-1 text-slate-400 dark:text-slate-500 italic">
+                                                                    <span class="font-mono">{{ $isLastMissing ? '└──' : '├──' }}</span>
+                                                                    <span class="font-bold text-amber-600 dark:text-amber-400">Slot {{ $missingIdx + 1 }} (○ Incomplete / Draft):</span>
+                                                                    <span>Question not yet completed</span>
+                                                                </div>
+                                                            @endfor
+                                                        @endif
                                                     </div>
                                                 </div>
                                             @endforeach
@@ -2109,10 +2121,11 @@
                 <div class="flex items-center gap-2 mt-1 flex-wrap">
                     <span id="pg-target-section-title" class="text-xs text-indigo-700 dark:text-indigo-300 font-bold"></span>
                     <span id="pg-part-badge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800/40">READING • PART 6</span>
-                    <span id="pg-count-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">4 Child Questions</span>
+                    <span id="pg-count-badge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">4 Questions per Text</span>
+                    <span id="pg-header-progress" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800">Progress: 0 / 4 Complete</span>
                 </div>
                 <div id="pg-helper-text" class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 font-medium">
-                    One text is shared by exactly 4 questions.
+                    Each Part 6 text contains four Text Completion questions. You may save your progress before all four questions are complete.
                 </div>
             </div>
             <button type="button" onclick="closeCreatePassageGroupModal()" aria-label="Close passage group modal" class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -2310,6 +2323,7 @@
                         <div class="flex items-center gap-2">
                             <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center">{{ $i + 1 }}</span>
                             <span class="text-xs font-extrabold text-slate-900 dark:text-white" id="pg-q{{ $i }}-label">{{ $i < 4 ? 'Question ' . ($i + 1) . ' of 4' : 'Question ' . ($i + 1) }}</span>
+                            <span id="pg-q{{ $i }}-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">○ Incomplete</span>
                         </div>
                         <button type="button" id="pg-q{{ $i }}-remove-btn" onclick="removePassageChildQuestion({{ $i }})" class="hidden px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors">
                             ✕ Remove
@@ -4318,7 +4332,11 @@
                         promptInput.setAttribute('required', 'required');
                     }
                 }
-                choiceInputs.forEach(ci => ci.setAttribute('required', 'required'));
+                if (isPart6) {
+                    choiceInputs.forEach(ci => ci.removeAttribute('required'));
+                } else {
+                    choiceInputs.forEach(ci => ci.setAttribute('required', 'required'));
+                }
             } else {
                 if (card) card.classList.add('hidden');
                 if (promptInput) promptInput.removeAttribute('required');
@@ -4341,6 +4359,80 @@
         }
 
         syncPassageFormFieldsDisabledState();
+        updatePassageGroupProgressAndBadges();
+    }
+
+    function updatePassageGroupProgressAndBadges() {
+        const isPart6 = currentPassagePartNum === 6;
+        const targetCount = getTargetQuestionCount();
+        let completeCount = 0;
+
+        for (let i = 0; i < targetCount; i++) {
+            const choiceInputs = Array.from(document.querySelectorAll(`input[id^="pg-q${i}-choice-"]`));
+            const filledChoicesCount = choiceInputs.filter(ci => ci.value && ci.value.trim().length > 0).length;
+            const promptEl = document.getElementById(`pg-q${i}-prompt`);
+            const promptFilled = promptEl ? promptEl.value.trim().length > 0 : false;
+
+            let isComplete = false;
+            if (isPart6) {
+                // Part 6 blank prompt note is optional; 4 valid choices = complete question
+                isComplete = (filledChoicesCount === 4);
+            } else {
+                // Part 7 prompt stem is required + 4 choices
+                isComplete = promptFilled && (filledChoicesCount === 4);
+            }
+
+            const badge = document.getElementById(`pg-q${i}-status-badge`);
+            if (badge) {
+                if (isComplete) {
+                    badge.textContent = '✓ Complete';
+                    badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
+                } else {
+                    badge.textContent = filledChoicesCount > 0 ? '🟡 In Progress' : '○ Incomplete';
+                    badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
+                }
+            }
+
+            if (isComplete) {
+                completeCount++;
+            }
+        }
+
+        const progressBadge = document.getElementById('pg-header-progress');
+        const helperText = document.getElementById('pg-helper-text');
+        const countBadge = document.getElementById('pg-count-badge');
+        const submitText = document.getElementById('pg-submit-text');
+        const methodInput = document.getElementById('pg-form-method');
+        const isEdit = methodInput && methodInput.value === 'PUT';
+
+        if (isPart6) {
+            if (countBadge) countBadge.textContent = '4 Questions per Text';
+            if (helperText) helperText.textContent = 'Each Part 6 text contains four Text Completion questions. You may save your progress before all four questions are complete.';
+            if (progressBadge) {
+                progressBadge.classList.remove('hidden');
+                progressBadge.textContent = `Progress: ${completeCount} / 4 Complete`;
+                if (completeCount === 4) {
+                    progressBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
+                } else {
+                    progressBadge.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
+                }
+            }
+            if (submitText) {
+                if (completeCount === 4) {
+                    submitText.textContent = isEdit ? 'Update Passage Group' : 'Save Passage Group';
+                } else {
+                    submitText.textContent = isEdit ? 'Update Draft Group' : 'Save Draft Group';
+                }
+            }
+        } else {
+            if (countBadge) {
+                if (currentPassageSetType === 'single') countBadge.textContent = '2 to 4 Questions';
+                else countBadge.textContent = '5 Questions';
+            }
+            if (helperText) helperText.textContent = 'Provide reading text, attached visual document, or both.';
+            if (progressBadge) progressBadge.classList.add('hidden');
+            if (submitText) submitText.textContent = isEdit ? 'Update Passage Group' : 'Save Passage Group';
+        }
     }
 
     function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '') {
@@ -5639,6 +5731,12 @@
 
         const pgForm = document.getElementById('create-passage-group-form');
         if (pgForm) {
+            pgForm.addEventListener('input', function() {
+                updatePassageGroupProgressAndBadges();
+            });
+            pgForm.addEventListener('change', function() {
+                updatePassageGroupProgressAndBadges();
+            });
             pgForm.addEventListener('submit', function() {
                 syncPassageFormFieldsDisabledState();
             });
