@@ -1942,7 +1942,7 @@
         <div id="ag-draft-restored-banner" class="hidden items-center justify-between p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs">
             <div class="flex items-center gap-2">
                 <span class="text-base">📝</span>
-                <span class="font-bold">Unsaved draft restored from your previous session.</span>
+                <span class="font-bold">Unsaved draft restored.</span>
             </div>
             <button type="button" onclick="discardAudioGroupDraft(true)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800 text-amber-900 dark:text-amber-100 text-xs font-extrabold rounded-lg border border-amber-300 dark:border-amber-700 transition-colors">
                 Discard Draft
@@ -3796,11 +3796,13 @@
                 cancelText: 'Continue Editing',
                 variant: 'warning',
                 onConfirm: () => {
+                    discardAudioGroupDraft(true);
                     forceCloseAudioGroupModal();
                 }
             });
         } else {
             if (confirm(message)) {
+                discardAudioGroupDraft(true);
                 forceCloseAudioGroupModal();
             }
         }

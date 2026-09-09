@@ -913,4 +913,53 @@ class TeacherAudioGroupAuthoringUiTest extends TestCase
         $responseTest2->assertSee("iap:audio_group_draft_{$this->teacher->id}_{$test2->id}_", false);
         $responseTest2->assertDontSee("iap:audio_group_draft_{$this->teacher->id}_{$this->test->id}_", false);
     }
+
+    /** @test */
+    public function test_54_group_discard_01_continue_editing_preserves_modal_and_draft()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee("cancelText: 'Continue Editing'", false);
+        $response->assertSee("title: 'Unsaved Changes'", false);
+    }
+
+    /** @test */
+    public function test_55_group_discard_02_discard_changes_invokes_discard_draft_and_closes_modal()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee("confirmText: 'Discard Changes'", false);
+        $response->assertSee('discardAudioGroupDraft(true);', false);
+        $response->assertSee('forceCloseAudioGroupModal();', false);
+    }
+
+    /** @test */
+    public function test_56_group_discard_03_reopening_after_discard_opens_fresh_form_without_restored_banner()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('Unsaved draft restored.', false);
+        $response->assertDontSee('Unsaved draft restored from your previous session.', false);
+        $response->assertSee('function discardAudioGroupDraft(reopenFresh = false)', false);
+        $response->assertSee('sessionStorage.removeItem(getAudioGroupDraftStorageKey(secId))', false);
+    }
+
+    /** @test */
+    public function test_57_group_discard_04_legitimate_transient_draft_restores_state_and_shows_banner()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('sessionStorage.getItem(getAudioGroupDraftStorageKey(sectionId))', false);
+        $response->assertSee('ag-draft-restored-banner', false);
+        $response->assertSee('banner.classList.remove(\'hidden\')', false);
+    }
+
+    /** @test */
+    public function test_58_group_discard_05_successful_save_draft_group_removes_transient_draft()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('function validateCreateAudioGroupForm(form)', false);
+        $response->assertSee('sessionStorage.removeItem(getAudioGroupDraftStorageKey(secId))', false);
+    }
 }
