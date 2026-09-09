@@ -1903,7 +1903,7 @@
 
 @push('modals')
 {{-- Modal 2b: Create / Edit Assessment-Authored Shared Audio Group (Part 3 / Part 4) --}}
-<div id="create-audio-group-modal" class="hidden fixed inset-0 z-[10000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10000;" onclick="closeCreateAudioGroupModal(event)">
+<div id="create-audio-group-modal" class="hidden fixed inset-0 z-[10000] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 10000;">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col p-5 sm:p-6 shadow-2xl space-y-4 overflow-y-auto" onclick="event.stopPropagation()">
         {{-- Header --}}
         <div class="flex justify-between items-start pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -1921,8 +1921,19 @@
                     TOEIC Part 3/4 uses exactly 3 questions per audio group. You may save your progress before all 3 questions are complete.
                 </div>
             </div>
-            <button type="button" onclick="closeCreateAudioGroupModal()" aria-label="Close audio group modal" class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <button type="button" onclick="attemptCloseAudioGroupModal()" aria-label="Close audio group modal" class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        {{-- Draft Restored Notice Banner --}}
+        <div id="ag-draft-restored-banner" class="hidden items-center justify-between p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs">
+            <div class="flex items-center gap-2">
+                <span class="text-base">📝</span>
+                <span class="font-bold">Unsaved draft restored from your previous session.</span>
+            </div>
+            <button type="button" onclick="discardAudioGroupDraft(true)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800 text-amber-900 dark:text-amber-100 text-xs font-extrabold rounded-lg border border-amber-300 dark:border-amber-700 transition-colors">
+                Discard Draft
             </button>
         </div>
 
@@ -2073,7 +2084,7 @@
 
             {{-- 3. Action Footer --}}
             <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onclick="closeCreateAudioGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
+                <button type="button" onclick="attemptCloseAudioGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
                     Cancel
                 </button>
                 <button type="submit" id="ag-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
@@ -2910,6 +2921,9 @@
             if (typeof updateAudioGroupAutoDifficulty === 'function') {
                 updateAudioGroupAutoDifficulty();
             }
+            if (typeof triggerAudioGroupDraftSave === 'function') {
+                triggerAudioGroupDraftSave();
+            }
             return;
         }
 
@@ -3609,6 +3623,175 @@
         }
     }
 
+    function getAudioGroupDraftStorageKey(sectionId) {
+        return `iap:audio_group_draft_{{ auth()->id() }}_{{ $test->id }}_${sectionId || 'default'}`;
+    }
+
+    let _agDraftSaveTimeout = null;
+    window._agBaselineSnapshot = null;
+    window._agSubmitting = false;
+
+    function getAudioGroupCurrentSnapshot() {
+        const secId = document.getElementById('ag-section-id')?.value || '';
+        const partNum = document.getElementById('ag-part-number')?.value || '';
+        const groupType = document.getElementById('ag-group-type')?.value || '';
+        const title = document.getElementById('ag-title')?.value || '';
+        const audioScript = document.getElementById('ag-audio-script')?.value || '';
+        const mediaAssetId = document.getElementById('ag-media-asset-id')?.value || '';
+        const audioUrl = document.getElementById('ag-audio-url')?.value || '';
+        const audioTitle = document.getElementById('ag-preview-audio-title')?.textContent || '';
+        const audioSrc = document.getElementById('ag-preview-audio-player')?.src || '';
+
+        const questions = [];
+        for (let i = 0; i < 3; i++) {
+            const id = document.getElementById(`ag-q${i}-id`)?.value || '';
+            const prompt = document.getElementById(`ag-q${i}-prompt`)?.value || '';
+            const explanation = document.getElementById(`ag-q${i}-explanation`)?.value || '';
+            const choices = [];
+            for (let c = 0; c < 4; c++) {
+                choices.push(document.getElementById(`ag-q${i}-choice-${c}`)?.value || '');
+            }
+            let correctChoice = 0;
+            for (let c = 0; c < 4; c++) {
+                const radio = document.getElementById(`ag-q${i}-correct-${c}`);
+                if (radio && radio.checked) {
+                    correctChoice = c;
+                    break;
+                }
+            }
+            questions.push({ id, prompt, explanation, choices, correct_choice: correctChoice });
+        }
+
+        return {
+            section_id: secId,
+            part_number: partNum,
+            group_type: groupType,
+            title,
+            audio_script: audioScript,
+            media_asset_id: mediaAssetId,
+            audio_url: audioUrl,
+            audio_title: audioTitle,
+            audio_effective_url: audioSrc,
+            questions
+        };
+    }
+
+    function isAudioGroupFormDirty() {
+        const current = getAudioGroupCurrentSnapshot();
+        if (!window._agBaselineSnapshot) {
+            if (current.title.trim() || current.audio_script.trim() || current.media_asset_id || current.audio_url) {
+                return true;
+            }
+            for (let i = 0; i < 3; i++) {
+                const q = current.questions[i];
+                if (q.prompt.trim() || q.explanation.trim() || q.choices.some(c => c.trim().length > 0)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return JSON.stringify(current) !== JSON.stringify(window._agBaselineSnapshot);
+    }
+
+    function triggerAudioGroupDraftSave() {
+        clearTimeout(_agDraftSaveTimeout);
+        _agDraftSaveTimeout = setTimeout(() => {
+            const modal = document.getElementById('create-audio-group-modal');
+            const methodInput = document.getElementById('ag-form-method');
+            if (!modal || modal.classList.contains('hidden') || modal.style.display === 'none') return;
+            if (methodInput && methodInput.value !== 'POST') return;
+
+            const secId = document.getElementById('ag-section-id')?.value;
+            if (!secId) return;
+
+            const snapshot = getAudioGroupCurrentSnapshot();
+            try {
+                sessionStorage.setItem(getAudioGroupDraftStorageKey(secId), JSON.stringify(snapshot));
+            } catch (e) {
+                console.warn('Unable to save audio group draft to sessionStorage', e);
+            }
+        }, 300);
+    }
+
+    function discardAudioGroupDraft(reopenFresh = false) {
+        const secId = document.getElementById('ag-section-id')?.value;
+        if (secId) {
+            try {
+                sessionStorage.removeItem(getAudioGroupDraftStorageKey(secId));
+            } catch (e) {}
+        }
+        const banner = document.getElementById('ag-draft-restored-banner');
+        if (banner) {
+            banner.classList.add('hidden');
+        }
+        if (reopenFresh) {
+            const titleInput = document.getElementById('ag-title');
+            const scriptInput = document.getElementById('ag-audio-script');
+            if (titleInput) titleInput.value = '';
+            if (scriptInput) scriptInput.value = '';
+            removeAudioGroupAttachedMedia();
+
+            for (let i = 0; i < 3; i++) {
+                const idEl = document.getElementById(`ag-q${i}-id`);
+                const promptEl = document.getElementById(`ag-q${i}-prompt`);
+                const explEl = document.getElementById(`ag-q${i}-explanation`);
+                if (idEl) idEl.value = '';
+                if (promptEl) promptEl.value = '';
+                if (explEl) explEl.value = '';
+                for (let c = 0; c < 4; c++) {
+                    const choiceEl = document.getElementById(`ag-q${i}-choice-${c}`);
+                    if (choiceEl) choiceEl.value = '';
+                }
+                const correct0 = document.getElementById(`ag-q${i}-correct-0`);
+                if (correct0) correct0.checked = true;
+            }
+
+            updateAudioGroupAutoDifficulty();
+            window._agBaselineSnapshot = getAudioGroupCurrentSnapshot();
+        }
+    }
+
+    function forceCloseAudioGroupModal() {
+        const modal = document.getElementById('create-audio-group-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+        const player = document.getElementById('ag-preview-audio-player');
+        if (player) {
+            player.pause();
+        }
+        window._agBaselineSnapshot = null;
+    }
+
+    function attemptCloseAudioGroupModal() {
+        const modal = document.getElementById('create-audio-group-modal');
+        if (!modal || modal.classList.contains('hidden') || modal.style.display === 'none') return;
+
+        if (!isAudioGroupFormDirty()) {
+            forceCloseAudioGroupModal();
+            return;
+        }
+
+        const message = 'You have unsaved changes in this audio group. Closing now will discard changes that have not been saved.';
+        if (typeof window.iapConfirm === 'function') {
+            window.iapConfirm({
+                title: 'Unsaved Changes',
+                message: message,
+                confirmText: 'Discard Changes',
+                cancelText: 'Continue Editing',
+                variant: 'warning',
+                onConfirm: () => {
+                    forceCloseAudioGroupModal();
+                }
+            });
+        } else {
+            if (confirm(message)) {
+                forceCloseAudioGroupModal();
+            }
+        }
+    }
+
     function openCreateAudioGroupModal(sectionId, partNumber, sectionTitle = '') {
         const modal = document.getElementById('create-audio-group-modal');
         const form = document.getElementById('create-audio-group-form');
@@ -3643,29 +3826,100 @@
         if (partBadge) partBadge.textContent = isTalk ? 'LISTENING • PART 4' : 'LISTENING • PART 3';
         if (scriptLabel) scriptLabel.textContent = isTalk ? 'Talk Script / Transcript (Optional)' : 'Conversation Script / Transcript (Optional)';
 
-        // Clear previous values
-        const titleInput = document.getElementById('ag-title');
-        const scriptInput = document.getElementById('ag-audio-script');
-        if (titleInput) titleInput.value = '';
-        if (scriptInput) scriptInput.value = '';
-        removeAudioGroupAttachedMedia();
-
-        for (let i = 0; i < 3; i++) {
-            const idEl = document.getElementById(`ag-q${i}-id`);
-            const promptEl = document.getElementById(`ag-q${i}-prompt`);
-            const explEl = document.getElementById(`ag-q${i}-explanation`);
-            if (idEl) idEl.value = '';
-            if (promptEl) promptEl.value = '';
-            if (explEl) explEl.value = '';
-            for (let c = 0; c < 4; c++) {
-                const choiceEl = document.getElementById(`ag-q${i}-choice-${c}`);
-                if (choiceEl) choiceEl.value = '';
+        // Check for existing sessionStorage draft
+        let draftData = null;
+        try {
+            const rawDraft = sessionStorage.getItem(getAudioGroupDraftStorageKey(sectionId));
+            if (rawDraft) {
+                draftData = JSON.parse(rawDraft);
             }
-            const correct0 = document.getElementById(`ag-q${i}-correct-0`);
-            if (correct0) correct0.checked = true;
+        } catch (e) {
+            draftData = null;
+        }
+
+        const banner = document.getElementById('ag-draft-restored-banner');
+
+        if (draftData) {
+            // Restore from draft
+            const titleInput = document.getElementById('ag-title');
+            const scriptInput = document.getElementById('ag-audio-script');
+            if (titleInput) titleInput.value = draftData.title || '';
+            if (scriptInput) scriptInput.value = draftData.audio_script || '';
+
+            const mediaIdInput = document.getElementById('ag-media-asset-id');
+            const audioInput = document.getElementById('ag-audio-url');
+            if (mediaIdInput) mediaIdInput.value = draftData.media_asset_id || '';
+            if (audioInput) audioInput.value = draftData.audio_url || '';
+
+            const effectiveUrl = draftData.audio_effective_url || draftData.audio_url || '';
+            const audioTitle = draftData.audio_title || draftData.title || 'Shared Audio';
+            const prevCard = document.getElementById('ag-preview-audio-card');
+            const emptyCard = document.getElementById('ag-empty-audio-card');
+            const prevTitle = document.getElementById('ag-preview-audio-title');
+            const player = document.getElementById('ag-preview-audio-player');
+
+            if (effectiveUrl || draftData.media_asset_id) {
+                if (prevTitle) prevTitle.textContent = audioTitle;
+                if (player) player.src = effectiveUrl;
+                if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+                if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+            } else {
+                removeAudioGroupAttachedMedia();
+            }
+
+            const qList = draftData.questions || [];
+            for (let i = 0; i < 3; i++) {
+                const q = qList[i] || null;
+                const idEl = document.getElementById(`ag-q${i}-id`);
+                const promptEl = document.getElementById(`ag-q${i}-prompt`);
+                const explEl = document.getElementById(`ag-q${i}-explanation`);
+                if (idEl) idEl.value = q ? (q.id || '') : '';
+                if (promptEl) promptEl.value = q ? (q.prompt || '') : '';
+                if (explEl) explEl.value = q ? (q.explanation || '') : '';
+
+                const choices = q ? (q.choices || []) : [];
+                for (let c = 0; c < 4; c++) {
+                    const choiceEl = document.getElementById(`ag-q${i}-choice-${c}`);
+                    if (choiceEl) choiceEl.value = choices[c] || '';
+                }
+                const correctIdx = q ? (q.correct_choice ?? 0) : 0;
+                const radio = document.getElementById(`ag-q${i}-correct-${correctIdx}`) || document.getElementById(`ag-q${i}-correct-0`);
+                if (radio) radio.checked = true;
+            }
+
+            if (banner) {
+                banner.classList.remove('hidden');
+            }
+        } else {
+            // Clear previous values
+            const titleInput = document.getElementById('ag-title');
+            const scriptInput = document.getElementById('ag-audio-script');
+            if (titleInput) titleInput.value = '';
+            if (scriptInput) scriptInput.value = '';
+            removeAudioGroupAttachedMedia();
+
+            for (let i = 0; i < 3; i++) {
+                const idEl = document.getElementById(`ag-q${i}-id`);
+                const promptEl = document.getElementById(`ag-q${i}-prompt`);
+                const explEl = document.getElementById(`ag-q${i}-explanation`);
+                if (idEl) idEl.value = '';
+                if (promptEl) promptEl.value = '';
+                if (explEl) explEl.value = '';
+                for (let c = 0; c < 4; c++) {
+                    const choiceEl = document.getElementById(`ag-q${i}-choice-${c}`);
+                    if (choiceEl) choiceEl.value = '';
+                }
+                const correct0 = document.getElementById(`ag-q${i}-correct-0`);
+                if (correct0) correct0.checked = true;
+            }
+
+            if (banner) {
+                banner.classList.add('hidden');
+            }
         }
 
         updateAudioGroupAutoDifficulty();
+        window._agBaselineSnapshot = getAudioGroupCurrentSnapshot();
 
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
@@ -3755,24 +4009,21 @@
             if (radio) radio.checked = true;
         }
 
+        const banner = document.getElementById('ag-draft-restored-banner');
+        if (banner) banner.classList.add('hidden');
+
         updateAudioGroupAutoDifficulty();
+        window._agBaselineSnapshot = getAudioGroupCurrentSnapshot();
 
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
     }
 
     function closeCreateAudioGroupModal(e = null) {
-        if (!e || e.target === document.getElementById('create-audio-group-modal')) {
-            const modal = document.getElementById('create-audio-group-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-            }
-            const player = document.getElementById('ag-preview-audio-player');
-            if (player) {
-                player.pause();
-            }
+        if (e && e.target !== document.getElementById('create-audio-group-modal')) {
+            return;
         }
+        attemptCloseAudioGroupModal();
     }
 
     let currentPassageSetType = 'single';
@@ -4513,6 +4764,7 @@
         if (prevCard) { prevCard.classList.add('hidden'); prevCard.style.display = 'none'; }
         if (emptyCard) { emptyCard.classList.remove('hidden'); emptyCard.style.display = 'flex'; }
         updateAudioGroupAutoDifficulty();
+        triggerAudioGroupDraftSave();
     }
 
     function updateAudioGroupAutoDifficulty() {
@@ -4601,6 +4853,13 @@
         if (!mediaId && !audioUrl) {
             alert('⚠️ Please attach a shared audio file before saving this audio question group.');
             return false;
+        }
+        window._agSubmitting = true;
+        const secId = form.querySelector('#ag-section-id')?.value;
+        if (secId) {
+            try {
+                sessionStorage.removeItem(getAudioGroupDraftStorageKey(secId));
+            } catch (e) {}
         }
         return true;
     }
@@ -5225,6 +5484,15 @@
 
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
+            const globalDialog = document.getElementById('iap-global-dialog');
+            if (globalDialog && globalDialog.open) {
+                return;
+            }
+            const audioGroupModal = document.getElementById('create-audio-group-modal');
+            if (audioGroupModal && !audioGroupModal.classList.contains('hidden') && audioGroupModal.style.display !== 'none') {
+                attemptCloseAudioGroupModal();
+                return;
+            }
             closeResubmitModal();
             closeAttachMasterModal();
             closeCreateAuthoredQuestionModal();
@@ -5234,7 +5502,6 @@
             closeAssetPreviewModal();
             closeTeacherRequestRevisionModal();
             closeQuestionMediaPicker();
-            closeCreateAudioGroupModal();
             closeCreatePassageGroupModal();
         }
     });
@@ -5374,6 +5641,28 @@
         if (pgForm) {
             pgForm.addEventListener('submit', function() {
                 syncPassageFormFieldsDisabledState();
+            });
+        }
+
+        window.addEventListener('beforeunload', function(e) {
+            if (window._agSubmitting) return;
+            const agModal = document.getElementById('create-audio-group-modal');
+            if (agModal && !agModal.classList.contains('hidden') && agModal.style.display !== 'none' && isAudioGroupFormDirty()) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        });
+
+        const agForm = document.getElementById('create-audio-group-form');
+        if (agForm) {
+            agForm.addEventListener('input', function() {
+                updateAudioGroupAutoDifficulty();
+                triggerAudioGroupDraftSave();
+            });
+            agForm.addEventListener('change', function() {
+                updateAudioGroupAutoDifficulty();
+                triggerAudioGroupDraftSave();
             });
         }
     });

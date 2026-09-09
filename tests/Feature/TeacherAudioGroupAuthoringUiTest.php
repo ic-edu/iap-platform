@@ -777,4 +777,140 @@ class TeacherAudioGroupAuthoringUiTest extends TestCase
         $response->assertSee('id="question-media-picker-modal"', false);
         $response->assertSee('id="attach-section-media-modal"', false);
     }
+
+    /** @test */
+    public function test_43_audio_group_modal_renders_close_and_cancel_with_attempt_close_guard()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('onclick="attemptCloseAudioGroupModal()"', false);
+        $response->assertSee('id="create-audio-group-modal"', false);
+    }
+
+    /** @test */
+    public function test_44_audio_group_modal_renders_draft_restored_banner_and_discard_button()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('id="ag-draft-restored-banner"', false);
+        $response->assertSee('onclick="discardAudioGroupDraft(true)"', false);
+        $response->assertSee('Discard Draft', false);
+    }
+
+    /** @test */
+    public function test_45_audio_group_modal_includes_session_storage_draft_key_and_restore_logic()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('getAudioGroupDraftStorageKey', false);
+        $response->assertSee('triggerAudioGroupDraftSave', false);
+        $response->assertSee('sessionStorage.getItem', false);
+    }
+
+    /** @test */
+    public function test_46_audio_group_modal_includes_dirty_check_and_confirmation_guard()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('isAudioGroupFormDirty', false);
+        $response->assertSee('attemptCloseAudioGroupModal', false);
+        $response->assertSee('forceCloseAudioGroupModal', false);
+        $response->assertSee('iapConfirm', false);
+    }
+
+    /** @test */
+    public function test_47_audio_group_modal_includes_beforeunload_guard()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('beforeunload', false);
+        $response->assertSee('isAudioGroupFormDirty()', false);
+    }
+
+    /** @test */
+    public function test_48_escape_key_listener_targets_audio_group_guard_when_modal_is_open()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee("event.key === 'Escape'", false);
+        $response->assertSee('attemptCloseAudioGroupModal();', false);
+    }
+
+    /** @test */
+    public function test_49_successful_submission_clears_transient_draft()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee('sessionStorage.removeItem(getAudioGroupDraftStorageKey(secId))', false);
+    }
+
+    /** @test */
+    public function test_50_part_4_shares_identical_unsaved_work_protection_architecture()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $response->assertSee("openCreateAudioGroupModal('{$this->sectionPart4->id}', '4'", false);
+        $response->assertSee('attemptCloseAudioGroupModal', false);
+    }
+
+    /** @test */
+    public function test_51_user_scoped_draft_storage_key_includes_authenticated_user_id()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+        $expectedKeyPrefix = "iap:audio_group_draft_{$this->teacher->id}_{$this->test->id}_";
+        $response->assertSee($expectedKeyPrefix, false);
+    }
+
+    /** @test */
+    public function test_52_cross_user_isolation_teacher_a_draft_cannot_restore_for_teacher_b()
+    {
+        $teacherB = User::factory()->create([
+            'name'   => 'TOEIC Teacher Secondary Author',
+            'email'  => 'toeic_author_b@icedu.org',
+            'status' => 'active',
+        ]);
+        $teacherB->assignRole('teacher');
+
+        $responseA = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $responseA->assertOk();
+        $expectedKeyA = "iap:audio_group_draft_{$this->teacher->id}_{$this->test->id}_";
+        $responseA->assertSee($expectedKeyA, false);
+
+        // Assign teacher B so they can view/author the same test
+        $this->test->update(['assigned_to' => $teacherB->id]);
+
+        $responseB = $this->actingAs($teacherB)->get(route('teacher.tests.show', $this->test->id));
+        $responseB->assertOk();
+        $expectedKeyB = "iap:audio_group_draft_{$teacherB->id}_{$this->test->id}_";
+        $responseB->assertSee($expectedKeyB, false);
+        $responseB->assertDontSee($expectedKeyA, false);
+
+        $this->assertNotEquals($expectedKeyA, $expectedKeyB);
+    }
+
+    /** @test */
+    public function test_53_same_user_different_test_and_section_isolation()
+    {
+        $test2 = Test::create([
+            'title'            => 'TOEIC Audio Group Master Test 2',
+            'slug'             => 'toeic-audio-group-master-test-2-' . \Illuminate\Support\Str::random(6),
+            'test_type'        => 'toeic',
+            'assessment_mode'  => 'simulator',
+            'duration_minutes' => 120,
+            'pass_percentage'  => 75,
+            'status'           => 'draft',
+            'created_by'       => $this->teacher->id,
+            'assigned_to'      => $this->teacher->id,
+        ]);
+
+        $responseTest1 = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $responseTest1->assertOk();
+        $responseTest1->assertSee("iap:audio_group_draft_{$this->teacher->id}_{$this->test->id}_", false);
+
+        $responseTest2 = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $test2->id));
+        $responseTest2->assertOk();
+        $responseTest2->assertSee("iap:audio_group_draft_{$this->teacher->id}_{$test2->id}_", false);
+        $responseTest2->assertDontSee("iap:audio_group_draft_{$this->teacher->id}_{$this->test->id}_", false);
+    }
 }
