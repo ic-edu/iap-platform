@@ -449,8 +449,21 @@
                                                 <h4 class="font-bold text-base text-indigo-700 dark:text-indigo-300 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1.5">{{ $pass->title }}</h4>
                                             @endif
                                             @if(!empty($passImg))
-                                                <div class="mb-4 text-center">
-                                                    <img src="{{ $passImg }}" alt="{{ $pass->title ?: 'Passage Document' }}" class="max-w-full rounded-lg mx-auto border border-slate-200 dark:border-slate-800 shadow-md object-contain" style="max-height: 500px;">
+                                                <div class="mb-4 text-center group relative">
+                                                    <img src="{{ $passImg }}"
+                                                         alt="{{ $pass->title ?: 'Passage Document' }}"
+                                                         data-stimulus-zoomable="true"
+                                                         class="stimulus-zoomable max-w-full rounded-lg mx-auto border border-slate-200 dark:border-slate-800 shadow-md object-contain cursor-zoom-in hover:opacity-95 transition-all"
+                                                         style="max-height: 500px;"
+                                                         onclick="openStimulusLightbox(this.src, this.alt)">
+                                                    <div class="mt-1.5 text-center">
+                                                        <button type="button"
+                                                                onclick="openStimulusLightbox('{{ $passImg }}', '{{ addslashes($pass->title ?: 'Passage Document') }}')"
+                                                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors">
+                                                            <span>🔍</span>
+                                                            <span>Click image to enlarge</span>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             @endif
                                             @if(!empty($pass->content))
@@ -611,8 +624,20 @@
 
                             <!-- Standard Layout Media Attachment -->
                             @if (!empty($qImageUrl))
-                                <div class="mb-5 text-center">
-                                    <img src="{{ $qImageUrl }}" alt="Question Attachment" class="max-h-72 max-w-full rounded-xl mx-auto border border-slate-200 dark:border-slate-800 shadow-md object-contain">
+                                <div class="mb-5 text-center group relative">
+                                    <img src="{{ $qImageUrl }}"
+                                         alt="Question Attachment"
+                                         data-stimulus-zoomable="true"
+                                         class="stimulus-zoomable max-h-72 max-w-full rounded-xl mx-auto border border-slate-200 dark:border-slate-800 shadow-md object-contain cursor-zoom-in hover:opacity-95 transition-all"
+                                         onclick="openStimulusLightbox(this.src, this.alt)">
+                                    <div class="mt-1.5 text-center">
+                                        <button type="button"
+                                                onclick="openStimulusLightbox('{{ $qImageUrl }}', 'Question Attachment')"
+                                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors">
+                                            <span>🔍</span>
+                                            <span>Click image to enlarge</span>
+                                        </button>
+                                    </div>
                                 </div>
                             @endif
 
@@ -1364,10 +1389,73 @@
             });
         }
 
+        // =========================================================================
+        // REUSABLE CANDIDATE STIMULUS IMAGE LIGHTBOX / ZOOM VIEWER
+        // =========================================================================
+        let stimulusLightboxLastFocus = null;
+
+        function openStimulusLightbox(src, caption) {
+            if (!src) return;
+            const modal = document.getElementById('stimulus-lightbox-modal');
+            const img = document.getElementById('stimulus-lightbox-image');
+            const cap = document.getElementById('stimulus-lightbox-caption');
+            const closeBtn = document.getElementById('stimulus-lightbox-close-btn');
+
+            if (!modal || !img) return;
+
+            stimulusLightboxLastFocus = document.activeElement;
+            img.src = src;
+            img.alt = caption || 'Enlarged Stimulus';
+            if (cap) {
+                cap.textContent = caption || 'Stimulus Document';
+            }
+
+            modal.classList.remove('hidden');
+            if (closeBtn) {
+                closeBtn.focus();
+            }
+        }
+
+        function closeStimulusLightbox() {
+            const modal = document.getElementById('stimulus-lightbox-modal');
+            const img = document.getElementById('stimulus-lightbox-image');
+
+            if (!modal) return;
+            modal.classList.add('hidden');
+            if (img) {
+                img.src = '';
+            }
+            if (stimulusLightboxLastFocus && typeof stimulusLightboxLastFocus.focus === 'function') {
+                stimulusLightboxLastFocus.focus();
+            }
+        }
+
+        function handleStimulusLightboxBackdropClick(event) {
+            if (event.target.id === 'stimulus-lightbox-modal' || event.target.closest('#stimulus-lightbox-image') === null) {
+                closeStimulusLightbox();
+            }
+        }
+
+        function isStimulusLightboxOpen() {
+            const modal = document.getElementById('stimulus-lightbox-modal');
+            return modal && !modal.classList.contains('hidden');
+        }
+
         window.addEventListener('blur', () => logViolation('window_blur'));
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
             if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+
+            if (e.key === 'Escape') {
+                if (isStimulusLightboxOpen()) {
+                    closeStimulusLightbox();
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+            }
+
+            if (isStimulusLightboxOpen()) return;
 
             if (e.key === 'n' || e.key === 'N') {
                 if (currentUnitIdx >= 0) {
@@ -1409,6 +1497,46 @@
             updatePaletteUI();
         });
     </script>
+
+    <!-- Reusable Candidate Stimulus Image Lightbox -->
+    <div id="stimulus-lightbox-modal"
+         class="hidden fixed inset-0 z-[110] bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-3 sm:p-6 select-none"
+         role="dialog"
+         aria-modal="true"
+         aria-label="Enlarged Stimulus Image"
+         onclick="handleStimulusLightboxBackdropClick(event)">
+
+        <!-- Lightbox Action Bar -->
+        <div class="w-full max-w-7xl flex items-center justify-between px-2 py-2 text-white mb-2" onclick="event.stopPropagation()">
+            <div class="flex items-center gap-2">
+                <span class="text-base">🔍</span>
+                <span id="stimulus-lightbox-caption" class="text-xs sm:text-sm font-bold truncate max-w-xs sm:max-w-md text-slate-200">Stimulus Image</span>
+                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800/90 text-slate-300 border border-slate-700">Zoom Mode</span>
+            </div>
+            <button type="button"
+                    id="stimulus-lightbox-close-btn"
+                    onclick="closeStimulusLightbox()"
+                    aria-label="Close enlarged view"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs transition-all cursor-pointer shadow-sm">
+                <span class="text-base leading-none">&times;</span>
+                <span class="hidden sm:inline">Close (Esc)</span>
+            </button>
+        </div>
+
+        <!-- Lightbox Image Viewer Container -->
+        <div class="relative max-w-full max-h-[85vh] sm:max-h-[88vh] overflow-auto rounded-2xl flex items-center justify-center p-1" onclick="event.stopPropagation()">
+            <img id="stimulus-lightbox-image"
+                 src=""
+                 alt="Enlarged Stimulus"
+                 class="max-w-[95vw] sm:max-w-[92vw] max-h-[82vh] sm:max-h-[85vh] object-contain rounded-xl shadow-2xl transition-all"
+                 onclick="event.stopPropagation()" />
+        </div>
+
+        <!-- Subtle Bottom Hint -->
+        <div class="mt-2 text-center text-[11px] text-slate-400">
+            <span>Click outside image or press <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[10px]">Esc</kbd> to close</span>
+        </div>
+    </div>
 
     <x-iap-modal />
 </body>
