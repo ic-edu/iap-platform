@@ -13,6 +13,9 @@ use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Certificate\Models\Certificate;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Modules\Commerce\Domain\Models\Payment;
+use App\Modules\QuestionBank\Models\AudioGroup;
+use App\Modules\QuestionBank\Models\Passage;
+use App\Modules\QuestionBank\Models\PassageGroup;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use Database\Seeders\AclStarterLibrarySeeder;
@@ -492,5 +495,251 @@ class TeacherAssessmentCandidatePreviewTest extends TestCase
         $this->assertNotNull($payment);
         $this->assertEquals(PaymentStatus::Pending, $payment->status);
         $this->assertEquals(832500, $payment->amount);
+    }
+
+    public function test_30_preview_renders_toeic_part_6_text_completion_passage_group_with_all_child_questions(): void
+    {
+        // Part 6 section
+        $p6Section = TestSection::create([
+            'test_id'      => $this->testRecord->id,
+            'title'        => 'PART 6: TEXT COMPLETION',
+            'section_type' => 'reading',
+            'order'        => 3,
+            'instructions' => 'Read the texts that follow. A word, phrase, or sentence is missing in parts of each text.',
+        ]);
+
+        $passageGroup = PassageGroup::create([
+            'test_id'      => $this->testRecord->id,
+            'title'        => 'Notice of Office Relocation',
+            'part_number'  => 6,
+            'passage_type' => 'single',
+            'order'        => 1,
+            'created_by'   => $this->teacherUser->id,
+        ]);
+
+        $passage = Passage::create([
+            'passage_group_id' => $passageGroup->id,
+            'test_id'          => $this->testRecord->id,
+            'order_in_group'   => 1,
+            'document_type'    => 'notice',
+            'title'            => 'Notice of Office Relocation',
+            'content'          => 'We are pleased to announce our relocation to the downtown business tower. ---[131]--- The new facility offers expanded workspaces. ---[132]--- Please direct all mail to our new address. ---[133]--- We appreciate your cooperation. ---[134]---',
+        ]);
+
+        $childQuestions = [];
+        for ($i = 131; $i <= 134; $i++) {
+            $q = Question::create([
+                'passage_group_id' => $passageGroup->id,
+                'prompt'           => 'Select the best option for blank [' . $i . '].',
+                'section'          => 'reading',
+                'part_number'      => 6,
+                'question_type'    => 'multiple_choice',
+                'difficulty'       => 'medium',
+                'points'           => 1,
+            ]);
+
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Option A for Q' . $i, 'is_correct' => true]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'B', 'content' => 'Option B for Q' . $i, 'is_correct' => false]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'C', 'content' => 'Option C for Q' . $i, 'is_correct' => false]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'D', 'content' => 'Option D for Q' . $i, 'is_correct' => false]);
+
+            TestQuestion::create([
+                'test_section_id' => $p6Section->id,
+                'question_id'     => $q->id,
+                'order'           => count($childQuestions) + 1,
+            ]);
+
+            $childQuestions[] = $q;
+        }
+
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+
+        $response->assertStatus(200);
+
+        // Verify shared passage content is rendered
+        $response->assertSee('PART 6 — NOTICE OF OFFICE RELOCATION', false);
+        $response->assertSee('Text Completion Group', false);
+        $response->assertSee('Notice of Office Relocation', false);
+        $response->assertSee('We are pleased to announce our relocation to the downtown business tower', false);
+
+        // Verify ALL 4 child question blocks exist in Preview DOM
+        // Total questions before this were 2 (Q1 at index 0, Q2 at index 1), so P6 questions are at indices 2, 3, 4, 5
+        $response->assertSee('id="unit-question-block-2"', false);
+        $response->assertSee('id="unit-question-block-3"', false);
+        $response->assertSee('id="unit-question-block-4"', false);
+        $response->assertSee('id="unit-question-block-5"', false);
+
+        // Verify prompts and choices for all 4 child questions
+        foreach ($childQuestions as $idx => $q) {
+            $globalIdx = $idx + 2;
+            $response->assertSee('Select the best option for blank [' . (131 + $idx) . '].', false);
+            $response->assertSee('name="preview_choice_' . $q->id . '"', false);
+            $response->assertSee('Option A for Q' . (131 + $idx), false);
+            $response->assertSee('Option D for Q' . (131 + $idx), false);
+        }
+
+        // Verify Question Palette buttons exist for all questions
+        $response->assertSee('id="palette-btn-2"', false);
+        $response->assertSee('id="palette-btn-3"', false);
+        $response->assertSee('id="palette-btn-4"', false);
+        $response->assertSee('id="palette-btn-5"', false);
+    }
+
+    public function test_31_preview_renders_toeic_part_7_multi_document_passage_group_with_tabs(): void
+    {
+        // Part 7 section
+        $p7Section = TestSection::create([
+            'test_id'      => $this->testRecord->id,
+            'title'        => 'PART 7: READING COMPREHENSION',
+            'section_type' => 'reading',
+            'order'        => 4,
+            'instructions' => 'Read the selections and answer the questions.',
+        ]);
+
+        $passageGroup = PassageGroup::create([
+            'test_id'      => $this->testRecord->id,
+            'title'        => 'Double Passage: Email and Schedule',
+            'part_number'  => 7,
+            'passage_type' => 'double',
+            'order'        => 1,
+            'created_by'   => $this->teacherUser->id,
+        ]);
+
+        $pass1 = Passage::create([
+            'passage_group_id' => $passageGroup->id,
+            'test_id'          => $this->testRecord->id,
+            'order_in_group'   => 1,
+            'document_type'    => 'email',
+            'title'            => 'Conference Inquiry Email',
+            'content'          => 'Dear Organizer, I would like to register for the upcoming seminar.',
+        ]);
+
+        $pass2 = Passage::create([
+            'passage_group_id' => $passageGroup->id,
+            'test_id'          => $this->testRecord->id,
+            'order_in_group'   => 2,
+            'document_type'    => 'schedule',
+            'title'            => 'Seminar Program Schedule',
+            'content'          => '9:00 AM - Keynote Address: Emerging AI in Education.',
+        ]);
+
+        $q1 = Question::create([
+            'passage_group_id' => $passageGroup->id,
+            'prompt'           => 'What is the purpose of the email?',
+            'section'          => 'reading',
+            'part_number'      => 7,
+            'question_type'    => 'multiple_choice',
+            'difficulty'       => 'medium',
+            'points'           => 1,
+        ]);
+        QuestionChoice::create(['question_id' => $q1->id, 'label' => 'A', 'content' => 'To register for a seminar', 'is_correct' => true]);
+        QuestionChoice::create(['question_id' => $q1->id, 'label' => 'B', 'content' => 'To cancel a subscription', 'is_correct' => false]);
+
+        $q2 = Question::create([
+            'passage_group_id' => $passageGroup->id,
+            'prompt'           => 'At what time does the keynote start?',
+            'section'          => 'reading',
+            'part_number'      => 7,
+            'question_type'    => 'multiple_choice',
+            'difficulty'       => 'medium',
+            'points'           => 1,
+        ]);
+        QuestionChoice::create(['question_id' => $q2->id, 'label' => 'A', 'content' => '9:00 AM', 'is_correct' => true]);
+        QuestionChoice::create(['question_id' => $q2->id, 'label' => 'B', 'content' => '1:00 PM', 'is_correct' => false]);
+
+        TestQuestion::create(['test_section_id' => $p7Section->id, 'question_id' => $q1->id, 'order' => 1]);
+        TestQuestion::create(['test_section_id' => $p7Section->id, 'question_id' => $q2->id, 'order' => 2]);
+
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+
+        $response->assertStatus(200);
+
+        // Verify Part 7 header and document switcher tabs
+        $response->assertSee('PART 7 — DOUBLE PASSAGE: EMAIL AND SCHEDULE', false);
+        $response->assertSee('Conference Inquiry Email (Email)', false);
+        $response->assertSee('Seminar Program Schedule (Schedule)', false);
+        $response->assertSee('switchPassageDocUnit', false);
+
+        // Verify both documents exist in DOM
+        $response->assertSee('Dear Organizer, I would like to register for the upcoming seminar', false);
+        $response->assertSee('9:00 AM - Keynote Address: Emerging AI in Education', false);
+
+        // Verify both child questions and their choices exist in DOM
+        $response->assertSee('What is the purpose of the email?', false);
+        $response->assertSee('To register for a seminar', false);
+        $response->assertSee('At what time does the keynote start?', false);
+        $response->assertSee('9:00 AM', false);
+    }
+
+    public function test_32_preview_renders_toeic_part_3_audio_group_and_all_child_questions(): void
+    {
+        $p3Section = TestSection::create([
+            'test_id'      => $this->testRecord->id,
+            'title'        => 'PART 3: CONVERSATIONS',
+            'section_type' => 'listening',
+            'order'        => 5,
+            'instructions' => 'You will hear conversations between two or more people.',
+        ]);
+
+        $audioGroup = AudioGroup::create([
+            'test_id'         => $this->testRecord->id,
+            'title'           => 'Conversation about Office Equipment',
+            'part_number'     => 3,
+            'group_type'      => 'conversation',
+            'audio_url'       => 'https://assets.mixkit.co/active_storage/sfx/conversation.mp3',
+            'order_in_section'=> 1,
+            'created_by'      => $this->teacherUser->id,
+        ]);
+
+        $childQuestions = [];
+        for ($i = 1; $i <= 3; $i++) {
+            $q = Question::create([
+                'audio_group_id' => $audioGroup->id,
+                'prompt'         => 'Where are the speakers? (P3 Q' . $i . ')',
+                'section'        => 'listening',
+                'part_number'    => 3,
+                'question_type'  => 'multiple_choice',
+                'difficulty'     => 'medium',
+                'points'         => 1,
+            ]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'In an office supply store', 'is_correct' => true]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'B', 'content' => 'In a restaurant', 'is_correct' => false]);
+
+            TestQuestion::create([
+                'test_section_id' => $p3Section->id,
+                'question_id'     => $q->id,
+                'order'           => $i,
+            ]);
+            $childQuestions[] = $q;
+        }
+
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+
+        $response->assertStatus(200);
+
+        // Verify Audio Group header & shared stimulus
+        $response->assertSee('PART 3 — CONVERSATION', false);
+        $response->assertSee('Shared Audio Group', false);
+        $response->assertSee('https://assets.mixkit.co/active_storage/sfx/conversation.mp3', false);
+
+        // Verify all 3 child questions exist
+        foreach ($childQuestions as $idx => $q) {
+            $response->assertSee('Where are the speakers? (P3 Q' . ($idx + 1) . ')', false);
+            $response->assertSee('name="preview_choice_' . $q->id . '"', false);
+        }
+    }
+
+    public function test_33_preview_retains_unrestricted_navigation_across_all_delivery_units(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+
+        $response->assertStatus(200);
+
+        // Preview should include unrestricted navigation functions
+        $response->assertSee('navigateDeliveryUnit', false);
+        $response->assertSee('handlePaletteQuestionClick', false);
+        $response->assertSee('selectPreviewChoice', false);
+        // Preview should NOT enforce mandatory answers before moving
+        $response->assertDontSee('For Mock Test examination, you must select an answer for all questions', false);
     }
 }

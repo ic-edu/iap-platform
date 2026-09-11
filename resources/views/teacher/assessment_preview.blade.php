@@ -312,6 +312,7 @@
                             $unitType = $unit['type'];
                             $section = $unit['section'];
                             $isAudioGroup = ($unitType === 'audio_group');
+                            $isPassageGroup = ($unitType === 'passage_group');
                             $groupTypeLabel = $unit['group_type'] === 'talk' ? 'Talk' : 'Conversation';
                             $unitAudioUrl = $unit['audio_url'];
                             $isFirstUnitOfSection = $unit['is_first_unit_of_section'];
@@ -461,6 +462,174 @@
                                     @else
                                         <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex + 1 }})" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
                                             Next Group &rarr;
+                                        </button>
+                                    @endif
+                                </div>
+
+                            @elseif($isPassageGroup)
+                                <!-- ========================================================================= -->
+                                <!-- PASSAGE GROUP DELIVERY UNIT (Part 6 Text Completion / Part 7 Reading)    -->
+                                <!-- ========================================================================= -->
+                                @php
+                                    $effectivePassages = $unit['passages'];
+                                    $partNum = $unit['part_number'];
+                                    $groupTitle = $unit['title'] ?? ($partNum === 6 ? 'Text Completion' : 'Reading Comprehension');
+                                @endphp
+
+                                <!-- Group Header & Meta -->
+                                <div class="border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
+                                    <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="px-2.5 py-0.5 rounded-md text-[11px] font-black bg-indigo-100 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 uppercase tracking-wider">
+                                                PART {{ $partNum }} — {{ strtoupper($groupTitle) }}
+                                            </span>
+                                            <span class="text-slate-400 dark:text-slate-600">•</span>
+                                            <span class="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                                                {{ $unit['display_question_range'] }}
+                                            </span>
+                                            @if($section)
+                                                <span class="text-slate-400 dark:text-slate-600">•</span>
+                                                <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline transition-colors" title="View Section Directions">
+                                                    {{ $section->title }}
+                                                </button>
+                                            @endif
+                                        </div>
+
+                                        <span class="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-indigo-100 dark:bg-indigo-950/50 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 uppercase">
+                                            {{ $partNum === 6 ? 'Text Completion Group' : 'Passage Group' }}
+                                        </span>
+                                    </div>
+
+                                    @if(!empty($unit['title']))
+                                        <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1">
+                                            {{ $unit['title'] }}
+                                        </h3>
+                                    @endif
+                                </div>
+
+                                <!-- Reading Dual Pane Split Screen -->
+                                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                                    <!-- Left Pane: Passages & Documents -->
+                                    <div class="lg:col-span-6 xl:col-span-7 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col min-h-[420px] max-h-[75vh] lg:sticky lg:top-20 overflow-hidden" id="passage-pane-unit-{{ $unitIndex }}">
+                                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-3 flex-wrap gap-2">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <span>📄</span>
+                                                    <span>{{ ($unit['passage_type'] ?? '') ? ('Part ' . $partNum . ' ' . ucfirst($unit['passage_type']) . ' Passage') : ($partNum === 6 ? 'Text Completion Passage' : 'Reading Passage') }}</span>
+                                                </span>
+                                                @if($effectivePassages->count() > 1)
+                                                    <div class="flex items-center gap-1.5 ml-2 flex-wrap">
+                                                        @foreach($effectivePassages as $pIdx => $pass)
+                                                            <button type="button"
+                                                                    id="passage-tab-unit-{{ $unitIndex }}-{{ $pIdx }}"
+                                                                    onclick="switchPassageDocUnit({{ $unitIndex }}, {{ $pIdx }})"
+                                                                    class="passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all {{ $pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700' }}">
+                                                                {{ $pass->title ?: ('Document ' . ($pIdx + 1)) }} ({{ ucfirst($pass->document_type ?? 'article') }})
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            @if($unit['title'])
+                                                <span class="text-[11px] text-slate-500 dark:text-slate-400 italic truncate max-w-[200px]">{{ $unit['title'] }}</span>
+                                            @endif
+                                        </div>
+
+                                        <div class="passage-scroll-container overflow-y-auto pr-2 space-y-4 text-sm text-slate-800 dark:text-slate-200 leading-relaxed max-h-[62vh]" id="passage-scroll-unit-{{ $unitIndex }}">
+                                            @forelse($effectivePassages as $pIdx => $pass)
+                                                @php
+                                                    $passImg = $pass->getEffectiveImageUrl();
+                                                @endphp
+                                                <div id="passage-doc-unit-{{ $unitIndex }}-{{ $pIdx }}" class="passage-doc-content-unit-{{ $unitIndex }} {{ $pIdx > 0 ? 'hidden' : '' }}">
+                                                    @if($pass->title && $effectivePassages->count() === 1)
+                                                        <h4 class="font-bold text-base text-indigo-700 dark:text-indigo-300 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1.5">{{ $pass->title }}</h4>
+                                                    @endif
+                                                    @if(!empty($passImg))
+                                                        <div class="mb-4 text-center">
+                                                            <img src="{{ $passImg }}" alt="{{ $pass->title ?: 'Passage Document' }}" class="max-w-full rounded-lg mx-auto border border-slate-200 dark:border-slate-800 shadow-md object-contain" style="max-height: 500px;">
+                                                        </div>
+                                                    @endif
+                                                    @if(!empty($pass->content))
+                                                        <div class="prose dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 text-sm whitespace-pre-line leading-relaxed select-text">
+                                                            {!! nl2br(e($pass->content)) !!}
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @empty
+                                                <div class="text-slate-500 italic text-sm">Passage stimulus content.</div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+
+                                    <!-- Right Pane: Associated Child Questions -->
+                                    <div class="lg:col-span-6 xl:col-span-5 space-y-6">
+                                        @foreach($unit['questions'] as $cIdx => $question)
+                                            @php
+                                                $globalQIdx = $unit['question_indices'][$cIdx];
+                                                $agn = $unit['canonical_question_numbers'][$cIdx] ?? ($globalQIdx + 1);
+                                            @endphp
+
+                                            <div id="unit-question-block-{{ $globalQIdx }}" class="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4 transition-all">
+                                                <!-- Header with Question Number -->
+                                                <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-wrap gap-2">
+                                                    <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                                                        Question {{ $agn }}
+                                                    </span>
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 uppercase">
+                                                        {{ is_object($question->question_type) ? $question->question_type->value : ($question->question_type ?? 'Multiple Choice') }}
+                                                    </span>
+                                                </div>
+
+                                                <!-- Stem Prompt (may be blank in Part 6 blanks) -->
+                                                @if(!empty($question->prompt))
+                                                    <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">
+                                                        {!! nl2br(e($question->prompt)) !!}
+                                                    </div>
+                                                @endif
+
+                                                <!-- Choices Options -->
+                                                <div class="space-y-3 pt-1">
+                                                    @foreach ($question->choices as $choice)
+                                                        <label class="preview-choice-label flex items-center p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer transition-all shadow-sm">
+                                                            <input type="radio"
+                                                                   name="preview_choice_{{ $question->id }}"
+                                                                   value="{{ $choice->id }}"
+                                                                   onchange="selectPreviewChoice('{{ $question->id }}', '{{ $choice->id }}', {{ $globalQIdx }})"
+                                                                   class="w-4 h-4 text-indigo-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 focus:ring-indigo-500" />
+                                                            <span class="ml-3 text-xs sm:text-sm text-slate-900 dark:text-slate-200 font-semibold">
+                                                                <strong class="text-indigo-600 dark:text-indigo-400 mr-2">{{ $choice->label }}.</strong> {{ $choice->content }}
+                                                            </span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                <!-- Passage Group Navigation Controls (Unrestricted Preview Mode) -->
+                                <div class="flex justify-between items-center pt-6 mt-8 border-t border-slate-200 dark:border-slate-800 flex-wrap gap-3">
+                                    @if($isFirstUnitOfSection && $section)
+                                        <button type="button" onclick="showSectionIntro('{{ $section->id }}')" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors">
+                                            &larr; Section Directions
+                                        </button>
+                                    @else
+                                        <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex - 1 }})" {{ $unitIndex === 0 ? 'disabled' : '' }} class="px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                            &larr; Previous
+                                        </button>
+                                    @endif
+
+                                    @if($isLastUnitOfSection && $nextSectionId)
+                                        <button type="button" onclick="showSectionIntro('{{ $nextSectionId }}')" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
+                                            Next Section &rarr;
+                                        </button>
+                                    @elseif($unitIndex === $totalUnitsCount - 1)
+                                        <button type="button" onclick="finishPreview()" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all">
+                                            Finish Preview &rarr;
+                                        </button>
+                                    @else
+                                        <button type="button" onclick="navigateDeliveryUnit({{ $unitIndex + 1 }})" class="px-6 py-2.5 text-xs font-extrabold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition-all">
+                                            Next &rarr;
                                         </button>
                                     @endif
                                 </div>
@@ -923,6 +1092,24 @@
             const btn = document.getElementById(`passage-tab-${questionId}-${tabIndex}`);
             if (content) content.classList.remove('hidden');
             if (btn) btn.className = 'passage-tab-btn px-2.5 py-1 rounded text-xs font-bold border transition-all bg-indigo-600 text-white border-indigo-600 shadow-sm';
+        }
+
+        // Switch Passage Document in Passage Group Unit (Multi-Document Part 7 Double/Triple Passages)
+        function switchPassageDocUnit(unitIndex, docIndex) {
+            document.querySelectorAll(`.passage-doc-content-unit-${unitIndex}`).forEach(el => el.classList.add('hidden'));
+            const targetDoc = document.getElementById(`passage-doc-unit-${unitIndex}-${docIndex}`);
+            if (targetDoc) {
+                targetDoc.classList.remove('hidden');
+            }
+
+            const tabs = document.querySelectorAll(`[id^="passage-tab-unit-${unitIndex}-"]`);
+            tabs.forEach((tab, idx) => {
+                if (idx === docIndex) {
+                    tab.className = 'passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all bg-indigo-600 text-white border-indigo-500 shadow-sm';
+                } else {
+                    tab.className = 'passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700';
+                }
+            });
         }
 
         function finishPreview() {
