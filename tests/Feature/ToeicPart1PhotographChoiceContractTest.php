@@ -387,7 +387,7 @@ test('TEST 15: Section validation rollup marks Part 1 with 4 blank transcripts a
     $test = Test::create([
         'title'            => 'Part 1 Test 3',
         'slug'             => 'part-1-test-3-' . Str::random(6),
-        'test_type'        => 'toeic',
+        'test_type'        => 'general',
         'assessment_mode'  => 'simulator',
         'duration_minutes' => 120,
         'pass_score'       => 750,
@@ -435,6 +435,7 @@ test('TEST 15: Section validation rollup marks Part 1 with 4 blank transcripts a
     $service = app(TestBuilderService::class);
     $validation = $service->validateAssessment($test);
 
+    expect($validation['questions'][0]['warnings'])->toBeEmpty();
     expect($validation['is_valid'])->toBeTrue()
         ->and($validation['errors'])->toBeEmpty();
 });

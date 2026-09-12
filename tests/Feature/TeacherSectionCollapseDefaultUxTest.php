@@ -192,8 +192,8 @@ class TeacherSectionCollapseDefaultUxTest extends TestCase
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertOk();
-        $response->assertSee('3 questions', false);
-        $response->assertSee('12 questions', false);
+        $response->assertSee('0 of 6 questions', false);
+        $response->assertSee('0 of 25 questions', false);
     }
 
     /** @test */
@@ -201,9 +201,9 @@ class TeacherSectionCollapseDefaultUxTest extends TestCase
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertOk();
-        $response->assertSee('(Questions 1–3)', false);
-        $response->assertSee('(Questions 4–15)', false);
-        $response->assertSee('(Questions 16–18)', false);
+        $response->assertSee('(Questions 1–6)', false);
+        $response->assertSee('(Questions 7–31)', false);
+        $response->assertSee('(Questions 32–70)', false);
     }
 
     /** @test */

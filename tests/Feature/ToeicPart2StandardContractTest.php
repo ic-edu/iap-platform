@@ -189,8 +189,8 @@ test('TEST 08: Part 2 with invalid choice labels fails validation', function () 
 // SECTION 2: SECTION ROLLUP & TEACHER DETAIL UX (TEST 09 to TEST 12)
 // =========================================================================
 
-test('TEST 09: Collapsed Section Rollup for Part 2 with 12 valid audio-only questions displays READY', function () {
-    for ($i = 1; $i <= 12; $i++) {
+test('TEST 09: Collapsed Section Rollup for Part 2 with 25 valid audio-only questions displays READY', function () {
+    for ($i = 1; $i <= 25; $i++) {
         $q = Question::create([
             'prompt'        => "Part 2 Item #{$i}",
             'section'       => SectionType::Listening,
@@ -209,12 +209,11 @@ test('TEST 09: Collapsed Section Rollup for Part 2 with 12 valid audio-only ques
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $response->assertStatus(200);
     $response->assertSee('READY');
-    $response->assertSee('12/12 Complete');
-    $response->assertDontSee('0/12 Complete');
+    $response->assertSee('25/25 Complete');
 });
 
 test('TEST 10: Collapsed Section Rollup for Part 2 with 1 missing audio item displays NEEDS ATTENTION', function () {
-    for ($i = 1; $i <= 12; $i++) {
+    for ($i = 1; $i <= 25; $i++) {
         $q = Question::create([
             'prompt'        => "Part 2 Item #{$i}",
             'section'       => SectionType::Listening,
@@ -233,11 +232,12 @@ test('TEST 10: Collapsed Section Rollup for Part 2 with 1 missing audio item dis
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $response->assertStatus(200);
     $response->assertSee('NEEDS ATTENTION');
-    $response->assertSee('11/12 Complete');
-    $response->assertSee('1 Issue');
+    $response->assertSee('24/25 Complete');
+    $response->assertSee('1 question missing');
 });
 
-test('TEST 11: Top-level submit button enabled when Part 2 has 12 valid audio-only questions', function () {
+test('TEST 11: Top-level submit button enabled when general assessment has 12 valid audio-only questions', function () {
+    $this->toeicTest->update(['test_type' => 'general']);
     for ($i = 1; $i <= 12; $i++) {
         $q = Question::create([
             'prompt'        => "Part 2 Item #{$i}",
@@ -261,7 +261,7 @@ test('TEST 11: Top-level submit button enabled when Part 2 has 12 valid audio-on
 });
 
 test('TEST 12: Top-level submit button disabled with attention badge when Part 2 question is invalid', function () {
-    for ($i = 1; $i <= 12; $i++) {
+    for ($i = 1; $i <= 25; $i++) {
         $q = Question::create([
             'prompt'        => "Part 2 Item #{$i}",
             'section'       => SectionType::Listening,

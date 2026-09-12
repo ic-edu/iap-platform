@@ -310,20 +310,19 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertOk();
-        $response->assertSee('• 3 questions', false);
-        $response->assertSee('(Questions 1–3)', false);
+        $response->assertSee('• 3 of 6 questions', false);
+        $response->assertSee('(Questions 1–6)', false);
         $response->assertSee('Part 1 Photo Question Stem 1', false);
         $response->assertSee('Part 1 Photo Question Stem 2', false);
         $response->assertSee('Part 1 Photo Question Stem 3', false);
     }
 
     /** @test */
-    public function test_18_section_2_contains_q4_to_q15()
+    public function test_18_section_2_contains_q7_to_q18()
     {
         $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $response->assertOk();
-        $response->assertSee('• 12 questions', false);
-        $response->assertSee('(Questions 4–15)', false);
+        $response->assertSee('(Questions 7–31)', false);
         $response->assertSee('Part 2 Question-Response Stem 4', false);
         $response->assertSee('Part 2 Question-Response Stem 15', false);
     }
@@ -335,8 +334,8 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
         $response->assertOk();
         $response->assertSee('Question #1', false);
         $response->assertSee('Question #3', false);
-        $response->assertSee('Question #4', false);
-        $response->assertSee('Question #15', false);
+        $response->assertSee('Question #7', false);
+        $response->assertSee('Question #18', false);
     }
 
     /** @test */
@@ -470,6 +469,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
     /** @test */
     public function test_29_validation_assistant_output_unchanged()
     {
+        $this->test->update(['test_type' => 'general']);
         $builderService = app(TestBuilderService::class);
         $result = $builderService->validateAssessment($this->test);
 

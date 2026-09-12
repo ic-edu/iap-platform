@@ -746,15 +746,15 @@ test('TEST 20: Section validation summary recomputes after return', function () 
         'choices'        => ['', '', ''],
     ]);
 
-    // Return view shows READY
+    // Return view shows updated completeness
     $resAfter = $this->actingAs($this->teacher)->get(route('teacher.tests.show', [
         'test'    => $this->toeicTest->id,
         'section' => $this->part2Section->id,
         'focus'   => 'question-card-' . $q->id,
     ]));
     $resAfter->assertStatus(200);
-    $resAfter->assertSee('READY');
-    $resAfter->assertSee('1/1 Complete');
+    $resAfter->assertSee('1/25 Complete');
+    $resAfter->assertSee('24 questions missing');
 });
 
 // =========================================================================

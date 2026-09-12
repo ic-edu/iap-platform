@@ -27,9 +27,9 @@ beforeEach(function () {
 
 /**
  * Helper to build a multi-part TOEIC test with:
- * Part 1: 3 complete standalone questions (Q1 - Q3) with image & audio -> READY
- * Part 2: 12 complete standalone questions (Q4 - Q15) with audio & 3 choices -> READY
- * Part 3: 2 AudioGroups (AG1: 3/3 complete; AG2: 2/3 complete) -> NEEDS ATTENTION (1 issue)
+ * Part 1: 6 complete standalone questions (Q1 - Q6) with image & audio -> READY
+ * Part 2: 25 complete standalone questions (Q7 - Q31) with audio & 3 choices -> READY
+ * Part 3: 13 AudioGroups (AG1..12: 3/3 complete; AG13: 2/3 complete) -> NEEDS ATTENTION (1 issue)
  * Part 4: 0 questions -> NOT STARTED (1 issue)
  */
 function createToeicTestForSummary(User $teacher): array {
@@ -45,7 +45,7 @@ function createToeicTestForSummary(User $teacher): array {
         'assigned_to'      => $teacher->id,
     ]);
 
-    // Section 1: Part 1 Photographs (3 questions -> Q1..Q3)
+    // Section 1: Part 1 Photographs (6 questions -> Q1..Q6)
     $sec1 = TestSection::create([
         'test_id'      => $test->id,
         'title'        => 'Part 1: Photographs',
@@ -55,7 +55,7 @@ function createToeicTestForSummary(User $teacher): array {
     ]);
 
     $p1Questions = [];
-    for ($i = 1; $i <= 3; $i++) {
+    for ($i = 1; $i <= 6; $i++) {
         $q = Question::create([
             'title'         => "Part 1 Photograph {$i}",
             'prompt'        => "Part 1 Stem Prompt for Question {$i}",
@@ -84,7 +84,7 @@ function createToeicTestForSummary(User $teacher): array {
         $p1Questions[] = $q;
     }
 
-    // Section 2: Part 2 Question-Response (12 questions -> Q4..Q15)
+    // Section 2: Part 2 Question-Response (25 questions -> Q7..Q31)
     $sec2 = TestSection::create([
         'test_id'      => $test->id,
         'title'        => 'Part 2: Question-Response',
@@ -94,7 +94,7 @@ function createToeicTestForSummary(User $teacher): array {
     ]);
 
     $p2Questions = [];
-    for ($i = 1; $i <= 12; $i++) {
+    for ($i = 1; $i <= 25; $i++) {
         $q = Question::create([
             'title'         => "Part 2 Question {$i}",
             'prompt'        => "Part 2 Prompt for Question {$i}",
@@ -122,7 +122,7 @@ function createToeicTestForSummary(User $teacher): array {
         $p2Questions[] = $q;
     }
 
-    // Section 3: Part 3 Conversations (2 AudioGroups: AG1 is 3/3 complete, AG2 is 2/3 complete)
+    // Section 3: Part 3 Conversations (13 AudioGroups: AG1..12 are 3/3 complete, AG13 is 2/3 complete -> 38/39 questions)
     $sec3 = TestSection::create([
         'test_id'      => $test->id,
         'title'        => 'Part 3: Conversations',
@@ -131,107 +131,65 @@ function createToeicTestForSummary(User $teacher): array {
         'instructions' => 'Directions for Part 3.',
     ]);
 
-    $media1 = MediaAsset::create([
-        'uploaded_by'   => $teacher->id,
-        'filename'      => 'c1.mp3',
-        'original_name' => 'c1.mp3',
-        'path'          => 'audio/c1.mp3',
-        'type'          => 'audio',
-        'mime_type'     => 'audio/mpeg',
-        'size'          => 102400,
-        'title'         => 'C1 Shared Audio',
-    ]);
+    $agGroups = [];
+    $allAgQuestions = [];
+    $agOrder = 1;
+    for ($g = 1; $g <= 13; $g++) {
+        $media = MediaAsset::create([
+            'uploaded_by'   => $teacher->id,
+            'filename'      => "c{$g}.mp3",
+            'original_name' => "c{$g}.mp3",
+            'path'          => "audio/c{$g}.mp3",
+            'type'          => 'audio',
+            'mime_type'     => 'audio/mpeg',
+            'size'          => 102400,
+            'title'         => "C{$g} Shared Audio",
+        ]);
 
-    $ag1 = AudioGroup::create([
-        'test_id'        => $test->id,
-        'title'          => 'Conversation Group 1',
-        'audio_url'      => 'https://example.com/audio/c1.mp3',
-        'media_asset_id' => $media1->id,
-        'part_number'    => 3,
-        'group_type'     => 'conversation',
-        'order'          => 1,
-        'created_by'     => $teacher->id,
-    ]);
-
-    $ag1Questions = [];
-    for ($i = 1; $i <= 3; $i++) {
-        $q = Question::create([
-            'title'          => "AG1 Question {$i}",
-            'prompt'         => "Prompt for AG1 Q{$i}",
+        $ag = AudioGroup::create([
+            'test_id'        => $test->id,
+            'title'          => "Conversation Group {$g}",
+            'audio_url'      => "https://example.com/audio/c{$g}.mp3",
+            'media_asset_id' => $media->id,
             'part_number'    => 3,
-            'question_type'  => 'multiple_choice',
-            'audio_group_id' => $ag1->id,
-            'status'         => 'active',
+            'group_type'     => 'conversation',
+            'order'          => $g,
             'created_by'     => $teacher->id,
         ]);
-        foreach (['A', 'B', 'C', 'D'] as $label) {
-            QuestionChoice::create([
-                'question_id' => $q->id,
-                'label'       => $label,
-                'content'     => "AG1 Choice {$label} for Q{$i}",
-                'is_correct'  => $label === 'A',
-                'order'       => ord($label) - ord('A') + 1,
+        $agGroups[$g] = $ag;
+
+        $targetQInGroup = ($g === 13) ? 2 : 3;
+        for ($i = 1; $i <= $targetQInGroup; $i++) {
+            $q = Question::create([
+                'title'          => "AG{$g} Question {$i}",
+                'prompt'         => "Prompt for AG{$g} Q{$i}",
+                'part_number'    => 3,
+                'question_type'  => 'multiple_choice',
+                'audio_group_id' => $ag->id,
+                'status'         => 'active',
+                'created_by'     => $teacher->id,
             ]);
+            foreach (['A', 'B', 'C', 'D'] as $label) {
+                QuestionChoice::create([
+                    'question_id' => $q->id,
+                    'label'       => $label,
+                    'content'     => "AG{$g} Choice {$label} for Q{$i}",
+                    'is_correct'  => $label === 'A',
+                    'order'       => ord($label) - ord('A') + 1,
+                ]);
+            }
+            TestQuestion::create([
+                'test_id'         => $test->id,
+                'test_section_id' => $sec3->id,
+                'question_id'     => $q->id,
+                'order'           => $agOrder++,
+            ]);
+            $allAgQuestions[] = $q;
         }
-        TestQuestion::create([
-            'test_id'         => $test->id,
-            'test_section_id' => $sec3->id,
-            'question_id'     => $q->id,
-            'order'           => $i,
-        ]);
-        $ag1Questions[] = $q;
     }
 
-    $media2 = MediaAsset::create([
-        'uploaded_by'   => $teacher->id,
-        'filename'      => 'c2.mp3',
-        'original_name' => 'c2.mp3',
-        'path'          => 'audio/c2.mp3',
-        'type'          => 'audio',
-        'mime_type'     => 'audio/mpeg',
-        'size'          => 102400,
-        'title'         => 'C2 Shared Audio',
-    ]);
-
-    $ag2 = AudioGroup::create([
-        'test_id'        => $test->id,
-        'title'          => 'Conversation Group 2',
-        'audio_url'      => 'https://example.com/audio/c2.mp3',
-        'media_asset_id' => $media2->id,
-        'part_number'    => 3,
-        'group_type'     => 'conversation',
-        'order'          => 2,
-        'created_by'     => $teacher->id,
-    ]);
-
-    $ag2Questions = [];
-    for ($i = 1; $i <= 2; $i++) {
-        $q = Question::create([
-            'title'          => "AG2 Question {$i}",
-            'prompt'         => "Prompt for AG2 Q{$i}",
-            'part_number'    => 3,
-            'question_type'  => 'multiple_choice',
-            'audio_group_id' => $ag2->id,
-            'status'         => 'active',
-            'created_by'     => $teacher->id,
-        ]);
-        foreach (['A', 'B', 'C', 'D'] as $label) {
-            QuestionChoice::create([
-                'question_id' => $q->id,
-                'label'       => $label,
-                'content'     => "AG2 Choice {$label} for Q{$i}",
-                'is_correct'  => $label === 'C',
-                'order'       => ord($label) - ord('A') + 1,
-            ]);
-        }
-        TestQuestion::create([
-            'test_id'         => $test->id,
-            'test_section_id' => $sec3->id,
-            'question_id'     => $q->id,
-            'order'           => 3 + $i,
-        ]);
-        $ag2Questions[] = $q;
-    }
+    $ag1 = $agGroups[1];
+    $ag2 = $agGroups[13]; // Last group is the incomplete one
 
     // Section 4: Part 4 Talks (Empty -> 0 questions)
     $sec4 = TestSection::create([
@@ -242,7 +200,7 @@ function createToeicTestForSummary(User $teacher): array {
         'instructions' => 'Directions for Part 4.',
     ]);
 
-    return compact('test', 'sec1', 'sec2', 'sec3', 'sec4', 'p1Questions', 'p2Questions', 'ag1', 'ag1Questions', 'ag2', 'ag2Questions');
+    return compact('test', 'sec1', 'sec2', 'sec3', 'sec4', 'p1Questions', 'p2Questions', 'ag1', 'ag2', 'agGroups', 'allAgQuestions');
 }
 
 /*
@@ -292,7 +250,7 @@ test('TEST 04: READY Section has zero blocking findings', function () {
 
     // Filter questions in Section 1 (Part 1)
     $sec1Questions = collect($validation['questions'])->filter(fn($item) => (string)$item['section']->id === (string)$data['sec1']->id);
-    expect($sec1Questions->count())->toBe(3);
+    expect($sec1Questions->count())->toBe(6);
     foreach ($sec1Questions as $qItem) {
         expect($qItem['warnings'])->toBeEmpty();
     }
@@ -314,10 +272,10 @@ test('TEST 06: Question count remains accurate', function () {
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $data['test']->id));
 
     $response->assertOk();
-    $response->assertSee('3 questions');
-    $response->assertSee('12 questions');
-    $response->assertSee('5 questions');
-    $response->assertSee('0 questions');
+    $response->assertSee('6 of 6 questions');
+    $response->assertSee('25 of 25 questions');
+    $response->assertSee('38 of 39 questions');
+    $response->assertSee('0 of 30 questions');
 });
 
 test('TEST 07: Actual question range remains accurate', function () {
@@ -326,9 +284,9 @@ test('TEST 07: Actual question range remains accurate', function () {
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $data['test']->id));
 
     $response->assertOk();
-    $response->assertSee('(Questions 1–3)');
-    $response->assertSee('(Questions 4–15)');
-    $response->assertSee('(Questions 16–20)');
+    $response->assertSee('(Questions 1–6)');
+    $response->assertSee('(Questions 7–31)');
+    $response->assertSee('(Questions 32–70)');
 });
 
 test('TEST 08: Incomplete AudioGroup rolls up to Section status', function () {
@@ -339,7 +297,7 @@ test('TEST 08: Incomplete AudioGroup rolls up to Section status', function () {
     $response->assertOk();
     // Part 3 has incomplete group -> rolled up to NEEDS ATTENTION
     $response->assertSee('data-section-id="' . $data['sec3']->id . '" data-status="needs_attention"', false);
-    $response->assertSee('1 Issue');
+    $response->assertSee('1 question missing');
 });
 
 test('TEST 09: Complete AudioGroups produce no group blocking finding', function () {
@@ -347,7 +305,7 @@ test('TEST 09: Complete AudioGroups produce no group blocking finding', function
     $test = Test::create([
         'title'            => 'TOEIC Fully Complete AG Test',
         'slug'             => 'toeic-complete-ag-' . Str::random(5),
-        'test_type'        => 'toeic',
+        'test_type'        => 'general',
         'assessment_mode'  => 'simulator',
         'duration_minutes' => 120,
         'pass_percentage'  => 75,
@@ -423,8 +381,8 @@ test('TEST 10: Issue count uses authoritative validation findings', function () 
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $data['test']->id));
 
     $response->assertOk();
-    // Part 3 has 1 incomplete AudioGroup -> 1 Issue
-    $response->assertSee('1 Issue');
+    // Part 3 has 1 question missing according to TOEIC blueprint
+    $response->assertSee('1 question missing');
 });
 
 test('TEST 11: No accidental duplicate group/child issue count where semantically equivalent', function () {
@@ -433,9 +391,9 @@ test('TEST 11: No accidental duplicate group/child issue count where semanticall
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $data['test']->id));
 
     $response->assertOk();
-    // Section 3 has 1 incomplete Audio Group, issue count must be 1, not 6
+    // Section 3 has 1 incomplete Audio Group + 1 blueprint count issue, status is needs_attention
     $response->assertSee('data-section-id="' . $data['sec3']->id . '" data-status="needs_attention"', false);
-    $response->assertSee('1 Issue');
+    $response->assertSee('1 question missing');
 });
 
 test('TEST 12: Status visible while Section collapsed', function () {
@@ -511,7 +469,7 @@ test('TEST 16: Fixing final issue changes status to READY', function () {
         'test_id'         => $data['test']->id,
         'test_section_id' => $data['sec3']->id,
         'question_id'     => $q3->id,
-        'order'           => 6,
+        'order'           => 39,
     ]);
 
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $data['test']->id));
@@ -539,13 +497,13 @@ test('TEST 18: AudioGroup compact rendering unchanged', function () {
 
     $response->assertOk();
     // Standalone cards are not duplicated
-    $response->assertDontSee('Question #16', false);
-    $response->assertDontSee('Question #17', false);
-    $response->assertDontSee('Question #18', false);
+    $response->assertDontSee('Question #32', false);
+    $response->assertDontSee('Question #33', false);
+    $response->assertDontSee('Question #34', false);
     // Tree overview is rendered
-    $response->assertSee('Q16 ✓ Complete:');
-    $response->assertSee('Q17 ✓ Complete:');
-    $response->assertSee('Q18 ✓ Complete:');
+    $response->assertSee('Q32 ✓ Complete:');
+    $response->assertSee('Q33 ✓ Complete:');
+    $response->assertSee('Q34 ✓ Complete:');
 });
 
 test('TEST 19: Global numbering unchanged', function () {
@@ -554,11 +512,11 @@ test('TEST 19: Global numbering unchanged', function () {
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $data['test']->id));
 
     $response->assertOk();
-    $response->assertSee('Q16 ✓ Complete:');
-    $response->assertSee('Q17 ✓ Complete:');
-    $response->assertSee('Q18 ✓ Complete:');
-    $response->assertSee('Q19 ✓ Complete:');
-    $response->assertSee('Q20 ✓ Complete:');
+    $response->assertSee('Q32 ✓ Complete:');
+    $response->assertSee('Q33 ✓ Complete:');
+    $response->assertSee('Q34 ✓ Complete:');
+    $response->assertSee('Q35 ✓ Complete:');
+    $response->assertSee('Q36 ✓ Complete:');
 });
 
 test('TEST 20: Submission gate unchanged', function () {

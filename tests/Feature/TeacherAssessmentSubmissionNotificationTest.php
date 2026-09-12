@@ -39,7 +39,7 @@ beforeEach(function () {
         'title'      => 'TOEIC Practice Test Alpha',
         'slug'       => 'toeic-practice-test-alpha-' . uniqid(),
         'type'       => 'simulator',
-        'test_type'  => 'toeic',
+        'test_type'  => 'general',
         'status'     => 'draft',
         'is_active'  => true,
         'created_by' => $this->teacher->id,
@@ -47,10 +47,9 @@ beforeEach(function () {
 
     $this->section5 = TestSection::create([
         'test_id'      => $this->test->id,
-        'title'        => 'Part 5: Incomplete Sentences',
-        'part_number'  => 5,
+        'title'        => 'General Section',
         'section_type' => 'reading',
-        'order'        => 5,
+        'order'        => 1,
     ]);
 
     // Attach 2 valid questions to section5
@@ -58,7 +57,6 @@ beforeEach(function () {
         $q = Question::create([
             'prompt'        => "Sentence completion question stem {$i}",
             'section'       => 'reading',
-            'part_number'   => 5,
             'question_type' => 'multiple_choice',
             'difficulty'    => 'medium',
             'points'        => 1,

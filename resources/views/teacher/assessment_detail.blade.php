@@ -244,7 +244,13 @@
                 @php
                     $isToeicTest = (is_object($test->test_type) ? $test->test_type->value : (string)$test->test_type) === 'toeic';
                     $questionsBySection = collect($validationResult['questions'] ?? [])->groupBy(fn($item) => (string) $item['section']->id);
-                    $globalQuestionNumberMap = collect($validationResult['questions'] ?? [])->mapWithKeys(fn($item) => [(string)$item['question']->id => (int)$item['number']]);
+                    $globalQuestionNumberMap = collect($validationResult['questions'] ?? [])->mapWithKeys(fn($item) => [
+                        (string)$item['question']->id => [
+                            'number'       => $item['canonical_number'] ?? $item['number'],
+                            'label'        => $item['display_label'] ?? "Q{$item['number']}",
+                            'is_overflow'  => $item['is_overflow'] ?? false,
+                        ]
+                    ]);
 
                     // Pre-load all audio groups for the test once to avoid N+1 queries
                     $allTestAudioGroups = \App\Modules\QuestionBank\Models\AudioGroup::where('test_id', (string)$test->id)
@@ -269,7 +275,7 @@
                         $sQuestions = $questionsBySection->get((string)$sModel->id) ?? collect();
                         $sQCount = $sQuestions->count();
                         $sFirstQ = $sModel->testQuestions->first()?->question;
-                        $sPartNum = $sFirstQ?->part_number ?? ($isToeicTest ? ($sModel->order ?? ($sIdx + 1)) : null);
+                        $sPartNum = \App\Services\ToeicQuestionValidator::detectPartNumber($sModel, $sFirstQ);
                         $sAudioGroups = ($sPartNum && in_array((int)$sPartNum, [3, 4], true))
                             ? ($allTestAudioGroups->get((int)$sPartNum) ?? collect())
                             : collect();
@@ -280,7 +286,9 @@
                         $blockingIssues = [];
                         $firstIssueId = null;
                         $completeQCount = 0;
-                        $targetCount = ($isToeicTest && (int)$sPartNum === 6) ? 16 : $sQCount;
+
+                        $blueprint = ($isToeicTest && $sPartNum) ? \App\Services\ToeicQuestionValidator::getPartBlueprint($sPartNum) : null;
+                        $targetCount = $blueprint['target_count'] ?? $sQCount;
 
                         if ($sQCount === 0 && $sAudioGroups->isEmpty() && $sPassageGroups->isEmpty()) {
                             $status = 'not_started';
@@ -366,16 +374,26 @@
                                 }
                             }
 
-
-
-                            if ($isToeicTest && (int)$sPartNum === 6 && $completeQCount < 16) {
-                                if (empty($blockingIssues)) {
-                                    $blockingIssues[] = "Part 6 requires 16 completed questions (currently {$completeQCount}/16).";
+                            // 4. Canonical TOEIC Part Blueprint Evaluation (UNDER / EXACT / OVER)
+                            if ($isToeicTest && $sPartNum) {
+                                $eval = \App\Services\ToeicQuestionValidator::evaluatePartCompleteness($sPartNum, $completeQCount, $sQCount);
+                                if ($eval['is_under']) {
+                                    $missingCount = $eval['diff'];
+                                    $blockingIssues[] = "Part {$sPartNum} requires {$targetCount} completed questions (currently {$completeQCount}/{$targetCount}; {$missingCount} " . \Illuminate\Support\Str::plural('question', $missingCount) . " missing).";
                                     if (!$firstIssueId) {
                                         $firstIssueId = "section-card-{$sModel->id}";
                                     }
+                                    $status = 'needs_attention';
+                                } elseif ($eval['is_over']) {
+                                    $exceedCount = $eval['diff'];
+                                    $blockingIssues[] = "Part {$sPartNum} exceeds TOEIC blueprint: target is {$targetCount} questions, but " . max($sQCount, $completeQCount) . " are present ({$exceedCount} " . \Illuminate\Support\Str::plural('question', $exceedCount) . " exceed blueprint).";
+                                    if (!$firstIssueId) {
+                                        $firstIssueId = "section-card-{$sModel->id}";
+                                    }
+                                    $status = 'needs_attention';
+                                } else {
+                                    $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
                                 }
-                                $status = 'needs_attention';
                             } else {
                                 $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
                             }
@@ -481,11 +499,10 @@
                                 $secLastNum = $secQuestions->last()['number'] ?? null;
 
                                 $firstQ = $sec->testQuestions->first()?->question;
-                                $secPartNumber = $firstQ?->part_number ?? ($isToeicTest ? ($sec->order ?? ($secIndex + 1)) : null);
-                                $isPart6 = ((int)$secPartNumber === 6 && $isToeicTest);
-                                $secTargetCount = $secRollup['target_questions'] ?? ($isPart6 ? 16 : $secQCount);
-
-                                $canonicalRange = $isPart6 ? \App\Services\ToeicQuestionValidator::getPartQuestionRange(6) : null;
+                                $secPartNumber = \App\Services\ToeicQuestionValidator::detectPartNumber($sec, $firstQ);
+                                $canonicalBlueprint = ($isToeicTest && $secPartNumber) ? \App\Services\ToeicQuestionValidator::getPartBlueprint($secPartNumber) : null;
+                                $secTargetCount = $canonicalBlueprint['target_count'] ?? $secRollup['target_questions'] ?? $secQCount;
+                                $canonicalRange = $canonicalBlueprint ? ['start' => $canonicalBlueprint['start_number'], 'end' => $canonicalBlueprint['end_number']] : null;
                                 $rangeLabel = $canonicalRange ? "Questions {$canonicalRange['start']}–{$canonicalRange['end']}" : ($secFirstNum ? ($secFirstNum === $secLastNum ? "Question #{$secFirstNum}" : "Questions {$secFirstNum}–{$secLastNum}") : "0 Questions");
 
                                 $secMCount = $sec->mediaAssets ? $sec->mediaAssets->count() : 0;
@@ -516,8 +533,8 @@
                                             </span>
                                             @endif
                                             <span class="text-xs text-slate-600 dark:text-slate-400 font-bold">
-                                                @if($isPart6)
-                                                    • {{ $secQCount }} of 16 questions
+                                                @if($isToeicTest && $secPartNumber && $secTargetCount)
+                                                    • {{ $secRollup['complete_questions'] }} of {{ $secTargetCount }} questions
                                                 @else
                                                     • {{ $secQCount }} {{ \Illuminate\Support\Str::plural('question', $secQCount) }}
                                                 @endif
@@ -528,9 +545,18 @@
                                         </div>
                                         <div class="flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400">
                                             <span>Section {{ $secIndex + 1 }} of {{ $test->sections->count() }}</span>
+                                            @php
+                                                $partEval = ($isToeicTest && $secPartNumber) ? \App\Services\ToeicQuestionValidator::evaluatePartCompleteness($secPartNumber, $secRollup['complete_questions'], $secRollup['total_questions']) : null;
+                                            @endphp
                                             @if($secRollup['status'] === 'needs_attention')
                                                 <span class="text-amber-700 dark:text-amber-300 font-semibold">• {{ $secRollup['complete_questions'] }}/{{ $secRollup['target_questions'] ?? $secRollup['total_questions'] }} Complete</span>
-                                                <span class="text-amber-700 dark:text-amber-300 font-bold">• {{ $secRollup['issue_count'] }} {{ \Illuminate\Support\Str::plural('Issue', $secRollup['issue_count']) }}</span>
+                                                @if($partEval && $partEval['is_under'])
+                                                    <span class="text-amber-700 dark:text-amber-300 font-bold">• {{ $partEval['diff'] }} {{ \Illuminate\Support\Str::plural('question', $partEval['diff']) }} missing</span>
+                                                @elseif($partEval && $partEval['is_over'])
+                                                    <span class="text-rose-700 dark:text-rose-300 font-bold">• {{ $partEval['diff'] }} {{ \Illuminate\Support\Str::plural('question', $partEval['diff']) }} over limit</span>
+                                                @else
+                                                    <span class="text-amber-700 dark:text-amber-300 font-bold">• {{ $secRollup['issue_count'] }} {{ \Illuminate\Support\Str::plural('Issue', $secRollup['issue_count']) }}</span>
+                                                @endif
                                             @elseif($secRollup['status'] === 'ready')
                                                 <span class="text-emerald-700 dark:text-emerald-300 font-semibold">• {{ $secRollup['complete_questions'] }}/{{ $secRollup['target_questions'] ?? $secRollup['total_questions'] }} Complete</span>
                                             @endif
@@ -814,7 +840,10 @@
                                                             @php
                                                                 $slotQ = $agSortedQuestions->get($s);
                                                                 $slotComplete = $slotQ && $slotQ->isCompleteChild();
-                                                                $slotGlobalNum = $slotQ ? ($globalQuestionNumberMap[(string)$slotQ->id] ?? null) : null;
+                                                                $slotQInfo = $slotQ ? ($globalQuestionNumberMap[(string)$slotQ->id] ?? null) : null;
+                                                                $slotGlobalNum = is_array($slotQInfo) ? ($slotQInfo['number'] ?? null) : $slotQInfo;
+                                                                $slotLabel = is_array($slotQInfo) ? ($slotQInfo['label'] ?? "Q{$slotGlobalNum}") : ($slotGlobalNum ? "Q{$slotGlobalNum}" : ("Q#" . ($s + 1)));
+                                                                $slotIsOverflow = is_array($slotQInfo) ? ($slotQInfo['is_overflow'] ?? false) : false;
                                                                 $slotDiffVal = $slotQ ? (is_object($slotQ->difficulty) ? $slotQ->difficulty->value : (string)($slotQ->difficulty ?? 'medium')) : null;
                                                                 $slotDiffBadgeColor = match($slotDiffVal) {
                                                                     'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
@@ -824,32 +853,30 @@
                                                             @endphp
                                                             <div @if($slotQ) id="question-card-{{ $slotQ->id }}" @endif class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
                                                                 <span class="text-slate-400 font-mono">{{ $s === 2 ? '└──' : '├──' }}</span>
-                                                                @if($slotComplete && $slotGlobalNum)
+                                                                @if($slotComplete && $slotIsOverflow)
+                                                                    <span class="font-extrabold text-amber-700 dark:text-amber-300">[{{ $slotLabel }}] ✓ Complete (Over Limit):</span>
+                                                                    <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt, 60) }}</span>
+                                                                @elseif($slotComplete && $slotGlobalNum)
                                                                     <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q{{ $slotGlobalNum }} ✓ Complete:</span>
                                                                     <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt, 60) }}</span>
-                                                                    @if($slotDiffVal)
-                                                                        <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $slotDiffBadgeColor }}">
-                                                                            Auto: {{ ucfirst($slotDiffVal) }}
-                                                                        </span>
-                                                                    @endif
                                                                 @elseif($slotComplete)
-                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q#{{ $s + 1 }} ✓ Complete:</span>
+                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">{{ $slotLabel }} ✓ Complete:</span>
                                                                     <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt, 60) }}</span>
-                                                                    @if($slotDiffVal)
-                                                                        <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $slotDiffBadgeColor }}">
-                                                                            Auto: {{ ucfirst($slotDiffVal) }}
-                                                                        </span>
-                                                                    @endif
                                                                 @elseif($slotQ)
                                                                     @if($slotGlobalNum)
                                                                         <span class="font-bold text-amber-700 dark:text-amber-300">Q{{ $slotGlobalNum }} ○ Incomplete:</span>
                                                                     @else
-                                                                        <span class="font-bold text-amber-700 dark:text-amber-300">Slot {{ $s + 1 }} ○ Incomplete:</span>
+                                                                        <span class="font-bold text-amber-700 dark:text-amber-300">{{ $slotLabel }} ○ Incomplete:</span>
                                                                     @endif
                                                                     <span class="text-slate-500 italic truncate max-w-md">{{ \Illuminate\Support\Str::limit($slotQ->prompt ?: 'Missing choices or correct answer', 50) }}</span>
                                                                 @else
                                                                     <span class="font-bold text-slate-400">Slot {{ $s + 1 }} ○ Incomplete:</span>
                                                                     <span class="text-slate-400 italic">Pending authoring</span>
+                                                                @endif
+                                                                @if($slotDiffVal)
+                                                                    <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $slotDiffBadgeColor }}">
+                                                                        Auto: {{ ucfirst($slotDiffVal) }}
+                                                                    </span>
                                                                 @endif
                                                             </div>
                                                         @endfor
@@ -1017,7 +1044,10 @@
                                                     <div class="space-y-1.5 pl-2 text-xs">
                                                         @foreach($pgSortedQuestions as $pqIdx => $pq)
                                                             @php
-                                                                $pqGlobalNum = $globalQuestionNumberMap[(string)$pq->id] ?? null;
+                                                                $pqInfo = $globalQuestionNumberMap[(string)$pq->id] ?? null;
+                                                                $pqGlobalNum = is_array($pqInfo) ? ($pqInfo['number'] ?? null) : $pqInfo;
+                                                                $pqLabel = is_array($pqInfo) ? ($pqInfo['label'] ?? "Q{$pqGlobalNum}") : ($pqGlobalNum ? "Q{$pqGlobalNum}" : "Q#" . ($pqIdx + 1));
+                                                                $pqIsOverflow = is_array($pqInfo) ? ($pqInfo['is_overflow'] ?? false) : false;
                                                                 $pqDiffVal = is_object($pq->difficulty) ? $pq->difficulty->value : (string)($pq->difficulty ?? 'medium');
                                                                 $pqDiffBadgeColor = match($pqDiffVal) {
                                                                     'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
@@ -1028,10 +1058,12 @@
                                                             @endphp
                                                             <div id="question-card-{{ $pq->id }}" class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
                                                                 <span class="text-slate-400 font-mono">{{ $isLastPq ? '└──' : '├──' }}</span>
-                                                                @if($pqGlobalNum)
+                                                                @if($pqIsOverflow)
+                                                                    <span class="font-extrabold text-amber-700 dark:text-amber-300">[{{ $pqLabel }}] ✓ Complete (Over Limit):</span>
+                                                                @elseif($pqGlobalNum)
                                                                     <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q{{ $pqGlobalNum }} ✓ Complete:</span>
                                                                 @else
-                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q#{{ $pqIdx + 1 }} ✓ Complete:</span>
+                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">{{ $pqLabel }} ✓ Complete:</span>
                                                                 @endif
                                                                 <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ $pq->prompt ? \Illuminate\Support\Str::limit($pq->prompt, 60) : 'Passage-embedded blank' }}</span>
                                                                 @if($pqDiffVal)
@@ -1067,11 +1099,23 @@
                                                 $q = $qItem['question'];
                                                 $hasWarning = !empty($qItem['warnings']);
                                                 $isMaster = !empty($q->question_bank_id);
+                                                $qInfo = $globalQuestionNumberMap[(string)$q->id] ?? null;
+                                                $qGlobalNum = is_array($qInfo) ? ($qInfo['number'] ?? null) : ($qItem['number'] ?? null);
+                                                $qLabel = is_array($qInfo) ? ($qInfo['label'] ?? "Question #{$qGlobalNum}") : "Question #{$qGlobalNum}";
+                                                $qIsOverflow = is_array($qInfo) ? ($qInfo['is_overflow'] ?? false) : false;
                                             @endphp
                                             <div id="question-card-{{ $q->id }}" class="bg-slate-50 dark:bg-slate-950/70 border {{ $hasWarning ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-800' }} rounded-xl p-4 shadow-sm flex justify-between items-center flex-wrap gap-3">
                                                     <div class="flex-1 min-w-[260px]">
                                                         <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                                                            <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">Question #{{ $qItem['number'] }}</span>
+                                                            <span class="text-xs font-extrabold {{ $qIsOverflow ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400' }}">
+                                                                @if($qIsOverflow)
+                                                                    [{{ $qLabel }}] (Over Limit)
+                                                                @elseif($qGlobalNum)
+                                                                    Question #{{ $qGlobalNum }}
+                                                                @else
+                                                                    {{ $qLabel }}
+                                                                @endif
+                                                            </span>
                                                             @if($isMaster)
                                                             <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded">
                                                                 🏛️ Governed Master Question

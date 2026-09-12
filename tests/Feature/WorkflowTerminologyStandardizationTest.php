@@ -43,7 +43,7 @@ class WorkflowTerminologyStandardizationTest extends TestCase
         $this->bankA = QuestionBank::create([
             'title'      => 'Terminology Bank',
             'slug'       => 'terminology-bank',
-            'test_type'  => 'toeic',
+            'test_type'  => 'general',
             'status'     => 'draft',
             'created_by' => $this->teacherA->id,
         ]);
@@ -83,7 +83,7 @@ class WorkflowTerminologyStandardizationTest extends TestCase
         $test = AssessmentTest::create([
             'title'            => 'Needs Revision Terminology Test 02',
             'slug'             => 'needs-revision-terminology-test-02',
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 70,
             'status'           => 'needs_revision',
@@ -111,7 +111,7 @@ class WorkflowTerminologyStandardizationTest extends TestCase
         $test = AssessmentTest::create([
             'title'            => 'Resubmit Activity Log Test 03',
             'slug'             => 'resubmit-activity-log-test-03',
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 70,
             'status'           => 'needs_revision',

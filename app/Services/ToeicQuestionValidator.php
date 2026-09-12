@@ -70,6 +70,172 @@ class ToeicQuestionValidator
     }
 
     /**
+     * Total canonical questions in a full TOEIC test (200).
+     */
+    public static function getTotalCanonicalTargetCount(): int
+    {
+        return 200;
+    }
+
+    /**
+     * Get all TOEIC part blueprints.
+     *
+     * @return array<int, array{target_count: int, start_number: int, end_number: int, name: string, section: string}>
+     */
+    public static function getAllPartBlueprints(): array
+    {
+        return self::TOEIC_PART_BLUEPRINTS;
+    }
+
+    /**
+     * Detect canonical TOEIC part number (1..7) from section or question context.
+     *
+     * @param mixed $section
+     * @param mixed $question
+     * @return int|null
+     */
+    public static function detectPartNumber(mixed $section, mixed $question = null): ?int
+    {
+        // 1. Check explicit question part_number if provided
+        if ($question) {
+            $qPart = is_array($question) ? ($question['part_number'] ?? null) : ($question->part_number ?? null);
+            if ($qPart && (int) $qPart >= 1 && (int) $qPart <= 7) {
+                return (int) $qPart;
+            }
+        }
+
+        // 2. Check section title regex 'Part X'
+        if ($section) {
+            $title = is_array($section) ? ($section['title'] ?? '') : ($section->title ?? '');
+            if (preg_match('/Part\s*([1-7])/i', (string) $title, $m)) {
+                return (int) $m[1];
+            }
+
+            // 3. Check first question in section if loaded
+            if ($section instanceof \App\Modules\Assessment\Models\TestSection && $section->relationLoaded('testQuestions')) {
+                $firstQ = $section->testQuestions->first()?->question;
+                if ($firstQ && $firstQ->part_number && (int) $firstQ->part_number >= 1 && (int) $firstQ->part_number <= 7) {
+                    return (int) $firstQ->part_number;
+                }
+            }
+
+            // 4. Check section order if between 1 and 7
+            $order = is_array($section) ? ($section['order'] ?? null) : ($section->order ?? null);
+            if ($order && (int) $order >= 1 && (int) $order <= 7) {
+                return (int) $order;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Evaluate the completeness state of a TOEIC part (under, exact, over).
+     *
+     * @param int|string|null $partNumber
+     * @param int $completeCount
+     * @param int $totalCount
+     * @return array{
+     *     target_count: int,
+     *     complete_count: int,
+     *     total_count: int,
+     *     state: 'under'|'exact'|'over',
+     *     is_exact: bool,
+     *     is_under: bool,
+     *     is_over: bool,
+     *     diff: int,
+     *     status: 'ready'|'needs_attention',
+     *     status_message: string
+     * }
+     */
+    public static function evaluatePartCompleteness(int|string|null $partNumber, int $completeCount, int $totalCount = 0): array
+    {
+        $blueprint = self::getPartBlueprint($partNumber);
+        $target = $blueprint['target_count'] ?? $totalCount;
+        $total = max($totalCount, $completeCount);
+
+        if ($total > $target || $completeCount > $target) {
+            $state = 'over';
+            $diff = max($total, $completeCount) - $target;
+            $msg = "{$diff} " . \Illuminate\Support\Str::plural('question', $diff) . " exceed TOEIC blueprint";
+            $status = 'needs_attention';
+        } elseif ($completeCount < $target) {
+            $state = 'under';
+            $diff = $target - $completeCount;
+            $msg = "{$diff} " . \Illuminate\Support\Str::plural('question', $diff) . " missing";
+            $status = 'needs_attention';
+        } else {
+            $state = 'exact';
+            $diff = 0;
+            $msg = "Ready";
+            $status = 'ready';
+        }
+
+        return [
+            'target_count'   => $target,
+            'complete_count' => $completeCount,
+            'total_count'    => $total,
+            'state'          => $state,
+            'is_exact'       => $state === 'exact',
+            'is_under'       => $state === 'under',
+            'is_over'        => $state === 'over',
+            'diff'           => $diff,
+            'status'         => $status,
+            'status_message' => $msg,
+        ];
+    }
+
+    /**
+     * Compute canonical question display number and overflow status for a slot in a part.
+     *
+     * @param int|string|null $partNumber
+     * @param int $slotIndexInPart 1-indexed position of question within this part
+     * @return array{
+     *     number: int|null,
+     *     display_number: string,
+     *     label: string,
+     *     is_overflow: bool,
+     *     overflow_index: int|null
+     * }
+     */
+    public static function getQuestionDisplayNumber(int|string|null $partNumber, int $slotIndexInPart): array
+    {
+        $blueprint = self::getPartBlueprint($partNumber);
+        if (!$blueprint) {
+            return [
+                'number'         => $slotIndexInPart,
+                'display_number' => (string) $slotIndexInPart,
+                'label'          => "Q{$slotIndexInPart}",
+                'is_overflow'    => false,
+                'overflow_index' => null,
+            ];
+        }
+
+        $target = $blueprint['target_count'];
+        $start = $blueprint['start_number'];
+
+        if ($slotIndexInPart <= $target) {
+            $canonicalNum = $start + $slotIndexInPart - 1;
+            return [
+                'number'         => $canonicalNum,
+                'display_number' => (string) $canonicalNum,
+                'label'          => "Q{$canonicalNum}",
+                'is_overflow'    => false,
+                'overflow_index' => null,
+            ];
+        }
+
+        $overflowIdx = $slotIndexInPart - $target;
+        return [
+            'number'         => null,
+            'display_number' => "Overflow {$overflowIdx}",
+            'label'          => "Overflow {$overflowIdx}",
+            'is_overflow'    => true,
+            'overflow_index' => $overflowIdx,
+        ];
+    }
+
+    /**
      * Determine if the context or entity is for a TOEIC assessment/question bank.
      */
     public static function isToeic(mixed $context): bool

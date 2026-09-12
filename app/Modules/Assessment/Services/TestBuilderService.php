@@ -1226,6 +1226,7 @@ class TestBuilderService
         $errors = [];
         $allQuestions = [];
         $questionIndex = 1;
+        $isToeicAssessment = ToeicQuestionValidator::isToeic($test);
 
         // Structural Rule 1: Section existence
         if ($test->sections->isEmpty()) {
@@ -1244,6 +1245,9 @@ class TestBuilderService
                 $errors[] = "Section '{$section->title}' has no questions assigned.";
             }
 
+            $secPartNum = ToeicQuestionValidator::detectPartNumber($section);
+            $partCounter = 1;
+
             foreach ($section->testQuestions as $tq) {
                 $q = $tq->question;
                 if (!$q) {
@@ -1252,9 +1256,19 @@ class TestBuilderService
                     continue;
                 }
 
-                $isToeic = ToeicQuestionValidator::isToeic($test) || ToeicQuestionValidator::isToeic($q);
-                $partNum = (int) ($q->part_number ?? 0);
+                $isToeic = $isToeicAssessment || ToeicQuestionValidator::isToeic($q);
+                $partNum = (int) ($q->part_number ?? $secPartNum ?? 0);
                 $isOptionalPromptPart = $isToeic && in_array($partNum, [2, 6], true);
+
+                $qDisplay = ($isToeic && $partNum >= 1 && $partNum <= 7)
+                    ? ToeicQuestionValidator::getQuestionDisplayNumber($partNum, $partCounter)
+                    : [
+                        'number'         => $questionIndex,
+                        'display_number' => (string) $questionIndex,
+                        'label'          => "Q{$questionIndex}",
+                        'is_overflow'    => false,
+                        'overflow_index' => null,
+                    ];
 
                 $qErrors = [];
                 if (!$isOptionalPromptPart && empty(trim($q->prompt ?? ''))) {
@@ -1275,8 +1289,7 @@ class TestBuilderService
                 }
 
                 // TOEIC Part-Aware Validation Check
-                $isToeic = ToeicQuestionValidator::isToeic($test) || ToeicQuestionValidator::isToeic($q);
-                if ($isToeic && !empty($q->part_number)) {
+                if ($isToeic && !empty($partNum)) {
                     $toeicCheck = ToeicQuestionValidator::check($q->toArray(), $q);
                     if (!$toeicCheck['is_valid']) {
                         foreach ($toeicCheck['errors'] as $toeicErr) {
@@ -1284,7 +1297,7 @@ class TestBuilderService
                         }
                     }
 
-                    if (in_array((int) $q->part_number, [3, 4], true) && $q->audio_group_id && $q->audioGroup) {
+                    if (in_array($partNum, [3, 4], true) && $q->audio_group_id && $q->audioGroup) {
                         $agCheck = ToeicQuestionValidator::checkAudioGroup($q->audioGroup);
                         if (!$agCheck['is_valid']) {
                             foreach ($agCheck['errors'] as $agErr) {
@@ -1293,7 +1306,7 @@ class TestBuilderService
                         }
                     }
 
-                    if (in_array((int) $q->part_number, [6, 7], true) && $q->passage_group_id && $q->passageGroup) {
+                    if (in_array($partNum, [6, 7], true) && $q->passage_group_id && $q->passageGroup) {
                         $pgCheck = ToeicQuestionValidator::checkPassageGroup($q->passageGroup);
                         if (!$pgCheck['is_valid']) {
                             foreach ($pgCheck['errors'] as $pgErr) {
@@ -1309,10 +1322,15 @@ class TestBuilderService
                     $qErrors[] = "Repository Feedback (" . ucfirst($qRev->field ?? 'general') . "): " . ($qRev->comment ?? 'Revision requested');
                 }
 
+                $displayNum = $qDisplay['number'] ?? $questionIndex;
+                $displayLabel = $qDisplay['label'];
+                $isOverflow = $qDisplay['is_overflow'];
+
                 if (!empty($qErrors)) {
                     $snippet = \Illuminate\Support\Str::limit($q->prompt ?? 'Question #'.$q->id, 25);
+                    $errPrefix = $isOverflow ? "[{$displayLabel}]" : "Q#{$displayNum}";
                     foreach ($qErrors as $err) {
-                        $errors[] = "Q#{$questionIndex} ({$snippet}): {$err}";
+                        $errors[] = "{$errPrefix} ({$snippet}): {$err}";
                     }
                     $q->validation_warning = implode(' ', $qErrors);
                 } else {
@@ -1320,12 +1338,16 @@ class TestBuilderService
                 }
 
                 $allQuestions[] = [
-                    'number'   => $questionIndex,
-                    'question' => $q,
-                    'section'  => $section,
-                    'warnings' => $qErrors,
+                    'number'           => $displayNum,
+                    'canonical_number' => $qDisplay['number'],
+                    'display_label'    => $displayLabel,
+                    'is_overflow'      => $isOverflow,
+                    'question'         => $q,
+                    'section'          => $section,
+                    'warnings'         => $qErrors,
                 ];
 
+                $partCounter++;
                 $questionIndex++;
             }
         }
@@ -1357,6 +1379,95 @@ class TestBuilderService
                 foreach ($pgCheck['errors'] as $pgErrKey => $pgErrMsg) {
                     $errors[] = "{$partLabel} - '{$groupTitle}' (Progress: {$completeCount}/{$expectedCount} complete): {$pgErrMsg}";
                 }
+            }
+        }
+
+        // Structural Rule 6: TOEIC Canonical Part Blueprint Enforcement (Parts 1–7 Exact Targets & Exact 200 Total)
+        if ($isToeicAssessment) {
+            $allToeicBlueprints = ToeicQuestionValidator::getAllPartBlueprints();
+            $questionsByPart = [];
+            foreach ($allQuestions as $item) {
+                $q = $item['question'];
+                $p = (int) ($q->part_number ?? ToeicQuestionValidator::detectPartNumber($item['section'], $q) ?? 0);
+                if ($p >= 1 && $p <= 7) {
+                    $questionsByPart[$p][] = $item;
+                }
+            }
+
+            $totalCompleteQuestions = 0;
+
+            foreach ($allToeicBlueprints as $partNum => $bp) {
+                $partItems = $questionsByPart[$partNum] ?? [];
+                $partTarget = $bp['target_count'];
+                $partName = $bp['name'];
+
+                $completeInPart = 0;
+                foreach ($partItems as $pItem) {
+                    $pq = $pItem['question'];
+                    $isComplete = empty($pItem['warnings']);
+                    if ($pq->audio_group_id || $pq->passage_group_id) {
+                        $isComplete = $isComplete && $pq->isCompleteChild();
+                    }
+                    if ($isComplete) {
+                        $completeInPart++;
+                    }
+                }
+                $totalInPart = count($partItems);
+                $totalCompleteQuestions += $completeInPart;
+
+                $eval = ToeicQuestionValidator::evaluatePartCompleteness($partNum, $completeInPart, $totalInPart);
+                if ($eval['is_under']) {
+                    $missing = $eval['diff'];
+                    $errors[] = "Part {$partNum} ({$partName}) requires exactly {$partTarget} completed questions (currently {$completeInPart}/{$partTarget}; {$missing} " . \Illuminate\Support\Str::plural('question', $missing) . " missing).";
+                } elseif ($eval['is_over']) {
+                    $exceeded = $eval['diff'];
+                    $errors[] = "Part {$partNum} ({$partName}) exceeds TOEIC blueprint: target is {$partTarget} questions, but {$eval['total_count']} are present ({$exceeded} " . \Illuminate\Support\Str::plural('question', $exceeded) . " exceed blueprint).";
+                }
+
+                // Grouped structural rules
+                if ($partNum === 3) {
+                    $p3Groups = AudioGroup::where('test_id', (string) $test->id)->where('part_number', 3)->get();
+                    if ($p3Groups->count() !== 13) {
+                        $errors[] = "Part 3 Conversations requires exactly 13 audio groups (currently {$p3Groups->count()}/13 groups).";
+                    }
+                    $p3Standalone = array_filter($partItems, fn($it) => empty($it['question']->audio_group_id));
+                    if (!empty($p3Standalone)) {
+                        $errors[] = "Part 3 Conversations requires all questions to belong to 3-question conversation audio groups; " . count($p3Standalone) . " standalone question(s) found.";
+                    }
+                }
+
+                if ($partNum === 4) {
+                    $p4Groups = AudioGroup::where('test_id', (string) $test->id)->where('part_number', 4)->get();
+                    if ($p4Groups->count() !== 10) {
+                        $errors[] = "Part 4 Talks requires exactly 10 audio groups (currently {$p4Groups->count()}/10 groups).";
+                    }
+                    $p4Standalone = array_filter($partItems, fn($it) => empty($it['question']->audio_group_id));
+                    if (!empty($p4Standalone)) {
+                        $errors[] = "Part 4 Talks requires all questions to belong to 3-question talk audio groups; " . count($p4Standalone) . " standalone question(s) found.";
+                    }
+                }
+
+                if ($partNum === 6) {
+                    $p6Groups = PassageGroup::where('test_id', (string) $test->id)->where('part_number', 6)->get();
+                    if ($p6Groups->count() !== 4) {
+                        $errors[] = "Part 6 Text Completion requires exactly 4 passage groups (currently {$p6Groups->count()}/4 groups).";
+                    }
+                    $p6Standalone = array_filter($partItems, fn($it) => empty($it['question']->passage_group_id));
+                    if (!empty($p6Standalone)) {
+                        $errors[] = "Part 6 Text Completion requires all questions to belong to 4-question passage groups; " . count($p6Standalone) . " standalone question(s) found.";
+                    }
+                }
+
+                if ($partNum === 7) {
+                    $p7Standalone = array_filter($partItems, fn($it) => empty($it['question']->passage_group_id));
+                    if (!empty($p7Standalone)) {
+                        $errors[] = "Part 7 Reading Comprehension requires all questions to belong to passage groups; " . count($p7Standalone) . " standalone question(s) found.";
+                    }
+                }
+            }
+
+            if ($totalCompleteQuestions !== 200) {
+                $errors[] = "TOEIC assessment requires exactly 200 completed questions across Parts 1–7 (currently {$totalCompleteQuestions}/200).";
             }
         }
 
