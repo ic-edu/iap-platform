@@ -1341,7 +1341,18 @@
             <div class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>✏️</span> Create Assessment-Authored Question
             </div>
-            <button type="button" onclick="closeCreateAuthoredQuestionModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
+            <button type="button" onclick="attemptCloseAuthoredQuestionModal()" aria-label="Close question modal" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg p-1">×</button>
+        </div>
+
+        {{-- Draft Restored Notice Banner --}}
+        <div id="q-draft-restored-banner" class="hidden items-center justify-between p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs mb-4">
+            <div class="flex items-center gap-2">
+                <span class="text-base">📝</span>
+                <span class="font-bold">Unsaved draft restored.</span>
+            </div>
+            <button type="button" onclick="discardAuthoredQuestionDraft(true)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800 text-amber-900 dark:text-amber-100 text-xs font-extrabold rounded-lg border border-amber-300 dark:border-amber-700 transition-colors">
+                Discard Draft
+            </button>
         </div>
 
         <form id="create-authored-question-form" method="POST" action="{{ route('teacher.tests.create-question', $test->id) }}" onsubmit="return validateCreateQuestionForm(this)" class="space-y-4">
@@ -1570,7 +1581,7 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onclick="closeCreateAuthoredQuestionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
+                <button type="button" onclick="attemptCloseAuthoredQuestionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700">Cancel</button>
                 <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20">Save Question</button>
             </div>
         </form>
@@ -2990,6 +3001,9 @@
         if (typeof updateCreateModalAutoDifficulty === 'function') {
             updateCreateModalAutoDifficulty();
         }
+        if (typeof triggerAuthoredQuestionDraftSave === 'function') {
+            triggerAuthoredQuestionDraftSave();
+        }
     }
 
     function removeQuestionAttachedMedia(mode, type) {
@@ -3022,6 +3036,9 @@
 
         if (typeof updateCreateModalAutoDifficulty === 'function') {
             updateCreateModalAutoDifficulty();
+        }
+        if (mode !== 'edit' && typeof triggerAuthoredQuestionDraftSave === 'function') {
+            triggerAuthoredQuestionDraftSave();
         }
     }
 
@@ -3469,49 +3486,170 @@
         return true;
     }
 
-    function openCreateAuthoredQuestionModal(sectionId, partNumber, sectionTitle, sectionType) {
+    function getAuthoredQuestionDraftStorageKey(sectionId, partNumber = null) {
+        const partSuffix = partNumber ? `_p${partNumber}` : '';
+        return `iap:question_draft_{{ auth()->id() }}_{{ $test->id }}_${sectionId || 'default'}${partSuffix}`;
+    }
+
+    let _qDraftSaveTimeout = null;
+    window._qBaselineSnapshot = null;
+    window._qSubmitting = false;
+    window._currentQContext = { sectionId: '', partNumber: '', sectionTitle: '', sectionType: '' };
+
+    function getAuthoredQuestionCurrentSnapshot() {
+        const form = document.getElementById('create-authored-question-form');
+        const secId = document.getElementById('create-q-section-id')?.value || '';
+        const partNum = document.getElementById('create-q-part-number')?.value || '1';
+        const secType = document.getElementById('create-q-section')?.value || 'listening';
+        const qType = form?.querySelector('select[name="question_type"]')?.value || 'multiple_choice';
+        const prompt = document.getElementById('create-q-prompt')?.value || '';
+        const passageText = document.getElementById('create-q-passage-text')?.value || '';
+        const explanation = form?.querySelector('textarea[name="explanation"]')?.value || '';
+        const mediaAssetId = document.getElementById('q-media-asset-id')?.value || '';
+        const imageUrl = document.getElementById('q-image-url')?.value || '';
+        const imageTitle = document.getElementById('q-preview-image-title')?.textContent || '';
+        const imageThumb = document.getElementById('q-preview-image-thumb')?.src || '';
+        const audioUrl = document.getElementById('q-audio-url')?.value || '';
+        const audioTitle = document.getElementById('q-preview-audio-title')?.textContent || '';
+
+        const choices = [];
+        const choiceInputs = form ? form.querySelectorAll('input[name="choices[]"]') : [];
+        choiceInputs.forEach(ci => choices.push(ci.value || ''));
+
+        const checkedRadio = form?.querySelector('input[name="correct_choice"]:checked');
+        const correctChoice = checkedRadio ? checkedRadio.value : null;
+
+        return {
+            section_id: secId,
+            part_number: partNum,
+            section_type: secType,
+            question_type: qType,
+            prompt,
+            passage_text: passageText,
+            explanation,
+            media_asset_id: mediaAssetId,
+            image_url: imageUrl,
+            image_title: imageTitle,
+            image_thumb: imageThumb,
+            audio_url: audioUrl,
+            audio_title: audioTitle,
+            choices,
+            correct_choice: correctChoice
+        };
+    }
+
+    function isAuthoredQuestionFormDirty() {
+        const current = getAuthoredQuestionCurrentSnapshot();
+        if (!window._qBaselineSnapshot) {
+            if (current.prompt.trim() || current.passage_text.trim() || current.explanation.trim() || current.media_asset_id || current.image_url || current.audio_url || current.correct_choice !== null) {
+                return true;
+            }
+            if (current.choices.some(c => c.trim().length > 0)) {
+                return true;
+            }
+            return false;
+        }
+        return JSON.stringify(current) !== JSON.stringify(window._qBaselineSnapshot);
+    }
+
+    function triggerAuthoredQuestionDraftSave() {
+        clearTimeout(_qDraftSaveTimeout);
+        _qDraftSaveTimeout = setTimeout(() => {
+            const modal = document.getElementById('create-authored-question-modal');
+            if (!modal || modal.classList.contains('hidden') || modal.style.display === 'none') return;
+
+            const secId = document.getElementById('create-q-section-id')?.value;
+            const partNum = document.getElementById('create-q-part-number')?.value || '1';
+            if (!secId) return;
+
+            const snapshot = getAuthoredQuestionCurrentSnapshot();
+            try {
+                sessionStorage.setItem(getAuthoredQuestionDraftStorageKey(secId, partNum), JSON.stringify(snapshot));
+            } catch (e) {
+                console.warn('Unable to save question draft to sessionStorage', e);
+            }
+        }, 300);
+    }
+
+    function discardAuthoredQuestionDraft(reopenFresh = false) {
+        const secId = document.getElementById('create-q-section-id')?.value;
+        const partNum = document.getElementById('create-q-part-number')?.value || '1';
+        if (secId) {
+            try {
+                sessionStorage.removeItem(getAuthoredQuestionDraftStorageKey(secId, partNum));
+            } catch (e) {}
+        }
+        const banner = document.getElementById('q-draft-restored-banner');
+        if (banner) {
+            banner.classList.add('hidden');
+        }
+        if (reopenFresh) {
+            const ctx = window._currentQContext || {};
+            openCreateAuthoredQuestionModal(ctx.sectionId, ctx.partNumber, ctx.sectionTitle, ctx.sectionType);
+        }
+    }
+
+    function forceCloseAuthoredQuestionModal() {
         const modal = document.getElementById('create-authored-question-modal');
-        if (!modal) return;
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+        const audioPlayer = document.getElementById('q-preview-audio-player');
+        if (audioPlayer) {
+            audioPlayer.pause();
+        }
+        window._qBaselineSnapshot = null;
+    }
 
-        modal.classList.remove('hidden');
-        modal.style.display = 'flex';
+    function attemptCloseAuthoredQuestionModal() {
+        const modal = document.getElementById('create-authored-question-modal');
+        if (!modal || modal.classList.contains('hidden') || modal.style.display === 'none') return;
 
-        // Reset correct radio selection
-        const checkedRadios = modal.querySelectorAll('input[name="correct_choice"]:checked');
-        checkedRadios.forEach(r => r.checked = false);
-        const errBox = document.getElementById('create-q-validation-error');
-        if (errBox) {
-            errBox.classList.add('hidden');
-            errBox.style.display = 'none';
+        if (!isAuthoredQuestionFormDirty()) {
+            forceCloseAuthoredQuestionModal();
+            return;
         }
 
-        // Reset media inputs
-        const imgInput = document.getElementById('q-image-url');
-        const audioInput = document.getElementById('q-audio-url');
-        const mediaIdInput = document.getElementById('q-media-asset-id');
-        if (imgInput) imgInput.value = '';
-        if (audioInput) audioInput.value = '';
-        if (mediaIdInput) mediaIdInput.value = '';
+        const message = 'You have unsaved changes in this question. Closing now will discard changes that have not been saved.';
+        if (typeof window.iapConfirm === 'function') {
+            window.iapConfirm({
+                title: 'Unsaved Changes',
+                message: message,
+                confirmText: 'Discard Changes',
+                cancelText: 'Continue Editing',
+                variant: 'warning',
+                onConfirm: () => {
+                    discardAuthoredQuestionDraft(false);
+                    forceCloseAuthoredQuestionModal();
+                }
+            });
+        } else {
+            if (confirm(message)) {
+                discardAuthoredQuestionDraft(false);
+                forceCloseAuthoredQuestionModal();
+            }
+        }
+    }
 
-        const prevImg = document.getElementById('q-preview-image-card');
-        const emptyImg = document.getElementById('q-empty-image-card');
-        const prevAudio = document.getElementById('q-preview-audio-card');
-        const emptyAudio = document.getElementById('q-empty-audio-card');
-        const audioPlayer = document.getElementById('q-preview-audio-player');
+    function openCreateAuthoredQuestionModal(sectionId, partNumber, sectionTitle, sectionType) {
+        const modal = document.getElementById('create-authored-question-modal');
+        const form = document.getElementById('create-authored-question-form');
+        if (!modal || !form) return;
 
-        if (prevImg) { prevImg.classList.add('hidden'); prevImg.style.display = 'none'; }
-        if (emptyImg) { emptyImg.classList.remove('hidden'); emptyImg.style.display = 'flex'; }
-        if (prevAudio) { prevAudio.classList.add('hidden'); prevAudio.style.display = 'none'; }
-        if (emptyAudio) { emptyAudio.classList.remove('hidden'); emptyAudio.style.display = 'flex'; }
-        if (audioPlayer) audioPlayer.src = '';
+        window._currentQContext = { sectionId, partNumber, sectionTitle, sectionType };
 
+        const secIdInput = document.getElementById('create-q-section-id');
+        const partInput = document.getElementById('create-q-part-number');
+        const secTypeInput = document.getElementById('create-q-section');
         const contextBanner = document.getElementById('create-q-context-banner');
         const globalSelector = document.getElementById('create-q-global-selector-container');
         const contextTitle = document.getElementById('create-q-context-title');
         const contextBadge = document.getElementById('create-q-context-badge');
-        const secIdInput = document.getElementById('create-q-section-id');
-        const partInput = document.getElementById('create-q-part-number');
-        const secTypeInput = document.getElementById('create-q-section');
+
+        let effectiveSecId = sectionId;
+        let effectivePartNum = partNumber;
+        let effectiveSecType = sectionType;
 
         if (sectionId) {
             // Contextual Section Mode
@@ -3529,10 +3667,6 @@
             }
             if (contextTitle) contextTitle.textContent = sectionTitle || 'Selected Section';
             if (contextBadge) contextBadge.textContent = (sectionType || 'SECTION') + (partNumber ? ` • Part ${partNumber}` : '');
-
-            if (partNumber) {
-                onCreateModalToeicPartChange(partNumber);
-            }
         } else {
             // Global Modal Mode
             if (contextBanner) {
@@ -3545,17 +3679,153 @@
             }
             const unifiedSelect = document.getElementById('create-q-unified-part-section');
             if (unifiedSelect) {
-                onGlobalUnifiedSectionChange(unifiedSelect);
+                const opt = unifiedSelect.options[unifiedSelect.selectedIndex];
+                if (opt) {
+                    effectiveSecId = opt.value;
+                    effectivePartNum = opt.getAttribute('data-part') || '1';
+                    effectiveSecType = opt.getAttribute('data-type') || 'listening';
+                    if (secIdInput) secIdInput.value = effectiveSecId;
+                    if (partInput) partInput.value = effectivePartNum;
+                    if (secTypeInput) secTypeInput.value = effectiveSecType;
+                }
             } else {
                 const genericSelect = document.getElementById('create-q-generic-section-select');
                 if (genericSelect) {
-                    onGlobalGenericSectionChange(genericSelect);
+                    effectiveSecId = genericSelect.value;
+                    if (secIdInput) secIdInput.value = effectiveSecId;
                 }
             }
         }
 
+        const partNumInt = parseInt(effectivePartNum) || 1;
+        onCreateModalToeicPartChange(partNumInt);
+
+        // Check for existing sessionStorage draft
+        let draftData = null;
+        try {
+            const rawDraft = sessionStorage.getItem(getAuthoredQuestionDraftStorageKey(effectiveSecId || secIdInput?.value, partNumInt));
+            if (rawDraft) {
+                draftData = JSON.parse(rawDraft);
+            }
+        } catch (e) {
+            draftData = null;
+        }
+
+        const banner = document.getElementById('q-draft-restored-banner');
+        const errBox = document.getElementById('create-q-validation-error');
+        if (errBox) {
+            errBox.classList.add('hidden');
+            errBox.style.display = 'none';
+        }
+
+        if (draftData) {
+            // Restore from draft
+            const promptInput = document.getElementById('create-q-prompt');
+            const passageInput = document.getElementById('create-q-passage-text');
+            const explInput = form.querySelector('textarea[name="explanation"]');
+            const qTypeSelect = form.querySelector('select[name="question_type"]');
+
+            if (promptInput) promptInput.value = draftData.prompt || '';
+            if (passageInput) passageInput.value = draftData.passage_text || '';
+            if (explInput) explInput.value = draftData.explanation || '';
+            if (qTypeSelect && draftData.question_type) qTypeSelect.value = draftData.question_type;
+
+            // Restore media
+            const imgInput = document.getElementById('q-image-url');
+            const audioInput = document.getElementById('q-audio-url');
+            const mediaIdInput = document.getElementById('q-media-asset-id');
+            if (imgInput) imgInput.value = draftData.image_url || '';
+            if (audioInput) audioInput.value = draftData.audio_url || '';
+            if (mediaIdInput) mediaIdInput.value = draftData.media_asset_id || '';
+
+            const prevImg = document.getElementById('q-preview-image-card');
+            const emptyImg = document.getElementById('q-empty-image-card');
+            const thumbImg = document.getElementById('q-preview-image-thumb');
+            const titleImg = document.getElementById('q-preview-image-title');
+
+            if (draftData.image_url || draftData.media_asset_id) {
+                if (thumbImg) thumbImg.src = draftData.image_thumb || draftData.image_url || '';
+                if (titleImg) titleImg.textContent = draftData.image_title || 'Attached Image';
+                if (prevImg) { prevImg.classList.remove('hidden'); prevImg.style.display = 'flex'; }
+                if (emptyImg) { emptyImg.classList.add('hidden'); emptyImg.style.display = 'none'; }
+            } else {
+                if (prevImg) { prevImg.classList.add('hidden'); prevImg.style.display = 'none'; }
+                if (emptyImg) { emptyImg.classList.remove('hidden'); emptyImg.style.display = 'flex'; }
+            }
+
+            const prevAudio = document.getElementById('q-preview-audio-card');
+            const emptyAudio = document.getElementById('q-empty-audio-card');
+            const playerAudio = document.getElementById('q-preview-audio-player');
+            const titleAudio = document.getElementById('q-preview-audio-title');
+
+            if (draftData.audio_url) {
+                if (playerAudio) playerAudio.src = draftData.audio_url;
+                if (titleAudio) titleAudio.textContent = draftData.audio_title || 'Attached Audio';
+                if (prevAudio) { prevAudio.classList.remove('hidden'); prevAudio.style.display = 'flex'; }
+                if (emptyAudio) { emptyAudio.classList.add('hidden'); emptyAudio.style.display = 'none'; }
+            } else {
+                if (prevAudio) { prevAudio.classList.add('hidden'); prevAudio.style.display = 'none'; }
+                if (emptyAudio) { emptyAudio.classList.remove('hidden'); emptyAudio.style.display = 'flex'; }
+                if (playerAudio) playerAudio.src = '';
+            }
+
+            // Restore choices
+            const choiceInputs = form.querySelectorAll('input[name="choices[]"]');
+            const draftChoices = draftData.choices || [];
+            choiceInputs.forEach((ci, idx) => {
+                ci.value = draftChoices[idx] !== undefined ? draftChoices[idx] : '';
+            });
+
+            // Restore correct choice radio
+            const checkedRadios = modal.querySelectorAll('input[name="correct_choice"]');
+            checkedRadios.forEach(r => {
+                r.checked = (draftData.correct_choice !== null && draftData.correct_choice !== undefined && String(r.value) === String(draftData.correct_choice));
+            });
+
+            if (banner) banner.classList.remove('hidden');
+        } else {
+            // Clean initial state
+            const promptInput = document.getElementById('create-q-prompt');
+            const passageInput = document.getElementById('create-q-passage-text');
+            const explInput = form.querySelector('textarea[name="explanation"]');
+            if (promptInput) promptInput.value = '';
+            if (passageInput) passageInput.value = '';
+            if (explInput) explInput.value = '';
+
+            const imgInput = document.getElementById('q-image-url');
+            const audioInput = document.getElementById('q-audio-url');
+            const mediaIdInput = document.getElementById('q-media-asset-id');
+            if (imgInput) imgInput.value = '';
+            if (audioInput) audioInput.value = '';
+            if (mediaIdInput) mediaIdInput.value = '';
+
+            const prevImg = document.getElementById('q-preview-image-card');
+            const emptyImg = document.getElementById('q-empty-image-card');
+            const prevAudio = document.getElementById('q-preview-audio-card');
+            const emptyAudio = document.getElementById('q-empty-audio-card');
+            const audioPlayer = document.getElementById('q-preview-audio-player');
+
+            if (prevImg) { prevImg.classList.add('hidden'); prevImg.style.display = 'none'; }
+            if (emptyImg) { emptyImg.classList.remove('hidden'); emptyImg.style.display = 'flex'; }
+            if (prevAudio) { prevAudio.classList.add('hidden'); prevAudio.style.display = 'none'; }
+            if (emptyAudio) { emptyAudio.classList.remove('hidden'); emptyAudio.style.display = 'flex'; }
+            if (audioPlayer) audioPlayer.src = '';
+
+            const choiceInputs = form.querySelectorAll('input[name="choices[]"]');
+            choiceInputs.forEach(ci => ci.value = '');
+
+            const checkedRadios = modal.querySelectorAll('input[name="correct_choice"]:checked');
+            checkedRadios.forEach(r => r.checked = false);
+
+            if (banner) banner.classList.add('hidden');
+        }
+
         updateCreateModalCorrectChoice();
         updateCreateModalAutoDifficulty();
+        window._qBaselineSnapshot = getAuthoredQuestionCurrentSnapshot();
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
     }
 
     function onGlobalUnifiedSectionChange(selectEl) {
@@ -3576,12 +3846,14 @@
         if (secTypeInput) secTypeInput.value = secType;
 
         onCreateModalToeicPartChange(partNum);
+        triggerAuthoredQuestionDraftSave();
     }
 
     function onGlobalGenericSectionChange(selectEl) {
         if (!selectEl) return;
         const secIdInput = document.getElementById('create-q-section-id');
         if (secIdInput) secIdInput.value = selectEl.value;
+        triggerAuthoredQuestionDraftSave();
     }
 
     function toggleSectionCollapse(secId, forceState = null) {
@@ -3640,15 +3912,13 @@
             }
         }
     }
-    function closeCreateAuthoredQuestionModal(e) {
-        const modal = document.getElementById('create-authored-question-modal');
-        if (!modal) return;
 
-        // Direct invocation (no event argument) or backdrop click (e.target is the backdrop itself)
-        if (!e || e.target === modal) {
-            modal.classList.add('hidden');
-            modal.style.display = 'none';
+    function closeCreateAuthoredQuestionModal(e) {
+        if (e && e.target === document.getElementById('create-authored-question-modal')) {
+            // Backdrop click: do not dismiss modal to protect unsaved work
+            return;
         }
+        attemptCloseAuthoredQuestionModal();
     }
 
     function getAudioGroupDraftStorageKey(sectionId) {
@@ -6043,6 +6313,16 @@
             if (globalDialog && globalDialog.open) {
                 return;
             }
+            const qMediaModal = document.getElementById('question-media-picker-modal');
+            if (qMediaModal && !qMediaModal.classList.contains('hidden') && qMediaModal.style.display !== 'none') {
+                closeQuestionMediaPicker();
+                return;
+            }
+            const authoredQModal = document.getElementById('create-authored-question-modal');
+            if (authoredQModal && !authoredQModal.classList.contains('hidden') && authoredQModal.style.display !== 'none') {
+                attemptCloseAuthoredQuestionModal();
+                return;
+            }
             const audioGroupModal = document.getElementById('create-audio-group-modal');
             if (audioGroupModal && !audioGroupModal.classList.contains('hidden') && audioGroupModal.style.display !== 'none') {
                 attemptCloseAudioGroupModal();
@@ -6055,7 +6335,6 @@
             }
             closeResubmitModal();
             closeAttachMasterModal();
-            closeCreateAuthoredQuestionModal();
             closeAddSectionModal();
             closeEditSectionModal();
             closeAttachSectionMediaModal();
@@ -6219,8 +6498,34 @@
             });
         }
 
+        const authoredQForm = document.getElementById('create-authored-question-form');
+        if (authoredQForm) {
+            authoredQForm.addEventListener('input', function() {
+                triggerAuthoredQuestionDraftSave();
+            });
+            authoredQForm.addEventListener('change', function() {
+                triggerAuthoredQuestionDraftSave();
+            });
+            authoredQForm.addEventListener('submit', function() {
+                window._authoredQSubmitting = true;
+                const secId = document.getElementById('q-section-id')?.value;
+                const partNum = document.getElementById('q-part-number')?.value;
+                if (secId) {
+                    try {
+                        sessionStorage.removeItem(getAuthoredQuestionDraftStorageKey(secId, partNum));
+                    } catch (e) {}
+                }
+            });
+        }
+
         window.addEventListener('beforeunload', function(e) {
-            if (window._agSubmitting || window._pgSubmitting) return;
+            if (window._agSubmitting || window._pgSubmitting || window._authoredQSubmitting) return;
+            const authoredQModal = document.getElementById('create-authored-question-modal');
+            if (authoredQModal && !authoredQModal.classList.contains('hidden') && authoredQModal.style.display !== 'none' && isAuthoredQuestionFormDirty()) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
             const agModal = document.getElementById('create-audio-group-modal');
             if (agModal && !agModal.classList.contains('hidden') && agModal.style.display !== 'none' && isAudioGroupFormDirty()) {
                 e.preventDefault();

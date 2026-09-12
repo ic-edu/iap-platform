@@ -95,7 +95,7 @@ class TeacherAssessmentQuestionModalInteractionTest extends TestCase
         $content = $response->getContent();
 
         $this->assertStringContainsString('function closeCreateAuthoredQuestionModal(e)', $content);
-        $this->assertStringContainsString('if (!e || e.target === modal)', $content);
+        $this->assertStringContainsString('attemptCloseAuthoredQuestionModal', $content);
     }
 
     public function test_05_x_button_calls_close_create_authored_question_modal(): void
@@ -103,7 +103,7 @@ class TeacherAssessmentQuestionModalInteractionTest extends TestCase
         $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.show', $this->testRecord->id));
 
         $response->assertStatus(200);
-        $response->assertSee('onclick="closeCreateAuthoredQuestionModal()"', false);
+        $response->assertSee('onclick="attemptCloseAuthoredQuestionModal()"', false);
     }
 
     public function test_06_cancel_button_calls_close_create_authored_question_modal(): void
@@ -114,7 +114,7 @@ class TeacherAssessmentQuestionModalInteractionTest extends TestCase
         $content = $response->getContent();
 
         $this->assertMatchesRegularExpression(
-            '/<button\s+type="button"\s+onclick="closeCreateAuthoredQuestionModal\(\)"[^>]*>\s*Cancel\s*<\/button>/i',
+            '/<button\s+type="button"\s+onclick="attemptCloseAuthoredQuestionModal\(\)"[^>]*>\s*Cancel\s*<\/button>/i',
             $content
         );
     }
