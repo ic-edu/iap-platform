@@ -298,8 +298,8 @@ class CandidateStimulusImageLightboxTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('switchPassageDocUnit', false);
-        $response->assertSee('Department Memo (Memo)', false);
-        $response->assertSee('Training Schedule (Schedule)', false);
+        $response->assertSee('Department Memo', false);
+        $response->assertSee('Training Schedule', false);
         $response->assertSee('https://images.unsplash.com/photo-1586281380349-632531db7ed4', false);
         $response->assertSee('https://images.unsplash.com/photo-1506784983877-45594efa4cbe', false);
     }
@@ -377,5 +377,32 @@ class CandidateStimulusImageLightboxTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('This is a pure textual passage with no image attached.', false);
+    }
+
+    /**
+     * IMAGE-ZOOM-13: Overlay controls have high accessible contrast against dark backdrop.
+     */
+    public function test_image_zoom_13_overlay_controls_contrast_contract(): void
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.preview', $this->test->id));
+
+        $response->assertStatus(200);
+        $content = $response->getContent();
+
+        // Stimulus caption uses high-contrast text-white
+        $this->assertStringContainsString('id="stimulus-lightbox-caption" class="text-xs sm:text-sm font-bold truncate max-w-xs sm:max-w-md text-white tracking-wide"', $content);
+        // Zoom mode badge uses high-contrast text-white and border-slate-500
+        $this->assertStringContainsString('class="text-[10px] uppercase font-black tracking-wider px-2.5 py-0.5 rounded-md bg-slate-800 text-white border border-slate-500 shadow-sm"', $content);
+        // Close button uses high-contrast text-white and border-slate-500 with accessible focus ring
+        $this->assertStringContainsString('id="stimulus-lightbox-close-btn"', $content);
+        $this->assertStringContainsString('bg-slate-800 hover:bg-slate-700 text-white hover:text-white border border-slate-500 hover:border-slate-300', $content);
+
+        // Also verify in Candidate CBT
+        $attempt = $this->createActiveAttempt('simulator');
+        $cbtResponse = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
+        $cbtResponse->assertStatus(200);
+        $cbtContent = $cbtResponse->getContent();
+        $this->assertStringContainsString('id="stimulus-lightbox-caption" class="text-xs sm:text-sm font-bold truncate max-w-xs sm:max-w-md text-white tracking-wide"', $cbtContent);
+        $this->assertStringContainsString('bg-slate-800 hover:bg-slate-700 text-white hover:text-white border border-slate-500 hover:border-slate-300', $cbtContent);
     }
 }

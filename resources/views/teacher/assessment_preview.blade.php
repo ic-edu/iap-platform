@@ -519,12 +519,32 @@
                                                 </span>
                                                 @if($effectivePassages->count() > 1)
                                                     <div class="flex items-center gap-1.5 ml-2 flex-wrap">
+                                                        <span class="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-500 mr-1 hidden sm:inline">Jump to:</span>
                                                         @foreach($effectivePassages as $pIdx => $pass)
+                                                            @php
+                                                                $rawTitle = trim($pass->title ?? '');
+                                                                $docType = trim($pass->document_type ?? '');
+                                                                $docTypeLabel = $docType ? ucfirst($docType) : '';
+                                                                if (!empty($rawTitle) && !empty($docTypeLabel)) {
+                                                                    if (strcasecmp($rawTitle, $docTypeLabel) === 0 || stripos($rawTitle, $docTypeLabel) !== false) {
+                                                                        $docLabel = $rawTitle;
+                                                                    } else {
+                                                                        $docLabel = $rawTitle . ' (' . $docTypeLabel . ')';
+                                                                    }
+                                                                } elseif (!empty($rawTitle)) {
+                                                                    $docLabel = $rawTitle;
+                                                                } elseif (!empty($docTypeLabel)) {
+                                                                    $docLabel = $docTypeLabel;
+                                                                } else {
+                                                                    $docLabel = 'Document ' . ($pIdx + 1);
+                                                                }
+                                                            @endphp
                                                             <button type="button"
                                                                     id="passage-tab-unit-{{ $unitIndex }}-{{ $pIdx }}"
                                                                     onclick="switchPassageDocUnit({{ $unitIndex }}, {{ $pIdx }})"
-                                                                    class="passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all {{ $pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700' }}">
-                                                                {{ $pass->title ?: ('Document ' . ($pIdx + 1)) }} ({{ ucfirst($pass->document_type ?? 'article') }})
+                                                                    class="passage-doc-tab text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all {{ $pIdx === 0 ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700' }}"
+                                                                    title="Jump to Document {{ $pIdx + 1 }}: {{ $docLabel }}">
+                                                                {{ ($pIdx + 1) }} — {{ $docLabel }}
                                                             </button>
                                                         @endforeach
                                                     </div>
@@ -535,26 +555,54 @@
                                             @endif
                                         </div>
 
-                                        <div class="passage-scroll-container overflow-y-auto pr-2 space-y-4 text-sm text-slate-800 dark:text-slate-200 leading-relaxed max-h-[62vh]" id="passage-scroll-unit-{{ $unitIndex }}">
+                                        <div class="passage-scroll-container overflow-y-auto pr-2 space-y-6 text-sm text-slate-800 dark:text-slate-200 leading-relaxed max-h-[62vh]" id="passage-scroll-unit-{{ $unitIndex }}">
                                             @forelse($effectivePassages as $pIdx => $pass)
                                                 @php
                                                     $passImg = $pass->getEffectiveImageUrl();
+                                                    $rawTitle = trim($pass->title ?? '');
+                                                    $docType = trim($pass->document_type ?? '');
+                                                    $docTypeLabel = $docType ? ucfirst($docType) : '';
+                                                    if (!empty($rawTitle) && !empty($docTypeLabel)) {
+                                                        if (strcasecmp($rawTitle, $docTypeLabel) === 0 || stripos($rawTitle, $docTypeLabel) !== false) {
+                                                            $docLabel = $rawTitle;
+                                                        } else {
+                                                            $docLabel = $rawTitle . ' (' . $docTypeLabel . ')';
+                                                        }
+                                                    } elseif (!empty($rawTitle)) {
+                                                        $docLabel = $rawTitle;
+                                                    } elseif (!empty($docTypeLabel)) {
+                                                        $docLabel = $docTypeLabel;
+                                                    } else {
+                                                        $docLabel = 'Document ' . ($pIdx + 1);
+                                                    }
                                                 @endphp
-                                                <div id="passage-doc-unit-{{ $unitIndex }}-{{ $pIdx }}" class="passage-doc-content-unit-{{ $unitIndex }} {{ $pIdx > 0 ? 'hidden' : '' }}">
-                                                    @if($pass->title && $effectivePassages->count() === 1)
+                                                <div id="passage-doc-unit-{{ $unitIndex }}-{{ $pIdx }}" class="passage-doc-content-unit-{{ $unitIndex }} {{ $pIdx > 0 ? 'pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-800' : '' }}">
+                                                    @if($effectivePassages->count() > 1)
+                                                        <div class="flex items-center justify-between gap-2 mb-3 bg-slate-100/90 dark:bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                                                    Document {{ $pIdx + 1 }} of {{ $effectivePassages->count() }}
+                                                                </span>
+                                                                @if($docLabel)
+                                                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ $docLabel }}</span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    @elseif($pass->title)
                                                         <h4 class="font-bold text-base text-indigo-700 dark:text-indigo-300 mb-2 border-b border-slate-200 dark:border-slate-800 pb-1.5">{{ $pass->title }}</h4>
                                                     @endif
+
                                                     @if(!empty($passImg))
                                                         <div class="mb-4 text-center group relative">
                                                             <img src="{{ $passImg }}"
-                                                                 alt="{{ $pass->title ?: 'Passage Document' }}"
+                                                                 alt="{{ $pass->title ?: ('Document ' . ($pIdx + 1)) }}"
                                                                  data-stimulus-zoomable="true"
                                                                  class="stimulus-zoomable max-w-full rounded-lg mx-auto border border-slate-200 dark:border-slate-800 shadow-md object-contain cursor-zoom-in hover:opacity-95 transition-all"
                                                                  style="max-height: 500px;"
                                                                  onclick="openStimulusLightbox(this.src, this.alt)">
                                                             <div class="mt-1.5 text-center">
                                                                 <button type="button"
-                                                                        onclick="openStimulusLightbox('{{ $passImg }}', '{{ addslashes($pass->title ?: 'Passage Document') }}')"
+                                                                        onclick="openStimulusLightbox('{{ $passImg }}', '{{ addslashes($pass->title ?: ('Document ' . ($pIdx + 1))) }}')"
                                                                         class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors">
                                                                     <span>🔍</span>
                                                                     <span>Click image to enlarge</span>
@@ -979,7 +1027,7 @@
 
     <!-- Reusable Candidate Stimulus Image Lightbox -->
     <div id="stimulus-lightbox-modal"
-         class="hidden fixed inset-0 z-[110] bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-3 sm:p-6 select-none"
+         class="hidden fixed inset-0 z-[110] bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 select-none"
          role="dialog"
          aria-modal="true"
          aria-label="Enlarged Stimulus Image"
@@ -987,18 +1035,22 @@
 
         <!-- Lightbox Action Bar -->
         <div class="w-full max-w-7xl flex items-center justify-between px-2 py-2 text-white mb-2" onclick="event.stopPropagation()">
-            <div class="flex items-center gap-2">
-                <span class="text-base">🔍</span>
-                <span id="stimulus-lightbox-caption" class="text-xs sm:text-sm font-bold truncate max-w-xs sm:max-w-md text-slate-200">Stimulus Image</span>
-                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800/90 text-slate-300 border border-slate-700">Zoom Mode</span>
+            <div class="flex items-center gap-2.5">
+                <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-800 border border-slate-600 text-white shadow-sm">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                    </svg>
+                </span>
+                <span id="stimulus-lightbox-caption" class="text-xs sm:text-sm font-bold truncate max-w-xs sm:max-w-md text-white tracking-wide">Stimulus Image</span>
+                <span class="text-[10px] uppercase font-black tracking-wider px-2.5 py-0.5 rounded-md bg-slate-800 text-white border border-slate-500 shadow-sm">Zoom Mode</span>
             </div>
             <button type="button"
                     id="stimulus-lightbox-close-btn"
                     onclick="closeStimulusLightbox()"
                     aria-label="Close enlarged view"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs transition-all cursor-pointer shadow-sm">
-                <span class="text-base leading-none">&times;</span>
-                <span class="hidden sm:inline">Close (Esc)</span>
+                    class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white hover:text-white border border-slate-500 hover:border-slate-300 font-bold text-xs transition-all cursor-pointer shadow-md focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-950">
+                <span class="text-base font-black leading-none text-white">&times;</span>
+                <span class="hidden sm:inline font-bold text-white">Close (Esc)</span>
             </button>
         </div>
 
@@ -1012,8 +1064,8 @@
         </div>
 
         <!-- Subtle Bottom Hint -->
-        <div class="mt-2 text-center text-[11px] text-slate-400">
-            <span>Click outside image or press <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[10px]">Esc</kbd> to close</span>
+        <div class="mt-2 text-center text-xs text-slate-200 font-medium">
+            <span>Click outside image or press <kbd class="px-2 py-0.5 rounded bg-slate-800 text-white border border-slate-500 font-mono text-[10px] font-bold shadow-sm">Esc</kbd> to close</span>
         </div>
     </div>
 
@@ -1236,12 +1288,19 @@
             if (btn) btn.className = 'passage-tab-btn px-2.5 py-1 rounded text-xs font-bold border transition-all bg-indigo-600 text-white border-indigo-600 shadow-sm';
         }
 
-        // Switch Passage Document in Passage Group Unit (Multi-Document Part 7 Double/Triple Passages)
+        // Quick-Jump to Passage Document in Passage Group Unit (Multi-Document Part 7 Double/Triple Passages)
         function switchPassageDocUnit(unitIndex, docIndex) {
-            document.querySelectorAll(`.passage-doc-content-unit-${unitIndex}`).forEach(el => el.classList.add('hidden'));
             const targetDoc = document.getElementById(`passage-doc-unit-${unitIndex}-${docIndex}`);
-            if (targetDoc) {
-                targetDoc.classList.remove('hidden');
+            const scrollContainer = document.getElementById(`passage-scroll-unit-${unitIndex}`);
+            if (scrollContainer && targetDoc) {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const docRect = targetDoc.getBoundingClientRect();
+                scrollContainer.scrollTo({
+                    top: scrollContainer.scrollTop + (docRect.top - containerRect.top) - 8,
+                    behavior: 'smooth'
+                });
+            } else if (targetDoc) {
+                targetDoc.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
             const tabs = document.querySelectorAll(`[id^="passage-tab-unit-${unitIndex}-"]`);

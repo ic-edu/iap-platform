@@ -656,8 +656,8 @@ class TeacherAssessmentCandidatePreviewTest extends TestCase
 
         // Verify Part 7 header and document switcher tabs
         $response->assertSee('PART 7 — DOUBLE PASSAGE: EMAIL AND SCHEDULE', false);
-        $response->assertSee('Conference Inquiry Email (Email)', false);
-        $response->assertSee('Seminar Program Schedule (Schedule)', false);
+        $response->assertSee('Conference Inquiry Email', false);
+        $response->assertSee('Seminar Program Schedule', false);
         $response->assertSee('switchPassageDocUnit', false);
 
         // Verify both documents exist in DOM
