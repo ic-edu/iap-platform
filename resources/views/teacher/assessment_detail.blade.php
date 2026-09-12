@@ -2128,8 +2128,19 @@
                     Each Part 6 text contains four Text Completion questions. You may save your progress before all four questions are complete.
                 </div>
             </div>
-            <button type="button" onclick="closeCreatePassageGroupModal()" aria-label="Close passage group modal" class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <button type="button" onclick="attemptClosePassageGroupModal()" aria-label="Close passage group modal" class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        {{-- Draft Restored Notice Banner --}}
+        <div id="pg-draft-restored-banner" class="hidden items-center justify-between p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs">
+            <div class="flex items-center gap-2">
+                <span class="text-base">📝</span>
+                <span class="font-bold">Unsaved draft restored.</span>
+            </div>
+            <button type="button" onclick="discardPassageGroupDraft(true)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800 text-amber-900 dark:text-amber-100 text-xs font-extrabold rounded-lg border border-amber-300 dark:border-amber-700 transition-colors">
+                Discard Draft
             </button>
         </div>
 
@@ -2376,7 +2387,7 @@
 
             {{-- 3. Action Footer --}}
             <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onclick="closeCreatePassageGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
+                <button type="button" onclick="attemptClosePassageGroupModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 transition-colors">
                     Cancel
                 </button>
                 <button type="submit" id="pg-submit-btn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 transition-all">
@@ -2914,6 +2925,9 @@
             if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
             if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
             closeQuestionMediaPicker();
+            if (typeof triggerPassageGroupDraftSave === 'function') {
+                triggerPassageGroupDraftSave();
+            }
             return;
         }
 
@@ -4042,6 +4056,18 @@
         attemptCloseAudioGroupModal();
     }
 
+    function getPassageGroupDraftStorageKey(sectionId, groupId = null) {
+        const editSuffix = groupId ? `_${groupId}` : '';
+        return `iap:passage_group_draft_{{ auth()->id() }}_{{ $test->id }}_${sectionId || 'default'}${editSuffix}`;
+    }
+
+    let _pgDraftSaveTimeout = null;
+    window._pgBaselineSnapshot = null;
+    window._pgSubmitting = false;
+    window._currentPassageGroupId = null;
+    window._pgOriginalData = null;
+    window._currentPassageSectionTitle = '';
+
     let currentPassageSetType = 'single';
     let currentPassageChildQCount = 2;
     let currentPassagePartNum = 7;
@@ -4058,6 +4084,172 @@
         if (currentPassagePartNum === 6) return 4;
         if (currentPassageSetType === 'double' || currentPassageSetType === 'triple') return 5;
         return Math.max(2, Math.min(4, currentPassageChildQCount));
+    }
+
+    function getPassageGroupCurrentSnapshot() {
+        const secId = document.getElementById('pg-section-id')?.value || '';
+        const partNum = document.getElementById('pg-part-number')?.value || '7';
+        const passageType = document.getElementById('pg-passage-type')?.value || currentPassageSetType;
+        const groupTitle = document.getElementById('pg-group-title')?.value || '';
+
+        const passages = [];
+        for (let d = 0; d < 3; d++) {
+            const id = document.getElementById(`pg-doc-${d}-id`)?.value || '';
+            const title = document.getElementById(`pg-doc-${d}-title`)?.value || '';
+            const docType = document.getElementById(`pg-doc-${d}-type`)?.value || 'article';
+            const contentEl = document.getElementById(`pg-doc-${d}-content`) || (d === 0 ? document.getElementById('pg-passage-content') : null);
+            const content = contentEl?.value || '';
+            const contentMode = document.getElementById(`pg-doc-${d}-content-mode`)?.value || 'text';
+            const mediaAssetId = document.getElementById(`pg-doc-${d}-media-asset-id`)?.value || '';
+            const imageUrl = document.getElementById(`pg-doc-${d}-image-url`)?.value || '';
+            const previewTitle = document.getElementById(`pg-doc-${d}-preview-image-title`)?.textContent || '';
+            const previewThumb = document.getElementById(`pg-doc-${d}-preview-image-thumb`)?.src || '';
+
+            passages.push({
+                id,
+                title,
+                document_type: docType,
+                content,
+                content_mode: contentMode,
+                media_asset_id: mediaAssetId,
+                image_url: imageUrl,
+                preview_image_title: previewTitle,
+                preview_image_thumb: previewThumb
+            });
+        }
+
+        const questions = [];
+        for (let i = 0; i < 5; i++) {
+            const id = document.getElementById(`pg-q${i}-id`)?.value || '';
+            const prompt = document.getElementById(`pg-q${i}-prompt`)?.value || '';
+            const explanation = document.getElementById(`pg-q${i}-explanation`)?.value || '';
+            const choices = [];
+            for (let c = 0; c < 4; c++) {
+                choices.push(document.getElementById(`pg-q${i}-choice-${c}`)?.value || '');
+            }
+            let correctChoice = 0;
+            for (let c = 0; c < 4; c++) {
+                const radio = document.getElementById(`pg-q${i}-correct-${c}`);
+                if (radio && radio.checked) {
+                    correctChoice = c;
+                    break;
+                }
+            }
+            questions.push({ id, prompt, explanation, choices, correct_choice: correctChoice });
+        }
+
+        return {
+            section_id: secId,
+            part_number: partNum,
+            passage_type: passageType,
+            child_q_count: currentPassageChildQCount,
+            title: groupTitle,
+            passages,
+            questions
+        };
+    }
+
+    function isPassageGroupFormDirty() {
+        const current = getPassageGroupCurrentSnapshot();
+        if (!window._pgBaselineSnapshot) {
+            if (current.title.trim()) return true;
+            const allowedDocs = getAllowedDocumentCount();
+            for (let d = 0; d < allowedDocs; d++) {
+                const p = current.passages[d];
+                if (p.title.trim() || p.content.trim() || p.media_asset_id || p.image_url) {
+                    return true;
+                }
+            }
+            const targetQCount = getTargetQuestionCount();
+            for (let i = 0; i < targetQCount; i++) {
+                const q = current.questions[i];
+                if (q.prompt.trim() || q.explanation.trim() || q.choices.some(c => c.trim().length > 0)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return JSON.stringify(current) !== JSON.stringify(window._pgBaselineSnapshot);
+    }
+
+    function triggerPassageGroupDraftSave() {
+        clearTimeout(_pgDraftSaveTimeout);
+        _pgDraftSaveTimeout = setTimeout(() => {
+            const modal = document.getElementById('create-passage-group-modal');
+            if (!modal || modal.classList.contains('hidden') || modal.style.display === 'none') return;
+
+            const secId = document.getElementById('pg-section-id')?.value;
+            if (!secId) return;
+
+            const snapshot = getPassageGroupCurrentSnapshot();
+            try {
+                sessionStorage.setItem(getPassageGroupDraftStorageKey(secId, window._currentPassageGroupId), JSON.stringify(snapshot));
+            } catch (e) {
+                console.warn('Unable to save passage group draft to sessionStorage', e);
+            }
+        }, 300);
+    }
+
+    function discardPassageGroupDraft(reopenFresh = false) {
+        const secId = document.getElementById('pg-section-id')?.value;
+        if (secId) {
+            try {
+                sessionStorage.removeItem(getPassageGroupDraftStorageKey(secId, window._currentPassageGroupId));
+            } catch (e) {}
+        }
+        const banner = document.getElementById('pg-draft-restored-banner');
+        if (banner) {
+            banner.classList.add('hidden');
+        }
+        if (reopenFresh) {
+            if (window._currentPassageGroupId && window._pgOriginalData) {
+                openEditPassageGroupModal(window._pgOriginalData, secId, window._currentPassageSectionTitle || '');
+            } else {
+                const partNum = currentPassagePartNum || 7;
+                openCreatePassageGroupModal(secId, partNum, window._currentPassageSectionTitle || '');
+            }
+        }
+    }
+
+    function forceClosePassageGroupModal() {
+        const modal = document.getElementById('create-passage-group-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+        window._pgBaselineSnapshot = null;
+        window._currentPassageGroupId = null;
+        window._pgOriginalData = null;
+    }
+
+    function attemptClosePassageGroupModal() {
+        const modal = document.getElementById('create-passage-group-modal');
+        if (!modal || modal.classList.contains('hidden') || modal.style.display === 'none') return;
+
+        if (!isPassageGroupFormDirty()) {
+            forceClosePassageGroupModal();
+            return;
+        }
+
+        const message = 'You have unsaved changes in this passage group. Closing now will discard changes that have not been saved.';
+        if (typeof window.iapConfirm === 'function') {
+            window.iapConfirm({
+                title: 'Unsaved Changes',
+                message: message,
+                confirmText: 'Discard Changes',
+                cancelText: 'Continue Editing',
+                variant: 'warning',
+                onConfirm: () => {
+                    discardPassageGroupDraft(false);
+                    forceClosePassageGroupModal();
+                }
+            });
+        } else {
+            if (confirm(message)) {
+                discardPassageGroupDraft(false);
+                forceClosePassageGroupModal();
+            }
+        }
     }
 
     function setPassageSetType(type) {
@@ -4120,6 +4312,7 @@
         switchPassageDocTab(currentPassageActiveDoc);
         updateChildQuestionsVisibility();
         syncPassageFormFieldsDisabledState();
+        triggerPassageGroupDraftSave();
     }
 
     function switchPassageDocTab(docIdx) {
@@ -4198,6 +4391,8 @@
             if (textWrap) textWrap.classList.remove('hidden');
             if (imageWrap) imageWrap.classList.remove('hidden');
         }
+
+        triggerPassageGroupDraftSave();
     }
 
     function removePassageDocMedia(d) {
@@ -4212,6 +4407,8 @@
         if (thumb) thumb.src = '';
         if (prevCard) { prevCard.classList.add('hidden'); prevCard.style.display = 'none'; }
         if (emptyCard) { emptyCard.classList.remove('hidden'); emptyCard.style.display = 'flex'; }
+
+        triggerPassageGroupDraftSave();
     }
 
     function addPassageChildQuestion() {
@@ -4219,6 +4416,7 @@
             currentPassageChildQCount++;
             updateChildQuestionsVisibility();
             syncPassageFormFieldsDisabledState();
+            triggerPassageGroupDraftSave();
         }
     }
 
@@ -4266,6 +4464,7 @@
             currentPassageChildQCount--;
             updateChildQuestionsVisibility();
             syncPassageFormFieldsDisabledState();
+            triggerPassageGroupDraftSave();
         }
     }
 
@@ -4443,6 +4642,10 @@
         const methodInput = document.getElementById('pg-form-method');
         if (!modal) return;
 
+        window._currentPassageGroupId = null;
+        window._pgOriginalData = null;
+        window._currentPassageSectionTitle = sectionTitle;
+
         if (form) {
             form.action = `{{ route('teacher.tests.create-passage-group', $test->id) }}`;
         }
@@ -4467,92 +4670,220 @@
         if (partBadge) partBadge.textContent = isPart6 ? 'READING • PART 6' : 'READING • PART 7';
         if (submitText) submitText.textContent = 'Save Passage Group';
 
-        // Clear group title
-        const groupTitleInput = document.getElementById('pg-group-title');
-        if (groupTitleInput) groupTitleInput.value = '';
-
-        // Clear document panels
-        for (let d = 0; d < 3; d++) {
-            const idEl = document.getElementById(`pg-doc-${d}-id`);
-            const titleEl = document.getElementById(`pg-doc-${d}-title`);
-            const contentEl = document.getElementById(`pg-doc-${d}-content`);
-            const typeEl = document.getElementById(`pg-doc-${d}-type`);
-            if (idEl) idEl.value = '';
-            if (titleEl) titleEl.value = '';
-            if (contentEl) contentEl.value = '';
-            if (typeEl) typeEl.value = 'article';
-            removePassageDocMedia(d);
-            setPassageDocContentMode(d, 'text');
-
-            const modeWrap = document.getElementById(`pg-doc-${d}-mode-selector-wrap`);
-            if (modeWrap) {
-                if (isPart6) modeWrap.classList.add('hidden');
-                else modeWrap.classList.remove('hidden');
+        // Check for existing sessionStorage draft
+        let draftData = null;
+        try {
+            const rawDraft = sessionStorage.getItem(getPassageGroupDraftStorageKey(sectionId, null));
+            if (rawDraft) {
+                draftData = JSON.parse(rawDraft);
             }
+        } catch (e) {
+            draftData = null;
         }
 
-        // Configure Part 6 vs Part 7
-        if (isPart6) {
-            if (setTypeWrap) setTypeWrap.classList.add('hidden');
-            const stimulusHeading = document.getElementById('pg-stimulus-heading');
-            const stimulusSub = document.getElementById('pg-stimulus-subheading');
-            if (stimulusHeading) stimulusHeading.textContent = 'Text / Passage Stimulus';
-            if (stimulusSub) stimulusSub.textContent = 'This text is shared by all 4 questions in this group.';
-            setPassageSetType('single');
-            currentPassageChildQCount = 4;
-        } else {
-            if (setTypeWrap) setTypeWrap.classList.remove('hidden');
-            const stimulusHeading = document.getElementById('pg-stimulus-heading');
-            const stimulusSub = document.getElementById('pg-stimulus-subheading');
-            if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
-            if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
-            currentPassageChildQCount = 2;
-            setPassageSetType('single');
-        }
+        const banner = document.getElementById('pg-draft-restored-banner');
 
-        // Configure questions prompt labels & requirements
-        for (let i = 0; i < 5; i++) {
-            const idEl = document.getElementById(`pg-q${i}-id`);
-            const promptEl = document.getElementById(`pg-q${i}-prompt`);
-            const explEl = document.getElementById(`pg-q${i}-explanation`);
-            const promptLabel = document.getElementById(`pg-q${i}-prompt-label`);
-            const promptReq = document.getElementById(`pg-q${i}-prompt-req`);
-            const promptNote = document.getElementById(`pg-q${i}-prompt-note`);
-            const promptHelp = document.getElementById(`pg-q${i}-prompt-help`);
-
-            if (idEl) idEl.value = '';
-            if (promptEl) promptEl.value = '';
-            if (explEl) explEl.value = '';
+        if (draftData) {
+            // Restore from draft
+            const groupTitleInput = document.getElementById('pg-group-title');
+            if (groupTitleInput) groupTitleInput.value = draftData.title || '';
 
             if (isPart6) {
-                if (promptLabel) promptLabel.textContent = 'Question Note / Blank Context';
-                if (promptReq) promptReq.classList.add('hidden');
-                if (promptNote) promptNote.textContent = 'Optional note';
-                if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
-                if (promptEl) {
-                    promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
-                    promptEl.removeAttribute('required');
-                }
+                if (setTypeWrap) setTypeWrap.classList.add('hidden');
+                const stimulusHeading = document.getElementById('pg-stimulus-heading');
+                const stimulusSub = document.getElementById('pg-stimulus-subheading');
+                if (stimulusHeading) stimulusHeading.textContent = 'Text / Passage Stimulus';
+                if (stimulusSub) stimulusSub.textContent = 'This text is shared by all 4 questions in this group.';
+                setPassageSetType('single');
+                currentPassageChildQCount = 4;
             } else {
-                if (promptLabel) promptLabel.textContent = 'QUESTION PROMPT / STEM';
-                if (promptReq) promptReq.classList.remove('hidden');
-                if (promptNote) promptNote.textContent = 'Required';
-                if (promptHelp) promptHelp.textContent = 'Specific reading comprehension question stem for this document.';
-                if (promptEl) {
-                    promptEl.placeholder = 'e.g. What is suggested about the advertisement?';
-                    promptEl.setAttribute('required', 'required');
+                if (setTypeWrap) setTypeWrap.classList.remove('hidden');
+                const stimulusHeading = document.getElementById('pg-stimulus-heading');
+                const stimulusSub = document.getElementById('pg-stimulus-subheading');
+                if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
+                if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
+                currentPassageChildQCount = draftData.child_q_count || 2;
+                setPassageSetType(draftData.passage_type || 'single');
+            }
+
+            const pList = draftData.passages || [];
+            for (let d = 0; d < 3; d++) {
+                const p = pList[d] || {};
+                const idEl = document.getElementById(`pg-doc-${d}-id`);
+                const titleEl = document.getElementById(`pg-doc-${d}-title`);
+                const contentEl = document.getElementById(`pg-doc-${d}-content`) || (d === 0 ? document.getElementById('pg-passage-content') : null);
+                const typeEl = document.getElementById(`pg-doc-${d}-type`);
+                const mediaIdEl = document.getElementById(`pg-doc-${d}-media-asset-id`);
+                const imgUrlEl = document.getElementById(`pg-doc-${d}-image-url`);
+
+                if (idEl) idEl.value = p.id || '';
+                if (titleEl) titleEl.value = p.title || '';
+                if (contentEl) contentEl.value = p.content || '';
+                if (typeEl) typeEl.value = p.document_type || 'article';
+                if (mediaIdEl) mediaIdEl.value = p.media_asset_id || '';
+                if (imgUrlEl) imgUrlEl.value = p.image_url || '';
+
+                setPassageDocContentMode(d, p.content_mode || (p.image_url ? (p.content ? 'text_image' : 'image') : 'text'));
+
+                if (p.image_url || p.media_asset_id) {
+                    const prevCard = document.getElementById(`pg-doc-${d}-preview-image-card`);
+                    const emptyCard = document.getElementById(`pg-doc-${d}-empty-image-card`);
+                    const thumb = document.getElementById(`pg-doc-${d}-preview-image-thumb`);
+                    const titleE = document.getElementById(`pg-doc-${d}-preview-image-title`);
+
+                    if (thumb) thumb.src = p.preview_image_thumb || p.image_url || '';
+                    if (titleE) titleE.textContent = p.preview_image_title || p.title || 'Document Image';
+                    if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+                    if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+                } else {
+                    removePassageDocMedia(d);
+                }
+
+                const modeWrap = document.getElementById(`pg-doc-${d}-mode-selector-wrap`);
+                if (modeWrap) {
+                    if (isPart6) modeWrap.classList.add('hidden');
+                    else modeWrap.classList.remove('hidden');
                 }
             }
 
-            for (let c = 0; c < 4; c++) {
-                const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
-                if (choiceEl) choiceEl.value = '';
+            const qList = draftData.questions || [];
+            for (let i = 0; i < 5; i++) {
+                const q = qList[i] || {};
+                const idEl = document.getElementById(`pg-q${i}-id`);
+                const promptEl = document.getElementById(`pg-q${i}-prompt`);
+                const explEl = document.getElementById(`pg-q${i}-explanation`);
+                const promptLabel = document.getElementById(`pg-q${i}-prompt-label`);
+                const promptReq = document.getElementById(`pg-q${i}-prompt-req`);
+                const promptNote = document.getElementById(`pg-q${i}-prompt-note`);
+                const promptHelp = document.getElementById(`pg-q${i}-prompt-help`);
+
+                if (idEl) idEl.value = q.id || '';
+                if (promptEl) promptEl.value = q.prompt || '';
+                if (explEl) explEl.value = q.explanation || '';
+
+                if (isPart6) {
+                    if (promptLabel) promptLabel.textContent = 'Question Note / Blank Context';
+                    if (promptReq) promptReq.classList.add('hidden');
+                    if (promptNote) promptNote.textContent = 'Optional note';
+                    if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
+                    if (promptEl) {
+                        promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
+                        promptEl.removeAttribute('required');
+                    }
+                } else {
+                    if (promptLabel) promptLabel.textContent = 'QUESTION PROMPT / STEM';
+                    if (promptReq) promptReq.classList.remove('hidden');
+                    if (promptNote) promptNote.textContent = 'Required';
+                    if (promptHelp) promptHelp.textContent = 'Specific reading comprehension question stem for this document.';
+                    if (promptEl) {
+                        promptEl.placeholder = 'e.g. What is suggested about the advertisement?';
+                        promptEl.setAttribute('required', 'required');
+                    }
+                }
+
+                const choices = q.choices || [];
+                for (let c = 0; c < 4; c++) {
+                    const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
+                    if (choiceEl) choiceEl.value = choices[c] || '';
+                }
+                const correctIdx = q.correct_choice ?? 0;
+                const radio = document.getElementById(`pg-q${i}-correct-${correctIdx}`) || document.getElementById(`pg-q${i}-correct-0`);
+                if (radio) radio.checked = true;
             }
-            const correct0 = document.getElementById(`pg-q${i}-correct-0`);
-            if (correct0) correct0.checked = true;
+
+            if (banner) banner.classList.remove('hidden');
+        } else {
+            // Clear group title
+            const groupTitleInput = document.getElementById('pg-group-title');
+            if (groupTitleInput) groupTitleInput.value = '';
+
+            // Configure Part 6 vs Part 7
+            if (isPart6) {
+                if (setTypeWrap) setTypeWrap.classList.add('hidden');
+                const stimulusHeading = document.getElementById('pg-stimulus-heading');
+                const stimulusSub = document.getElementById('pg-stimulus-subheading');
+                if (stimulusHeading) stimulusHeading.textContent = 'Text / Passage Stimulus';
+                if (stimulusSub) stimulusSub.textContent = 'This text is shared by all 4 questions in this group.';
+                setPassageSetType('single');
+                currentPassageChildQCount = 4;
+            } else {
+                if (setTypeWrap) setTypeWrap.classList.remove('hidden');
+                const stimulusHeading = document.getElementById('pg-stimulus-heading');
+                const stimulusSub = document.getElementById('pg-stimulus-subheading');
+                if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
+                if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
+                currentPassageChildQCount = 2;
+                setPassageSetType('single');
+            }
+
+            // Clear document panels
+            for (let d = 0; d < 3; d++) {
+                const idEl = document.getElementById(`pg-doc-${d}-id`);
+                const titleEl = document.getElementById(`pg-doc-${d}-title`);
+                const contentEl = document.getElementById(`pg-doc-${d}-content`) || (d === 0 ? document.getElementById('pg-passage-content') : null);
+                const typeEl = document.getElementById(`pg-doc-${d}-type`);
+                if (idEl) idEl.value = '';
+                if (titleEl) titleEl.value = '';
+                if (contentEl) contentEl.value = '';
+                if (typeEl) typeEl.value = 'article';
+                removePassageDocMedia(d);
+                setPassageDocContentMode(d, 'text');
+
+                const modeWrap = document.getElementById(`pg-doc-${d}-mode-selector-wrap`);
+                if (modeWrap) {
+                    if (isPart6) modeWrap.classList.add('hidden');
+                    else modeWrap.classList.remove('hidden');
+                }
+            }
+
+            // Configure questions prompt labels & requirements
+            for (let i = 0; i < 5; i++) {
+                const idEl = document.getElementById(`pg-q${i}-id`);
+                const promptEl = document.getElementById(`pg-q${i}-prompt`);
+                const explEl = document.getElementById(`pg-q${i}-explanation`);
+                const promptLabel = document.getElementById(`pg-q${i}-prompt-label`);
+                const promptReq = document.getElementById(`pg-q${i}-prompt-req`);
+                const promptNote = document.getElementById(`pg-q${i}-prompt-note`);
+                const promptHelp = document.getElementById(`pg-q${i}-prompt-help`);
+
+                if (idEl) idEl.value = '';
+                if (promptEl) promptEl.value = '';
+                if (explEl) explEl.value = '';
+
+                if (isPart6) {
+                    if (promptLabel) promptLabel.textContent = 'Question Note / Blank Context';
+                    if (promptReq) promptReq.classList.add('hidden');
+                    if (promptNote) promptNote.textContent = 'Optional note';
+                    if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
+                    if (promptEl) {
+                        promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
+                        promptEl.removeAttribute('required');
+                    }
+                } else {
+                    if (promptLabel) promptLabel.textContent = 'QUESTION PROMPT / STEM';
+                    if (promptReq) promptReq.classList.remove('hidden');
+                    if (promptNote) promptNote.textContent = 'Required';
+                    if (promptHelp) promptHelp.textContent = 'Specific reading comprehension question stem for this document.';
+                    if (promptEl) {
+                        promptEl.placeholder = 'e.g. What is suggested about the advertisement?';
+                        promptEl.setAttribute('required', 'required');
+                    }
+                }
+
+                for (let c = 0; c < 4; c++) {
+                    const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
+                    if (choiceEl) choiceEl.value = '';
+                }
+                const correct0 = document.getElementById(`pg-q${i}-correct-0`);
+                if (correct0) correct0.checked = true;
+            }
+
+            if (banner) banner.classList.add('hidden');
         }
 
         updateChildQuestionsVisibility();
+        updatePassageGroupProgressAndBadges();
+        window._pgBaselineSnapshot = getPassageGroupCurrentSnapshot();
 
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
@@ -4563,6 +4894,10 @@
         const form = document.getElementById('create-passage-group-form');
         const methodInput = document.getElementById('pg-form-method');
         if (!modal || !pgData) return;
+
+        window._currentPassageGroupId = pgData.id;
+        window._pgOriginalData = pgData;
+        window._currentPassageSectionTitle = sectionTitle;
 
         const partNum = parseInt(pgData.part_number) || 7;
         currentPassagePartNum = partNum;
@@ -4588,154 +4923,280 @@
         if (partBadge) partBadge.textContent = isPart6 ? 'READING • PART 6' : 'READING • PART 7';
         if (submitText) submitText.textContent = 'Update Passage Group';
 
-        // Title
-        const titleInput = document.getElementById('pg-group-title');
-        if (titleInput) titleInput.value = pgData.title || '';
-
-        // Configure Part 6 vs Part 7
-        if (isPart6) {
-            if (setTypeWrap) setTypeWrap.classList.add('hidden');
-            const stimulusHeading = document.getElementById('pg-stimulus-heading');
-            const stimulusSub = document.getElementById('pg-stimulus-subheading');
-            if (stimulusHeading) stimulusHeading.textContent = 'Text / Passage Stimulus';
-            if (stimulusSub) stimulusSub.textContent = 'This text is shared by all 4 questions in this group.';
-            setPassageSetType('single');
-            currentPassageChildQCount = 4;
-        } else {
-            if (setTypeWrap) setTypeWrap.classList.remove('hidden');
-            const stimulusHeading = document.getElementById('pg-stimulus-heading');
-            const stimulusSub = document.getElementById('pg-stimulus-subheading');
-            if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
-            if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
-            setPassageSetType(pgData.passage_type || 'single');
-        }
-
-        // Clear all document slots first
-        for (let d = 0; d < 3; d++) {
-            const idEl = document.getElementById(`pg-doc-${d}-id`);
-            const titleEl = document.getElementById(`pg-doc-${d}-title`);
-            const contentEl = document.getElementById(`pg-doc-${d}-content`);
-            const typeEl = document.getElementById(`pg-doc-${d}-type`);
-            if (idEl) idEl.value = '';
-            if (titleEl) titleEl.value = '';
-            if (contentEl) contentEl.value = '';
-            if (typeEl) typeEl.value = 'article';
-            removePassageDocMedia(d);
-            setPassageDocContentMode(d, 'text');
-
-            const modeWrap = document.getElementById(`pg-doc-${d}-mode-selector-wrap`);
-            if (modeWrap) {
-                if (isPart6) modeWrap.classList.add('hidden');
-                else modeWrap.classList.remove('hidden');
+        // Check for existing sessionStorage draft for edit mode
+        let draftData = null;
+        try {
+            const rawDraft = sessionStorage.getItem(getPassageGroupDraftStorageKey(sectionId, pgData.id));
+            if (rawDraft) {
+                draftData = JSON.parse(rawDraft);
             }
+        } catch (e) {
+            draftData = null;
         }
 
-        // Populate passages
-        const passages = pgData.passages || [];
-        passages.forEach((p, d) => {
-            if (d >= 3) return;
-            const idEl = document.getElementById(`pg-doc-${d}-id`);
-            const titleEl = document.getElementById(`pg-doc-${d}-title`);
-            const contentEl = document.getElementById(`pg-doc-${d}-content`);
-            const typeEl = document.getElementById(`pg-doc-${d}-type`);
-            const mediaIdEl = document.getElementById(`pg-doc-${d}-media-asset-id`);
-            const imgUrlEl = document.getElementById(`pg-doc-${d}-image-url`);
+        const banner = document.getElementById('pg-draft-restored-banner');
 
-            if (idEl) idEl.value = p.id || '';
-            if (titleEl) titleEl.value = p.title || '';
-            if (contentEl) contentEl.value = p.content || '';
-            if (typeEl) typeEl.value = p.document_type || 'article';
-            if (mediaIdEl) mediaIdEl.value = p.media_asset_id || '';
-            if (imgUrlEl) imgUrlEl.value = p.image_url || '';
-
-            const hasText = !!p.content && p.content.trim().length > 0;
-            const hasImg = !!p.image_url || !!p.media_asset_id;
-
-            let mode = 'text';
-            if (hasImg && hasText) mode = 'text_image';
-            else if (hasImg && !hasText) mode = 'image';
-
-            setPassageDocContentMode(d, mode);
-
-            if (hasImg) {
-                const prevCard = document.getElementById(`pg-doc-${d}-preview-image-card`);
-                const emptyCard = document.getElementById(`pg-doc-${d}-empty-image-card`);
-                const thumb = document.getElementById(`pg-doc-${d}-preview-image-thumb`);
-                const titleE = document.getElementById(`pg-doc-${d}-preview-image-title`);
-
-                if (thumb) thumb.src = p.image_url;
-                if (titleE) titleE.textContent = p.title || 'Document Image';
-                if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
-                if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
-            }
-        });
-
-        // Questions
-        const qList = pgData.questions || [];
-        if (!isPart6 && (pgData.passage_type || 'single') === 'single') {
-            currentPassageChildQCount = Math.max(2, Math.min(4, qList.length));
-        }
-
-        for (let i = 0; i < 5; i++) {
-            const q = qList[i] || null;
-            const idEl = document.getElementById(`pg-q${i}-id`);
-            const promptEl = document.getElementById(`pg-q${i}-prompt`);
-            const explEl = document.getElementById(`pg-q${i}-explanation`);
-            const promptLabel = document.getElementById(`pg-q${i}-prompt-label`);
-            const promptReq = document.getElementById(`pg-q${i}-prompt-req`);
-            const promptNote = document.getElementById(`pg-q${i}-prompt-note`);
-            const promptHelp = document.getElementById(`pg-q${i}-prompt-help`);
-
-            if (idEl) idEl.value = q ? q.id : '';
-            if (promptEl) promptEl.value = q ? (q.prompt || '') : '';
-            if (explEl) explEl.value = q ? (q.explanation || '') : '';
+        if (draftData) {
+            // Restore from transient edit draft
+            const titleInput = document.getElementById('pg-group-title');
+            if (titleInput) titleInput.value = draftData.title || '';
 
             if (isPart6) {
-                if (promptLabel) promptLabel.textContent = 'Question Note / Blank Context';
-                if (promptReq) promptReq.classList.add('hidden');
-                if (promptNote) promptNote.textContent = 'Optional note';
-                if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
-                if (promptEl) {
-                    promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
-                    promptEl.removeAttribute('required');
-                }
+                if (setTypeWrap) setTypeWrap.classList.add('hidden');
+                const stimulusHeading = document.getElementById('pg-stimulus-heading');
+                const stimulusSub = document.getElementById('pg-stimulus-subheading');
+                if (stimulusHeading) stimulusHeading.textContent = 'Text / Passage Stimulus';
+                if (stimulusSub) stimulusSub.textContent = 'This text is shared by all 4 questions in this group.';
+                setPassageSetType('single');
+                currentPassageChildQCount = 4;
             } else {
-                if (promptLabel) promptLabel.textContent = 'QUESTION PROMPT / STEM';
-                if (promptReq) promptReq.classList.remove('hidden');
-                if (promptNote) promptNote.textContent = 'Required';
-                if (promptHelp) promptHelp.textContent = 'Specific reading comprehension question stem for this document.';
-                if (promptEl) {
-                    promptEl.placeholder = 'e.g. What is suggested about the advertisement?';
-                    promptEl.setAttribute('required', 'required');
+                if (setTypeWrap) setTypeWrap.classList.remove('hidden');
+                const stimulusHeading = document.getElementById('pg-stimulus-heading');
+                const stimulusSub = document.getElementById('pg-stimulus-subheading');
+                if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
+                if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
+                currentPassageChildQCount = draftData.child_q_count || 2;
+                setPassageSetType(draftData.passage_type || 'single');
+            }
+
+            const pList = draftData.passages || [];
+            for (let d = 0; d < 3; d++) {
+                const p = pList[d] || {};
+                const idEl = document.getElementById(`pg-doc-${d}-id`);
+                const titleEl = document.getElementById(`pg-doc-${d}-title`);
+                const contentEl = document.getElementById(`pg-doc-${d}-content`) || (d === 0 ? document.getElementById('pg-passage-content') : null);
+                const typeEl = document.getElementById(`pg-doc-${d}-type`);
+                const mediaIdEl = document.getElementById(`pg-doc-${d}-media-asset-id`);
+                const imgUrlEl = document.getElementById(`pg-doc-${d}-image-url`);
+
+                if (idEl) idEl.value = p.id || '';
+                if (titleEl) titleEl.value = p.title || '';
+                if (contentEl) contentEl.value = p.content || '';
+                if (typeEl) typeEl.value = p.document_type || 'article';
+                if (mediaIdEl) mediaIdEl.value = p.media_asset_id || '';
+                if (imgUrlEl) imgUrlEl.value = p.image_url || '';
+
+                setPassageDocContentMode(d, p.content_mode || (p.image_url ? (p.content ? 'text_image' : 'image') : 'text'));
+
+                if (p.image_url || p.media_asset_id) {
+                    const prevCard = document.getElementById(`pg-doc-${d}-preview-image-card`);
+                    const emptyCard = document.getElementById(`pg-doc-${d}-empty-image-card`);
+                    const thumb = document.getElementById(`pg-doc-${d}-preview-image-thumb`);
+                    const titleE = document.getElementById(`pg-doc-${d}-preview-image-title`);
+
+                    if (thumb) thumb.src = p.preview_image_thumb || p.image_url || '';
+                    if (titleE) titleE.textContent = p.preview_image_title || p.title || 'Document Image';
+                    if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+                    if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+                } else {
+                    removePassageDocMedia(d);
+                }
+
+                const modeWrap = document.getElementById(`pg-doc-${d}-mode-selector-wrap`);
+                if (modeWrap) {
+                    if (isPart6) modeWrap.classList.add('hidden');
+                    else modeWrap.classList.remove('hidden');
                 }
             }
 
-            const choices = q ? (q.choices || []) : [];
-            const correctIdx = q ? (q.correct_choice ?? 0) : 0;
+            const qList = draftData.questions || [];
+            for (let i = 0; i < 5; i++) {
+                const q = qList[i] || {};
+                const idEl = document.getElementById(`pg-q${i}-id`);
+                const promptEl = document.getElementById(`pg-q${i}-prompt`);
+                const explEl = document.getElementById(`pg-q${i}-explanation`);
+                const promptLabel = document.getElementById(`pg-q${i}-prompt-label`);
+                const promptReq = document.getElementById(`pg-q${i}-prompt-req`);
+                const promptNote = document.getElementById(`pg-q${i}-prompt-note`);
+                const promptHelp = document.getElementById(`pg-q${i}-prompt-help`);
 
-            for (let c = 0; c < 4; c++) {
-                const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
-                if (choiceEl) choiceEl.value = choices[c] || '';
+                if (idEl) idEl.value = q.id || '';
+                if (promptEl) promptEl.value = q.prompt || '';
+                if (explEl) explEl.value = q.explanation || '';
+
+                if (isPart6) {
+                    if (promptLabel) promptLabel.textContent = 'Question Note / Blank Context';
+                    if (promptReq) promptReq.classList.add('hidden');
+                    if (promptNote) promptNote.textContent = 'Optional note';
+                    if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
+                    if (promptEl) {
+                        promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
+                        promptEl.removeAttribute('required');
+                    }
+                } else {
+                    if (promptLabel) promptLabel.textContent = 'QUESTION PROMPT / STEM';
+                    if (promptReq) promptReq.classList.remove('hidden');
+                    if (promptNote) promptNote.textContent = 'Required';
+                    if (promptHelp) promptHelp.textContent = 'Specific reading comprehension question stem for this document.';
+                    if (promptEl) {
+                        promptEl.placeholder = 'e.g. What is suggested about the advertisement?';
+                        promptEl.setAttribute('required', 'required');
+                    }
+                }
+
+                const choices = q.choices || [];
+                for (let c = 0; c < 4; c++) {
+                    const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
+                    if (choiceEl) choiceEl.value = choices[c] || '';
+                }
+                const correctIdx = q.correct_choice ?? 0;
+                const radio = document.getElementById(`pg-q${i}-correct-${correctIdx}`) || document.getElementById(`pg-q${i}-correct-0`);
+                if (radio) radio.checked = true;
             }
 
-            const radio = document.getElementById(`pg-q${i}-correct-${correctIdx}`) || document.getElementById(`pg-q${i}-correct-0`);
-            if (radio) radio.checked = true;
+            if (banner) banner.classList.remove('hidden');
+        } else {
+            // Populate from saved database model data
+            const titleInput = document.getElementById('pg-group-title');
+            if (titleInput) titleInput.value = pgData.title || '';
+
+            // Configure Part 6 vs Part 7
+            if (isPart6) {
+                if (setTypeWrap) setTypeWrap.classList.add('hidden');
+                const stimulusHeading = document.getElementById('pg-stimulus-heading');
+                const stimulusSub = document.getElementById('pg-stimulus-subheading');
+                if (stimulusHeading) stimulusHeading.textContent = 'Text / Passage Stimulus';
+                if (stimulusSub) stimulusSub.textContent = 'This text is shared by all 4 questions in this group.';
+                setPassageSetType('single');
+                currentPassageChildQCount = 4;
+            } else {
+                if (setTypeWrap) setTypeWrap.classList.remove('hidden');
+                const stimulusHeading = document.getElementById('pg-stimulus-heading');
+                const stimulusSub = document.getElementById('pg-stimulus-subheading');
+                if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
+                if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
+                setPassageSetType(pgData.passage_type || 'single');
+            }
+
+            // Clear all document slots first
+            for (let d = 0; d < 3; d++) {
+                const idEl = document.getElementById(`pg-doc-${d}-id`);
+                const titleEl = document.getElementById(`pg-doc-${d}-title`);
+                const contentEl = document.getElementById(`pg-doc-${d}-content`) || (d === 0 ? document.getElementById('pg-passage-content') : null);
+                const typeEl = document.getElementById(`pg-doc-${d}-type`);
+                if (idEl) idEl.value = '';
+                if (titleEl) titleEl.value = '';
+                if (contentEl) contentEl.value = '';
+                if (typeEl) typeEl.value = 'article';
+                removePassageDocMedia(d);
+                setPassageDocContentMode(d, 'text');
+
+                const modeWrap = document.getElementById(`pg-doc-${d}-mode-selector-wrap`);
+                if (modeWrap) {
+                    if (isPart6) modeWrap.classList.add('hidden');
+                    else modeWrap.classList.remove('hidden');
+                }
+            }
+
+            // Populate passages
+            const passages = pgData.passages || [];
+            passages.forEach((p, d) => {
+                if (d >= 3) return;
+                const idEl = document.getElementById(`pg-doc-${d}-id`);
+                const titleEl = document.getElementById(`pg-doc-${d}-title`);
+                const contentEl = document.getElementById(`pg-doc-${d}-content`) || (d === 0 ? document.getElementById('pg-passage-content') : null);
+                const typeEl = document.getElementById(`pg-doc-${d}-type`);
+                const mediaIdEl = document.getElementById(`pg-doc-${d}-media-asset-id`);
+                const imgUrlEl = document.getElementById(`pg-doc-${d}-image-url`);
+
+                if (idEl) idEl.value = p.id || '';
+                if (titleEl) titleEl.value = p.title || '';
+                if (contentEl) contentEl.value = p.content || '';
+                if (typeEl) typeEl.value = p.document_type || 'article';
+                if (mediaIdEl) mediaIdEl.value = p.media_asset_id || '';
+                if (imgUrlEl) imgUrlEl.value = p.image_url || '';
+
+                const hasText = !!p.content && p.content.trim().length > 0;
+                const hasImg = !!p.image_url || !!p.media_asset_id;
+
+                let mode = 'text';
+                if (hasImg && hasText) mode = 'text_image';
+                else if (hasImg && !hasText) mode = 'image';
+
+                setPassageDocContentMode(d, mode);
+
+                if (hasImg) {
+                    const prevCard = document.getElementById(`pg-doc-${d}-preview-image-card`);
+                    const emptyCard = document.getElementById(`pg-doc-${d}-empty-image-card`);
+                    const thumb = document.getElementById(`pg-doc-${d}-preview-image-thumb`);
+                    const titleE = document.getElementById(`pg-doc-${d}-preview-image-title`);
+
+                    if (thumb) thumb.src = p.image_url;
+                    if (titleE) titleE.textContent = p.title || 'Document Image';
+                    if (prevCard) { prevCard.classList.remove('hidden'); prevCard.style.display = 'flex'; }
+                    if (emptyCard) { emptyCard.classList.add('hidden'); emptyCard.style.display = 'none'; }
+                }
+            });
+
+            // Questions
+            const qList = pgData.questions || [];
+            if (!isPart6 && (pgData.passage_type || 'single') === 'single') {
+                currentPassageChildQCount = Math.max(2, Math.min(4, qList.length));
+            }
+
+            for (let i = 0; i < 5; i++) {
+                const q = qList[i] || null;
+                const idEl = document.getElementById(`pg-q${i}-id`);
+                const promptEl = document.getElementById(`pg-q${i}-prompt`);
+                const explEl = document.getElementById(`pg-q${i}-explanation`);
+                const promptLabel = document.getElementById(`pg-q${i}-prompt-label`);
+                const promptReq = document.getElementById(`pg-q${i}-prompt-req`);
+                const promptNote = document.getElementById(`pg-q${i}-prompt-note`);
+                const promptHelp = document.getElementById(`pg-q${i}-prompt-help`);
+
+                if (idEl) idEl.value = q ? q.id : '';
+                if (promptEl) promptEl.value = q ? (q.prompt || '') : '';
+                if (explEl) explEl.value = q ? (q.explanation || '') : '';
+
+                if (isPart6) {
+                    if (promptLabel) promptLabel.textContent = 'Question Note / Blank Context';
+                    if (promptReq) promptReq.classList.add('hidden');
+                    if (promptNote) promptNote.textContent = 'Optional note';
+                    if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
+                    if (promptEl) {
+                        promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
+                        promptEl.removeAttribute('required');
+                    }
+                } else {
+                    if (promptLabel) promptLabel.textContent = 'QUESTION PROMPT / STEM';
+                    if (promptReq) promptReq.classList.remove('hidden');
+                    if (promptNote) promptNote.textContent = 'Required';
+                    if (promptHelp) promptHelp.textContent = 'Specific reading comprehension question stem for this document.';
+                    if (promptEl) {
+                        promptEl.placeholder = 'e.g. What is suggested about the advertisement?';
+                        promptEl.setAttribute('required', 'required');
+                    }
+                }
+
+                const choices = q ? (q.choices || []) : [];
+                const correctIdx = q ? (q.correct_choice ?? 0) : 0;
+
+                for (let c = 0; c < 4; c++) {
+                    const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
+                    if (choiceEl) choiceEl.value = choices[c] || '';
+                }
+
+                const radio = document.getElementById(`pg-q${i}-correct-${correctIdx}`) || document.getElementById(`pg-q${i}-correct-0`);
+                if (radio) radio.checked = true;
+            }
+
+            if (banner) banner.classList.add('hidden');
         }
 
         updateChildQuestionsVisibility();
+        updatePassageGroupProgressAndBadges();
+        window._pgBaselineSnapshot = getPassageGroupCurrentSnapshot();
 
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
     }
 
     function closeCreatePassageGroupModal(e = null) {
-        if (!e || e.target === document.getElementById('create-passage-group-modal')) {
-            const modal = document.getElementById('create-passage-group-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-            }
+        if (e && e.target === document.getElementById('create-passage-group-modal')) {
+            // Backdrop click: do not dismiss modal to protect unsaved work
+            return;
         }
+        attemptClosePassageGroupModal();
     }
 
     function openPassageGroupPreviewModal(pgData) {
@@ -5587,6 +6048,11 @@
                 attemptCloseAudioGroupModal();
                 return;
             }
+            const passageGroupModal = document.getElementById('create-passage-group-modal');
+            if (passageGroupModal && !passageGroupModal.classList.contains('hidden') && passageGroupModal.style.display !== 'none') {
+                attemptClosePassageGroupModal();
+                return;
+            }
             closeResubmitModal();
             closeAttachMasterModal();
             closeCreateAuthoredQuestionModal();
@@ -5735,19 +6201,34 @@
         if (pgForm) {
             pgForm.addEventListener('input', function() {
                 updatePassageGroupProgressAndBadges();
+                triggerPassageGroupDraftSave();
             });
             pgForm.addEventListener('change', function() {
                 updatePassageGroupProgressAndBadges();
+                triggerPassageGroupDraftSave();
             });
             pgForm.addEventListener('submit', function() {
+                window._pgSubmitting = true;
+                const secId = document.getElementById('pg-section-id')?.value;
+                if (secId) {
+                    try {
+                        sessionStorage.removeItem(getPassageGroupDraftStorageKey(secId, window._currentPassageGroupId));
+                    } catch (e) {}
+                }
                 syncPassageFormFieldsDisabledState();
             });
         }
 
         window.addEventListener('beforeunload', function(e) {
-            if (window._agSubmitting) return;
+            if (window._agSubmitting || window._pgSubmitting) return;
             const agModal = document.getElementById('create-audio-group-modal');
             if (agModal && !agModal.classList.contains('hidden') && agModal.style.display !== 'none' && isAudioGroupFormDirty()) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+            const pgModal = document.getElementById('create-passage-group-modal');
+            if (pgModal && !pgModal.classList.contains('hidden') && pgModal.style.display !== 'none' && isPassageGroupFormDirty()) {
                 e.preventDefault();
                 e.returnValue = '';
                 return '';
