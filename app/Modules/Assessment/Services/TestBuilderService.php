@@ -182,6 +182,35 @@ class TestBuilderService
     }
 
     /**
+     * Helper to determine if a submitted child question has any authoring content.
+     *
+     * @param array<string, mixed> $qData
+     * @return bool
+     */
+    public function hasChildAuthoringContent(array $qData): bool
+    {
+        if (!empty(trim((string) ($qData['prompt'] ?? '')))) {
+            return true;
+        }
+        if (!empty(trim((string) ($qData['explanation'] ?? '')))) {
+            return true;
+        }
+        if (isset($qData['correct_choice']) && $qData['correct_choice'] !== '' && $qData['correct_choice'] !== null) {
+            return true;
+        }
+        $choices = $qData['choices'] ?? [];
+        if (is_array($choices)) {
+            foreach ($choices as $choice) {
+                $content = is_array($choice) ? ($choice['content'] ?? ($choice['choice_text'] ?? '')) : (string) $choice;
+                if (!empty(trim($content))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Create an Assessment-authored Shared Audio Group (Part 3 / Part 4) with up to 3 child questions.
      */
     public function createAudioGroup(TestSection $section, array $data): AudioGroup
@@ -518,57 +547,98 @@ class TestBuilderService
             }
 
             $questions = $data['questions'] ?? [];
-            foreach ($questions as $qData) {
-                if (!$this->isChildComplete($qData, $partNumber)) {
-                    continue;
-                }
+            $slotsMetadata = [];
 
-                $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
-                    'part_number'  => $partNumber,
-                    'passage_type' => $passageType,
-                    'passage_text' => $passages[0]['content'] ?? null,
-                ]));
+            foreach ($questions as $slotIdx => $qData) {
+                $isComplete = $this->isChildComplete($qData, $partNumber);
+                $hasContent = $this->hasChildAuthoringContent($qData);
 
-                $question = Question::create([
-                    'question_bank_id'       => null,
-                    'passage_group_id'       => $passageGroup->id,
-                    'prompt'                 => $qData['prompt'] ?? '',
-                    'section'                => $sectionType,
-                    'part_number'            => $partNumber,
-                    'question_type'          => 'multiple_choice',
-                    'difficulty'             => $qDetect['difficulty_level'],
-                    'difficulty_score'       => $qDetect['difficulty_score'],
-                    'difficulty_status'      => $qDetect['difficulty_status'],
-                    'difficulty_source'      => 'auto',
-                    'difficulty_factors'     => $qDetect['difficulty_factors'],
-                    'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
-                    'points'                 => 1,
-                    'explanation'            => $qData['explanation'] ?? null,
-                ]);
+                if ($isComplete) {
+                    $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
+                        'part_number'  => $partNumber,
+                        'passage_type' => $passageType,
+                        'passage_text' => $passages[0]['content'] ?? null,
+                    ]));
 
-                $correctChoiceIdx = $qData['correct_choice'] ?? 0;
-                $choices = $qData['choices'] ?? [];
-                foreach ($choices as $cIdx => $choice) {
-                    $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
-                    $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
-                    QuestionChoice::create([
-                        'question_id' => $question->id,
-                        'label'       => chr(65 + $cIdx),
-                        'content'     => $content,
-                        'choice_text' => $content,
-                        'is_correct'  => $isCorrect,
-                        'order'       => $cIdx + 1,
+                    $question = Question::create([
+                        'question_bank_id'       => null,
+                        'passage_group_id'       => $passageGroup->id,
+                        'prompt'                 => $qData['prompt'] ?? '',
+                        'section'                => $sectionType,
+                        'part_number'            => $partNumber,
+                        'question_type'          => 'multiple_choice',
+                        'difficulty'             => $qDetect['difficulty_level'],
+                        'difficulty_score'       => $qDetect['difficulty_score'],
+                        'difficulty_status'      => $qDetect['difficulty_status'],
+                        'difficulty_source'      => 'auto',
+                        'difficulty_factors'     => $qDetect['difficulty_factors'],
+                        'difficulty_detected_at' => $qDetect['difficulty_detected_at'],
+                        'points'                 => 1,
+                        'explanation'            => $qData['explanation'] ?? null,
                     ]);
-                }
 
-                $nextOrder = (TestQuestion::where('test_section_id', $section->id)->max('order') ?? 0) + 1;
-                TestQuestion::create([
-                    'test_section_id' => $section->id,
-                    'question_id'     => $question->id,
-                    'order'           => $nextOrder,
-                    'points'          => 1,
-                ]);
+                    $correctChoiceIdx = $qData['correct_choice'] ?? 0;
+                    $choices = $qData['choices'] ?? [];
+                    foreach ($choices as $cIdx => $choice) {
+                        $content = is_array($choice) ? ($choice['content'] ?? '') : $choice;
+                        $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
+                        QuestionChoice::create([
+                            'question_id' => $question->id,
+                            'label'       => chr(65 + $cIdx),
+                            'content'     => $content,
+                            'choice_text' => $content,
+                            'is_correct'  => $isCorrect,
+                            'order'       => $cIdx + 1,
+                        ]);
+                    }
+
+                    $nextOrder = (TestQuestion::where('test_section_id', $section->id)->max('order') ?? 0) + 1;
+                    TestQuestion::create([
+                        'test_section_id' => $section->id,
+                        'question_id'     => $question->id,
+                        'order'           => $nextOrder,
+                        'points'          => 1,
+                    ]);
+
+                    $slotsMetadata[$slotIdx] = [
+                        'slot'        => $slotIdx,
+                        'state'       => 'complete',
+                        'question_id' => $question->id,
+                    ];
+                } elseif ($hasContent) {
+                    $slotsMetadata[$slotIdx] = [
+                        'slot'           => $slotIdx,
+                        'state'          => 'partial',
+                        'id'             => $qData['id'] ?? null,
+                        'prompt'         => $qData['prompt'] ?? '',
+                        'explanation'    => $qData['explanation'] ?? null,
+                        'difficulty'     => $qData['difficulty'] ?? 'medium',
+                        'choices'        => $qData['choices'] ?? ['', '', '', ''],
+                        'correct_choice' => $qData['correct_choice'] ?? null,
+                    ];
+                } else {
+                    $slotsMetadata[$slotIdx] = [
+                        'slot'  => $slotIdx,
+                        'state' => 'untouched',
+                    ];
+                }
             }
+
+            if ($partNumber === 6) {
+                for ($i = 0; $i < 4; $i++) {
+                    if (!isset($slotsMetadata[$i])) {
+                        $slotsMetadata[$i] = ['slot' => $i, 'state' => 'untouched'];
+                    }
+                }
+                ksort($slotsMetadata);
+            }
+
+            $contextMetadata = $data['context_metadata'] ?? $passageGroup->context_metadata ?? [];
+            if (!is_array($contextMetadata)) {
+                $contextMetadata = [];
+            }
+            $contextMetadata['draft_slots'] = $slotsMetadata;
+            $passageGroup->update(['context_metadata' => $contextMetadata]);
 
             return $passageGroup->fresh(['questions.choices', 'passages']);
         });
@@ -666,7 +736,9 @@ class TestBuilderService
             $questionsData = $data['questions'] ?? [];
             $existingQuestions = $passageGroup->questions()->with('choices')->orderBy('created_at', 'asc')->get()->keyBy('id');
             $existingList = $passageGroup->questions()->with('choices')->orderBy('created_at', 'asc')->get()->values();
+            $prevDraftSlots = $passageGroup->context_metadata['draft_slots'] ?? [];
             $keptQuestionIds = [];
+            $slotsMetadata = [];
 
             foreach ($questionsData as $slotIdx => $qData) {
                 $qId = $qData['id'] ?? null;
@@ -674,16 +746,19 @@ class TestBuilderService
 
                 if ($qId && isset($existingQuestions[$qId])) {
                     $matchedQuestion = $existingQuestions[$qId];
+                } elseif (isset($prevDraftSlots[$slotIdx]['question_id']) && isset($existingQuestions[$prevDraftSlots[$slotIdx]['question_id']])) {
+                    $matchedQuestion = $existingQuestions[$prevDraftSlots[$slotIdx]['question_id']];
                 } elseif (isset($existingList[$slotIdx])) {
                     $matchedQuestion = $existingList[$slotIdx];
                 }
 
                 $isComplete = $this->isChildComplete($qData, $partNumber);
+                $hasContent = $this->hasChildAuthoringContent($qData);
                 $prompt = $qData['prompt'] ?? '';
 
-                if ($matchedQuestion) {
-                    $keptQuestionIds[] = $matchedQuestion->id;
-                    if ($isComplete) {
+                if ($isComplete) {
+                    if ($matchedQuestion) {
+                        $keptQuestionIds[] = $matchedQuestion->id;
                         $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
                             'part_number'  => $partNumber,
                             'passage_type' => $passageType,
@@ -735,9 +810,8 @@ class TestBuilderService
                                 ]);
                             }
                         }
-                    }
-                } else {
-                    if ($isComplete) {
+                        $targetQuestionId = $matchedQuestion->id;
+                    } else {
                         $qDetect = \App\Services\QuestionDifficultyDetectionService::detect(array_merge($qData, [
                             'part_number'  => $partNumber,
                             'passage_type' => $passageType,
@@ -786,11 +860,43 @@ class TestBuilderService
                                 'points'          => 1,
                             ]);
                         }
+                        $targetQuestionId = $newQuestion->id;
                     }
+
+                    $slotsMetadata[$slotIdx] = [
+                        'slot'        => $slotIdx,
+                        'state'       => 'complete',
+                        'question_id' => $targetQuestionId,
+                    ];
+                } elseif ($hasContent) {
+                    $slotsMetadata[$slotIdx] = [
+                        'slot'           => $slotIdx,
+                        'state'          => 'partial',
+                        'id'             => $qData['id'] ?? null,
+                        'prompt'         => $qData['prompt'] ?? '',
+                        'explanation'    => $qData['explanation'] ?? null,
+                        'difficulty'     => $qData['difficulty'] ?? 'medium',
+                        'choices'        => $qData['choices'] ?? ['', '', '', ''],
+                        'correct_choice' => $qData['correct_choice'] ?? null,
+                    ];
+                } else {
+                    $slotsMetadata[$slotIdx] = [
+                        'slot'  => $slotIdx,
+                        'state' => 'untouched',
+                    ];
                 }
             }
 
-            // Clean up removed questions
+            if ($partNumber === 6) {
+                for ($i = 0; $i < 4; $i++) {
+                    if (!isset($slotsMetadata[$i])) {
+                        $slotsMetadata[$i] = ['slot' => $i, 'state' => 'untouched'];
+                    }
+                }
+                ksort($slotsMetadata);
+            }
+
+            // Clean up removed questions (including any question transitioned to partial/untouched)
             foreach ($existingQuestions as $exQId => $exQ) {
                 if (!in_array($exQId, $keptQuestionIds, true)) {
                     TestQuestion::where('question_id', $exQId)->delete();
@@ -798,6 +904,13 @@ class TestBuilderService
                     $exQ->delete();
                 }
             }
+
+            $contextMetadata = $data['context_metadata'] ?? $passageGroup->context_metadata ?? [];
+            if (!is_array($contextMetadata)) {
+                $contextMetadata = [];
+            }
+            $contextMetadata['draft_slots'] = $slotsMetadata;
+            $passageGroup->update(['context_metadata' => $contextMetadata]);
 
             return $passageGroup->fresh(['questions.choices', 'passages']);
         });

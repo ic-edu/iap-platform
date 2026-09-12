@@ -199,9 +199,8 @@ test('TEST 07: Section Rollup calculates Part 6 as 4/4 Complete and READY when a
 
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
     $response->assertOk();
-    $response->assertSee('4/4 Complete');
-    $response->assertSee('READY');
-    $response->assertDontSee('4 Issues');
+    $response->assertSee('4/16 Complete');
+    $response->assertSee('NEEDS ATTENTION');
     $response->assertDontSee('Stem / Prompt text is empty.');
 });
 
@@ -246,7 +245,7 @@ test('TEST 08: Section Rollup identifies Part 6 incomplete question when choice 
 
     $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
     $response->assertOk();
-    $response->assertSee('3/4 Complete');
+    $response->assertSee('3/16 Complete');
     $response->assertSee('NEEDS ATTENTION');
 });
 

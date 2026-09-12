@@ -408,7 +408,7 @@ test('TEST 24: Question count adds four', function () {
     );
 
     $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
-    $res->assertSee('4/4 Complete');
+    $res->assertSee('4/16 Complete');
 });
 
 test('TEST 25: Section validation summary recomputes', function () {
@@ -416,7 +416,7 @@ test('TEST 25: Section validation summary recomputes', function () {
     $resBefore = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $resBefore->assertSee('NOT STARTED');
 
-    // Add valid group -> 4/4 Complete -> READY
+    // Add valid group -> 4/16 Complete -> NEEDS ATTENTION (requires 16 complete)
     $payload = validPart6Payload($this->part6Section->id);
     $this->actingAs($this->teacher)->post(
         route('teacher.tests.create-passage-group', $this->toeicTest->id),
@@ -424,7 +424,8 @@ test('TEST 25: Section validation summary recomputes', function () {
     );
 
     $resAfter = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
-    $resAfter->assertSee('READY');
+    $resAfter->assertSee('NEEDS ATTENTION');
+    $resAfter->assertSee('4/16 Complete');
 });
 
 test('TEST 26: Return context keeps Part 6 expanded', function () {

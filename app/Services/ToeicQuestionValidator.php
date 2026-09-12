@@ -15,6 +15,61 @@ use Illuminate\Validation\ValidationException;
 class ToeicQuestionValidator
 {
     /**
+     * Canonical TOEIC Part Blueprints: question count targets and number ranges.
+     */
+    public const TOEIC_PART_BLUEPRINTS = [
+        1 => ['target_count' => 6,  'start_number' => 1,   'end_number' => 6,   'name' => 'Photographs',             'section' => 'listening'],
+        2 => ['target_count' => 25, 'start_number' => 7,   'end_number' => 31,  'name' => 'Question-Response',       'section' => 'listening'],
+        3 => ['target_count' => 39, 'start_number' => 32,  'end_number' => 70,  'name' => 'Conversations',           'section' => 'listening'],
+        4 => ['target_count' => 30, 'start_number' => 71,  'end_number' => 100, 'name' => 'Talks',                   'section' => 'listening'],
+        5 => ['target_count' => 30, 'start_number' => 101, 'end_number' => 130, 'name' => 'Incomplete Sentences',   'section' => 'reading'],
+        6 => ['target_count' => 16, 'start_number' => 131, 'end_number' => 146, 'name' => 'Text Completion',        'section' => 'reading'],
+        7 => ['target_count' => 54, 'start_number' => 147, 'end_number' => 200, 'name' => 'Reading Comprehension',   'section' => 'reading'],
+    ];
+
+    /**
+     * Get blueprint details for a TOEIC part.
+     *
+     * @param int|string|null $partNumber
+     * @return array{target_count: int, start_number: int, end_number: int, name: string, section: string}|null
+     */
+    public static function getPartBlueprint(int|string|null $partNumber): ?array
+    {
+        $part = (int) $partNumber;
+        return self::TOEIC_PART_BLUEPRINTS[$part] ?? null;
+    }
+
+    /**
+     * Get canonical target question count for a TOEIC part.
+     *
+     * @param int|string|null $partNumber
+     * @return int|null
+     */
+    public static function getPartTargetQuestionCount(int|string|null $partNumber): ?int
+    {
+        $blueprint = self::getPartBlueprint($partNumber);
+        return $blueprint['target_count'] ?? null;
+    }
+
+    /**
+     * Get canonical question range [start, end] for a TOEIC part.
+     *
+     * @param int|string|null $partNumber
+     * @return array{start: int, end: int}|null
+     */
+    public static function getPartQuestionRange(int|string|null $partNumber): ?array
+    {
+        $blueprint = self::getPartBlueprint($partNumber);
+        if (!$blueprint) {
+            return null;
+        }
+        return [
+            'start' => $blueprint['start_number'],
+            'end'   => $blueprint['end_number'],
+        ];
+    }
+
+    /**
      * Determine if the context or entity is for a TOEIC assessment/question bank.
      */
     public static function isToeic(mixed $context): bool

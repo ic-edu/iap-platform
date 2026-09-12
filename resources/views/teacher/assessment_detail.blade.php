@@ -280,6 +280,7 @@
                         $blockingIssues = [];
                         $firstIssueId = null;
                         $completeQCount = 0;
+                        $targetCount = ($isToeicTest && (int)$sPartNum === 6) ? 16 : $sQCount;
 
                         if ($sQCount === 0 && $sAudioGroups->isEmpty() && $sPassageGroups->isEmpty()) {
                             $status = 'not_started';
@@ -365,7 +366,19 @@
                                 }
                             }
 
-                            $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
+
+
+                            if ($isToeicTest && (int)$sPartNum === 6 && $completeQCount < 16) {
+                                if (empty($blockingIssues)) {
+                                    $blockingIssues[] = "Part 6 requires 16 completed questions (currently {$completeQCount}/16).";
+                                    if (!$firstIssueId) {
+                                        $firstIssueId = "section-card-{$sModel->id}";
+                                    }
+                                }
+                                $status = 'needs_attention';
+                            } else {
+                                $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
+                            }
                         }
 
                         $uniqueIssues = array_values(array_unique($blockingIssues));
@@ -379,6 +392,7 @@
                         $sectionRollups[(string)$sModel->id] = [
                             'status'             => $status,
                             'total_questions'    => $sQCount,
+                            'target_questions'   => $targetCount,
                             'complete_questions' => $completeQCount,
                             'issue_count'        => $issueCount,
                             'issues'             => $uniqueIssues,
@@ -465,10 +479,14 @@
                                 $secQCount = $secQuestions->count();
                                 $secFirstNum = $secQuestions->first()['number'] ?? null;
                                 $secLastNum = $secQuestions->last()['number'] ?? null;
-                                $rangeLabel = $secFirstNum ? ($secFirstNum === $secLastNum ? "Question #{$secFirstNum}" : "Questions {$secFirstNum}–{$secLastNum}") : "0 Questions";
 
                                 $firstQ = $sec->testQuestions->first()?->question;
                                 $secPartNumber = $firstQ?->part_number ?? ($isToeicTest ? ($sec->order ?? ($secIndex + 1)) : null);
+                                $isPart6 = ((int)$secPartNumber === 6 && $isToeicTest);
+                                $secTargetCount = $secRollup['target_questions'] ?? ($isPart6 ? 16 : $secQCount);
+
+                                $canonicalRange = $isPart6 ? \App\Services\ToeicQuestionValidator::getPartQuestionRange(6) : null;
+                                $rangeLabel = $canonicalRange ? "Questions {$canonicalRange['start']}–{$canonicalRange['end']}" : ($secFirstNum ? ($secFirstNum === $secLastNum ? "Question #{$secFirstNum}" : "Questions {$secFirstNum}–{$secLastNum}") : "0 Questions");
 
                                 $secMCount = $sec->mediaAssets ? $sec->mediaAssets->count() : 0;
                                 $secEscTitle = addslashes($sec->title);
@@ -498,8 +516,12 @@
                                             </span>
                                             @endif
                                             <span class="text-xs text-slate-600 dark:text-slate-400 font-bold">
-                                                • {{ $secQCount }} {{ \Illuminate\Support\Str::plural('question', $secQCount) }}
-                                                @if($secFirstNum)
+                                                @if($isPart6)
+                                                    • {{ $secQCount }} of 16 questions
+                                                @else
+                                                    • {{ $secQCount }} {{ \Illuminate\Support\Str::plural('question', $secQCount) }}
+                                                @endif
+                                                @if($canonicalRange || $secFirstNum)
                                                     <span class="text-indigo-600 dark:text-indigo-400 font-extrabold">({{ $rangeLabel }})</span>
                                                 @endif
                                             </span>
@@ -507,10 +529,10 @@
                                         <div class="flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400">
                                             <span>Section {{ $secIndex + 1 }} of {{ $test->sections->count() }}</span>
                                             @if($secRollup['status'] === 'needs_attention')
-                                                <span class="text-amber-700 dark:text-amber-300 font-semibold">• {{ $secRollup['complete_questions'] }}/{{ $secRollup['total_questions'] }} Complete</span>
+                                                <span class="text-amber-700 dark:text-amber-300 font-semibold">• {{ $secRollup['complete_questions'] }}/{{ $secRollup['target_questions'] ?? $secRollup['total_questions'] }} Complete</span>
                                                 <span class="text-amber-700 dark:text-amber-300 font-bold">• {{ $secRollup['issue_count'] }} {{ \Illuminate\Support\Str::plural('Issue', $secRollup['issue_count']) }}</span>
                                             @elseif($secRollup['status'] === 'ready')
-                                                <span class="text-emerald-700 dark:text-emerald-300 font-semibold">• {{ $secRollup['total_questions'] }}/{{ $secRollup['total_questions'] }} Complete</span>
+                                                <span class="text-emerald-700 dark:text-emerald-300 font-semibold">• {{ $secRollup['complete_questions'] }}/{{ $secRollup['target_questions'] ?? $secRollup['total_questions'] }} Complete</span>
                                             @endif
                                         </div>
                                     </div>
@@ -855,6 +877,70 @@
                                                     $pgCompleteCount = $pgSortedQuestions->filter(fn($cq) => $cq->isCompleteChild())->count();
                                                     $isPart6 = ((int)$pg->part_number === 6);
                                                     $groupTypeName = $isPart6 ? 'Text Completion' : 'Reading Passage';
+                                                    $draftSlots = $pg->context_metadata['draft_slots'] ?? null;
+                                                    $qSlots = [];
+                                                    if (is_array($draftSlots) && !empty($draftSlots)) {
+                                                        foreach ($draftSlots as $slotIdx => $slotData) {
+                                                            $state = $slotData['state'] ?? 'untouched';
+                                                            if ($state === 'complete' && !empty($slotData['question_id'])) {
+                                                                $cq = $pg->questions->firstWhere('id', $slotData['question_id']);
+                                                                if ($cq) {
+                                                                    $choices = $cq->choices->sortBy('order')->values();
+                                                                    $correctIdx = $choices->search(fn($c) => (bool)$c->is_correct);
+                                                                    $qSlots[] = [
+                                                                        'id'             => $cq->id,
+                                                                        'prompt'         => $cq->prompt,
+                                                                        'explanation'    => $cq->explanation,
+                                                                        'difficulty'     => is_object($cq->difficulty) ? $cq->difficulty->value : $cq->difficulty,
+                                                                        'choices'        => $choices->map(fn($c) => $c->content ?? $c->choice_text)->toArray(),
+                                                                        'correct_choice' => $correctIdx !== false ? $correctIdx : 0,
+                                                                        'is_complete'    => $cq->isCompleteChild(),
+                                                                        'slot_state'     => 'complete',
+                                                                    ];
+                                                                    continue;
+                                                                }
+                                                            }
+                                                            if ($state === 'partial') {
+                                                                $qSlots[] = [
+                                                                    'id'             => $slotData['id'] ?? null,
+                                                                    'prompt'         => $slotData['prompt'] ?? '',
+                                                                    'explanation'    => $slotData['explanation'] ?? null,
+                                                                    'difficulty'     => $slotData['difficulty'] ?? 'medium',
+                                                                    'choices'        => $slotData['choices'] ?? ['', '', '', ''],
+                                                                    'correct_choice' => $slotData['correct_choice'] ?? null,
+                                                                    'is_complete'    => false,
+                                                                    'slot_state'     => 'partial',
+                                                                ];
+                                                                continue;
+                                                            }
+                                                            $qSlots[] = [
+                                                                'id'             => null,
+                                                                'prompt'         => '',
+                                                                'explanation'    => null,
+                                                                'difficulty'     => 'medium',
+                                                                'choices'        => ['', '', '', ''],
+                                                                'correct_choice' => null,
+                                                                'is_complete'    => false,
+                                                                'slot_state'     => 'untouched',
+                                                            ];
+                                                        }
+                                                    } else {
+                                                        $qSlots = $pgSortedQuestions->map(function($cq) {
+                                                            $choices = $cq->choices->sortBy('order')->values();
+                                                            $correctIdx = $choices->search(fn($c) => (bool)$c->is_correct);
+                                                            return [
+                                                                'id'             => $cq->id,
+                                                                'prompt'         => $cq->prompt,
+                                                                'explanation'    => $cq->explanation,
+                                                                'difficulty'     => is_object($cq->difficulty) ? $cq->difficulty->value : $cq->difficulty,
+                                                                'choices'        => $choices->map(fn($c) => $c->content ?? $c->choice_text)->toArray(),
+                                                                'correct_choice' => $correctIdx !== false ? $correctIdx : 0,
+                                                                'is_complete'    => $cq->isCompleteChild(),
+                                                                'slot_state'     => 'complete',
+                                                            ];
+                                                        })->toArray();
+                                                    }
+
                                                     $pgJson = [
                                                         'id'             => $pg->id,
                                                         'title'          => $pg->title,
@@ -871,19 +957,7 @@
                                                         ])->toArray(),
                                                         'complete_count' => $pgCompleteCount,
                                                         'is_complete'    => $pgIsComplete,
-                                                        'questions'      => $pgSortedQuestions->map(function($cq) {
-                                                            $choices = $cq->choices->sortBy('order')->values();
-                                                            $correctIdx = $choices->search(fn($c) => (bool)$c->is_correct);
-                                                            return [
-                                                                'id'             => $cq->id,
-                                                                'prompt'         => $cq->prompt,
-                                                                'explanation'    => $cq->explanation,
-                                                                'difficulty'     => is_object($cq->difficulty) ? $cq->difficulty->value : $cq->difficulty,
-                                                                'choices'        => $choices->map(fn($c) => $c->content ?? $c->choice_text)->toArray(),
-                                                                'correct_choice' => $correctIdx !== false ? $correctIdx : 0,
-                                                                'is_complete'    => $cq->isCompleteChild(),
-                                                            ];
-                                                        })->toArray(),
+                                                        'questions'      => $qSlots,
                                                     ];
                                                 @endphp
                                                 <div id="passage-group-card-{{ $pg->id }}" class="bg-white dark:bg-slate-900 border {{ $pgIsComplete ? 'border-slate-200 dark:border-slate-800' : 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20' }} rounded-xl p-4 shadow-sm space-y-3">
@@ -896,7 +970,7 @@
                                                                 <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
                                                                     {{ $isPart6 ? 'Text Completion Group' : 'Passage Group (' . ucfirst($pg->passage_type) . ')' }}
                                                                 </span>
-                                                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full {{ $pgIsComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800' }}">
+                                                                <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full {{ $pgIsComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800' }}">
                                                                     Progress: {{ $pgCompleteCount }} / {{ $isPart6 ? 4 : $pgSortedQuestions->count() }} Complete
                                                                 </span>
                                                                 @if($pgIsComplete)
@@ -2377,7 +2451,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             @foreach(['A', 'B', 'C', 'D'] as $cIdx => $optLabel)
                             <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
-                                <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="pg-q{{ $i }}-correct-{{ $cIdx }}" {{ $cIdx === 0 ? 'checked' : '' }} class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
+                                <input type="radio" name="questions[{{ $i }}][correct_choice]" value="{{ $cIdx }}" id="pg-q{{ $i }}-correct-{{ $cIdx }}" class="accent-emerald-600 w-4 h-4 cursor-pointer" title="Mark Option {{ $optLabel }} as correct">
                                 <span class="text-xs font-black text-slate-900 dark:text-white w-4">{{ $optLabel }}</span>
                                 <input type="text" name="questions[{{ $i }}][choices][]" id="pg-q{{ $i }}-choice-{{ $cIdx }}" placeholder="Option {{ $optLabel }} text" class="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                             </div>
@@ -4397,7 +4471,7 @@
             for (let c = 0; c < 4; c++) {
                 choices.push(document.getElementById(`pg-q${i}-choice-${c}`)?.value || '');
             }
-            let correctChoice = 0;
+            let correctChoice = null;
             for (let c = 0; c < 4; c++) {
                 const radio = document.getElementById(`pg-q${i}-correct-${c}`);
                 if (radio && radio.checked) {
@@ -4843,14 +4917,15 @@
             const filledChoicesCount = choiceInputs.filter(ci => ci.value && ci.value.trim().length > 0).length;
             const promptEl = document.getElementById(`pg-q${i}-prompt`);
             const promptFilled = promptEl ? promptEl.value.trim().length > 0 : false;
+            const radioChecked = !!document.querySelector(`input[name="questions[${i}][correct_choice]"]:checked`);
 
             let isComplete = false;
             if (isPart6) {
-                // Part 6 blank prompt note is optional; 4 valid choices = complete question
-                isComplete = (filledChoicesCount === 4);
+                // Part 6 blank prompt note is optional; 4 valid choices + correct answer selected = complete question
+                isComplete = (filledChoicesCount === 4) && radioChecked;
             } else {
-                // Part 7 prompt stem is required + 4 choices
-                isComplete = promptFilled && (filledChoicesCount === 4);
+                // Part 7 prompt stem is required + 4 choices + correct answer selected
+                isComplete = promptFilled && (filledChoicesCount === 4) && radioChecked;
             }
 
             const badge = document.getElementById(`pg-q${i}-status-badge`);
@@ -4859,7 +4934,8 @@
                     badge.textContent = '✓ Complete';
                     badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
                 } else {
-                    badge.textContent = filledChoicesCount > 0 ? '🟡 In Progress' : '○ Incomplete';
+                    const hasSomeInput = filledChoicesCount > 0 || promptFilled || radioChecked;
+                    badge.textContent = hasSomeInput ? '🟡 In Progress' : '○ Incomplete';
                     badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
                 }
             }
@@ -5056,9 +5132,11 @@
                     const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
                     if (choiceEl) choiceEl.value = choices[c] || '';
                 }
-                const correctIdx = q.correct_choice ?? 0;
-                const radio = document.getElementById(`pg-q${i}-correct-${correctIdx}`) || document.getElementById(`pg-q${i}-correct-0`);
-                if (radio) radio.checked = true;
+                const correctIdx = (q.correct_choice !== undefined && q.correct_choice !== null && q.correct_choice !== '') ? q.correct_choice : null;
+                for (let c = 0; c < 4; c++) {
+                    const radio = document.getElementById(`pg-q${i}-correct-${c}`);
+                    if (radio) radio.checked = (correctIdx !== null && String(correctIdx) === String(c));
+                }
             }
 
             if (banner) banner.classList.remove('hidden');
@@ -5143,9 +5221,9 @@
                 for (let c = 0; c < 4; c++) {
                     const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
                     if (choiceEl) choiceEl.value = '';
+                    const radio = document.getElementById(`pg-q${i}-correct-${c}`);
+                    if (radio) radio.checked = false;
                 }
-                const correct0 = document.getElementById(`pg-q${i}-correct-0`);
-                if (correct0) correct0.checked = true;
             }
 
             if (banner) banner.classList.add('hidden');
@@ -5309,9 +5387,11 @@
                     const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
                     if (choiceEl) choiceEl.value = choices[c] || '';
                 }
-                const correctIdx = q.correct_choice ?? 0;
-                const radio = document.getElementById(`pg-q${i}-correct-${correctIdx}`) || document.getElementById(`pg-q${i}-correct-0`);
-                if (radio) radio.checked = true;
+                const correctIdx = (q.correct_choice !== undefined && q.correct_choice !== null && q.correct_choice !== '') ? q.correct_choice : null;
+                for (let c = 0; c < 4; c++) {
+                    const radio = document.getElementById(`pg-q${i}-correct-${c}`);
+                    if (radio) radio.checked = (correctIdx !== null && String(correctIdx) === String(c));
+                }
             }
 
             if (banner) banner.classList.remove('hidden');
@@ -5439,15 +5519,14 @@
                 }
 
                 const choices = q ? (q.choices || []) : [];
-                const correctIdx = q ? (q.correct_choice ?? 0) : 0;
+                const correctIdx = (q && q.correct_choice !== undefined && q.correct_choice !== null && q.correct_choice !== '') ? q.correct_choice : null;
 
                 for (let c = 0; c < 4; c++) {
                     const choiceEl = document.getElementById(`pg-q${i}-choice-${c}`);
                     if (choiceEl) choiceEl.value = choices[c] || '';
+                    const radio = document.getElementById(`pg-q${i}-correct-${c}`);
+                    if (radio) radio.checked = (correctIdx !== null && String(correctIdx) === String(c));
                 }
-
-                const radio = document.getElementById(`pg-q${i}-correct-${correctIdx}`) || document.getElementById(`pg-q${i}-correct-0`);
-                if (radio) radio.checked = true;
             }
 
             if (banner) banner.classList.add('hidden');
