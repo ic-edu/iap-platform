@@ -47,7 +47,7 @@ class AssessmentSectionDeletionWorkflowTest extends TestCase
         $this->test = Test::create([
             'title'            => 'TOEIC Listening & Reading for SMK Perhotelan',
             'slug'             => 'toeic-listening-reading-smk-perhotelan',
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 70,
             'created_by'       => $this->teacher->id,

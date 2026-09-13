@@ -39,7 +39,7 @@ class TeacherAssessmentResubmitModalTest extends TestCase
         $bank = \App\Modules\QuestionBank\Models\QuestionBank::create([
             'title'       => 'Bank ' . $test->id,
             'slug'        => 'bank-' . $test->id . '-' . \Illuminate\Support\Str::random(5),
-            'test_type'   => 'toeic',
+            'test_type'   => 'general',
             'status'      => 'published',
             'created_by'  => $this->teacher->id,
         ]);
@@ -77,6 +77,7 @@ class TeacherAssessmentResubmitModalTest extends TestCase
         $test = Test::create([
             'title'      => 'TOEIC Full Simulation Test 01',
             'slug'       => 'toeic-full-sim-01',
+            'test_type'  => 'general',
             'status'     => 'needs_revision',
             'created_by' => $this->teacher->id,
         ]);
@@ -110,6 +111,7 @@ class TeacherAssessmentResubmitModalTest extends TestCase
         $test = Test::create([
             'title'      => 'TOEIC Full Simulation Test 02',
             'slug'       => 'toeic-full-sim-02',
+            'test_type'  => 'general',
             'status'     => 'needs_revision',
             'created_by' => $this->teacher->id,
         ]);

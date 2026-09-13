@@ -158,7 +158,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
         $test = Test::create([
             'title'            => 'TOEIC Mock Test — SMK Perhotelan (UAT)',
             'slug'             => 'toeic-mock-smk-perhotelan-' . Str::random(6),
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'assessment_mode'  => 'real_test',
             'scoring_method'   => 'automatic',
             'duration_minutes' => 30,
@@ -640,7 +640,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
         // 2. RA submits request
         $this->actingAs($this->ra)->post(route('admin.assessment-requests.store'), [
             'title'           => 'TOEIC Mock Test — SMK Perhotelan UAT',
-            'test_type'       => 'toeic',
+            'test_type'       => 'general',
             'candidate_id'    => $this->candidate->id,
             'program_context' => 'SMK Perhotelan — Hospitality / Vocational Context',
             'notes'           => '3-question institutional Mock Test for Human UAT lifecycle validation.',
@@ -656,7 +656,7 @@ class HumanMockTestUatDatasetWorkflowTest extends \Tests\TestCase
             [
                 'teacher_id'       => $this->teacher->id,
                 'title'            => 'TOEIC Mock Test — SMK Perhotelan (UAT)',
-                'test_type'        => 'toeic',
+                'test_type'        => 'general',
                 'duration_minutes' => 30,
                 'pass_score'       => 0,
             ]

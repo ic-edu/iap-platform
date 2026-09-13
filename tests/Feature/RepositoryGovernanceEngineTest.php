@@ -43,7 +43,7 @@ class RepositoryGovernanceEngineTest extends TestCase
         $this->bankA = QuestionBank::create([
             'title'      => 'Governance Question Bank Pool',
             'slug'       => 'governance-question-bank-pool',
-            'test_type'  => 'toeic',
+            'test_type'  => 'general',
             'status'     => 'draft',
             'created_by' => $this->teacherA->id,
         ]);
@@ -57,7 +57,7 @@ class RepositoryGovernanceEngineTest extends TestCase
         $test = AssessmentTest::create([
             'title'            => 'TOEIC Simulation Gov 01',
             'slug'             => 'toeic-simulation-gov-01',
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 70,
             'status'           => 'needs_revision',

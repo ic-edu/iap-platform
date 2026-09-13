@@ -53,7 +53,7 @@ class RepositoryManagerNavigationAndLifecycleStateTest extends TestCase
         $this->bank = QuestionBank::create([
             'title'      => 'Core Bank',
             'slug'       => 'core-bank-' . uniqid(),
-            'test_type'  => 'toeic',
+            'test_type'  => 'general',
             'status'     => 'approved',
             'created_by' => $this->teacher->id,
         ]);
@@ -64,7 +64,7 @@ class RepositoryManagerNavigationAndLifecycleStateTest extends TestCase
         $test = AssessmentTest::create([
             'title'            => 'TOEIC Lifecycle Test ' . uniqid(),
             'slug'             => 'toeic-lifecycle-' . uniqid(),
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 70,
             'status'           => $status,

@@ -51,7 +51,7 @@ class AssessmentQuestionAuthoringEngineTest extends TestCase
         $this->bankA = QuestionBank::create([
             'title'      => 'Test Question Pool Bank',
             'slug'       => 'test-question-pool-bank',
-            'test_type'  => 'toeic',
+            'test_type'  => 'general',
             'status'     => 'draft',
             'created_by' => $this->teacherA->id,
         ]);
@@ -194,7 +194,7 @@ class AssessmentQuestionAuthoringEngineTest extends TestCase
         $test = AssessmentTest::create([
             'title'            => 'Valid Resubmit Test 04',
             'slug'             => 'valid-resubmit-test-04',
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 70,
             'status'           => 'needs_revision',

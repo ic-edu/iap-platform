@@ -134,7 +134,7 @@ class AssessmentAuthoringWorkflowTest extends TestCase
         $test = AssessmentTest::create([
             'title'            => 'Resubmitted Full Test',
             'slug'             => 'resubmitted-full-test',
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 120,
             'pass_score'       => 750,
             'status'           => 'needs_revision',
@@ -149,7 +149,7 @@ class AssessmentAuthoringWorkflowTest extends TestCase
         $bank = \App\Modules\QuestionBank\Models\QuestionBank::create([
             'title'       => 'Test Bank A',
             'slug'        => 'test-bank-a-' . \Illuminate\Support\Str::random(5),
-            'test_type'   => 'toeic',
+            'test_type'   => 'general',
             'status'      => 'published',
             'created_by'  => $this->teacherA->id,
         ]);

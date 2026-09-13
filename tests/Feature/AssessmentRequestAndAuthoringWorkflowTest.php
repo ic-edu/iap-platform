@@ -295,7 +295,7 @@ class AssessmentRequestAndAuthoringWorkflowTest extends TestCase
         $test = Test::create([
             'title'            => 'Empty Draft Assessment',
             'slug'             => 'empty-draft-assessment',
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 400,
             'created_by'       => $this->teacher1->id,

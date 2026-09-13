@@ -65,7 +65,7 @@ class AssessmentLifecycleConsolidationTest extends TestCase
         $test = Test::create([
             'title'            => 'TOEIC Assessment ' . uniqid(),
             'slug'             => 'toeic-' . uniqid(),
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'assessment_mode'  => $mode,
             'duration_minutes' => 90,
             'pass_score'       => 70,
@@ -83,7 +83,7 @@ class AssessmentLifecycleConsolidationTest extends TestCase
         $bank = QuestionBank::create([
             'title'      => 'Bank ' . uniqid(),
             'slug'       => 'bank-' . uniqid(),
-            'test_type'  => 'toeic',
+            'test_type'  => 'general',
             'created_by' => $this->teacher->id,
             'status'     => 'published',
         ]);

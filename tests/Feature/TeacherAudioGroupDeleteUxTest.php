@@ -337,11 +337,11 @@ test('TEST 15: Global numbering recomputes after deletion', function () {
     $ag1 = createTestAudioGroup($this->toeicTest, $this->part3Section, 3, 'conversation', $this->mediaAsset);
     $ag2 = createTestAudioGroup($this->toeicTest, $this->part3Section, 3, 'conversation', $this->mediaAsset);
 
-    // Initial: 6 questions (Q1 to Q6)
+    // Initial: 6 questions in Part 3 (Q32 to Q37)
     $resInitial = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $resInitial->assertStatus(200);
-    $resInitial->assertSee('Q1 ✓ Complete');
-    $resInitial->assertSee('Q4 ✓ Complete');
+    $resInitial->assertSee('Q32 ✓ Complete');
+    $resInitial->assertSee('Q35 ✓ Complete');
 
     // Delete group 1
     $this->actingAs($this->teacher)->delete(route('teacher.tests.destroy-audio-group', [
@@ -349,12 +349,12 @@ test('TEST 15: Global numbering recomputes after deletion', function () {
         'audioGroup' => $ag1->id,
     ]));
 
-    // Group 2 child questions renumber to Q1, Q2, Q3
+    // Group 2 child questions renumber to Q32, Q33, Q34
     $resAfter = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $resAfter->assertStatus(200);
-    $resAfter->assertSee('Q1 ✓ Complete');
-    $resAfter->assertSee('Q2 ✓ Complete');
-    $resAfter->assertSee('Q3 ✓ Complete');
+    $resAfter->assertSee('Q32 ✓ Complete');
+    $resAfter->assertSee('Q33 ✓ Complete');
+    $resAfter->assertSee('Q34 ✓ Complete');
 });
 
 test('TEST 16: Section question count recomputes', function () {
@@ -362,7 +362,7 @@ test('TEST 16: Section question count recomputes', function () {
     $ag2 = createTestAudioGroup($this->toeicTest, $this->part3Section, 3, 'conversation', $this->mediaAsset);
 
     $resInitial = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
-    $resInitial->assertSee('6/6 Complete');
+    $resInitial->assertSee('6/39 Complete');
 
     $this->actingAs($this->teacher)->delete(route('teacher.tests.destroy-audio-group', [
         'test'       => $this->toeicTest->id,
@@ -370,7 +370,7 @@ test('TEST 16: Section question count recomputes', function () {
     ]));
 
     $resAfter = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
-    $resAfter->assertSee('3/3 Complete');
+    $resAfter->assertSee('3/39 Complete');
 });
 
 test('TEST 17: Section validation summary recomputes', function () {

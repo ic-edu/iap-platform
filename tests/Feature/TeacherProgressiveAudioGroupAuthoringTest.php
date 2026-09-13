@@ -632,6 +632,7 @@ class TeacherProgressiveAudioGroupAuthoringTest extends TestCase
 
     public function test_22_submit_for_review_succeeds_when_all_assessment_rules_including_audio_groups_pass(): void
     {
+        $this->test->update(['test_type' => 'general']);
         $service = app(TestBuilderService::class);
         $service->createAudioGroup($this->part3Section, [
             'media_asset_id' => $this->audioAsset->id,
@@ -1094,6 +1095,7 @@ class TeacherProgressiveAudioGroupAuthoringTest extends TestCase
         $this->assertTrue($ag->isComplete());
 
         // Step 4: Submission succeeds
+        $this->test->update(['test_type' => 'general']);
         $this->part4Section->delete();
         $submitRes = $this->actingAs($this->teacher)->post(route('teacher.tests.resubmit', $this->test->id));
         $submitRes->assertRedirect(route('teacher.tests.show', $this->test->id));

@@ -36,7 +36,7 @@ function createFullToeicAssessmentForDetail(User $teacher): array {
     $test = Test::create([
         'title'            => 'TOEIC Complete Practice Assessment AG4',
         'slug'             => 'toeic-assessment-ag4-' . Str::random(5),
-        'test_type'        => 'toeic',
+        'test_type'        => 'general',
         'assessment_mode'  => 'simulator',
         'duration_minutes' => 120,
         'pass_percentage'  => 75,

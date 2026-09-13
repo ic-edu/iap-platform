@@ -222,7 +222,7 @@ class AssessmentWorkflowIntegrationTest extends TestCase
         $test = AssessmentTest::create([
             'title'            => 'E2E Lifecycle Assessment',
             'slug'             => 'e2e-lifecycle-assessment',
-            'test_type'        => 'toeic',
+            'test_type'        => 'general',
             'duration_minutes' => 60,
             'pass_score'       => 70,
             'status'           => 'draft',

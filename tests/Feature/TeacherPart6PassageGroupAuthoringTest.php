@@ -393,11 +393,11 @@ test('TEST 23: Global numbering continues from previous Part', function () {
 
     $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
 
-    // Part 5 gets Q1, Part 6 gets Q2, Q3, Q4, Q5
-    $res->assertSee('Q2 ✓ Complete:');
-    $res->assertSee('Q3 ✓ Complete:');
-    $res->assertSee('Q4 ✓ Complete:');
-    $res->assertSee('Q5 ✓ Complete:');
+    // Part 5 gets Q101, Part 6 gets canonical Q131, Q132, Q133, Q134
+    $res->assertSee('Q131 ✓ Complete:');
+    $res->assertSee('Q132 ✓ Complete:');
+    $res->assertSee('Q133 ✓ Complete:');
+    $res->assertSee('Q134 ✓ Complete:');
 });
 
 test('TEST 24: Question count adds four', function () {
@@ -821,6 +821,7 @@ test('P6-DRAFT-11: Assessment with complete 4/4 Part 6 group passes completeness
     QuestionChoice::create(['question_id' => $p5q->id, 'label' => 'D', 'content' => 'Opt D', 'choice_text' => 'Opt D', 'is_correct' => false, 'order' => 4]);
     TestQuestion::create(['test_section_id' => $this->part5Section->id, 'question_id' => $p5q->id, 'order' => 1, 'points' => 1]);
 
+    $this->toeicTest->update(['test_type' => 'general']);
     /** @var \App\Modules\Assessment\Services\TestBuilderService $service */
     $service = app(\App\Modules\Assessment\Services\TestBuilderService::class);
 
