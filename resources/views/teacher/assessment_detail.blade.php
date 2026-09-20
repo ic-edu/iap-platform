@@ -1209,16 +1209,6 @@
                                                             <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $diffBadgeColor }}">
                                                                 ⚡ Auto: {{ ucfirst($diffVal) }}@if(!empty($q->difficulty_score)) ({{ $q->difficulty_score }})@endif
                                                             </span>
-                                                            @if($isStandaloneToeicPart)
-                                                                @php
-                                                                    $ansBadgeColor = $correctLabel
-                                                                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800'
-                                                                        : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
-                                                                @endphp
-                                                                <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $ansBadgeColor }}" title="Persisted correct answer key">
-                                                                    🎯 Correct Answer: {{ $correctAnswerDisplay }}
-                                                                </span>
-                                                            @endif
                                                         </div>
                                                         <div class="text-sm font-bold text-slate-900 dark:text-white">
                                                             {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
@@ -1268,6 +1258,16 @@
                                                         </div>
                                                     </div>
                                                 <div class="flex items-center gap-2 flex-wrap">
+                                                    @if($isStandaloneToeicPart)
+                                                        @php
+                                                            $ansBadgeColor = $correctLabel
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                                                                : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
+                                                        @endphp
+                                                        <span class="px-2.5 py-1.5 rounded-xl border text-xs font-bold inline-flex items-center {{ $ansBadgeColor }}" title="Persisted correct answer key">
+                                                            Correct Answer: {{ $correctAnswerDisplay }}
+                                                        </span>
+                                                    @endif
                                                     @if($isMaster)
                                                         <button type="button" onclick="openTeacherRequestRevisionModal('{{ $q->question_bank_id }}', '{{ $q->id }}', '{{ addslashes(Str::limit($q->prompt, 60)) }}')" class="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50 text-xs font-bold inline-flex items-center gap-1">
                                                             🛠 Request Master Revision

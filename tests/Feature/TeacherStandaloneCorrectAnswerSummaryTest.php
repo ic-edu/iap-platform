@@ -100,6 +100,8 @@ class TeacherStandaloneCorrectAnswerSummaryTest extends TestCase
         $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $res->assertStatus(200);
         $res->assertSee('Correct Answer: A', false);
+        $res->assertDontSee('🎯 Correct Answer', false);
+        $res->assertSee('bg-emerald-50 text-emerald-700 border-emerald-200', false);
     }
 
     public function test_qa_answer_02_part1_alternate_answer_d(): void
@@ -132,6 +134,7 @@ class TeacherStandaloneCorrectAnswerSummaryTest extends TestCase
         $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $res->assertStatus(200);
         $res->assertSee('Correct Answer: D', false);
+        $res->assertDontSee('🎯 Correct Answer', false);
     }
 
     public function test_qa_answer_03_part2_question_shows_correct_answer_b_and_no_d(): void
@@ -299,5 +302,34 @@ class TeacherStandaloneCorrectAnswerSummaryTest extends TestCase
         $resUpdated = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
         $resUpdated->assertSee('Correct Answer: B', false);
         $resUpdated->assertDontSee('Correct Answer: A', false);
+    }
+
+    public function test_qa_answer_08_badge_is_co_located_in_action_button_row(): void
+    {
+        $q = Question::create([
+            'prompt'      => 'Look at the photograph and choose the best statement.',
+            'section'     => 'listening',
+            'part_number' => 1,
+            'image_url'   => 'https://example.com/p1.jpg',
+            'audio_url'   => 'https://example.com/p1.mp3',
+            'difficulty'  => 'easy',
+        ]);
+        foreach (['A', 'B', 'C', 'D'] as $idx => $lbl) {
+            QuestionChoice::create(['question_id' => $q->id, 'label' => $lbl, 'content' => "Statement {$lbl}", 'is_correct' => ($lbl === 'C'), 'order' => $idx + 1]);
+        }
+        TestQuestion::create(['test_section_id' => $this->part1Section->id, 'question_id' => $q->id, 'order' => 1]);
+
+        $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $res->assertStatus(200);
+
+        $html = $res->getContent();
+        $cardStart = strpos($html, "id=\"question-card-{$q->id}\"");
+        $this->assertNotFalse($cardStart);
+        $cardChunk = substr($html, $cardStart, 8000);
+
+        $this->assertStringContainsString('Correct Answer: C', $cardChunk);
+        $this->assertStringContainsString('Edit Question', $cardChunk);
+        $this->assertStringContainsString('Remove', $cardChunk);
+        $this->assertStringNotContainsString('🎯 Correct Answer', $cardChunk);
     }
 }
