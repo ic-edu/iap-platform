@@ -265,7 +265,7 @@
                                                 @if($isSecImage)
                                                     <img src="{{ $secMediaSrc }}" alt="{{ $sectionMedia->title }}" class="max-h-64 object-contain rounded-lg border border-slate-300 dark:border-slate-700">
                                                 @elseif($isSecAudio)
-                                                    <audio controls class="w-full" src="{{ $secMediaSrc }}" preload="metadata">
+                                                    <audio controls class="w-full" src="{{ $secMediaSrc }}" preload="metadata" data-preview-exam-audio="true" data-exam-audio="true">
                                                         <source src="{{ $secMediaSrc }}" type="{{ $sectionMedia->mime_type ?? 'audio/mpeg' }}">
                                                         Your browser does not support the audio element.
                                                     </audio>
@@ -379,7 +379,7 @@
                                     </div>
 
                                     @if(!empty($unitAudioUrl))
-                                        <audio controls class="w-full h-10 rounded-lg" src="{{ $unitAudioUrl }}" preload="metadata">
+                                        <audio controls class="w-full h-10 rounded-lg" src="{{ $unitAudioUrl }}" preload="metadata" data-preview-exam-audio="true" data-exam-audio="true">
                                             <source src="{{ $unitAudioUrl }}">
                                             Your browser does not support the audio element.
                                         </audio>
@@ -818,7 +818,7 @@
                                                 @if(!empty($audioUrl))
                                                     <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
                                                         <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
-                                                        <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata">
+                                                        <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata" data-preview-exam-audio="true" data-exam-audio="true">
                                                             <source src="{{ $audioUrl }}">
                                                             Your browser does not support the audio element.
                                                         </audio>
@@ -869,7 +869,7 @@
                                             @if(!empty($audioUrl))
                                                 <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-xl space-y-1.5">
                                                     <span class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">🎧 Audio Prompt Player</span>
-                                                    <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata">
+                                                    <audio controls class="w-full h-8" src="{{ $audioUrl }}" preload="metadata" data-preview-exam-audio="true" data-exam-audio="true">
                                                         <source src="{{ $audioUrl }}">
                                                         Your browser does not support the audio element.
                                                     </audio>
@@ -1071,6 +1071,72 @@
 
     <!-- Candidate Preview Runtime JavaScript Engine -->
     <script>
+        // =========================================================================
+        // UNIVERSAL PREVIEW EXAMINATION AUDIO LIFECYCLE MANAGER
+        // =========================================================================
+        const PreviewExamAudioManager = (function() {
+            let activeAudio = null;
+
+            function getAllExamAudioElements() {
+                return document.querySelectorAll('audio[data-preview-exam-audio], audio[data-exam-audio], audio');
+            }
+
+            function stopAll(options = {}) {
+                const elements = getAllExamAudioElements();
+                elements.forEach(audio => {
+                    try {
+                        if (!audio.paused) {
+                            audio.pause();
+                        }
+                        audio.currentTime = 0;
+                    } catch (err) {
+                        console.error('PreviewExamAudioManager: error pausing audio', err);
+                    }
+                });
+                activeAudio = null;
+            }
+
+            function handlePlayEvent(e) {
+                if (e.target && e.target.tagName === 'AUDIO') {
+                    const currentAudio = e.target;
+                    activeAudio = currentAudio;
+                    getAllExamAudioElements().forEach(audio => {
+                        if (audio !== currentAudio && !audio.paused) {
+                            try {
+                                audio.pause();
+                                audio.currentTime = 0;
+                            } catch (err) {}
+                        }
+                    });
+                }
+            }
+
+            function beforeDeliveryTransition(context = {}) {
+                stopAll(context);
+            }
+
+            function init() {
+                document.addEventListener('play', handlePlayEvent, true);
+                window.addEventListener('beforeunload', () => stopAll());
+                window.addEventListener('pagehide', () => stopAll());
+            }
+
+            init();
+
+            return {
+                stopAll: stopAll,
+                getActiveAudio: () => activeAudio,
+                beforeDeliveryTransition: beforeDeliveryTransition,
+                getAllElements: getAllExamAudioElements
+            };
+        })();
+
+        // Global aliases for parity and test access
+        window.PreviewExamAudioManager = PreviewExamAudioManager;
+        window.stopAllPreviewExamAudio = function(options = {}) {
+            PreviewExamAudioManager.stopAll(options);
+        };
+
         const totalQuestions = {{ $totalQuestionsCount }};
         const totalUnits = {{ $totalUnitsCount }};
         const questionIndexToUnitIndex = @json($questionIndexToUnitIndex);
@@ -1173,6 +1239,7 @@
         }
 
         function showAssessmentOverview() {
+            PreviewExamAudioManager.beforeDeliveryTransition({ type: 'overview' });
             hideAllViews();
             currentUnitIndex = -2;
             const overviewCard = document.getElementById('preview-overview-card');
@@ -1184,6 +1251,7 @@
         }
 
         function startPreview() {
+            PreviewExamAudioManager.beforeDeliveryTransition({ type: 'start_preview' });
             isPreviewStarted = true;
             startTimer();
             if (firstSectionId) {
@@ -1194,6 +1262,7 @@
         }
 
         function showSectionIntro(sectionId) {
+            PreviewExamAudioManager.beforeDeliveryTransition({ type: 'section_intro', targetSection: sectionId });
             hideAllViews();
             currentUnitIndex = -1;
             const introCard = document.getElementById(`section-intro-card-${sectionId}`);
@@ -1210,6 +1279,7 @@
 
         function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
             if (unitIdx < 0 || unitIdx >= totalUnits) return;
+            PreviewExamAudioManager.beforeDeliveryTransition({ type: 'delivery_unit', targetUnit: unitIdx, targetQ: targetQIndex });
             if (!isPreviewStarted) {
                 isPreviewStarted = true;
                 startTimer();
@@ -1314,6 +1384,7 @@
         }
 
         function finishPreview() {
+            PreviewExamAudioManager.stopAll({ type: 'finish_preview' });
             const modal = document.getElementById('preview-complete-modal');
             const summaryText = document.getElementById('preview-summary-text');
             if (summaryText) {
@@ -1325,6 +1396,7 @@
         }
 
         function restartPreview() {
+            PreviewExamAudioManager.stopAll({ type: 'restart_preview' });
             for (const key in temporaryAnswers) {
                 delete temporaryAnswers[key];
             }

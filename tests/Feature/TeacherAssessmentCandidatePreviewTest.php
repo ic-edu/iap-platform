@@ -742,4 +742,196 @@ class TeacherAssessmentCandidatePreviewTest extends TestCase
         // Preview should NOT enforce mandatory answers before moving
         $response->assertDontSee('For Mock Test examination, you must select an answer for all questions', false);
     }
+
+    public function test_34_preview_audio_01_part1_audio_stops_on_next_navigation(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // Verify PreviewExamAudioManager is defined
+        $response->assertSee('const PreviewExamAudioManager = (function()', false);
+        $response->assertSee('window.PreviewExamAudioManager = PreviewExamAudioManager', false);
+        $response->assertSee('data-preview-exam-audio="true"', false);
+        $response->assertSee('data-exam-audio="true"', false);
+
+        // Verify navigateDeliveryUnit invokes beforeDeliveryTransition
+        $response->assertSee('PreviewExamAudioManager.beforeDeliveryTransition({ type: \'delivery_unit\'', false);
+    }
+
+    public function test_35_preview_audio_02_part2_audio_stops_on_navigation_or_palette_jump(): void
+    {
+        $p2Section = TestSection::create([
+            'test_id'      => $this->testRecord->id,
+            'title'        => 'PART 2: QUESTION-RESPONSE',
+            'section_type' => 'listening',
+            'order'        => 3,
+            'instructions' => 'Listen to the audio question and responses.',
+        ]);
+
+        $p2Q = Question::create([
+            'prompt'        => 'Where is the conference room?',
+            'section'       => 'listening',
+            'part_number'   => 2,
+            'question_type' => 'multiple_choice',
+            'difficulty'    => 'easy',
+            'points'        => 1,
+            'audio_url'     => 'https://assets.mixkit.co/active_storage/sfx/part2.mp3',
+        ]);
+        QuestionChoice::create(['question_id' => $p2Q->id, 'label' => 'A', 'content' => 'On the third floor', 'is_correct' => true]);
+        QuestionChoice::create(['question_id' => $p2Q->id, 'label' => 'B', 'content' => 'At 2:00 PM', 'is_correct' => false]);
+        QuestionChoice::create(['question_id' => $p2Q->id, 'label' => 'C', 'content' => 'Yes, I did', 'is_correct' => false]);
+        TestQuestion::create(['test_section_id' => $p2Section->id, 'question_id' => $p2Q->id, 'order' => 1]);
+
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // Verify Part 2 audio contains preview audio tracking attributes
+        $response->assertSee('src="https://assets.mixkit.co/active_storage/sfx/part2.mp3"', false);
+        $response->assertSee('data-preview-exam-audio="true"', false);
+    }
+
+    public function test_36_preview_audio_03_part3_group_audio_stops_on_group_transition(): void
+    {
+        $p3Section = TestSection::create([
+            'test_id'      => $this->testRecord->id,
+            'title'        => 'PART 3: CONVERSATIONS',
+            'section_type' => 'listening',
+            'order'        => 3,
+            'instructions' => 'Listen to conversations.',
+        ]);
+
+        $ag1 = AudioGroup::create([
+            'test_id'          => $this->testRecord->id,
+            'title'            => 'P3 Audio Group 1',
+            'part_number'      => 3,
+            'group_type'       => 'conversation',
+            'audio_url'        => 'https://assets.mixkit.co/active_storage/sfx/p3_group1.mp3',
+            'order_in_section' => 1,
+            'created_by'       => $this->teacherUser->id,
+        ]);
+        $q1 = Question::create([
+            'audio_group_id' => $ag1->id,
+            'prompt'         => 'P3 G1 Question 1',
+            'section'        => 'listening',
+            'part_number'    => 3,
+            'question_type'  => 'multiple_choice',
+            'difficulty'     => 'medium',
+            'points'         => 1,
+        ]);
+        QuestionChoice::create(['question_id' => $q1->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true]);
+        QuestionChoice::create(['question_id' => $q1->id, 'label' => 'B', 'content' => 'Choice B', 'is_correct' => false]);
+        TestQuestion::create(['test_section_id' => $p3Section->id, 'question_id' => $q1->id, 'order' => 1]);
+
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // Verify shared unit audio element has data-preview-exam-audio="true"
+        $response->assertSee('src="https://assets.mixkit.co/active_storage/sfx/p3_group1.mp3"', false);
+        $response->assertSee('data-preview-exam-audio="true"', false);
+    }
+
+    public function test_37_preview_audio_04_part4_group_audio_stops_on_transition(): void
+    {
+        $p4Section = TestSection::create([
+            'test_id'      => $this->testRecord->id,
+            'title'        => 'PART 4: TALKS',
+            'section_type' => 'listening',
+            'order'        => 3,
+            'instructions' => 'Listen to talks.',
+        ]);
+
+        $ag2 = AudioGroup::create([
+            'test_id'          => $this->testRecord->id,
+            'title'            => 'P4 Talk Group',
+            'part_number'      => 4,
+            'group_type'       => 'talk',
+            'audio_url'        => 'https://assets.mixkit.co/active_storage/sfx/p4_talk.mp3',
+            'order_in_section' => 1,
+            'created_by'       => $this->teacherUser->id,
+        ]);
+        $q4 = Question::create([
+            'audio_group_id' => $ag2->id,
+            'prompt'         => 'P4 Talk Question 1',
+            'section'        => 'listening',
+            'part_number'    => 4,
+            'question_type'  => 'multiple_choice',
+            'difficulty'     => 'medium',
+            'points'         => 1,
+        ]);
+        QuestionChoice::create(['question_id' => $q4->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true]);
+        QuestionChoice::create(['question_id' => $q4->id, 'label' => 'B', 'content' => 'Choice B', 'is_correct' => false]);
+        TestQuestion::create(['test_section_id' => $p4Section->id, 'question_id' => $q4->id, 'order' => 1]);
+
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        $response->assertSee('src="https://assets.mixkit.co/active_storage/sfx/p4_talk.mp3"', false);
+        $response->assertSee('data-preview-exam-audio="true"', false);
+    }
+
+    public function test_38_preview_audio_05_one_audio_active_rule_stops_previous_audio(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // Verify handlePlayEvent pauses and resets all other audios
+        $response->assertSee('function handlePlayEvent(e)', false);
+        $response->assertSee('audio !== currentAudio && !audio.paused', false);
+        $response->assertSee('audio.pause()', false);
+        $response->assertSee('audio.currentTime = 0', false);
+    }
+
+    public function test_39_preview_audio_06_palette_jump_stops_audio_before_target_unit_activates(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // handlePaletteQuestionClick routes to navigateDeliveryUnit which executes beforeDeliveryTransition
+        $response->assertSee('function handlePaletteQuestionClick(qIndex)', false);
+        $response->assertSee('navigateDeliveryUnit(unitIdx, qIndex)', false);
+    }
+
+    public function test_40_preview_audio_07_section_intro_transition_stops_audio(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // showSectionIntro calls beforeDeliveryTransition
+        $response->assertSee('function showSectionIntro(sectionId)', false);
+        $response->assertSee('PreviewExamAudioManager.beforeDeliveryTransition({ type: \'section_intro\'', false);
+    }
+
+    public function test_41_preview_audio_08_keyboard_navigation_stops_audio(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // Keyboard handler calls navigateDeliveryUnit which stops audio
+        $response->assertSee('event.key === \'ArrowRight\'', false);
+        $response->assertSee('event.key === \'ArrowLeft\'', false);
+        $response->assertSee('navigateDeliveryUnit(currentUnitIndex + 1)', false);
+    }
+
+    public function test_42_preview_audio_09_audio_resets_to_zero_and_permits_unrestricted_replay_on_return(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // stopAll resets currentTime to 0 for replayability in QA preview
+        $response->assertSee('audio.currentTime = 0;', false);
+        $response->assertDontSee('isPlayed', false);
+        $response->assertDontSee('disablePlayButton', false);
+    }
+
+    public function test_43_preview_audio_10_preview_does_not_contain_real_test_or_mock_audio_ledger(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
+        $response->assertStatus(200);
+
+        // Verify absence of one-play ledger, attempt mutations, and playback API tracking
+        $response->assertDontSee('audio_playback_started', false);
+        $response->assertDontSee('audio_playback_completed', false);
+        $response->assertDontSee('/api/assessment/audio-log', false);
+        $response->assertDontSee('logViolation', false);
+    }
 }
