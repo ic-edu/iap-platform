@@ -388,4 +388,42 @@ class TeacherSectionCollapseDefaultUxTest extends TestCase
         $response->assertSee('id="section-body-' . $this->sectionPart2->id . '" class="hidden', false);
         $response->assertSee('id="section-body-' . $this->sectionPart3->id . '" class="hidden', false);
     }
+
+    /** @test */
+    public function test_29_footer_collapse_button_renders_in_every_section()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+
+        // Each section should have its footer collapse control
+        $response->assertSee('id="btn-footer-collapse-' . $this->sectionPart1->id . '"', false);
+        $response->assertSee('id="btn-footer-collapse-' . $this->sectionPart2->id . '"', false);
+        $response->assertSee('id="btn-footer-collapse-' . $this->sectionPart3->id . '"', false);
+    }
+
+    /** @test */
+    public function test_30_footer_collapse_button_has_accessible_contract_without_forced_scroll()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+
+        // Footer collapse button invokes toggleSectionCollapse(id, false) without forced scroll
+        $response->assertSee("onclick=\"toggleSectionCollapse('{$this->sectionPart1->id}', false)\"", false);
+        $response->assertSee('aria-controls="section-body-' . $this->sectionPart1->id . '"', false);
+        $response->assertSee('title="Collapse ' . $this->sectionPart1->title . '"', false);
+        $response->assertSee('End of ' . $this->sectionPart1->title, false);
+    }
+
+    /** @test */
+    public function test_31_toggle_section_collapse_js_updates_both_header_and_footer_buttons_without_scroll()
+    {
+        $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->test->id));
+        $response->assertOk();
+
+        $response->assertSee('function toggleSectionCollapse(secId, forceState = null)', false);
+        $response->assertSee('const footerBtn = document.getElementById(`btn-footer-collapse-${secId}`);', false);
+        $response->assertSee('if (footerBtn) footerBtn.setAttribute(\'aria-expanded\', \'true\');', false);
+        $response->assertSee('if (footerBtn) footerBtn.setAttribute(\'aria-expanded\', \'false\');', false);
+        $response->assertDontSee('scrollToHeader', false);
+    }
 }

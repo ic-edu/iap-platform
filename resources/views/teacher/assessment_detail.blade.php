@@ -1357,6 +1357,23 @@
                                                 </div>
                                             @endif
                                         @endforelse
+
+                                        <!-- Section Footer Collapse Control -->
+                                        <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center flex-wrap gap-3">
+                                            <div class="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                                <span>End of {{ $sec->title }}</span>
+                                            </div>
+                                            <button type="button"
+                                                    onclick="toggleSectionCollapse('{{ $sec->id }}', false)"
+                                                    id="btn-footer-collapse-{{ $sec->id }}"
+                                                    aria-expanded="true"
+                                                    aria-controls="section-body-{{ $sec->id }}"
+                                                    class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all inline-flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 cursor-pointer"
+                                                    title="Collapse {{ $sec->title }}">
+                                                <span class="text-xs">▴</span>
+                                                <span>Collapse</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -4090,6 +4107,7 @@
         const icon = document.getElementById(`collapse-icon-${secId}`);
         const label = document.getElementById(`collapse-label-${secId}`);
         const btn = document.getElementById(`btn-collapse-${secId}`);
+        const footerBtn = document.getElementById(`btn-footer-collapse-${secId}`);
         if (!body) return;
 
         const isHidden = body.classList.contains('hidden') || body.style.display === 'none';
@@ -4101,12 +4119,14 @@
             if (icon) icon.textContent = '▾';
             if (label) label.textContent = 'Collapse';
             if (btn) btn.setAttribute('aria-expanded', 'true');
+            if (footerBtn) footerBtn.setAttribute('aria-expanded', 'true');
         } else {
             body.classList.add('hidden');
             body.style.display = 'none';
             if (icon) icon.textContent = '▸';
             if (label) label.textContent = 'Expand';
             if (btn) btn.setAttribute('aria-expanded', 'false');
+            if (footerBtn) footerBtn.setAttribute('aria-expanded', 'false');
         }
     }
 
