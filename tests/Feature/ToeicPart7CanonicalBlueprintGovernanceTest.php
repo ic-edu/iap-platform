@@ -826,3 +826,294 @@ test('P7-EDGE-04: Progressive UI correctly advances from Single -> Double -> Tri
     $response->assertDontSee('+ Add Double Passage');
     $response->assertDontSee('+ Add Single Passage');
 });
+
+/*
+|--------------------------------------------------------------------------
+| P7-LEGACY-01: Single Incomplete with Existing Later-Phase Double Groups
+|--------------------------------------------------------------------------
+*/
+test('P7-LEGACY-01: Single incomplete with existing Double groups suppresses Add Single CTA and shows repair guidance', function () {
+    // 8 Single groups (24 questions)
+    for ($g = 1; $g <= 8; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    // Direct DB creation of 2 Double groups (simulating legacy data)
+    for ($g = 1; $g <= 2; $g++) {
+        $pg = PassageGroup::create([
+            'test_id'      => $this->toeicTest->id,
+            'part_number'  => 7,
+            'passage_type' => 'double',
+            'title'        => "Legacy Double {$g}",
+            'order'        => 8 + $g,
+        ]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 1', 'content' => 'Content', 'order_in_group' => 1]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 2', 'content' => 'Content', 'order_in_group' => 2]);
+        for ($q = 1; $q <= 5; $q++) {
+            $cq = Question::create(['passage_group_id' => $pg->id, 'part_number' => 7, 'section' => 'reading', 'prompt' => "Prompt {$q}", 'question_type' => 'multiple_choice']);
+            foreach (['A', 'B', 'C', 'D'] as $ci => $cl) {
+                QuestionChoice::create(['question_id' => $cq->id, 'label' => $cl, 'content' => "Option {$cl}", 'is_correct' => $ci === 0, 'order' => $ci + 1]);
+            }
+        }
+    }
+
+    $eval = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval['single']['is_exact'])->toBeFalse()
+        ->and($eval['single']['has_later_phase_groups'])->toBeTrue()
+        ->and($eval['single']['can_create_new_group'])->toBeFalse();
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertDontSee('+ Add Single Passage');
+    $response->assertDontSee('+ Add Double Passage');
+    $response->assertDontSee('+ Add Triple Passage');
+    $response->assertDontSee('+ Add Passage Group');
+    $response->assertSee('Needs Attention:');
+    $response->assertSee('Legacy Part 7 structure detected. Later-phase passage groups already exist while the Single Passage block is incomplete. Edit or remove existing passage groups before adding new groups.');
+});
+
+/*
+|--------------------------------------------------------------------------
+| P7-LEGACY-02: Real UAT Shape (8 Single / 24Q + 6 Double / 30Q)
+|--------------------------------------------------------------------------
+*/
+test('P7-LEGACY-02: Real UAT legacy shape (8 Single / 24Q + 6 Double / 30Q) displays Single in progress, Double needs attention, Triple locked', function () {
+    // 8 Single groups (24 complete questions)
+    for ($g = 1; $g <= 8; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    // 6 Double groups (30 complete questions)
+    for ($g = 1; $g <= 6; $g++) {
+        $pg = PassageGroup::create([
+            'test_id'      => $this->toeicTest->id,
+            'part_number'  => 7,
+            'passage_type' => 'double',
+            'title'        => "Legacy Double {$g}",
+            'order'        => 8 + $g,
+        ]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 1', 'content' => 'Content', 'order_in_group' => 1]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 2', 'content' => 'Content', 'order_in_group' => 2]);
+        for ($q = 1; $q <= 5; $q++) {
+            $cq = Question::create(['passage_group_id' => $pg->id, 'part_number' => 7, 'section' => 'reading', 'prompt' => "Prompt {$q}", 'question_type' => 'multiple_choice']);
+            foreach (['A', 'B', 'C', 'D'] as $ci => $cl) {
+                QuestionChoice::create(['question_id' => $cq->id, 'label' => $cl, 'content' => "Option {$cl}", 'is_correct' => $ci === 0, 'order' => $ci + 1]);
+            }
+        }
+    }
+
+    $eval = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval['total']['groups'])->toBe(14)
+        ->and($eval['total']['questions'])->toBe(54)
+        ->and($eval['is_ready'])->toBeFalse()
+        ->and($eval['single']['status'])->toBe('in_progress')
+        ->and($eval['double']['status'])->toBe('invalid')
+        ->and($eval['triple']['status'])->toBe('locked')
+        ->and($eval['single']['can_create_new_group'])->toBeFalse()
+        ->and($eval['double']['can_create_new_group'])->toBeFalse()
+        ->and($eval['triple']['can_create_new_group'])->toBeFalse();
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+
+    // Verify badges and absence of create actions
+    $response->assertSee('IN PROGRESS');
+    $response->assertSee('NEEDS ATTENTION');
+    $response->assertSee('LOCKED');
+    $response->assertDontSee('+ Add Single Passage');
+    $response->assertDontSee('+ Add Double Passage');
+    $response->assertDontSee('+ Add Triple Passage');
+    $response->assertDontSee('+ Add Passage Group');
+});
+
+/*
+|--------------------------------------------------------------------------
+| P7-LEGACY-03: Invalid Double Priority over Locked
+|--------------------------------------------------------------------------
+*/
+test('P7-LEGACY-03: Over-limit Double block displays NEEDS ATTENTION even when Single is incomplete', function () {
+    // Single incomplete: 5 Single groups (15 questions)
+    for ($g = 1; $g <= 5; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    // Double over-limit: 6 groups (30 questions)
+    for ($g = 1; $g <= 6; $g++) {
+        $pg = PassageGroup::create([
+            'test_id'      => $this->toeicTest->id,
+            'part_number'  => 7,
+            'passage_type' => 'double',
+            'title'        => "Legacy Double {$g}",
+            'order'        => 5 + $g,
+        ]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 1', 'content' => 'Content', 'order_in_group' => 1]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 2', 'content' => 'Content', 'order_in_group' => 2]);
+        for ($q = 1; $q <= 5; $q++) {
+            $cq = Question::create(['passage_group_id' => $pg->id, 'part_number' => 7, 'section' => 'reading', 'prompt' => "Prompt {$q}", 'question_type' => 'multiple_choice']);
+            foreach (['A', 'B', 'C', 'D'] as $ci => $cl) {
+                QuestionChoice::create(['question_id' => $cq->id, 'label' => $cl, 'content' => "Option {$cl}", 'is_correct' => $ci === 0, 'order' => $ci + 1]);
+            }
+        }
+    }
+
+    $eval = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval['double']['is_locked'])->toBeTrue()
+        ->and($eval['double']['status'])->toBe('invalid');
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertSee('NEEDS ATTENTION');
+});
+
+/*
+|--------------------------------------------------------------------------
+| P7-LEGACY-04: Invalid Triple Priority over Locked
+|--------------------------------------------------------------------------
+*/
+test('P7-LEGACY-04: Over-limit Triple block displays NEEDS ATTENTION even when Double is incomplete', function () {
+    // Single exact: 10 groups (29 questions)
+    for ($g = 1; $g <= 9; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 2, ['title' => "Single 10"]));
+
+    // Double incomplete: 1 group (5 questions)
+    $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'double', 5, ['title' => "Double 1"]));
+
+    // Triple over-limit: 4 groups (20 questions) created directly
+    for ($g = 1; $g <= 4; $g++) {
+        $pg = PassageGroup::create([
+            'test_id'      => $this->toeicTest->id,
+            'part_number'  => 7,
+            'passage_type' => 'triple',
+            'title'        => "Legacy Triple {$g}",
+            'order'        => 11 + $g,
+        ]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 1', 'content' => 'Content', 'order_in_group' => 1]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 2', 'content' => 'Content', 'order_in_group' => 2]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 3', 'content' => 'Content', 'order_in_group' => 3]);
+        for ($q = 1; $q <= 5; $q++) {
+            $cq = Question::create(['passage_group_id' => $pg->id, 'part_number' => 7, 'section' => 'reading', 'prompt' => "Prompt {$q}", 'question_type' => 'multiple_choice']);
+            foreach (['A', 'B', 'C', 'D'] as $ci => $cl) {
+                QuestionChoice::create(['question_id' => $cq->id, 'label' => $cl, 'content' => "Option {$cl}", 'is_correct' => $ci === 0, 'order' => $ci + 1]);
+            }
+        }
+    }
+
+    $eval = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval['triple']['is_locked'])->toBeTrue()
+        ->and($eval['triple']['status'])->toBe('invalid')
+        ->and($eval['triple']['can_create_new_group'])->toBeFalse();
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertSee('NEEDS ATTENTION');
+});
+
+/*
+|--------------------------------------------------------------------------
+| P7-LEGACY-05: Canonical Clean Authoring Flow Regression
+|--------------------------------------------------------------------------
+*/
+test('P7-LEGACY-05: Canonical authoring flow cleanly progresses through can_create_new_group states', function () {
+    // 1. Empty state
+    $eval0 = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval0['single']['can_create_new_group'])->toBeTrue()
+        ->and($eval0['double']['can_create_new_group'])->toBeFalse()
+        ->and($eval0['triple']['can_create_new_group'])->toBeFalse();
+
+    // 2. Single incomplete (5 groups of 3)
+    for ($g = 1; $g <= 5; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    $eval1 = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval1['single']['can_create_new_group'])->toBeTrue()
+        ->and($eval1['double']['can_create_new_group'])->toBeFalse()
+        ->and($eval1['triple']['can_create_new_group'])->toBeFalse();
+
+    // 3. Complete Single (10 groups / 29 questions)
+    for ($g = 6; $g <= 9; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 2, ['title' => "Single 10"]));
+
+    $eval2 = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval2['single']['can_create_new_group'])->toBeFalse()
+        ->and($eval2['double']['can_create_new_group'])->toBeTrue()
+        ->and($eval2['triple']['can_create_new_group'])->toBeFalse();
+
+    // 4. Double incomplete (1 group of 5)
+    $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'double', 5, ['title' => "Double 1"]));
+    $eval3 = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval3['single']['can_create_new_group'])->toBeFalse()
+        ->and($eval3['double']['can_create_new_group'])->toBeTrue()
+        ->and($eval3['triple']['can_create_new_group'])->toBeFalse();
+
+    // 5. Complete Double (2 groups of 5)
+    $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'double', 5, ['title' => "Double 2"]));
+    $eval4 = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval4['single']['can_create_new_group'])->toBeFalse()
+        ->and($eval4['double']['can_create_new_group'])->toBeFalse()
+        ->and($eval4['triple']['can_create_new_group'])->toBeTrue();
+
+    // 6. Complete Triple (3 groups of 5) -> All complete
+    for ($g = 1; $g <= 3; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'triple', 5, ['title' => "Triple {$g}"]));
+    }
+    $eval5 = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval5['single']['can_create_new_group'])->toBeFalse()
+        ->and($eval5['double']['can_create_new_group'])->toBeFalse()
+        ->and($eval5['triple']['can_create_new_group'])->toBeFalse()
+        ->and($eval5['is_ready'])->toBeTrue();
+});
+
+/*
+|--------------------------------------------------------------------------
+| P7-LEGACY-06: Existing Group Repairability in Legacy State
+|--------------------------------------------------------------------------
+*/
+test('P7-LEGACY-06: Existing passage groups in legacy state retain edit and delete repairability', function () {
+    // 8 Single groups + 6 Double groups
+    $singleGroups = [];
+    for ($g = 1; $g <= 8; $g++) {
+        $singleGroups[] = $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    $doubleGroups = [];
+    for ($g = 1; $g <= 6; $g++) {
+        $pg = PassageGroup::create([
+            'test_id'      => $this->toeicTest->id,
+            'part_number'  => 7,
+            'passage_type' => 'double',
+            'title'        => "Legacy Double {$g}",
+            'order'        => 8 + $g,
+        ]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 1', 'content' => 'Content', 'order_in_group' => 1]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 2', 'content' => 'Content', 'order_in_group' => 2]);
+        for ($q = 1; $q <= 5; $q++) {
+            $cq = Question::create(['passage_group_id' => $pg->id, 'part_number' => 7, 'section' => 'reading', 'prompt' => "Prompt {$q}", 'question_type' => 'multiple_choice']);
+            foreach (['A', 'B', 'C', 'D'] as $ci => $cl) {
+                QuestionChoice::create(['question_id' => $cq->id, 'label' => $cl, 'content' => "Option {$cl}", 'is_correct' => $ci === 0, 'order' => $ci + 1]);
+            }
+        }
+        $doubleGroups[] = $pg;
+    }
+
+    // 1. Verify Teacher can view assessment detail with edit/delete buttons for each group
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertSee('Edit Group');
+    $response->assertSee('Remove Group');
+
+    // 2. Teacher can delete one of the over-limit Double groups to repair data
+    $doubleToDelete = end($doubleGroups);
+    $delResponse = $this->actingAs($this->teacher)->delete(route('teacher.tests.destroy-passage-group', [
+        'test' => $this->toeicTest->id,
+        'passageGroup' => $doubleToDelete->id,
+    ]));
+    $delResponse->assertRedirect();
+    expect(PassageGroup::find($doubleToDelete->id))->toBeNull()
+        ->and(PassageGroup::where('test_id', $this->toeicTest->id)->where('passage_type', 'double')->count())->toBe(5);
+
+    // 3. Teacher can edit a Single group
+    $singleToEdit = $singleGroups[0];
+    $updatePayload = makePart7Payload($this->p7Section->id, 'single', 4, ['title' => 'Single 1 Updated to 4 Questions']);
+    $updatedGroup = $this->builderService->updatePassageGroup($singleToEdit, $updatePayload);
+    expect($updatedGroup->fresh()->questions()->count())->toBe(4);
+});

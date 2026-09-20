@@ -753,13 +753,15 @@
                                             </div>
 
                                             {{-- Double Passages --}}
-                                            <div class="p-3.5 rounded-xl border {{ $p7DashEval['double']['is_exact'] ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' : ($p7DashEval['double']['is_locked'] ? 'bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800') }} flex flex-col justify-between space-y-2">
+                                            <div class="p-3.5 rounded-xl border {{ $p7DashEval['double']['status'] === 'invalid' ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800' : ($p7DashEval['double']['is_exact'] ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' : ($p7DashEval['double']['is_locked'] ? 'bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800')) }} flex flex-col justify-between space-y-2">
                                                 <div>
                                                     <div class="flex items-center justify-between mb-1">
                                                         <span class="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                                                             <span>📄📄</span> DOUBLE PASSAGES
                                                         </span>
-                                                        @if($p7DashEval['double']['is_exact'])
+                                                        @if($p7DashEval['double']['status'] === 'invalid')
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700">NEEDS ATTENTION</span>
+                                                        @elseif($p7DashEval['double']['is_exact'])
                                                             <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">COMPLETE</span>
                                                         @elseif($p7DashEval['double']['is_locked'])
                                                             <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">LOCKED</span>
@@ -776,7 +778,9 @@
                                                     </div>
                                                 </div>
                                                 <div class="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-slate-800">
-                                                    @if($p7DashEval['double']['is_locked'])
+                                                    @if($p7DashEval['double']['status'] === 'invalid')
+                                                        Exceeds canonical limit ({{ $p7DashEval['double']['groups'] }}/2 groups, {{ $p7DashEval['double']['questions'] }}/10 questions).
+                                                    @elseif($p7DashEval['double']['is_locked'])
                                                         Locked — Complete Single Passage block first (10 groups / 29 questions).
                                                     @elseif($p7DashEval['double']['is_exact'])
                                                         Double Passage block complete (2 / 2 groups).
@@ -787,13 +791,15 @@
                                             </div>
 
                                             {{-- Triple Passages --}}
-                                            <div class="p-3.5 rounded-xl border {{ $p7DashEval['triple']['is_exact'] ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' : ($p7DashEval['triple']['is_locked'] ? 'bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800') }} flex flex-col justify-between space-y-2">
+                                            <div class="p-3.5 rounded-xl border {{ $p7DashEval['triple']['status'] === 'invalid' ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800' : ($p7DashEval['triple']['is_exact'] ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' : ($p7DashEval['triple']['is_locked'] ? 'bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800')) }} flex flex-col justify-between space-y-2">
                                                 <div>
                                                     <div class="flex items-center justify-between mb-1">
                                                         <span class="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                                                             <span>📄📄📄</span> TRIPLE PASSAGES
                                                         </span>
-                                                        @if($p7DashEval['triple']['is_exact'])
+                                                        @if($p7DashEval['triple']['status'] === 'invalid')
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700">NEEDS ATTENTION</span>
+                                                        @elseif($p7DashEval['triple']['is_exact'])
                                                             <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">COMPLETE</span>
                                                         @elseif($p7DashEval['triple']['is_locked'])
                                                             <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">LOCKED</span>
@@ -810,7 +816,9 @@
                                                     </div>
                                                 </div>
                                                 <div class="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-slate-800">
-                                                    @if($p7DashEval['triple']['is_locked'])
+                                                    @if($p7DashEval['triple']['status'] === 'invalid')
+                                                        Exceeds canonical limit ({{ $p7DashEval['triple']['groups'] }}/3 groups, {{ $p7DashEval['triple']['questions'] }}/15 questions).
+                                                    @elseif($p7DashEval['triple']['is_locked'])
                                                         Locked — Complete Double Passage block first (2 groups / 10 questions).
                                                     @elseif($p7DashEval['triple']['is_exact'])
                                                         Triple Passage block complete (3 / 3 groups).
@@ -832,19 +840,19 @@
                                                     $p7Standalones = $secQuestions->filter(fn($it) => empty($it['question']->passage_group_id))->count();
                                                     $p7ActionsEval = \App\Services\ToeicQuestionValidator::evaluatePart7Blueprint($secPassageGroups, $p7Standalones);
                                                 @endphp
-                                                @if(!$p7ActionsEval['single']['is_exact'] && $p7ActionsEval['single']['is_feasible'] && $p7ActionsEval['single']['groups'] < 10)
+                                                @if($p7ActionsEval['single']['can_create_new_group'])
                                                 <button type="button"
                                                         onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'single')"
                                                         class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
                                                     <span>📄</span> + Add Single Passage ({{ $p7ActionsEval['single']['groups'] }}/10)
                                                 </button>
-                                                @elseif($p7ActionsEval['single']['is_exact'] && !$p7ActionsEval['double']['is_exact'] && $p7ActionsEval['double']['groups'] < 2)
+                                                @elseif($p7ActionsEval['double']['can_create_new_group'])
                                                 <button type="button"
                                                         onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'double')"
                                                         class="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
                                                     <span>📄📄</span> + Add Double Passage ({{ $p7ActionsEval['double']['groups'] }}/2)
                                                 </button>
-                                                @elseif($p7ActionsEval['single']['is_exact'] && $p7ActionsEval['double']['is_exact'] && !$p7ActionsEval['triple']['is_exact'] && $p7ActionsEval['triple']['groups'] < 3)
+                                                @elseif($p7ActionsEval['triple']['can_create_new_group'])
                                                 <button type="button"
                                                         onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'triple')"
                                                         class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
@@ -859,7 +867,15 @@
                                                     <span>⚠️</span>
                                                     <span>
                                                         <strong class="font-bold">Needs Attention:</strong>
-                                                        @if($p7ActionsEval['single']['groups'] >= 10 && !$p7ActionsEval['single']['is_exact'])
+                                                        @if($p7ActionsEval['single']['has_later_phase_groups'] && !$p7ActionsEval['single']['is_exact'])
+                                                            Legacy Part 7 structure detected. Later-phase passage groups already exist while the Single Passage block is incomplete. Edit or remove existing passage groups before adding new groups.
+                                                        @elseif($p7ActionsEval['double']['has_later_phase_groups'] && !$p7ActionsEval['double']['is_exact'])
+                                                            Legacy Part 7 structure detected. Triple Passage groups already exist while the Double Passage block is incomplete. Edit or remove existing passage groups before adding new groups.
+                                                        @elseif($p7ActionsEval['double']['groups'] > 2 || $p7ActionsEval['double']['questions'] > 10)
+                                                            Double Passage exceeds canonical limit: {{ $p7ActionsEval['double']['groups'] }} / 2 groups and {{ $p7ActionsEval['double']['questions'] }} / 10 questions.
+                                                        @elseif($p7ActionsEval['triple']['groups'] > 3 || $p7ActionsEval['triple']['questions'] > 15)
+                                                            Triple Passage exceeds canonical limit: {{ $p7ActionsEval['triple']['groups'] }} / 3 groups and {{ $p7ActionsEval['triple']['questions'] }} / 15 questions.
+                                                        @elseif($p7ActionsEval['single']['groups'] >= 10 && !$p7ActionsEval['single']['is_exact'])
                                                             Single Passage has {{ $p7ActionsEval['single']['groups'] }} / 10 groups but {{ $p7ActionsEval['single']['questions'] }} / 29 questions. Edit an existing Single Passage group to reach exactly 29 questions.
                                                         @elseif(!$p7ActionsEval['single']['is_feasible'])
                                                             Single Passage distribution needs repair before authoring can continue.

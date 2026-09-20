@@ -1294,6 +1294,10 @@ class ToeicQuestionValidator
         $tripleExact = ($numTripleGroups === $blueprint['triple']['group_count'] && $numTripleQuestions === $blueprint['triple']['question_total']);
         $tripleLocked = !$singleExact || !$doubleExact;
 
+        // Future phase detection
+        $singleHasLaterPhase = ($numDoubleGroups > 0 || $numTripleGroups > 0);
+        $doubleHasLaterPhase = ($numTripleGroups > 0);
+
         // Ordering validation (Single -> Double -> Triple)
         $orderingValid = true;
         $orderingMessage = null;
@@ -1324,6 +1328,33 @@ class ToeicQuestionValidator
             $orderingMessage = "Part 7 passage groups are out of canonical order. Expected Single → Double → Triple.";
         }
 
+        // Can-create-new-group eligibility
+        $singleCanCreate = !$singleExact
+            && $singleFeasibility['is_feasible']
+            && $numSingleGroups < $blueprint['single']['group_count']
+            && !$singleHasLaterPhase
+            && $orderingValid;
+
+        $doubleCanCreate = $singleExact
+            && !$doubleExact
+            && $numDoubleGroups < $blueprint['double']['group_count']
+            && $numDoubleQuestions <= $blueprint['double']['question_total']
+            && !$doubleHasLaterPhase
+            && $orderingValid;
+
+        $tripleCanCreate = $singleExact
+            && $doubleExact
+            && !$tripleExact
+            && $numTripleGroups < $blueprint['triple']['group_count']
+            && $numTripleQuestions <= $blueprint['triple']['question_total']
+            && $orderingValid;
+
+        if (!$orderingValid) {
+            $singleCanCreate = false;
+            $doubleCanCreate = false;
+            $tripleCanCreate = false;
+        }
+
         // Ready check
         $isReady = $singleExact
             && $doubleExact
@@ -1348,12 +1379,12 @@ class ToeicQuestionValidator
         }
 
         if (!$singleExact) {
-            if (!$singleFeasibility['is_feasible']) {
-                $findings[] = "Part 7 Single Passage question distribution is impossible ({$numSingleQuestions}/29 questions in {$numSingleGroups}/10 groups).";
-            } elseif ($numSingleGroups > $blueprint['single']['group_count']) {
-                $findings[] = "Part 7 Single Passage exceeds 10 groups limit ({$numSingleGroups}/10 groups).";
+            if ($numSingleGroups > $blueprint['single']['group_count']) {
+                $findings[] = "Part 7 Single Passage exceeds canonical group limit: {$numSingleGroups} / 10 groups.";
             } elseif ($numSingleQuestions > $blueprint['single']['question_total']) {
-                $findings[] = "Part 7 Single Passage exceeds 29 questions limit ({$numSingleQuestions}/29 questions).";
+                $findings[] = "Part 7 Single Passage exceeds canonical question limit: {$numSingleQuestions} / 29 questions.";
+            } elseif (!$singleFeasibility['is_feasible']) {
+                $findings[] = "Part 7 Single Passage question distribution is impossible ({$numSingleQuestions}/29 questions in {$numSingleGroups}/10 groups).";
             } else {
                 $remG = $blueprint['single']['group_count'] - $numSingleGroups;
                 $remQ = $blueprint['single']['question_total'] - $numSingleQuestions;
@@ -1361,26 +1392,22 @@ class ToeicQuestionValidator
             }
         }
 
-        if ($singleExact && !$doubleExact) {
-            if ($numDoubleGroups > $blueprint['double']['group_count']) {
-                $findings[] = "Part 7 Double Passage exceeds 2 groups limit ({$numDoubleGroups}/2 groups).";
-            } elseif ($numDoubleQuestions > $blueprint['double']['question_total']) {
-                $findings[] = "Part 7 Double Passage exceeds 10 questions limit ({$numDoubleQuestions}/10 questions).";
-            } else {
-                $findings[] = "Part 7 Double Passage: {$numDoubleGroups} / 2 groups, {$numDoubleQuestions} / 10 questions.";
-            }
+        if ($numDoubleGroups > $blueprint['double']['group_count']) {
+            $findings[] = "Part 7 Double Passage exceeds canonical group limit: {$numDoubleGroups} / 2 groups.";
+        } elseif ($numDoubleQuestions > $blueprint['double']['question_total']) {
+            $findings[] = "Part 7 Double Passage exceeds canonical question limit: {$numDoubleQuestions} / 10 questions.";
+        } elseif ($singleExact && !$doubleExact) {
+            $findings[] = "Part 7 Double Passage: {$numDoubleGroups} / 2 groups, {$numDoubleQuestions} / 10 questions.";
         } elseif (!$singleExact && ($numDoubleGroups > 0 || $numDoubleQuestions > 0)) {
             $findings[] = "Part 7 Double Passage is locked until Single Passage reaches 10 groups / 29 questions.";
         }
 
-        if ($singleExact && $doubleExact && !$tripleExact) {
-            if ($numTripleGroups > $blueprint['triple']['group_count']) {
-                $findings[] = "Part 7 Triple Passage exceeds 3 groups limit ({$numTripleGroups}/3 groups).";
-            } elseif ($numTripleQuestions > $blueprint['triple']['question_total']) {
-                $findings[] = "Part 7 Triple Passage exceeds 15 questions limit ({$numTripleQuestions}/15 questions).";
-            } else {
-                $findings[] = "Part 7 Triple Passage: {$numTripleGroups} / 3 groups, {$numTripleQuestions} / 15 questions.";
-            }
+        if ($numTripleGroups > $blueprint['triple']['group_count']) {
+            $findings[] = "Part 7 Triple Passage exceeds canonical group limit: {$numTripleGroups} / 3 groups.";
+        } elseif ($numTripleQuestions > $blueprint['triple']['question_total']) {
+            $findings[] = "Part 7 Triple Passage exceeds canonical question limit: {$numTripleQuestions} / 15 questions.";
+        } elseif ($singleExact && $doubleExact && !$tripleExact) {
+            $findings[] = "Part 7 Triple Passage: {$numTripleGroups} / 3 groups, {$numTripleQuestions} / 15 questions.";
         } elseif ((!$singleExact || !$doubleExact) && ($numTripleGroups > 0 || $numTripleQuestions > 0)) {
             if (!$singleExact) {
                 $findings[] = "Part 7 Triple Passage is locked until Single Passage reaches 10 groups / 29 questions.";
@@ -1402,42 +1429,48 @@ class ToeicQuestionValidator
                 'status'             => $isReady ? 'ready' : 'needs_attention',
             ],
             'single' => [
-                'groups'              => $numSingleGroups,
-                'questions'           => $numSingleQuestions,
-                'expected_groups'     => $blueprint['single']['group_count'],
-                'expected_questions'  => $blueprint['single']['question_total'],
-                'remaining_groups'    => max(0, $blueprint['single']['group_count'] - $numSingleGroups),
-                'remaining_questions' => max(0, $blueprint['single']['question_total'] - $numSingleQuestions),
-                'is_exact'            => $singleExact,
-                'is_feasible'         => $singleFeasibility['is_feasible'],
-                'feasibility_reason'  => $singleFeasibility['reason'] ?? 'feasible',
-                'feasibility_message' => $singleFeasibility['message'] ?? '',
-                'range'               => ['start' => 147, 'end' => 175],
-                'status'              => $singleExact ? 'complete' : (!$singleFeasibility['is_feasible'] || $numSingleGroups > 10 || $numSingleQuestions > 29 ? 'invalid' : ($numSingleGroups > 0 ? 'in_progress' : 'not_started')),
+                'groups'                 => $numSingleGroups,
+                'questions'              => $numSingleQuestions,
+                'expected_groups'        => $blueprint['single']['group_count'],
+                'expected_questions'     => $blueprint['single']['question_total'],
+                'remaining_groups'       => max(0, $blueprint['single']['group_count'] - $numSingleGroups),
+                'remaining_questions'    => max(0, $blueprint['single']['question_total'] - $numSingleQuestions),
+                'is_exact'               => $singleExact,
+                'is_feasible'            => $singleFeasibility['is_feasible'],
+                'feasibility_reason'     => $singleFeasibility['reason'] ?? 'feasible',
+                'feasibility_message'    => $singleFeasibility['message'] ?? '',
+                'has_later_phase_groups' => $singleHasLaterPhase,
+                'can_create_new_group'   => $singleCanCreate,
+                'range'                  => ['start' => 147, 'end' => 175],
+                'status'                 => $numSingleGroups > 10 || $numSingleQuestions > 29 || !$singleFeasibility['is_feasible'] ? 'invalid' : ($singleExact ? 'complete' : ($numSingleGroups > 0 ? 'in_progress' : 'not_started')),
             ],
             'double' => [
-                'groups'              => $numDoubleGroups,
-                'questions'           => $numDoubleQuestions,
-                'expected_groups'     => $blueprint['double']['group_count'],
-                'expected_questions'  => $blueprint['double']['question_total'],
-                'remaining_groups'    => max(0, $blueprint['double']['group_count'] - $numDoubleGroups),
-                'remaining_questions' => max(0, $blueprint['double']['question_total'] - $numDoubleQuestions),
-                'is_exact'            => $doubleExact,
-                'is_locked'           => $doubleLocked,
-                'range'               => ['start' => 176, 'end' => 185],
-                'status'              => $doubleExact ? 'complete' : ($numDoubleGroups > 2 || $numDoubleQuestions > 10 ? 'invalid' : ($doubleLocked ? 'locked' : ($numDoubleGroups > 0 ? 'in_progress' : 'not_started'))),
+                'groups'                 => $numDoubleGroups,
+                'questions'              => $numDoubleQuestions,
+                'expected_groups'        => $blueprint['double']['group_count'],
+                'expected_questions'     => $blueprint['double']['question_total'],
+                'remaining_groups'       => max(0, $blueprint['double']['group_count'] - $numDoubleGroups),
+                'remaining_questions'    => max(0, $blueprint['double']['question_total'] - $numDoubleQuestions),
+                'is_exact'               => $doubleExact,
+                'is_locked'              => $doubleLocked,
+                'has_later_phase_groups' => $doubleHasLaterPhase,
+                'can_create_new_group'   => $doubleCanCreate,
+                'range'                  => ['start' => 176, 'end' => 185],
+                'status'                 => $numDoubleGroups > 2 || $numDoubleQuestions > 10 ? 'invalid' : ($doubleExact ? 'complete' : ($doubleLocked ? 'locked' : ($numDoubleGroups > 0 ? 'in_progress' : 'not_started'))),
             ],
             'triple' => [
-                'groups'              => $numTripleGroups,
-                'questions'           => $numTripleQuestions,
-                'expected_groups'     => $blueprint['triple']['group_count'],
-                'expected_questions'  => $blueprint['triple']['question_total'],
-                'remaining_groups'    => max(0, $blueprint['triple']['group_count'] - $numTripleGroups),
-                'remaining_questions' => max(0, $blueprint['triple']['question_total'] - $numTripleQuestions),
-                'is_exact'            => $tripleExact,
-                'is_locked'           => $tripleLocked,
-                'range'               => ['start' => 186, 'end' => 200],
-                'status'              => $tripleExact ? 'complete' : ($numTripleGroups > 3 || $numTripleQuestions > 15 ? 'invalid' : ($tripleLocked ? 'locked' : ($numTripleGroups > 0 ? 'in_progress' : 'not_started'))),
+                'groups'                 => $numTripleGroups,
+                'questions'              => $numTripleQuestions,
+                'expected_groups'        => $blueprint['triple']['group_count'],
+                'expected_questions'     => $blueprint['triple']['question_total'],
+                'remaining_groups'       => max(0, $blueprint['triple']['group_count'] - $numTripleGroups),
+                'remaining_questions'    => max(0, $blueprint['triple']['question_total'] - $numTripleQuestions),
+                'is_exact'               => $tripleExact,
+                'is_locked'              => $tripleLocked,
+                'has_later_phase_groups' => false,
+                'can_create_new_group'   => $tripleCanCreate,
+                'range'                  => ['start' => 186, 'end' => 200],
+                'status'                 => $numTripleGroups > 3 || $numTripleQuestions > 15 ? 'invalid' : ($tripleExact ? 'complete' : ($tripleLocked ? 'locked' : ($numTripleGroups > 0 ? 'in_progress' : 'not_started'))),
             ],
             'ordering' => [
                 'valid'   => $orderingValid,
