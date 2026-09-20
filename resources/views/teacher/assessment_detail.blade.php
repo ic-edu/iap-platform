@@ -879,6 +879,17 @@
                                                                         Auto: {{ ucfirst($slotDiffVal) }}
                                                                     </span>
                                                                 @endif
+                                                                @php
+                                                                    $slotCorrectChoice = $slotQ && $slotQ->choices ? $slotQ->choices->firstWhere('is_correct', true) : null;
+                                                                    $slotCorrectLabel = $slotCorrectChoice ? strtoupper(trim((string)$slotCorrectChoice->label)) : null;
+                                                                    $slotCorrectDisplay = $slotCorrectLabel ?: '—';
+                                                                    $slotAnsBadgeColor = $slotCorrectLabel
+                                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                                                                        : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
+                                                                @endphp
+                                                                <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $slotAnsBadgeColor }}" title="Persisted correct answer key">
+                                                                    Correct Answer: {{ $slotCorrectDisplay }}
+                                                                </span>
                                                             </div>
                                                         @endfor
                                                     </div>
@@ -1093,18 +1104,35 @@
                                                                                 Auto: {{ ucfirst($pqDiffVal) }}
                                                                             </span>
                                                                         @endif
+                                                                        @php
+                                                                            $pqCorrectChoice = $pq->choices ? $pq->choices->firstWhere('is_correct', true) : null;
+                                                                            $pqCorrectLabel = $pqCorrectChoice ? strtoupper(trim((string)$pqCorrectChoice->label)) : null;
+                                                                            $pqCorrectDisplay = $pqCorrectLabel ?: '—';
+                                                                            $pqAnsBadgeColor = $pqCorrectLabel
+                                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                                                                                : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
+                                                                        @endphp
+                                                                        <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $pqAnsBadgeColor }}" title="Persisted correct answer key">
+                                                                            Correct Answer: {{ $pqCorrectDisplay }}
+                                                                        </span>
                                                                     </div>
                                                                 @elseif($slotState === 'partial')
                                                                     <div class="flex items-center gap-2 flex-wrap rounded-lg p-1 text-slate-500 dark:text-slate-400 italic">
                                                                         <span class="font-mono">{{ $isLastSlot ? '└──' : '├──' }}</span>
                                                                         <span class="font-bold text-amber-600 dark:text-amber-400">{{ $slotLabel }} (○ Incomplete / Draft):</span>
                                                                         <span class="truncate max-w-md">{{ !empty($slotMeta['prompt']) ? \Illuminate\Support\Str::limit($slotMeta['prompt'], 60) : 'Draft blank context saved' }}</span>
+                                                                        <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 not-italic" title="Persisted correct answer key">
+                                                                            Correct Answer: —
+                                                                        </span>
                                                                     </div>
                                                                 @else
                                                                     <div class="flex items-center gap-2 flex-wrap rounded-lg p-1 text-slate-400 dark:text-slate-500 italic">
                                                                         <span class="font-mono">{{ $isLastSlot ? '└──' : '├──' }}</span>
                                                                         <span class="font-bold text-amber-600 dark:text-amber-400">{{ $slotLabel }} (○ Incomplete / Draft):</span>
                                                                         <span>Question not yet completed</span>
+                                                                        <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 not-italic" title="Persisted correct answer key">
+                                                                            Correct Answer: —
+                                                                        </span>
                                                                     </div>
                                                                 @endif
                                                             @endfor
@@ -1122,6 +1150,12 @@
                                                                         default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
                                                                     };
                                                                     $isLastPq = ($pqIdx === count($pgSortedQuestions) - 1);
+                                                                    $pqCorrectChoice = $pq->choices ? $pq->choices->firstWhere('is_correct', true) : null;
+                                                                    $pqCorrectLabel = $pqCorrectChoice ? strtoupper(trim((string)$pqCorrectChoice->label)) : null;
+                                                                    $pqCorrectDisplay = $pqCorrectLabel ?: '—';
+                                                                    $pqAnsBadgeColor = $pqCorrectLabel
+                                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                                                                        : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
                                                                 @endphp
                                                                 <div id="question-card-{{ $pq->id }}" class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
                                                                     <span class="text-slate-400 font-mono">{{ $isLastPq ? '└──' : '├──' }}</span>
@@ -1138,6 +1172,9 @@
                                                                             Auto: {{ ucfirst($pqDiffVal) }}
                                                                         </span>
                                                                     @endif
+                                                                    <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $pqAnsBadgeColor }}" title="Persisted correct answer key">
+                                                                        Correct Answer: {{ $pqCorrectDisplay }}
+                                                                    </span>
                                                                 </div>
                                                             @endforeach
                                                         @endif
