@@ -1159,6 +1159,14 @@
                                                 $qGlobalNum = is_array($qInfo) ? ($qInfo['number'] ?? null) : ($qItem['number'] ?? null);
                                                 $qLabel = is_array($qInfo) ? ($qInfo['label'] ?? "Question #{$qGlobalNum}") : "Question #{$qGlobalNum}";
                                                 $qIsOverflow = is_array($qInfo) ? ($qInfo['is_overflow'] ?? false) : false;
+                                                $qPartNum = (int) ($q->part_number ?: $secPartNumber);
+                                                $isStandaloneToeicPart = $isToeicTest && in_array($qPartNum, [1, 2, 5], true);
+                                                $correctChoice = $q->choices ? $q->choices->firstWhere('is_correct', true) : null;
+                                                $correctLabel = $correctChoice ? strtoupper(trim((string)$correctChoice->label)) : null;
+                                                if ($qPartNum === 2 && $correctLabel === 'D') {
+                                                    $correctLabel = null;
+                                                }
+                                                $correctAnswerDisplay = $correctLabel ?: '—';
                                             @endphp
                                             <div id="question-card-{{ $q->id }}" class="bg-slate-50 dark:bg-slate-950/70 border {{ $hasWarning ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20' : 'border-slate-200 dark:border-slate-800' }} rounded-xl p-4 shadow-sm flex justify-between items-center flex-wrap gap-3">
                                                     <div class="flex-1 min-w-[260px]">
@@ -1201,6 +1209,16 @@
                                                             <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $diffBadgeColor }}">
                                                                 ⚡ Auto: {{ ucfirst($diffVal) }}@if(!empty($q->difficulty_score)) ({{ $q->difficulty_score }})@endif
                                                             </span>
+                                                            @if($isStandaloneToeicPart)
+                                                                @php
+                                                                    $ansBadgeColor = $correctLabel
+                                                                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800'
+                                                                        : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
+                                                                @endphp
+                                                                <span class="text-[11px] font-bold border px-2 py-0.5 rounded {{ $ansBadgeColor }}" title="Persisted correct answer key">
+                                                                    🎯 Correct Answer: {{ $correctAnswerDisplay }}
+                                                                </span>
+                                                            @endif
                                                         </div>
                                                         <div class="text-sm font-bold text-slate-900 dark:text-white">
                                                             {{ \Illuminate\Support\Str::limit($q->prompt ?? '(Empty Stem)', 75) }}
