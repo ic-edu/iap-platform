@@ -437,36 +437,42 @@ test('TOEIC-BP-06: Part 6 handles UNDER (12/16), EXACT (16 in 4x4), and OVER (20
 test('TOEIC-BP-07: Part 7 handles UNDER (53/54), EXACT (54), and OVER (55/54)', function () {
     $sec = createToeicSection($this->toeicTest, 7);
 
-    // 10 single groups of 4 questions (40) + 2 double groups of 5 questions (10) + 1 single group of 3 (total 53 -> UNDER)
-    for ($g = 1; $g <= 10; $g++) {
-        createValidPart7PassageGroup($sec, $g, 'single', 4);
+    // 10 single (29) + 2 double (10) + 2 triple of 5 (10) + 1 triple of 4 (4) = 53 questions (UNDER)
+    for ($g = 1; $g <= 9; $g++) {
+        createValidPart7PassageGroup($sec, $g, 'single', 3);
     }
+    createValidPart7PassageGroup($sec, 10, 'single', 2);
     createValidPart7PassageGroup($sec, 11, 'double', 5);
     createValidPart7PassageGroup($sec, 12, 'double', 5);
-    createValidPart7PassageGroup($sec, 13, 'single', 3);
+    createValidPart7PassageGroup($sec, 13, 'triple', 5);
+    createValidPart7PassageGroup($sec, 14, 'triple', 5);
+    createValidPart7PassageGroup($sec, 15, 'triple', 4);
 
     $resUnder = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $resUnder->assertSee('53/54 Complete');
     $resUnder->assertSee('NEEDS ATTENTION');
     $resUnder->assertSee('1 question missing');
 
-    // Replace group 13 with a 4-question group -> 54 EXACT
+    // Replace group 15 with a 5-question group -> 54 EXACT (Canonical READY)
     PassageGroup::where('test_id', $this->toeicTest->id)->delete();
     $this->toeicTest->sections()->delete();
     $sec = createToeicSection($this->toeicTest, 7);
-    for ($g = 1; $g <= 10; $g++) {
-        createValidPart7PassageGroup($sec, $g, 'single', 4);
+    for ($g = 1; $g <= 9; $g++) {
+        createValidPart7PassageGroup($sec, $g, 'single', 3);
     }
+    createValidPart7PassageGroup($sec, 10, 'single', 2);
     createValidPart7PassageGroup($sec, 11, 'double', 5);
     createValidPart7PassageGroup($sec, 12, 'double', 5);
-    createValidPart7PassageGroup($sec, 13, 'single', 4);
+    createValidPart7PassageGroup($sec, 13, 'triple', 5);
+    createValidPart7PassageGroup($sec, 14, 'triple', 5);
+    createValidPart7PassageGroup($sec, 15, 'triple', 5);
 
     $resExact = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $resExact->assertSee('54/54 Complete');
     $resExact->assertSee('READY');
 
     // Add extra passage group with 2 questions -> OVER (56/54)
-    createValidPart7PassageGroup($sec, 14, 'single', 2);
+    createValidPart7PassageGroup($sec, 16, 'single', 2);
     $resOver = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
     $resOver->assertSee('56/54 Complete');
     $resOver->assertSee('NEEDS ATTENTION');
@@ -516,14 +522,17 @@ test('TOEIC-BP-08: Total 200 questions with wrong distribution (P1=5, P2=26) is 
         createValidPart6PassageGroup($s6, $g);
     }
 
-    // P7 = 54 (Exact)
+    // P7 = 54 (Exact Canonical)
     $s7 = createToeicSection($this->toeicTest, 7);
-    for ($g = 1; $g <= 10; $g++) {
-        createValidPart7PassageGroup($s7, $g, 'single', 4);
+    for ($g = 1; $g <= 9; $g++) {
+        createValidPart7PassageGroup($s7, $g, 'single', 3);
     }
+    createValidPart7PassageGroup($s7, 10, 'single', 2);
     createValidPart7PassageGroup($s7, 11, 'double', 5);
     createValidPart7PassageGroup($s7, 12, 'double', 5);
-    createValidPart7PassageGroup($s7, 13, 'single', 4);
+    createValidPart7PassageGroup($s7, 13, 'triple', 5);
+    createValidPart7PassageGroup($s7, 14, 'triple', 5);
+    createValidPart7PassageGroup($s7, 15, 'triple', 5);
 
     // Total questions in DB = 5 + 26 + 39 + 30 + 30 + 16 + 54 = 200
     $val = $this->builderService->validateAssessment($this->toeicTest);
@@ -580,14 +589,17 @@ test('TOEIC-BP-09: Exact full TOEIC (6, 25, 39, 30, 30, 16, 54 = 200) passes val
         createValidPart6PassageGroup($s6, $g);
     }
 
-    // P7 = 54
+    // P7 = 54 (Exact Canonical)
     $s7 = createToeicSection($this->toeicTest, 7);
-    for ($g = 1; $g <= 10; $g++) {
-        createValidPart7PassageGroup($s7, $g, 'single', 4);
+    for ($g = 1; $g <= 9; $g++) {
+        createValidPart7PassageGroup($s7, $g, 'single', 3);
     }
+    createValidPart7PassageGroup($s7, 10, 'single', 2);
     createValidPart7PassageGroup($s7, 11, 'double', 5);
     createValidPart7PassageGroup($s7, 12, 'double', 5);
-    createValidPart7PassageGroup($s7, 13, 'single', 4);
+    createValidPart7PassageGroup($s7, 13, 'triple', 5);
+    createValidPart7PassageGroup($s7, 14, 'triple', 5);
+    createValidPart7PassageGroup($s7, 15, 'triple', 5);
 
     $val = $this->builderService->validateAssessment($this->toeicTest);
     expect($val['is_valid'])->toBeTrue();

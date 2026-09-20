@@ -508,6 +508,25 @@ class TestBuilderService
         }
 
         return DB::transaction(function () use ($section, $test, $data, $partNumber, $passageType, $sectionType, $passages) {
+            if ($partNumber === 7) {
+                $completeChildCount = 0;
+                foreach ($data['questions'] ?? [] as $q) {
+                    if ($this->isChildComplete($q, 7)) {
+                        $completeChildCount++;
+                    }
+                }
+                $existingP7Groups = PassageGroup::where('test_id', $test?->id)
+                    ->where('part_number', 7)
+                    ->with(['questions.choices', 'passages'])
+                    ->get();
+
+                ToeicQuestionValidator::validatePart7AggregateCreation(
+                    $existingP7Groups,
+                    $passageType,
+                    $completeChildCount
+                );
+            }
+
             $passageGroup = PassageGroup::create([
                 'test_id'          => $test?->id,
                 'title'            => $data['title'] ?? ('Part ' . $partNumber . ' ' . ucfirst($passageType) . ' Passage Group (' . ($test?->title ?? 'Assessment') . ')'),
@@ -676,6 +695,27 @@ class TestBuilderService
         }
 
         return DB::transaction(function () use ($passageGroup, $data, $partNumber, $passageType, $sectionType, $section, $test, $passagesData) {
+            if ($partNumber === 7) {
+                $completeChildCount = 0;
+                foreach ($data['questions'] ?? [] as $q) {
+                    if ($this->isChildComplete($q, 7)) {
+                        $completeChildCount++;
+                    }
+                }
+                $testId = $passageGroup->test_id ?? $test?->id;
+                $existingP7Groups = PassageGroup::where('test_id', $testId)
+                    ->where('part_number', 7)
+                    ->with(['questions.choices', 'passages'])
+                    ->get();
+
+                ToeicQuestionValidator::validatePart7AggregateCreation(
+                    $existingP7Groups,
+                    $passageType,
+                    $completeChildCount,
+                    $passageGroup
+                );
+            }
+
             $passageGroup->update([
                 'title'            => $data['title'] ?? $passageGroup->title,
                 'part_number'      => $partNumber,
@@ -1577,6 +1617,20 @@ class TestBuilderService
                     $p7Standalone = array_filter($partItems, fn($it) => empty($it['question']->passage_group_id));
                     if (!empty($p7Standalone)) {
                         $errors[] = "Part 7 Reading Comprehension requires all questions to belong to passage groups; " . count($p7Standalone) . " standalone question(s) found.";
+                    }
+
+                    $p7Groups = PassageGroup::where('test_id', (string) $test->id)
+                        ->where('part_number', 7)
+                        ->orderBy('order', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->with(['questions.choices', 'passages'])
+                        ->get();
+
+                    $p7Eval = ToeicQuestionValidator::evaluatePart7Blueprint($p7Groups, count($p7Standalone));
+                    if (!$p7Eval['is_ready']) {
+                        foreach ($p7Eval['findings'] as $finding) {
+                            $errors[] = $finding;
+                        }
                     }
                 }
             }

@@ -431,7 +431,7 @@ test('TEST 17 - Part 7 does NOT render + Add Question', function () {
     expect($part7Block)->not->toContain('+ Add Question');
 });
 
-test('TEST 18 - Part 7 renders + Add Passage Group where supported', function () {
+test('TEST 18 - Part 7 renders + Add Single Passage where supported', function () {
     $response = $this->actingAs($this->teacher)
         ->get(route('teacher.tests.show', $this->test->id));
 
@@ -440,7 +440,7 @@ test('TEST 18 - Part 7 renders + Add Passage Group where supported', function ()
     $sec7Pos = strpos($content, $sec7Id);
     $part7Block = substr($content, $sec7Pos);
 
-    expect($part7Block)->toContain('+ Add Passage Group');
+    expect($part7Block)->toContain('+ Add Single Passage');
 });
 
 test('TEST 19 - Part 5 still renders Add Question', function () {

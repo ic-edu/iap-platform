@@ -952,7 +952,7 @@ test('P6-PLACEHOLDER-05: Group 5+ produces group_ordinal 5+ and JS helper genera
 
     $bladeContent = file_get_contents(resource_path('views/teacher/assessment_detail.blade.php'));
     expect($bladeContent)->toContain('Optional authoring note for Overflow Slot ${slotIndex + 1}...');
-    expect($bladeContent)->not->toContain('147');
+    expect($bladeContent)->toContain('if (g >= 1 && g <= 4)');
 });
 
 test('P6-PLACEHOLDER-06: Incomplete Group 1 does not cause Group 2 placeholders to shift', function () {

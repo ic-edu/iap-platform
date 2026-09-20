@@ -28,6 +28,72 @@ class ToeicQuestionValidator
     ];
 
     /**
+     * Canonical Full TOEIC Part 7 Blueprint (Reading Comprehension).
+     */
+    public const TOEIC_PART7_BLUEPRINT = [
+        'total_questions' => 54,
+        'start_number'    => 147,
+        'end_number'      => 200,
+        'total_groups'    => 15,
+
+        'single' => [
+            'group_count'             => 10,
+            'question_total'          => 29,
+            'questions_per_group_min' => 2,
+            'questions_per_group_max' => 4,
+            'document_count'          => 1,
+            'start_number'            => 147,
+            'end_number'              => 175,
+        ],
+
+        'double' => [
+            'group_count'         => 2,
+            'question_total'      => 10,
+            'questions_per_group' => 5,
+            'document_count'      => 2,
+            'start_number'        => 176,
+            'end_number'          => 185,
+        ],
+
+        'triple' => [
+            'group_count'         => 3,
+            'question_total'      => 15,
+            'questions_per_group' => 5,
+            'document_count'      => 3,
+            'start_number'        => 186,
+            'end_number'          => 200,
+        ],
+    ];
+
+    /**
+     * Get Part 7 canonical blueprint.
+     */
+    public static function getPart7Blueprint(): array
+    {
+        return self::TOEIC_PART7_BLUEPRINT;
+    }
+
+    /**
+     * Get canonical question range for a Part 7 passage type.
+     *
+     * @param string $passageType 'single'|'double'|'triple'
+     * @return array{start: int, end: int, count: int}|null
+     */
+    public static function getPart7PassageTypeQuestionRange(string $passageType): ?array
+    {
+        $type = strtolower($passageType);
+        $bp = self::TOEIC_PART7_BLUEPRINT[$type] ?? null;
+        if (!$bp) {
+            return null;
+        }
+        return [
+            'start' => $bp['start_number'],
+            'end'   => $bp['end_number'],
+            'count' => $bp['question_total'],
+        ];
+    }
+
+    /**
      * Get blueprint details for a TOEIC part.
      *
      * @param int|string|null $partNumber
@@ -1034,5 +1100,454 @@ class ToeicQuestionValidator
         }
 
         return $result;
+    }
+
+    /**
+     * Check mathematical feasibility of remaining Single Passage groups given current group and question counts.
+     *
+     * @param int $currentGroups
+     * @param int $currentQuestions
+     * @return array{
+     *     is_feasible: bool,
+     *     reason: string,
+     *     message: string,
+     *     remaining_groups: int,
+     *     remaining_questions: int,
+     *     min_possible?: int,
+     *     max_possible?: int
+     * }
+     */
+    public static function checkSinglePassageFeasibility(int $currentGroups, int $currentQuestions): array
+    {
+        $targetGroups = self::TOEIC_PART7_BLUEPRINT['single']['group_count']; // 10
+        $targetQuestions = self::TOEIC_PART7_BLUEPRINT['single']['question_total']; // 29
+
+        $remGroups = $targetGroups - $currentGroups;
+        $remQuestions = $targetQuestions - $currentQuestions;
+
+        if ($remGroups < 0 || $remQuestions < 0) {
+            return [
+                'is_feasible'         => false,
+                'reason'              => 'overflow',
+                'message'             => 'Single Passage count exceeds canonical target (10 groups, 29 questions).',
+                'remaining_groups'    => max(0, $remGroups),
+                'remaining_questions' => max(0, $remQuestions),
+            ];
+        }
+
+        if ($remGroups === 0) {
+            $feasible = ($remQuestions === 0);
+            return [
+                'is_feasible'         => $feasible,
+                'reason'              => $feasible ? 'exact' : 'mismatch',
+                'message'             => $feasible ? 'Single Passage block complete.' : 'All 10 Single Passage groups created but question count is ' . $currentQuestions . '/29.',
+                'remaining_groups'    => 0,
+                'remaining_questions' => $remQuestions,
+            ];
+        }
+
+        $minPossible = 2 * $remGroups;
+        $maxPossible = 4 * $remGroups;
+        $feasible = ($remQuestions >= $minPossible && $remQuestions <= $maxPossible);
+
+        $msg = $feasible
+            ? ($remGroups === 1
+                ? "Final Single Passage must contain exactly {$remQuestions} questions."
+                : "{$remQuestions} questions remaining across {$remGroups} Single Passage groups.")
+            : "Remaining {$remQuestions} questions cannot be distributed across {$remGroups} Single Passage groups (2–4 questions required per group; allowed range is {$minPossible}–{$maxPossible} questions).";
+
+        return [
+            'is_feasible'         => $feasible,
+            'reason'              => $feasible ? 'feasible' : 'impossible',
+            'message'             => $msg,
+            'remaining_groups'    => $remGroups,
+            'remaining_questions' => $remQuestions,
+            'min_possible'        => $minPossible,
+            'max_possible'        => $maxPossible,
+        ];
+    }
+
+    /**
+     * Evaluate aggregate Part 7 canonical blueprint composition, completeness, ordering, and ranges.
+     *
+     * @param mixed $groups Iterable of PassageGroup models, arrays, or Test/TestSection
+     * @param int $standaloneCount Number of standalone questions not belonging to a passage group
+     * @return array<string, mixed>
+     */
+    public static function evaluatePart7Blueprint(mixed $groups, int $standaloneCount = 0): array
+    {
+        $blueprint = self::TOEIC_PART7_BLUEPRINT;
+
+        if ($groups instanceof \App\Modules\Assessment\Models\Test || $groups instanceof \App\Modules\QuestionBank\Models\QuestionBank) {
+            $groups = \App\Modules\QuestionBank\Models\PassageGroup::where('test_id', (string)$groups->id)
+                ->where('part_number', 7)
+                ->orderBy('order', 'asc')
+                ->orderBy('id', 'asc')
+                ->with(['questions.choices', 'passages'])
+                ->get();
+        } elseif ($groups instanceof \App\Modules\Assessment\Models\TestSection) {
+            $groups = \App\Modules\QuestionBank\Models\PassageGroup::where('test_id', (string)$groups->test_id)
+                ->where('part_number', 7)
+                ->orderBy('order', 'asc')
+                ->orderBy('id', 'asc')
+                ->with(['questions.choices', 'passages'])
+                ->get();
+        } elseif ($groups instanceof Collection) {
+            // Keep collection
+        } elseif (is_array($groups)) {
+            $groups = collect($groups);
+        } else {
+            $groups = collect();
+        }
+
+        $singleGroups = [];
+        $doubleGroups = [];
+        $tripleGroups = [];
+        $otherGroups = [];
+        $groupSequence = [];
+        $allGroupsValid = true;
+        $groupIssues = [];
+
+        foreach ($groups as $gIdx => $group) {
+            $isModel = $group instanceof \App\Modules\QuestionBank\Models\PassageGroup;
+            $type = strtolower((string)($isModel ? $group->passage_type : ($group['passage_type'] ?? 'single')));
+            $groupSequence[] = $type;
+
+            // Individual group check
+            $pgCheck = self::checkPassageGroup($group);
+            if (!$pgCheck['is_valid']) {
+                $allGroupsValid = false;
+                foreach ($pgCheck['errors'] as $err) {
+                    $groupIssues[] = "Passage Group #" . ($gIdx + 1) . " ({$type}): {$err}";
+                }
+            }
+
+            // Count complete questions
+            $completeQuestions = 0;
+            if ($isModel) {
+                $draftSlots = $group->context_metadata['draft_slots'] ?? null;
+                if (is_array($draftSlots) && !empty($draftSlots)) {
+                    foreach ($draftSlots as $slot) {
+                        if (($slot['state'] ?? '') === 'complete') {
+                            $completeQuestions++;
+                        }
+                    }
+                } else {
+                    $qs = $group->relationLoaded('questions') ? $group->questions : $group->questions()->get();
+                    $completeQuestions = $qs->filter(fn($q) => $q instanceof Question ? $q->isCompleteChild() : !empty($q['prompt']))->count();
+                }
+            } elseif (is_array($group)) {
+                $qs = $group['questions'] ?? [];
+                foreach ($qs as $q) {
+                    if (is_array($q)) {
+                        $hasPrompt = !empty(trim((string)($q['prompt'] ?? '')));
+                        $choices = $q['choices'] ?? [];
+                        $hasChoices = is_array($choices) && count(array_filter($choices, fn($c) => !empty(trim(is_array($c) ? ($c['content'] ?? $c['choice_text'] ?? '') : (string)$c)))) === 4;
+                        $hasCorrect = isset($q['correct_choice']) && $q['correct_choice'] !== '' && $q['correct_choice'] !== null;
+                        if ($hasPrompt && $hasChoices && $hasCorrect) {
+                            $completeQuestions++;
+                        }
+                    } elseif ($q instanceof Question) {
+                        if ($q->isCompleteChild()) {
+                            $completeQuestions++;
+                        }
+                    }
+                }
+            }
+
+            $groupData = [
+                'model'              => $isModel ? $group : null,
+                'type'               => $type,
+                'complete_questions' => $completeQuestions,
+                'is_valid'           => $pgCheck['is_valid'],
+            ];
+
+            match ($type) {
+                'single' => $singleGroups[] = $groupData,
+                'double' => $doubleGroups[] = $groupData,
+                'triple' => $tripleGroups[] = $groupData,
+                default  => $otherGroups[] = $groupData,
+            };
+        }
+
+        $numSingleGroups = count($singleGroups);
+        $numSingleQuestions = array_sum(array_column($singleGroups, 'complete_questions'));
+
+        $numDoubleGroups = count($doubleGroups);
+        $numDoubleQuestions = array_sum(array_column($doubleGroups, 'complete_questions'));
+
+        $numTripleGroups = count($tripleGroups);
+        $numTripleQuestions = array_sum(array_column($tripleGroups, 'complete_questions'));
+
+        $totalGroups = count($groups);
+        $totalQuestions = $numSingleQuestions + $numDoubleQuestions + $numTripleQuestions + array_sum(array_column($otherGroups, 'complete_questions')) + $standaloneCount;
+
+        // Single evaluation
+        $singleExact = ($numSingleGroups === $blueprint['single']['group_count'] && $numSingleQuestions === $blueprint['single']['question_total']);
+        $singleFeasibility = self::checkSinglePassageFeasibility($numSingleGroups, $numSingleQuestions);
+
+        // Double evaluation
+        $doubleExact = ($numDoubleGroups === $blueprint['double']['group_count'] && $numDoubleQuestions === $blueprint['double']['question_total']);
+        $doubleLocked = !$singleExact;
+
+        // Triple evaluation
+        $tripleExact = ($numTripleGroups === $blueprint['triple']['group_count'] && $numTripleQuestions === $blueprint['triple']['question_total']);
+        $tripleLocked = !$doubleExact;
+
+        // Ordering validation (Single -> Double -> Triple)
+        $orderingValid = true;
+        $orderingMessage = null;
+        $seenDouble = false;
+        $seenTriple = false;
+
+        foreach ($groupSequence as $seqType) {
+            if ($seqType === 'single') {
+                if ($seenDouble || $seenTriple) {
+                    $orderingValid = false;
+                    break;
+                }
+            } elseif ($seqType === 'double') {
+                if ($seenTriple) {
+                    $orderingValid = false;
+                    break;
+                }
+                $seenDouble = true;
+            } elseif ($seqType === 'triple') {
+                $seenTriple = true;
+            } else {
+                $orderingValid = false;
+                break;
+            }
+        }
+
+        if (!$orderingValid) {
+            $orderingMessage = "Part 7 passage groups are out of canonical order. Expected Single → Double → Triple.";
+        }
+
+        // Ready check
+        $isReady = $singleExact
+            && $doubleExact
+            && $tripleExact
+            && $totalGroups === $blueprint['total_groups']
+            && $totalQuestions === $blueprint['total_questions']
+            && $standaloneCount === 0
+            && $orderingValid
+            && $allGroupsValid
+            && empty($otherGroups);
+
+        // Build findings for Validation Assistant
+        $findings = [];
+        if ($standaloneCount > 0) {
+            $findings[] = "Part 7 Reading Comprehension requires all questions to belong to passage groups; {$standaloneCount} standalone question(s) found.";
+        }
+        if (!$orderingValid && $orderingMessage) {
+            $findings[] = $orderingMessage;
+        }
+        foreach ($groupIssues as $gi) {
+            $findings[] = $gi;
+        }
+
+        if (!$singleExact) {
+            if (!$singleFeasibility['is_feasible']) {
+                $findings[] = "Part 7 Single Passage question distribution is impossible ({$numSingleQuestions}/29 questions in {$numSingleGroups}/10 groups).";
+            } elseif ($numSingleGroups > $blueprint['single']['group_count']) {
+                $findings[] = "Part 7 Single Passage exceeds 10 groups limit ({$numSingleGroups}/10 groups).";
+            } elseif ($numSingleQuestions > $blueprint['single']['question_total']) {
+                $findings[] = "Part 7 Single Passage exceeds 29 questions limit ({$numSingleQuestions}/29 questions).";
+            } else {
+                $remG = $blueprint['single']['group_count'] - $numSingleGroups;
+                $remQ = $blueprint['single']['question_total'] - $numSingleQuestions;
+                $findings[] = "Part 7 Single Passage: {$numSingleGroups} / 10 groups, {$numSingleQuestions} / 29 questions ({$remQ} questions remaining across {$remG} groups).";
+            }
+        }
+
+        if ($singleExact && !$doubleExact) {
+            if ($numDoubleGroups > $blueprint['double']['group_count']) {
+                $findings[] = "Part 7 Double Passage exceeds 2 groups limit ({$numDoubleGroups}/2 groups).";
+            } elseif ($numDoubleQuestions > $blueprint['double']['question_total']) {
+                $findings[] = "Part 7 Double Passage exceeds 10 questions limit ({$numDoubleQuestions}/10 questions).";
+            } else {
+                $findings[] = "Part 7 Double Passage: {$numDoubleGroups} / 2 groups, {$numDoubleQuestions} / 10 questions.";
+            }
+        } elseif (!$singleExact && ($numDoubleGroups > 0 || $numDoubleQuestions > 0)) {
+            $findings[] = "Part 7 Double Passage is locked until Single Passage reaches 10 groups / 29 questions.";
+        }
+
+        if ($doubleExact && !$tripleExact) {
+            if ($numTripleGroups > $blueprint['triple']['group_count']) {
+                $findings[] = "Part 7 Triple Passage exceeds 3 groups limit ({$numTripleGroups}/3 groups).";
+            } elseif ($numTripleQuestions > $blueprint['triple']['question_total']) {
+                $findings[] = "Part 7 Triple Passage exceeds 15 questions limit ({$numTripleQuestions}/15 questions).";
+            } else {
+                $findings[] = "Part 7 Triple Passage: {$numTripleGroups} / 3 groups, {$numTripleQuestions} / 15 questions.";
+            }
+        } elseif (!$doubleExact && ($numTripleGroups > 0 || $numTripleQuestions > 0)) {
+            $findings[] = "Part 7 Triple Passage is locked until Double Passage reaches 2 groups / 10 questions.";
+        }
+
+        if ($totalQuestions === 54 && !$isReady) {
+            $findings[] = "Part 7 contains 54 questions but its passage-type composition does not match the canonical TOEIC blueprint.";
+        }
+
+        return [
+            'total' => [
+                'groups'             => $totalGroups,
+                'questions'          => $totalQuestions,
+                'expected_groups'    => $blueprint['total_groups'],
+                'expected_questions' => $blueprint['total_questions'],
+                'status'             => $isReady ? 'ready' : 'needs_attention',
+            ],
+            'single' => [
+                'groups'              => $numSingleGroups,
+                'questions'           => $numSingleQuestions,
+                'expected_groups'     => $blueprint['single']['group_count'],
+                'expected_questions'  => $blueprint['single']['question_total'],
+                'remaining_groups'    => max(0, $blueprint['single']['group_count'] - $numSingleGroups),
+                'remaining_questions' => max(0, $blueprint['single']['question_total'] - $numSingleQuestions),
+                'is_exact'            => $singleExact,
+                'is_feasible'         => $singleFeasibility['is_feasible'],
+                'feasibility_reason'  => $singleFeasibility['reason'] ?? 'feasible',
+                'feasibility_message' => $singleFeasibility['message'] ?? '',
+                'range'               => ['start' => 147, 'end' => 175],
+                'status'              => $singleExact ? 'complete' : (!$singleFeasibility['is_feasible'] || $numSingleGroups > 10 || $numSingleQuestions > 29 ? 'invalid' : ($numSingleGroups > 0 ? 'in_progress' : 'not_started')),
+            ],
+            'double' => [
+                'groups'              => $numDoubleGroups,
+                'questions'           => $numDoubleQuestions,
+                'expected_groups'     => $blueprint['double']['group_count'],
+                'expected_questions'  => $blueprint['double']['question_total'],
+                'remaining_groups'    => max(0, $blueprint['double']['group_count'] - $numDoubleGroups),
+                'remaining_questions' => max(0, $blueprint['double']['question_total'] - $numDoubleQuestions),
+                'is_exact'            => $doubleExact,
+                'is_locked'           => $doubleLocked,
+                'range'               => ['start' => 176, 'end' => 185],
+                'status'              => $doubleExact ? 'complete' : ($numDoubleGroups > 2 || $numDoubleQuestions > 10 ? 'invalid' : ($doubleLocked ? 'locked' : ($numDoubleGroups > 0 ? 'in_progress' : 'not_started'))),
+            ],
+            'triple' => [
+                'groups'              => $numTripleGroups,
+                'questions'           => $numTripleQuestions,
+                'expected_groups'     => $blueprint['triple']['group_count'],
+                'expected_questions'  => $blueprint['triple']['question_total'],
+                'remaining_groups'    => max(0, $blueprint['triple']['group_count'] - $numTripleGroups),
+                'remaining_questions' => max(0, $blueprint['triple']['question_total'] - $numTripleQuestions),
+                'is_exact'            => $tripleExact,
+                'is_locked'           => $tripleLocked,
+                'range'               => ['start' => 186, 'end' => 200],
+                'status'              => $tripleExact ? 'complete' : ($numTripleGroups > 3 || $numTripleQuestions > 15 ? 'invalid' : ($tripleLocked ? 'locked' : ($numTripleGroups > 0 ? 'in_progress' : 'not_started'))),
+            ],
+            'ordering' => [
+                'valid'   => $orderingValid,
+                'message' => $orderingMessage,
+            ],
+            'is_ready'  => $isReady,
+            'findings'  => array_values(array_unique($findings)),
+        ];
+    }
+
+    /**
+     * Validate aggregate creation or update of a Part 7 Passage Group against canonical limits and prerequisites.
+     *
+     * @param mixed $existingGroups
+     * @param string $proposedPassageType
+     * @param int $proposedQuestionCount
+     * @param \App\Modules\QuestionBank\Models\PassageGroup|null $updatingGroup
+     * @throws ValidationException
+     */
+    public static function validatePart7AggregateCreation(
+        mixed $existingGroups,
+        string $proposedPassageType,
+        int $proposedQuestionCount = 0,
+        ?\App\Modules\QuestionBank\Models\PassageGroup $updatingGroup = null
+    ): void {
+        $blueprint = self::TOEIC_PART7_BLUEPRINT;
+        $proposedType = strtolower($proposedPassageType);
+
+        if ($updatingGroup && $existingGroups instanceof Collection) {
+            $existingGroups = $existingGroups->filter(fn($g) => (string)$g->id !== (string)$updatingGroup->id);
+        }
+
+        $eval = self::evaluatePart7Blueprint($existingGroups);
+
+        $isChangingType = $updatingGroup ? (strtolower((string)$updatingGroup->passage_type) !== $proposedType) : false;
+        $isNew = is_null($updatingGroup);
+
+        if ($proposedType === 'single') {
+            $targetGroups = $blueprint['single']['group_count']; // 10
+            $targetQuestions = $blueprint['single']['question_total']; // 29
+
+            $newGroupCount = $eval['single']['groups'] + 1;
+            if ($newGroupCount > $targetGroups) {
+                throw ValidationException::withMessages([
+                    'passage_type' => ["Cannot exceed {$targetGroups} Single Passage groups in Part 7 (currently {$eval['single']['groups']}/{$targetGroups})."],
+                ]);
+            }
+
+            $newQuestionTotal = $eval['single']['questions'] + $proposedQuestionCount;
+            if ($newQuestionTotal > $targetQuestions) {
+                throw ValidationException::withMessages([
+                    'questions' => ["Cannot exceed {$targetQuestions} Single Passage questions in Part 7 (adding {$proposedQuestionCount} question(s) would reach {$newQuestionTotal}/{$targetQuestions})."],
+                ]);
+            }
+
+            $feas = self::checkSinglePassageFeasibility($newGroupCount, $newQuestionTotal);
+            if (!$feas['is_feasible']) {
+                throw ValidationException::withMessages([
+                    'questions' => ["Single Passage question distribution would be impossible to complete: {$feas['message']}"],
+                ]);
+            }
+        } elseif ($proposedType === 'double') {
+            $targetGroups = $blueprint['double']['group_count']; // 2
+            $targetQuestions = $blueprint['double']['question_total']; // 10
+
+            if (($isNew || $isChangingType) && !$eval['single']['is_exact']) {
+                throw ValidationException::withMessages([
+                    'passage_type' => ["Double Passage creation is locked until the Single Passage block is complete (requires 10 groups and 29 questions; currently {$eval['single']['groups']}/10 groups, {$eval['single']['questions']}/29 questions)."],
+                ]);
+            }
+
+            $newGroupCount = $eval['double']['groups'] + 1;
+            if ($newGroupCount > $targetGroups) {
+                throw ValidationException::withMessages([
+                    'passage_type' => ["Cannot exceed {$targetGroups} Double Passage groups in Part 7 (currently {$eval['double']['groups']}/{$targetGroups})."],
+                ]);
+            }
+
+            $newQuestionTotal = $eval['double']['questions'] + $proposedQuestionCount;
+            if ($newQuestionTotal > $targetQuestions) {
+                throw ValidationException::withMessages([
+                    'questions' => ["Cannot exceed {$targetQuestions} Double Passage questions in Part 7 (adding {$proposedQuestionCount} question(s) would reach {$newQuestionTotal}/{$targetQuestions})."],
+                ]);
+            }
+        } elseif ($proposedType === 'triple') {
+            $targetGroups = $blueprint['triple']['group_count']; // 3
+            $targetQuestions = $blueprint['triple']['question_total']; // 15
+
+            if ($isNew || $isChangingType) {
+                if (!$eval['single']['is_exact']) {
+                    throw ValidationException::withMessages([
+                        'passage_type' => ["Triple Passage creation is locked until Single and Double Passage blocks are complete (Single requires 10 groups and 29 questions; currently {$eval['single']['groups']}/10 groups, {$eval['single']['questions']}/29 questions)."],
+                    ]);
+                }
+                if (!$eval['double']['is_exact']) {
+                    throw ValidationException::withMessages([
+                        'passage_type' => ["Triple Passage creation is locked until the Double Passage block is complete (requires 2 groups and 10 questions; currently {$eval['double']['groups']}/2 groups, {$eval['double']['questions']}/10 questions)."],
+                    ]);
+                }
+            }
+
+            $newGroupCount = $eval['triple']['groups'] + 1;
+            if ($newGroupCount > $targetGroups) {
+                throw ValidationException::withMessages([
+                    'passage_type' => ["Cannot exceed {$targetGroups} Triple Passage groups in Part 7 (currently {$eval['triple']['groups']}/{$targetGroups})."],
+                ]);
+            }
+
+            $newQuestionTotal = $eval['triple']['questions'] + $proposedQuestionCount;
+            if ($newQuestionTotal > $targetQuestions) {
+                throw ValidationException::withMessages([
+                    'questions' => ["Cannot exceed {$targetQuestions} Triple Passage questions in Part 7 (adding {$proposedQuestionCount} question(s) would reach {$newQuestionTotal}/{$targetQuestions})."],
+                ]);
+            }
+        }
     }
 }

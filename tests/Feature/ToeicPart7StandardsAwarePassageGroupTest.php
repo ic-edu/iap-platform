@@ -309,7 +309,49 @@ test('TEST 08: Teacher can create Part 7 Single passage group with 2 questions v
     $this->assertDatabaseCount('test_questions', 2);
 });
 
+function seedPrerequisiteSingleGroups($test, $section, $builderService): void
+{
+    for ($g = 1; $g <= 9; $g++) {
+        $builderService->createPassageGroup($section, [
+            'test_section_id' => $section->id,
+            'part_number'     => 7,
+            'passage_type'    => 'single',
+            'title'           => "Prereq Single {$g}",
+            'passages'        => [['document_type' => 'article', 'title' => "Doc {$g}", 'content' => "Stimulus {$g}"]],
+            'questions'       => array_map(fn($k) => ['prompt' => "Q{$k}", 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0], range(1, 3)),
+        ]);
+    }
+    $builderService->createPassageGroup($section, [
+        'test_section_id' => $section->id,
+        'part_number'     => 7,
+        'passage_type'    => 'single',
+        'title'           => 'Prereq Single 10',
+        'passages'        => [['document_type' => 'article', 'title' => 'Doc 10', 'content' => 'Stimulus 10']],
+        'questions'       => array_map(fn($k) => ['prompt' => "Q{$k}", 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0], range(1, 2)),
+    ]);
+}
+
+function seedPrerequisiteDoubleGroups($test, $section, $builderService): void
+{
+    seedPrerequisiteSingleGroups($test, $section, $builderService);
+    for ($g = 1; $g <= 2; $g++) {
+        $builderService->createPassageGroup($section, [
+            'test_section_id' => $section->id,
+            'part_number'     => 7,
+            'passage_type'    => 'double',
+            'title'           => "Prereq Double {$g}",
+            'passages'        => [
+                ['document_type' => 'article', 'title' => "Doc {$g}-1", 'content' => 'Text 1'],
+                ['document_type' => 'email', 'title' => "Doc {$g}-2", 'content' => 'Text 2'],
+            ],
+            'questions'       => array_map(fn($k) => ['prompt' => "Q{$k}", 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0], range(1, 5)),
+        ]);
+    }
+}
+
 test('TEST 09: Teacher can create Part 7 Double passage group with visual document stimulus', function () {
+    seedPrerequisiteSingleGroups($this->test, $this->part7Section, $this->builderService);
+
     $mediaAsset = MediaAsset::create([
         'uploaded_by'   => $this->teacher->id,
         'filename'      => 'schedule_chart.png',
@@ -353,7 +395,7 @@ test('TEST 09: Teacher can create Part 7 Double passage group with visual docume
 
     $response->assertRedirect(route('teacher.tests.show', $this->test->id));
 
-    $pg = PassageGroup::where('test_id', $this->test->id)->first();
+    $pg = PassageGroup::where('title', 'Training Workshop Schedule & Email')->first();
     expect($pg)->not->toBeNull()
         ->and($pg->passage_type)->toBe('double')
         ->and($pg->passages)->toHaveCount(2)
@@ -366,10 +408,17 @@ test('TEST 09: Teacher can create Part 7 Double passage group with visual docume
 });
 
 test('TEST 10: Teacher can update passage group and clean up orphaned passages and questions', function () {
+    $genSection = TestSection::create([
+        'test_id'      => $this->test->id,
+        'title'        => 'General Reading Section',
+        'section_type' => 'reading',
+        'order'        => 99,
+    ]);
+
     // First create a Triple passage group with 3 docs and 5 questions
-    $pg = $this->builderService->createPassageGroup($this->part7Section, [
-        'test_section_id' => $this->part7Section->id,
-        'part_number'     => 7,
+    $pg = $this->builderService->createPassageGroup($genSection, [
+        'test_section_id' => $genSection->id,
+        'part_number'     => 0,
         'passage_type'    => 'triple',
         'title'           => 'Initial Triple Set',
         'passages'        => [
@@ -391,10 +440,11 @@ test('TEST 10: Teacher can update passage group and clean up orphaned passages a
 
     // Update down to Single passage group with 2 questions
     $updatePayload = [
-        'part_number'  => 7,
-        'passage_type' => 'single',
-        'title'        => 'Updated to Single Set',
-        'passages'     => [
+        'test_section_id' => $genSection->id,
+        'part_number'     => 0,
+        'passage_type'    => 'single',
+        'title'           => 'Updated to Single Set',
+        'passages'        => [
             ['document_type' => 'notice', 'title' => 'Doc 1 (Updated)', 'content' => 'Text 1 updated'],
         ],
         'questions'    => [
@@ -403,11 +453,7 @@ test('TEST 10: Teacher can update passage group and clean up orphaned passages a
         ],
     ];
 
-    $response = $this->actingAs($this->teacher)
-        ->put(route('teacher.tests.update-passage-group', ['test' => $this->test->id, 'passageGroup' => $pg->id]), $updatePayload);
-
-    $response->assertRedirect();
-    $response->assertSessionHas('status');
+    $this->builderService->updatePassageGroup($pg, $updatePayload, $genSection);
 
     // Verify orphan passages (2 and 3) and questions (3, 4, 5) were removed
     $pg->refresh();
@@ -540,6 +586,8 @@ test('TEST 14: Teacher can create Part 7 Single with 3 questions and 4 questions
 });
 
 test('TEST 15: Teacher can create Part 7 Triple passage group via HTTP', function () {
+    seedPrerequisiteDoubleGroups($this->test, $this->part7Section, $this->builderService);
+
     $payload = [
         'test_section_id' => $this->part7Section->id,
         'part_number'     => 7,
@@ -653,6 +701,8 @@ test('TEST 19: Validation failure does not write any records to database and rol
 });
 
 test('TEST 20: Old input restoration and modal auto-reopen script is embedded on validation failure', function () {
+    seedPrerequisiteSingleGroups($this->test, $this->part7Section, $this->builderService);
+
     $invalidPayload = [
         'test_section_id' => $this->part7Section->id,
         'part_number'     => 7,

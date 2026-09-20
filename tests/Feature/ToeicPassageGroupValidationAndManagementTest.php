@@ -422,7 +422,49 @@ test('TEST 16: Part 7 Single Passage group requires 2 to 4 questions', function 
     $this->builderService->createPassageGroup($this->sectionPart7, $groupData);
 });
 
+function seedPrerequisiteSingleGroupsForMgmt($test, $section, $builderService): void
+{
+    for ($g = 1; $g <= 9; $g++) {
+        $builderService->createPassageGroup($section, [
+            'test_section_id' => $section->id,
+            'part_number'     => 7,
+            'passage_type'    => 'single',
+            'title'           => "Prereq Single {$g}",
+            'passages'        => [['document_type' => 'article', 'title' => "Doc {$g}", 'content' => "Stimulus {$g}"]],
+            'questions'       => array_map(fn($k) => ['prompt' => "Q{$k}", 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0], range(1, 3)),
+        ]);
+    }
+    $builderService->createPassageGroup($section, [
+        'test_section_id' => $section->id,
+        'part_number'     => 7,
+        'passage_type'    => 'single',
+        'title'           => 'Prereq Single 10',
+        'passages'        => [['document_type' => 'article', 'title' => 'Doc 10', 'content' => 'Stimulus 10']],
+        'questions'       => array_map(fn($k) => ['prompt' => "Q{$k}", 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0], range(1, 2)),
+    ]);
+}
+
+function seedPrerequisiteDoubleGroupsForMgmt($test, $section, $builderService): void
+{
+    seedPrerequisiteSingleGroupsForMgmt($test, $section, $builderService);
+    for ($g = 1; $g <= 2; $g++) {
+        $builderService->createPassageGroup($section, [
+            'test_section_id' => $section->id,
+            'part_number'     => 7,
+            'passage_type'    => 'double',
+            'title'           => "Prereq Double {$g}",
+            'passages'        => [
+                ['document_type' => 'article', 'title' => "Doc {$g}-1", 'content' => 'Text 1'],
+                ['document_type' => 'email', 'title' => "Doc {$g}-2", 'content' => 'Text 2'],
+            ],
+            'questions'       => array_map(fn($k) => ['prompt' => "Q{$k}", 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0], range(1, 5)),
+        ]);
+    }
+}
+
 test('TEST 17: Part 7 Double Passage group requires exactly 2 passages and 5 questions', function () {
+    seedPrerequisiteSingleGroupsForMgmt($this->test, $this->sectionPart7, $this->builderService);
+
     $groupData = [
         'test_section_id' => $this->sectionPart7->id,
         'part_number'     => 7,
@@ -445,6 +487,8 @@ test('TEST 17: Part 7 Double Passage group requires exactly 2 passages and 5 que
 });
 
 test('TEST 18: Part 7 Triple Passage group requires exactly 3 passages and 5 questions', function () {
+    seedPrerequisiteDoubleGroupsForMgmt($this->test, $this->sectionPart7, $this->builderService);
+
     $groupData = [
         'test_section_id' => $this->sectionPart7->id,
         'part_number'     => 7,
@@ -759,17 +803,21 @@ test('TEST 26: Update PassageGroup persists difficulty recalculation', function 
 });
 
 test('TEST 27: Teacher can update Part 7 PassageGroup from single to double with 5 questions', function () {
+    seedPrerequisiteSingleGroupsForMgmt($this->test, $this->sectionPart7, $this->builderService);
+
     $groupData = [
         'test_section_id' => $this->sectionPart7->id,
         'part_number'     => 7,
-        'passage_type'    => 'single',
+        'passage_type'    => 'double',
         'passages'        => [
             ['title' => 'Doc 1', 'content' => 'Doc 1 content'],
+            ['title' => 'Doc 2', 'content' => 'Doc 2 content'],
         ],
-        'questions'       => [
-            ['prompt' => 'Question 1', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 0],
-            ['prompt' => 'Question 2', 'choices' => ['A', 'B', 'C', 'D'], 'correct_choice' => 1],
-        ],
+        'questions'       => array_map(fn($i) => [
+            'prompt'         => "Question {$i}",
+            'choices'        => ['A', 'B', 'C', 'D'],
+            'correct_choice' => 0,
+        ], range(1, 5)),
     ];
 
     $pg = $this->builderService->createPassageGroup($this->sectionPart7, $groupData);
@@ -780,8 +828,8 @@ test('TEST 27: Teacher can update Part 7 PassageGroup from single to double with
         'part_number'     => 7,
         'passage_type'    => 'double',
         'passages'        => [
-            ['id' => $pg->passages->first()->id, 'title' => 'Email', 'content' => 'Email content here'],
-            ['title' => 'Response', 'content' => 'Response letter here'],
+            ['id' => $pg->passages[0]->id, 'title' => 'Email', 'content' => 'Email content here'],
+            ['id' => $pg->passages[1]->id, 'title' => 'Response', 'content' => 'Response letter here'],
         ],
         'questions'       => array_map(fn($i) => [
             'prompt'         => "Updated Question {$i}",

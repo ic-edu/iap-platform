@@ -376,23 +376,39 @@
 
                             // 4. Canonical TOEIC Part Blueprint Evaluation (UNDER / EXACT / OVER)
                             if ($isToeicTest && $sPartNum) {
-                                $eval = \App\Services\ToeicQuestionValidator::evaluatePartCompleteness($sPartNum, $completeQCount, $sQCount);
-                                if ($eval['is_under']) {
-                                    $missingCount = $eval['diff'];
-                                    $blockingIssues[] = "Part {$sPartNum} requires {$targetCount} completed questions (currently {$completeQCount}/{$targetCount}; {$missingCount} " . \Illuminate\Support\Str::plural('question', $missingCount) . " missing).";
-                                    if (!$firstIssueId) {
-                                        $firstIssueId = "section-card-{$sModel->id}";
+                                if ((int)$sPartNum === 7) {
+                                    $p7StandaloneCount = $sQuestions->filter(fn($it) => empty($it['question']->passage_group_id))->count();
+                                    $p7Eval = \App\Services\ToeicQuestionValidator::evaluatePart7Blueprint($sPassageGroups, $p7StandaloneCount);
+                                    if (!$p7Eval['is_ready']) {
+                                        foreach ($p7Eval['findings'] as $finding) {
+                                            $blockingIssues[] = $finding;
+                                        }
+                                        if (!$firstIssueId) {
+                                            $firstIssueId = "section-card-{$sModel->id}";
+                                        }
+                                        $status = 'needs_attention';
+                                    } else {
+                                        $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
                                     }
-                                    $status = 'needs_attention';
-                                } elseif ($eval['is_over']) {
-                                    $exceedCount = $eval['diff'];
-                                    $blockingIssues[] = "Part {$sPartNum} exceeds TOEIC blueprint: target is {$targetCount} questions, but " . max($sQCount, $completeQCount) . " are present ({$exceedCount} " . \Illuminate\Support\Str::plural('question', $exceedCount) . " exceed blueprint).";
-                                    if (!$firstIssueId) {
-                                        $firstIssueId = "section-card-{$sModel->id}";
-                                    }
-                                    $status = 'needs_attention';
                                 } else {
-                                    $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
+                                    $eval = \App\Services\ToeicQuestionValidator::evaluatePartCompleteness($sPartNum, $completeQCount, $sQCount);
+                                    if ($eval['is_under']) {
+                                        $missingCount = $eval['diff'];
+                                        $blockingIssues[] = "Part {$sPartNum} requires {$targetCount} completed questions (currently {$completeQCount}/{$targetCount}; {$missingCount} " . \Illuminate\Support\Str::plural('question', $missingCount) . " missing).";
+                                        if (!$firstIssueId) {
+                                            $firstIssueId = "section-card-{$sModel->id}";
+                                        }
+                                        $status = 'needs_attention';
+                                    } elseif ($eval['is_over']) {
+                                        $exceedCount = $eval['diff'];
+                                        $blockingIssues[] = "Part {$sPartNum} exceeds TOEIC blueprint: target is {$targetCount} questions, but " . max($sQCount, $completeQCount) . " are present ({$exceedCount} " . \Illuminate\Support\Str::plural('question', $exceedCount) . " exceed blueprint).";
+                                        if (!$firstIssueId) {
+                                            $firstIssueId = "section-card-{$sModel->id}";
+                                        }
+                                        $status = 'needs_attention';
+                                    } else {
+                                        $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
+                                    }
                                 }
                             } else {
                                 $status = empty($blockingIssues) ? 'ready' : 'needs_attention';
@@ -676,13 +692,178 @@
                                         @endif
                                     </div>
 
+                                    {{-- Part 7 Canonical Blueprint Dashboard Panel --}}
+                                    @if($isToeicTest && (int)$secPartNumber === 7)
+                                    @php
+                                        $p7Standalones = $secQuestions->filter(fn($it) => empty($it['question']->passage_group_id))->count();
+                                        $p7DashEval = \App\Services\ToeicQuestionValidator::evaluatePart7Blueprint($secPassageGroups, $p7Standalones);
+                                    @endphp
+                                    <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 space-y-3.5 shadow-sm">
+                                        <div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                                            <div>
+                                                <div class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                                                    <span class="text-indigo-600 dark:text-indigo-400">📊</span>
+                                                    <span>PART 7 — READING COMPREHENSION BLUEPRINT</span>
+                                                </div>
+                                                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                                                    54 Questions • Q147–Q200 • 15 Canonical Passage Groups
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                @if($p7DashEval['is_ready'])
+                                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1.5">
+                                                        <span>✓</span> READY (15/15 Groups • 54/54 Questions)
+                                                    </span>
+                                                @else
+                                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 flex items-center gap-1.5">
+                                                        <span>⚠️</span> {{ $p7DashEval['total']['groups'] }}/15 Groups • {{ $p7DashEval['total']['questions'] }}/54 Questions
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        {{-- 3 Block Cards --}}
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            {{-- Single Passages --}}
+                                            <div class="p-3.5 rounded-xl border {{ $p7DashEval['single']['is_exact'] ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' : ($p7DashEval['single']['status'] === 'invalid' ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800') }} flex flex-col justify-between space-y-2">
+                                                <div>
+                                                    <div class="flex items-center justify-between mb-1">
+                                                        <span class="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                            <span>📄</span> SINGLE PASSAGES
+                                                        </span>
+                                                        @if($p7DashEval['single']['is_exact'])
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">COMPLETE</span>
+                                                        @elseif($p7DashEval['single']['status'] === 'invalid')
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700">NEEDS ATTENTION</span>
+                                                        @elseif($p7DashEval['single']['groups'] > 0 || $p7DashEval['single']['questions'] > 0)
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">IN PROGRESS</span>
+                                                        @else
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">NOT STARTED</span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="text-[11px] font-bold text-slate-700 dark:text-slate-300 space-y-0.5">
+                                                        <div>{{ $p7DashEval['single']['groups'] }} / 10 Groups</div>
+                                                        <div>{{ $p7DashEval['single']['questions'] }} / 29 Questions</div>
+                                                        <div class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Q147–Q175 • 1 Doc • 2–4 Qs</div>
+                                                    </div>
+                                                </div>
+                                                <div class="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-slate-800">
+                                                    {{ $p7DashEval['single']['feasibility_message'] }}
+                                                </div>
+                                            </div>
+
+                                            {{-- Double Passages --}}
+                                            <div class="p-3.5 rounded-xl border {{ $p7DashEval['double']['is_exact'] ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' : ($p7DashEval['double']['is_locked'] ? 'bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800') }} flex flex-col justify-between space-y-2">
+                                                <div>
+                                                    <div class="flex items-center justify-between mb-1">
+                                                        <span class="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                            <span>📄📄</span> DOUBLE PASSAGES
+                                                        </span>
+                                                        @if($p7DashEval['double']['is_exact'])
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">COMPLETE</span>
+                                                        @elseif($p7DashEval['double']['is_locked'])
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">LOCKED</span>
+                                                        @elseif($p7DashEval['double']['groups'] > 0 || $p7DashEval['double']['questions'] > 0)
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">IN PROGRESS</span>
+                                                        @else
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">UNLOCKED</span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="text-[11px] font-bold text-slate-700 dark:text-slate-300 space-y-0.5">
+                                                        <div>{{ $p7DashEval['double']['groups'] }} / 2 Groups</div>
+                                                        <div>{{ $p7DashEval['double']['questions'] }} / 10 Questions</div>
+                                                        <div class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Q176–Q185 • 2 Docs • Exactly 5 Qs</div>
+                                                    </div>
+                                                </div>
+                                                <div class="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-slate-800">
+                                                    @if($p7DashEval['double']['is_locked'])
+                                                        Locked — Complete Single Passage block first (10 groups / 29 questions).
+                                                    @elseif($p7DashEval['double']['is_exact'])
+                                                        Double Passage block complete (2 / 2 groups).
+                                                    @else
+                                                        {{ 2 - $p7DashEval['double']['groups'] }} Double Passage group(s) remaining (5 Qs each).
+                                                    @endif
+                                                </div>
+                                            </div>
+
+                                            {{-- Triple Passages --}}
+                                            <div class="p-3.5 rounded-xl border {{ $p7DashEval['triple']['is_exact'] ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800' : ($p7DashEval['triple']['is_locked'] ? 'bg-slate-100/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800') }} flex flex-col justify-between space-y-2">
+                                                <div>
+                                                    <div class="flex items-center justify-between mb-1">
+                                                        <span class="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                            <span>📄📄📄</span> TRIPLE PASSAGES
+                                                        </span>
+                                                        @if($p7DashEval['triple']['is_exact'])
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">COMPLETE</span>
+                                                        @elseif($p7DashEval['triple']['is_locked'])
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">LOCKED</span>
+                                                        @elseif($p7DashEval['triple']['groups'] > 0 || $p7DashEval['triple']['questions'] > 0)
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">IN PROGRESS</span>
+                                                        @else
+                                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">UNLOCKED</span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="text-[11px] font-bold text-slate-700 dark:text-slate-300 space-y-0.5">
+                                                        <div>{{ $p7DashEval['triple']['groups'] }} / 3 Groups</div>
+                                                        <div>{{ $p7DashEval['triple']['questions'] }} / 15 Questions</div>
+                                                        <div class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Q186–Q200 • 3 Docs • Exactly 5 Qs</div>
+                                                    </div>
+                                                </div>
+                                                <div class="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-slate-800">
+                                                    @if($p7DashEval['triple']['is_locked'])
+                                                        Locked — Complete Double Passage block first (2 groups / 10 questions).
+                                                    @elseif($p7DashEval['triple']['is_exact'])
+                                                        Triple Passage block complete (3 / 3 groups).
+                                                    @else
+                                                        {{ 3 - $p7DashEval['triple']['groups'] }} Triple Passage group(s) remaining (5 Qs each).
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endif
+
                                     <!-- Contextual Section Action Bar -->
                                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
                                     <div class="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                         <div class="flex items-center gap-2 flex-wrap">
-                                            @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
+                                            @if($isToeicTest && (int)$secPartNumber === 7)
+                                                @php
+                                                    $p7Standalones = $secQuestions->filter(fn($it) => empty($it['question']->passage_group_id))->count();
+                                                    $p7ActionsEval = \App\Services\ToeicQuestionValidator::evaluatePart7Blueprint($secPassageGroups, $p7Standalones);
+                                                @endphp
+                                                @if(!$p7ActionsEval['single']['is_exact'] && $p7ActionsEval['single']['groups'] < 10)
+                                                <button type="button"
+                                                        onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'single')"
+                                                        class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                    <span>📄</span> + Add Single Passage ({{ $p7ActionsEval['single']['groups'] }}/10)
+                                                </button>
+                                                @elseif($p7ActionsEval['single']['is_exact'] && !$p7ActionsEval['double']['is_exact'] && $p7ActionsEval['double']['groups'] < 2)
+                                                <button type="button"
+                                                        onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'double')"
+                                                        class="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                    <span>📄📄</span> + Add Double Passage ({{ $p7ActionsEval['double']['groups'] }}/2)
+                                                </button>
+                                                @elseif($p7ActionsEval['double']['is_exact'] && !$p7ActionsEval['triple']['is_exact'] && $p7ActionsEval['triple']['groups'] < 3)
+                                                <button type="button"
+                                                        onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'triple')"
+                                                        class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                    <span>📄📄📄</span> + Add Triple Passage ({{ $p7ActionsEval['triple']['groups'] }}/3)
+                                                </button>
+                                                @elseif($p7ActionsEval['is_ready'])
+                                                <span class="px-3.5 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-800 text-xs font-black inline-flex items-center gap-1.5">
+                                                    <span>✓</span> All Part 7 Blocks Complete (15/15 Groups)
+                                                </span>
+                                                @else
+                                                <button type="button"
+                                                        onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }})"
+                                                        class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                    <span>📖</span> + Add Passage Group
+                                                </button>
+                                                @endif
+                                            @elseif($isToeicTest && (int)$secPartNumber === 6)
                                             <button type="button"
-                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }})"
+                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '6', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }})"
                                                     class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
                                                 <span>📖</span> + Add Passage Group
                                             </button>
@@ -1334,9 +1515,15 @@
                                                 <div class="p-6 text-center bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
                                                     <div class="text-slate-400 font-bold text-xs">No questions assigned to this section yet.</div>
                                                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
-                                                        @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
+                                                        @if($isToeicTest && (int)$secPartNumber === 7)
                                                         <button type="button"
-                                                                onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }})"
+                                                                onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'single')"
+                                                                class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
+                                                            <span>📄</span> + Add Single Passage to this Section
+                                                        </button>
+                                                        @elseif($isToeicTest && (int)$secPartNumber === 6)
+                                                        <button type="button"
+                                                                onclick="openCreatePassageGroupModal('{{ $sec->id }}', '6', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }})"
                                                                 class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
                                                             <span>📖</span> + Add Passage Group to this Section
                                                         </button>
@@ -5177,7 +5364,7 @@
         return `Optional authoring note for Overflow Slot ${slotIndex + 1}...`;
     }
 
-    function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '', groupOrdinal = null) {
+    function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '', groupOrdinal = null, preferredType = null) {
         const modal = document.getElementById('create-passage-group-modal');
         const form = document.getElementById('create-passage-group-form');
         const methodInput = document.getElementById('pg-form-method');
@@ -5209,7 +5396,7 @@
         if (secInput) secInput.value = sectionId;
         if (partInput) partInput.value = partNum;
         if (titleLabel) titleLabel.textContent = `Target Section: ${sectionTitle || (isPart6 ? 'Part 6: Text Completion' : 'Part 7: Reading Comprehension')}`;
-        if (modalTitle) modalTitle.textContent = isPart6 ? 'Create Text Completion Group' : 'Create Reading Passage Group';
+        if (modalTitle) modalTitle.textContent = isPart6 ? 'Create Text Completion Group' : (preferredType === 'double' ? 'Create Double Passage Group' : (preferredType === 'triple' ? 'Create Triple Passage Group' : 'Create Single Passage Group'));
         if (partBadge) partBadge.textContent = isPart6 ? 'READING • PART 6' : 'READING • PART 7';
         if (submitText) submitText.textContent = 'Save Passage Group';
 
@@ -5246,7 +5433,7 @@
                 if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
                 if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
                 currentPassageChildQCount = draftData.child_q_count || 2;
-                setPassageSetType(draftData.passage_type || 'single');
+                setPassageSetType(draftData.passage_type || preferredType || 'single');
             }
 
             const pList = draftData.passages || [];
@@ -5357,8 +5544,13 @@
                 const stimulusSub = document.getElementById('pg-stimulus-subheading');
                 if (stimulusHeading) stimulusHeading.textContent = 'Reading Passage Documents';
                 if (stimulusSub) stimulusSub.textContent = 'Provide reading text, attached visual document, or both.';
-                currentPassageChildQCount = 2;
-                setPassageSetType('single');
+                const targetType = preferredType || 'single';
+                setPassageSetType(targetType);
+                if (targetType === 'single') {
+                    currentPassageChildQCount = 2;
+                } else if (targetType === 'double' || targetType === 'triple') {
+                    currentPassageChildQCount = 5;
+                }
             }
 
             // Clear document panels
