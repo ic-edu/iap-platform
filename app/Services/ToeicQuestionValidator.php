@@ -1282,16 +1282,44 @@ class ToeicQuestionValidator
         $totalGroups = count($groups);
         $totalQuestions = $numSingleQuestions + $numDoubleQuestions + $numTripleQuestions + array_sum(array_column($otherGroups, 'complete_questions')) + $standaloneCount;
 
+        // Per-block structural validity derivation
+        $singleGroupsValid = true;
+        foreach ($singleGroups as $g) {
+            if (empty($g['is_valid'])) {
+                $singleGroupsValid = false;
+                break;
+            }
+        }
+
+        $doubleGroupsValid = true;
+        foreach ($doubleGroups as $g) {
+            if (empty($g['is_valid'])) {
+                $doubleGroupsValid = false;
+                break;
+            }
+        }
+
+        $tripleGroupsValid = true;
+        foreach ($tripleGroups as $g) {
+            if (empty($g['is_valid'])) {
+                $tripleGroupsValid = false;
+                break;
+            }
+        }
+
         // Single evaluation
-        $singleExact = ($numSingleGroups === $blueprint['single']['group_count'] && $numSingleQuestions === $blueprint['single']['question_total']);
+        $singleCountExact = ($numSingleGroups === $blueprint['single']['group_count'] && $numSingleQuestions === $blueprint['single']['question_total']);
+        $singleExact = $singleCountExact && $singleGroupsValid;
         $singleFeasibility = self::checkSinglePassageFeasibility($numSingleGroups, $numSingleQuestions);
 
         // Double evaluation
-        $doubleExact = ($numDoubleGroups === $blueprint['double']['group_count'] && $numDoubleQuestions === $blueprint['double']['question_total']);
+        $doubleCountExact = ($numDoubleGroups === $blueprint['double']['group_count'] && $numDoubleQuestions === $blueprint['double']['question_total']);
+        $doubleExact = $doubleCountExact && $doubleGroupsValid;
         $doubleLocked = !$singleExact;
 
         // Triple evaluation
-        $tripleExact = ($numTripleGroups === $blueprint['triple']['group_count'] && $numTripleQuestions === $blueprint['triple']['question_total']);
+        $tripleCountExact = ($numTripleGroups === $blueprint['triple']['group_count'] && $numTripleQuestions === $blueprint['triple']['question_total']);
+        $tripleExact = $tripleCountExact && $tripleGroupsValid;
         $tripleLocked = !$singleExact || !$doubleExact;
 
         // Future phase detection
@@ -1329,14 +1357,16 @@ class ToeicQuestionValidator
         }
 
         // Can-create-new-group eligibility
-        $singleCanCreate = !$singleExact
+        $singleCanCreate = !$singleCountExact
+            && $singleGroupsValid
             && $singleFeasibility['is_feasible']
             && $numSingleGroups < $blueprint['single']['group_count']
             && !$singleHasLaterPhase
             && $orderingValid;
 
         $doubleCanCreate = $singleExact
-            && !$doubleExact
+            && $doubleGroupsValid
+            && !$doubleCountExact
             && $numDoubleGroups < $blueprint['double']['group_count']
             && $numDoubleQuestions <= $blueprint['double']['question_total']
             && !$doubleHasLaterPhase
@@ -1344,7 +1374,8 @@ class ToeicQuestionValidator
 
         $tripleCanCreate = $singleExact
             && $doubleExact
-            && !$tripleExact
+            && $tripleGroupsValid
+            && !$tripleCountExact
             && $numTripleGroups < $blueprint['triple']['group_count']
             && $numTripleQuestions <= $blueprint['triple']['question_total']
             && $orderingValid;
@@ -1366,6 +1397,19 @@ class ToeicQuestionValidator
             && $allGroupsValid
             && empty($otherGroups);
 
+        // Block statuses
+        $singleStatus = ($numSingleGroups > 10 || $numSingleQuestions > 29 || !$singleFeasibility['is_feasible'] || !$singleGroupsValid)
+            ? 'invalid'
+            : ($singleExact ? 'complete' : ($numSingleGroups > 0 ? 'in_progress' : 'not_started'));
+
+        $doubleStatus = ($numDoubleGroups > 2 || $numDoubleQuestions > 10 || !$doubleGroupsValid)
+            ? 'invalid'
+            : ($doubleExact ? 'complete' : ($doubleLocked ? 'locked' : ($numDoubleGroups > 0 ? 'in_progress' : 'not_started')));
+
+        $tripleStatus = ($numTripleGroups > 3 || $numTripleQuestions > 15 || !$tripleGroupsValid)
+            ? 'invalid'
+            : ($tripleExact ? 'complete' : ($tripleLocked ? 'locked' : ($numTripleGroups > 0 ? 'in_progress' : 'not_started')));
+
         // Build findings for Validation Assistant
         $findings = [];
         if ($standaloneCount > 0) {
@@ -1376,6 +1420,16 @@ class ToeicQuestionValidator
         }
         foreach ($groupIssues as $gi) {
             $findings[] = $gi;
+        }
+
+        if (!$singleGroupsValid) {
+            $findings[] = "Part 7 Single Passage contains structurally invalid passage group(s).";
+        }
+        if (!$doubleGroupsValid) {
+            $findings[] = "Part 7 Double Passage contains structurally invalid passage group(s).";
+        }
+        if (!$tripleGroupsValid) {
+            $findings[] = "Part 7 Triple Passage contains structurally invalid passage group(s).";
         }
 
         if (!$singleExact) {
@@ -1435,6 +1489,8 @@ class ToeicQuestionValidator
                 'expected_questions'     => $blueprint['single']['question_total'],
                 'remaining_groups'       => max(0, $blueprint['single']['group_count'] - $numSingleGroups),
                 'remaining_questions'    => max(0, $blueprint['single']['question_total'] - $numSingleQuestions),
+                'count_exact'            => $singleCountExact,
+                'groups_valid'           => $singleGroupsValid,
                 'is_exact'               => $singleExact,
                 'is_feasible'            => $singleFeasibility['is_feasible'],
                 'feasibility_reason'     => $singleFeasibility['reason'] ?? 'feasible',
@@ -1442,7 +1498,7 @@ class ToeicQuestionValidator
                 'has_later_phase_groups' => $singleHasLaterPhase,
                 'can_create_new_group'   => $singleCanCreate,
                 'range'                  => ['start' => 147, 'end' => 175],
-                'status'                 => $numSingleGroups > 10 || $numSingleQuestions > 29 || !$singleFeasibility['is_feasible'] ? 'invalid' : ($singleExact ? 'complete' : ($numSingleGroups > 0 ? 'in_progress' : 'not_started')),
+                'status'                 => $singleStatus,
             ],
             'double' => [
                 'groups'                 => $numDoubleGroups,
@@ -1451,12 +1507,14 @@ class ToeicQuestionValidator
                 'expected_questions'     => $blueprint['double']['question_total'],
                 'remaining_groups'       => max(0, $blueprint['double']['group_count'] - $numDoubleGroups),
                 'remaining_questions'    => max(0, $blueprint['double']['question_total'] - $numDoubleQuestions),
+                'count_exact'            => $doubleCountExact,
+                'groups_valid'           => $doubleGroupsValid,
                 'is_exact'               => $doubleExact,
                 'is_locked'              => $doubleLocked,
                 'has_later_phase_groups' => $doubleHasLaterPhase,
                 'can_create_new_group'   => $doubleCanCreate,
                 'range'                  => ['start' => 176, 'end' => 185],
-                'status'                 => $numDoubleGroups > 2 || $numDoubleQuestions > 10 ? 'invalid' : ($doubleExact ? 'complete' : ($doubleLocked ? 'locked' : ($numDoubleGroups > 0 ? 'in_progress' : 'not_started'))),
+                'status'                 => $doubleStatus,
             ],
             'triple' => [
                 'groups'                 => $numTripleGroups,
@@ -1465,12 +1523,14 @@ class ToeicQuestionValidator
                 'expected_questions'     => $blueprint['triple']['question_total'],
                 'remaining_groups'       => max(0, $blueprint['triple']['group_count'] - $numTripleGroups),
                 'remaining_questions'    => max(0, $blueprint['triple']['question_total'] - $numTripleQuestions),
+                'count_exact'            => $tripleCountExact,
+                'groups_valid'           => $tripleGroupsValid,
                 'is_exact'               => $tripleExact,
                 'is_locked'              => $tripleLocked,
                 'has_later_phase_groups' => false,
                 'can_create_new_group'   => $tripleCanCreate,
                 'range'                  => ['start' => 186, 'end' => 200],
-                'status'                 => $numTripleGroups > 3 || $numTripleQuestions > 15 ? 'invalid' : ($tripleExact ? 'complete' : ($tripleLocked ? 'locked' : ($numTripleGroups > 0 ? 'in_progress' : 'not_started'))),
+                'status'                 => $tripleStatus,
             ],
             'ordering' => [
                 'valid'   => $orderingValid,

@@ -748,7 +748,11 @@
                                                     </div>
                                                 </div>
                                                 <div class="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-slate-800">
-                                                    {{ $p7DashEval['single']['feasibility_message'] }}
+                                                    @if($p7DashEval['single']['status'] === 'invalid' && !$p7DashEval['single']['groups_valid'])
+                                                        Contains structurally invalid passage group(s).
+                                                    @else
+                                                        {{ $p7DashEval['single']['feasibility_message'] }}
+                                                    @endif
                                                 </div>
                                             </div>
 
@@ -779,7 +783,11 @@
                                                 </div>
                                                 <div class="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-slate-800">
                                                     @if($p7DashEval['double']['status'] === 'invalid')
-                                                        Exceeds canonical limit ({{ $p7DashEval['double']['groups'] }}/2 groups, {{ $p7DashEval['double']['questions'] }}/10 questions).
+                                                        @if($p7DashEval['double']['groups'] > 2 || $p7DashEval['double']['questions'] > 10)
+                                                            Exceeds canonical limit ({{ $p7DashEval['double']['groups'] }}/2 groups, {{ $p7DashEval['double']['questions'] }}/10 questions).
+                                                        @else
+                                                            Contains structurally invalid passage group(s).
+                                                        @endif
                                                     @elseif($p7DashEval['double']['is_locked'])
                                                         Locked — Complete Single Passage block first (10 groups / 29 questions).
                                                     @elseif($p7DashEval['double']['is_exact'])
@@ -817,7 +825,11 @@
                                                 </div>
                                                 <div class="text-[10px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-100 dark:border-slate-800">
                                                     @if($p7DashEval['triple']['status'] === 'invalid')
-                                                        Exceeds canonical limit ({{ $p7DashEval['triple']['groups'] }}/3 groups, {{ $p7DashEval['triple']['questions'] }}/15 questions).
+                                                        @if($p7DashEval['triple']['groups'] > 3 || $p7DashEval['triple']['questions'] > 15)
+                                                            Exceeds canonical limit ({{ $p7DashEval['triple']['groups'] }}/3 groups, {{ $p7DashEval['triple']['questions'] }}/15 questions).
+                                                        @else
+                                                            Contains structurally invalid passage group(s).
+                                                        @endif
                                                     @elseif($p7DashEval['triple']['is_locked'])
                                                         Locked — Complete Double Passage block first (2 groups / 10 questions).
                                                     @elseif($p7DashEval['triple']['is_exact'])
@@ -867,7 +879,13 @@
                                                     <span>⚠️</span>
                                                     <span>
                                                         <strong class="font-bold">Needs Attention:</strong>
-                                                        @if($p7ActionsEval['single']['has_later_phase_groups'] && !$p7ActionsEval['single']['is_exact'])
+                                                        @if(!$p7ActionsEval['single']['groups_valid'])
+                                                            Existing Single Passage group(s) need repair before authoring can continue.
+                                                        @elseif(!$p7ActionsEval['double']['groups_valid'])
+                                                            Existing Double Passage group(s) need repair before authoring can continue.
+                                                        @elseif(!$p7ActionsEval['triple']['groups_valid'])
+                                                            Existing Triple Passage group(s) need repair before authoring can continue.
+                                                        @elseif($p7ActionsEval['single']['has_later_phase_groups'] && !$p7ActionsEval['single']['is_exact'])
                                                             Legacy Part 7 structure detected. Later-phase passage groups already exist while the Single Passage block is incomplete. Edit or remove existing passage groups before adding new groups.
                                                         @elseif($p7ActionsEval['double']['has_later_phase_groups'] && !$p7ActionsEval['double']['is_exact'])
                                                             Legacy Part 7 structure detected. Triple Passage groups already exist while the Double Passage block is incomplete. Edit or remove existing passage groups before adding new groups.
