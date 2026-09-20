@@ -892,8 +892,9 @@
                                             @php
                                                 $secPassageGroups = $allTestPassageGroups->get((int)$secPartNumber) ?? collect();
                                             @endphp
-                                            @foreach($secPassageGroups as $pg)
+                                            @foreach($secPassageGroups->values() as $pgOrdinalIdx => $pg)
                                                 @php
+                                                    $pgOrdinal = $pgOrdinalIdx + 1;
                                                     $pgPassages = $pg->passages;
                                                     $pgFirstPassage = $pgPassages->first();
                                                     $pgSortedQuestions = $pg->questions->sortBy(function($cq) use ($globalQuestionNumberMap) {
@@ -920,7 +921,7 @@
                                                                         'explanation'    => $cq->explanation,
                                                                         'difficulty'     => is_object($cq->difficulty) ? $cq->difficulty->value : $cq->difficulty,
                                                                         'choices'        => $choices->map(fn($c) => $c->content ?? $c->choice_text)->toArray(),
-                                                                        'correct_choice' => $correctIdx !== false ? $correctIdx : 0,
+                                                                        'correct_choice' => $correctIdx !== false ? $correctIdx : null,
                                                                         'is_complete'    => $cq->isCompleteChild(),
                                                                         'slot_state'     => 'complete',
                                                                     ];
@@ -929,7 +930,7 @@
                                                             }
                                                             if ($state === 'partial') {
                                                                 $qSlots[] = [
-                                                                    'id'             => $slotData['id'] ?? null,
+                                                                    'id'             => null,
                                                                     'prompt'         => $slotData['prompt'] ?? '',
                                                                     'explanation'    => $slotData['explanation'] ?? null,
                                                                     'difficulty'     => $slotData['difficulty'] ?? 'medium',
@@ -961,7 +962,7 @@
                                                                 'explanation'    => $cq->explanation,
                                                                 'difficulty'     => is_object($cq->difficulty) ? $cq->difficulty->value : $cq->difficulty,
                                                                 'choices'        => $choices->map(fn($c) => $c->content ?? $c->choice_text)->toArray(),
-                                                                'correct_choice' => $correctIdx !== false ? $correctIdx : 0,
+                                                                'correct_choice' => $correctIdx !== false ? $correctIdx : null,
                                                                 'is_complete'    => $cq->isCompleteChild(),
                                                                 'slot_state'     => 'complete',
                                                             ];
@@ -992,7 +993,15 @@
                                                         <div>
                                                             <div class="flex items-center gap-2 flex-wrap">
                                                                 <span class="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                                                                    <span>📖</span> {{ $pg->title ?: ('Part ' . $pg->part_number . ' ' . ucfirst($pg->passage_type) . ' Passage Group') }}
+                                                                    <span>📖</span> {{ $pg->title ?: ($isPart6 ? "Text Completion Group {$pgOrdinal}" : ('Part ' . $pg->part_number . ' ' . ucfirst($pg->passage_type) . ' Passage Group')) }}
+                                                                    @if($isPart6)
+                                                                        @php
+                                                                            $startSlotNum = 130 + ($pgOrdinal - 1) * 4 + 1;
+                                                                            $endSlotNum = 130 + $pgOrdinal * 4;
+                                                                            $p6RangeLabel = ($pgOrdinal <= 4) ? "Questions {$startSlotNum}–{$endSlotNum}" : "Questions [Overflow +{$pgOrdinal}]";
+                                                                        @endphp
+                                                                        <span class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">({{ $p6RangeLabel }})</span>
+                                                                    @endif
                                                                 </span>
                                                                 <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
                                                                     {{ $isPart6 ? 'Text Completion Group' : 'Passage Group (' . ucfirst($pg->passage_type) . ')' }}
@@ -1042,48 +1051,93 @@
 
                                                     {{-- Slot Overview Tree with Global Question Numbering --}}
                                                     <div class="space-y-1.5 pl-2 text-xs">
-                                                        @foreach($pgSortedQuestions as $pqIdx => $pq)
-                                                            @php
-                                                                $pqInfo = $globalQuestionNumberMap[(string)$pq->id] ?? null;
-                                                                $pqGlobalNum = is_array($pqInfo) ? ($pqInfo['number'] ?? null) : $pqInfo;
-                                                                $pqLabel = is_array($pqInfo) ? ($pqInfo['label'] ?? "Q{$pqGlobalNum}") : ($pqGlobalNum ? "Q{$pqGlobalNum}" : "Q#" . ($pqIdx + 1));
-                                                                $pqIsOverflow = is_array($pqInfo) ? ($pqInfo['is_overflow'] ?? false) : false;
-                                                                $pqDiffVal = is_object($pq->difficulty) ? $pq->difficulty->value : (string)($pq->difficulty ?? 'medium');
-                                                                $pqDiffBadgeColor = match($pqDiffVal) {
-                                                                    'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
-                                                                    'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
-                                                                    default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
-                                                                };
-                                                                $isLastPq = ($pqIdx === count($pgSortedQuestions) - 1) && (!$isPart6 || count($pgSortedQuestions) === 4);
-                                                            @endphp
-                                                            <div id="question-card-{{ $pq->id }}" class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
-                                                                <span class="text-slate-400 font-mono">{{ $isLastPq ? '└──' : '├──' }}</span>
-                                                                @if($pqIsOverflow)
-                                                                    <span class="font-extrabold text-amber-700 dark:text-amber-300">[{{ $pqLabel }}] ✓ Complete (Over Limit):</span>
-                                                                @elseif($pqGlobalNum)
-                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q{{ $pqGlobalNum }} ✓ Complete:</span>
-                                                                @else
-                                                                    <span class="font-extrabold text-emerald-700 dark:text-emerald-300">{{ $pqLabel }} ✓ Complete:</span>
-                                                                @endif
-                                                                <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ $pq->prompt ? \Illuminate\Support\Str::limit($pq->prompt, 60) : 'Passage-embedded blank' }}</span>
-                                                                @if($pqDiffVal)
-                                                                    <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $pqDiffBadgeColor }}">
-                                                                        Auto: {{ ucfirst($pqDiffVal) }}
-                                                                    </span>
-                                                                @endif
-                                                            </div>
-                                                        @endforeach
-                                                        @if($isPart6 && count($pgSortedQuestions) < 4)
-                                                            @for($missingIdx = count($pgSortedQuestions); $missingIdx < 4; $missingIdx++)
+                                                        @if($isPart6)
+                                                            @for($sIdx = 0; $sIdx < 4; $sIdx++)
                                                                 @php
-                                                                    $isLastMissing = ($missingIdx === 3);
+                                                                    $slotInPart = ($pgOrdinal - 1) * 4 + ($sIdx + 1);
+                                                                    $slotDisp = \App\Services\ToeicQuestionValidator::getQuestionDisplayNumber(6, $slotInPart);
+                                                                    $slotLabel = $slotDisp['label'] ?? "Q" . (130 + $slotInPart);
+                                                                    $slotIsOverflow = $slotDisp['is_overflow'] ?? false;
+                                                                    $isLastSlot = ($sIdx === 3);
+                                                                    $slotMeta = is_array($draftSlots) ? ($draftSlots[$sIdx] ?? null) : null;
+                                                                    $slotState = $slotMeta['state'] ?? null;
+                                                                    $pq = null;
+
+                                                                    if ($slotState === 'complete' && !empty($slotMeta['question_id'])) {
+                                                                        $pq = $pg->questions->firstWhere('id', $slotMeta['question_id']);
+                                                                    } elseif (!$slotState && $pgSortedQuestions->has($sIdx)) {
+                                                                        $pq = $pgSortedQuestions->get($sIdx);
+                                                                    }
                                                                 @endphp
-                                                                <div class="flex items-center gap-2 flex-wrap rounded-lg p-1 text-slate-400 dark:text-slate-500 italic">
-                                                                    <span class="font-mono">{{ $isLastMissing ? '└──' : '├──' }}</span>
-                                                                    <span class="font-bold text-amber-600 dark:text-amber-400">Slot {{ $missingIdx + 1 }} (○ Incomplete / Draft):</span>
-                                                                    <span>Question not yet completed</span>
-                                                                </div>
+                                                                @if($pq)
+                                                                    @php
+                                                                        $pqDiffVal = is_object($pq->difficulty) ? $pq->difficulty->value : (string)($pq->difficulty ?? 'medium');
+                                                                        $pqDiffBadgeColor = match($pqDiffVal) {
+                                                                            'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+                                                                            'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+                                                                            default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+                                                                        };
+                                                                    @endphp
+                                                                    <div id="question-card-{{ $pq->id }}" class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
+                                                                        <span class="text-slate-400 font-mono">{{ $isLastSlot ? '└──' : '├──' }}</span>
+                                                                        @if($slotIsOverflow)
+                                                                            <span class="font-extrabold text-amber-700 dark:text-amber-300">[{{ $slotLabel }}] ✓ Complete (Over Limit):</span>
+                                                                        @else
+                                                                            <span class="font-extrabold text-emerald-700 dark:text-emerald-300">{{ $slotLabel }} ✓ Complete:</span>
+                                                                        @endif
+                                                                        <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ $pq->prompt ? \Illuminate\Support\Str::limit($pq->prompt, 60) : 'Passage-embedded blank' }}</span>
+                                                                        @if($pqDiffVal)
+                                                                            <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $pqDiffBadgeColor }}">
+                                                                                Auto: {{ ucfirst($pqDiffVal) }}
+                                                                            </span>
+                                                                        @endif
+                                                                    </div>
+                                                                @elseif($slotState === 'partial')
+                                                                    <div class="flex items-center gap-2 flex-wrap rounded-lg p-1 text-slate-500 dark:text-slate-400 italic">
+                                                                        <span class="font-mono">{{ $isLastSlot ? '└──' : '├──' }}</span>
+                                                                        <span class="font-bold text-amber-600 dark:text-amber-400">{{ $slotLabel }} (○ Incomplete / Draft):</span>
+                                                                        <span class="truncate max-w-md">{{ !empty($slotMeta['prompt']) ? \Illuminate\Support\Str::limit($slotMeta['prompt'], 60) : 'Draft blank context saved' }}</span>
+                                                                    </div>
+                                                                @else
+                                                                    <div class="flex items-center gap-2 flex-wrap rounded-lg p-1 text-slate-400 dark:text-slate-500 italic">
+                                                                        <span class="font-mono">{{ $isLastSlot ? '└──' : '├──' }}</span>
+                                                                        <span class="font-bold text-amber-600 dark:text-amber-400">{{ $slotLabel }} (○ Incomplete / Draft):</span>
+                                                                        <span>Question not yet completed</span>
+                                                                    </div>
+                                                                @endif
                                                             @endfor
+                                                        @else
+                                                            @foreach($pgSortedQuestions as $pqIdx => $pq)
+                                                                @php
+                                                                    $pqInfo = $globalQuestionNumberMap[(string)$pq->id] ?? null;
+                                                                    $pqGlobalNum = is_array($pqInfo) ? ($pqInfo['number'] ?? null) : $pqInfo;
+                                                                    $pqLabel = is_array($pqInfo) ? ($pqInfo['label'] ?? "Q{$pqGlobalNum}") : ($pqGlobalNum ? "Q{$pqGlobalNum}" : "Q#" . ($pqIdx + 1));
+                                                                    $pqIsOverflow = is_array($pqInfo) ? ($pqInfo['is_overflow'] ?? false) : false;
+                                                                    $pqDiffVal = is_object($pq->difficulty) ? $pq->difficulty->value : (string)($pq->difficulty ?? 'medium');
+                                                                    $pqDiffBadgeColor = match($pqDiffVal) {
+                                                                        'easy' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+                                                                        'hard' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+                                                                        default => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+                                                                    };
+                                                                    $isLastPq = ($pqIdx === count($pgSortedQuestions) - 1);
+                                                                @endphp
+                                                                <div id="question-card-{{ $pq->id }}" class="flex items-center gap-2 flex-wrap rounded-lg p-1 transition-all">
+                                                                    <span class="text-slate-400 font-mono">{{ $isLastPq ? '└──' : '├──' }}</span>
+                                                                    @if($pqIsOverflow)
+                                                                        <span class="font-extrabold text-amber-700 dark:text-amber-300">[{{ $pqLabel }}] ✓ Complete (Over Limit):</span>
+                                                                    @elseif($pqGlobalNum)
+                                                                        <span class="font-extrabold text-emerald-700 dark:text-emerald-300">Q{{ $pqGlobalNum }} ✓ Complete:</span>
+                                                                    @else
+                                                                        <span class="font-extrabold text-emerald-700 dark:text-emerald-300">{{ $pqLabel }} ✓ Complete:</span>
+                                                                    @endif
+                                                                    <span class="text-slate-700 dark:text-slate-300 truncate max-w-md">{{ $pq->prompt ? \Illuminate\Support\Str::limit($pq->prompt, 60) : 'Passage-embedded blank' }}</span>
+                                                                    @if($pqDiffVal)
+                                                                        <span class="text-[10px] font-bold border px-1.5 py-0.5 rounded {{ $pqDiffBadgeColor }}">
+                                                                            Auto: {{ ucfirst($pqDiffVal) }}
+                                                                        </span>
+                                                                    @endif
+                                                                </div>
+                                                            @endforeach
                                                         @endif
                                                     </div>
                                                 </div>
@@ -4829,7 +4883,7 @@
                     if (curChoice && nextChoice) curChoice.value = nextChoice.value;
                 }
 
-                const nextRadioChecked = document.querySelector(`input[name="questions[${i + 1}][correct_choice]"]:checked`);
+                const nextRadioChecked = Array.from(document.querySelectorAll(`input[id^="pg-q${i + 1}-correct-"]`)).find(r => r.checked);
                 if (nextRadioChecked) {
                     const curRadio = document.getElementById(`pg-q${i}-correct-${nextRadioChecked.value}`);
                     if (curRadio) curRadio.checked = true;
@@ -4961,7 +5015,7 @@
             const filledChoicesCount = choiceInputs.filter(ci => ci.value && ci.value.trim().length > 0).length;
             const promptEl = document.getElementById(`pg-q${i}-prompt`);
             const promptFilled = promptEl ? promptEl.value.trim().length > 0 : false;
-            const radioChecked = !!document.querySelector(`input[name="questions[${i}][correct_choice]"]:checked`);
+            const radioChecked = Array.from(document.querySelectorAll(`input[id^="pg-q${i}-correct-"]`)).some(r => r.checked);
 
             let isComplete = false;
             if (isPart6) {
@@ -5724,7 +5778,7 @@
             const choices = Array.from(document.querySelectorAll(`input[name="questions[${i}][choices][]"]`))
                 .map(input => input.value.trim())
                 .filter(v => v.length > 0);
-            const radioChecked = !!document.querySelector(`input[name="questions[${i}][correct_choice]"]:checked`);
+            const radioChecked = Array.from(document.querySelectorAll(`input[id^="ag-q${i}-correct-"]`)).some(r => r.checked);
 
             const isSlotComplete = prompt.length > 0 && choices.length === 4 && radioChecked;
             if (isSlotComplete) {

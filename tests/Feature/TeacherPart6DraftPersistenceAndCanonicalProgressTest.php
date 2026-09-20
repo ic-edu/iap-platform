@@ -461,3 +461,337 @@ test('P6-PROGRESS-05: Blueprint helper returns canonical target 16 and range 131
     expect(ToeicQuestionValidator::getPartQuestionRange(6))->toBe(['start' => 131, 'end' => 146]);
     expect(ToeicQuestionValidator::getPartBlueprint(6)['name'])->toBe('Text Completion');
 });
+
+test('P6-STABLE-01: Baseline complete Part 6 renders exact canonical numbers 131-146 in cards and slot tree', function () {
+    $testBuilder = app(TestBuilderService::class);
+
+    for ($g = 1; $g <= 4; $g++) {
+        $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+            ['prompt' => "G{$g} Q1", 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+            ['prompt' => "G{$g} Q2", 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+            ['prompt' => "G{$g} Q3", 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+            ['prompt' => "G{$g} Q4", 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+        ]));
+    }
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+
+    $res->assertSee('Questions 131–134');
+    $res->assertSee('Questions 135–138');
+    $res->assertSee('Questions 139–142');
+    $res->assertSee('Questions 143–146');
+
+    $res->assertSee('Q131');
+    $res->assertSee('Q134');
+    $res->assertSee('Q135');
+    $res->assertSee('Q138');
+    $res->assertSee('Q139');
+    $res->assertSee('Q142');
+    $res->assertSee('Q143');
+    $res->assertSee('Q146');
+
+    $validation = $testBuilder->validateAssessment($this->toeicTest);
+    $part6Items = $validation['questions'];
+    expect($part6Items)->toHaveCount(16);
+    expect($part6Items[0]['number'])->toBe(131);
+    expect($part6Items[3]['number'])->toBe(134);
+    expect($part6Items[4]['number'])->toBe(135);
+    expect($part6Items[7]['number'])->toBe(138);
+    expect($part6Items[8]['number'])->toBe(139);
+    expect($part6Items[12]['number'])->toBe(143);
+    expect($part6Items[15]['number'])->toBe(146);
+});
+
+test('P6-STABLE-02: Temporary demotion of Q134 (Group 1 Slot 3) does NOT shift Group 2-4 numbering', function () {
+    $testBuilder = app(TestBuilderService::class);
+
+    $groups = [];
+    for ($g = 1; $g <= 4; $g++) {
+        $groups[$g] = $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+            ['prompt' => "G{$g} Q1", 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+            ['prompt' => "G{$g} Q2", 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+            ['prompt' => "G{$g} Q3", 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+            ['prompt' => "G{$g} Q4", 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+        ]));
+    }
+
+    // Demote Q134 in Group 1 to partial
+    $updatePayload = makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G1 Q1', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q2', 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+        ['prompt' => 'G1 Q3', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'G1 Q4 partial note', 'choices' => ['A','B','',''], 'correct_choice' => null],
+    ]);
+    $testBuilder->updatePassageGroup($groups[1], $updatePayload, $this->part6Section);
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+
+    // Group 1 header still says Questions 131–134 (3 of 4 Complete)
+    $res->assertSee('Questions 131–134');
+    $res->assertSee('Progress: 3 / 4 Complete');
+
+    // Group 2, 3, 4 headers remain stable
+    $res->assertSee('Questions 135–138');
+    $res->assertSee('Questions 139–142');
+    $res->assertSee('Questions 143–146');
+
+    // Group 2 is NOT shifted to 134–137
+    $res->assertDontSee('Questions 134–137');
+
+    $validation = $testBuilder->validateAssessment($this->toeicTest);
+    $part6Items = $validation['questions'];
+    expect($part6Items)->toHaveCount(15);
+    // Group 2 first item must still be 135
+    expect($part6Items[3]['number'])->toBe(135);
+    expect($part6Items[3]['question']->prompt)->toBe('G2 Q1');
+    // Group 3 first item must still be 139
+    expect($part6Items[7]['number'])->toBe(139);
+    // Group 4 first item must still be 143
+    expect($part6Items[11]['number'])->toBe(143);
+});
+
+test('P6-STABLE-03: Re-completing Q134 restores it back to Q134 without corrupting other slots', function () {
+    $testBuilder = app(TestBuilderService::class);
+
+    $groups = [];
+    for ($g = 1; $g <= 4; $g++) {
+        $groups[$g] = $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+            ['prompt' => "G{$g} Q1", 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+            ['prompt' => "G{$g} Q2", 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+            ['prompt' => "G{$g} Q3", 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+            ['prompt' => "G{$g} Q4", 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+        ]));
+    }
+
+    // Demote Q134
+    $testBuilder->updatePassageGroup($groups[1], makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G1 Q1', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q2', 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+        ['prompt' => 'G1 Q3', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'G1 Q4 partial', 'choices' => ['A','','',''], 'correct_choice' => null],
+    ]), $this->part6Section);
+
+    // Re-complete Q134
+    $testBuilder->updatePassageGroup($groups[1], makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G1 Q1', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q2', 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+        ['prompt' => 'G1 Q3', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'G1 Q4 Restored', 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+    ]), $this->part6Section);
+
+    $groups[1]->refresh();
+    expect($groups[1]->questions()->count())->toBe(4);
+
+    $validation = $testBuilder->validateAssessment($this->toeicTest);
+    expect($validation['questions'])->toHaveCount(16);
+    expect($validation['questions'][3]['number'])->toBe(134);
+    expect($validation['questions'][3]['question']->prompt)->toBe('G1 Q4 Restored');
+});
+
+test('P6-STABLE-04: Middle-slot demotion: Demoting Q132 leaves Q131, Q133, Q134 intact; re-completing Q132 preserves ordering', function () {
+    $testBuilder = app(TestBuilderService::class);
+
+    $g1 = $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G1 Q131', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q132', 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+        ['prompt' => 'G1 Q133', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'G1 Q134', 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+    ]));
+
+    // Demote Slot 1 (Q132) to partial
+    $testBuilder->updatePassageGroup($g1, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G1 Q131', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q132 draft note', 'choices' => ['opt1','','',''], 'correct_choice' => null],
+        ['prompt' => 'G1 Q133', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'G1 Q134', 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+    ]), $this->part6Section);
+
+    $g1->refresh();
+    expect($g1->questions()->count())->toBe(3);
+    $draftSlots = $g1->context_metadata['draft_slots'];
+    expect($draftSlots[0]['state'])->toBe('complete');
+    expect($draftSlots[1]['state'])->toBe('partial');
+    expect($draftSlots[1]['question_id'])->toBeNull();
+    expect($draftSlots[2]['state'])->toBe('complete');
+    expect($draftSlots[3]['state'])->toBe('complete');
+
+    // Re-complete Slot 1 (Q132)
+    $testBuilder->updatePassageGroup($g1, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G1 Q131', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q132 Recompleted', 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+        ['prompt' => 'G1 Q133', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'G1 Q134', 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+    ]), $this->part6Section);
+
+    $g1->refresh();
+    expect($g1->questions()->count())->toBe(4);
+    $reloadedSlots = $g1->context_metadata['draft_slots'];
+    expect($reloadedSlots[0]['state'])->toBe('complete');
+    expect($reloadedSlots[1]['state'])->toBe('complete');
+    expect(Question::find($reloadedSlots[1]['question_id'])->prompt)->toBe('G1 Q132 Recompleted');
+    expect($reloadedSlots[2]['state'])->toBe('complete');
+    expect($reloadedSlots[3]['state'])->toBe('complete');
+});
+
+test('P6-STABLE-05: Resequenced TestQuestion.order guarantees Candidate Delivery in strict canonical order', function () {
+    $testBuilder = app(TestBuilderService::class);
+
+    $g1 = $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'Q131 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'Q132 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+        ['prompt' => 'Q133 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'Q134 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+    ]));
+
+    // Demote middle slot Q132
+    $testBuilder->updatePassageGroup($g1, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'Q131 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'Q132 Partial', 'choices' => ['A','','',''], 'correct_choice' => null],
+        ['prompt' => 'Q133 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'Q134 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+    ]), $this->part6Section);
+
+    // Re-complete middle slot Q132
+    $testBuilder->updatePassageGroup($g1, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'Q131 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'Q132 Recompleted', 'choices' => ['A','B','C','D'], 'correct_choice' => 1],
+        ['prompt' => 'Q133 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 2],
+        ['prompt' => 'Q134 Prompt', 'choices' => ['A','B','C','D'], 'correct_choice' => 3],
+    ]), $this->part6Section);
+
+    $delivery = DeliveryUnitBuilder::build($this->toeicTest);
+    $questions = $delivery['questions'];
+    expect($questions)->toHaveCount(4);
+    expect($questions[0]->prompt)->toBe('Q131 Prompt');
+    expect($questions[1]->prompt)->toBe('Q132 Recompleted');
+    expect($questions[2]->prompt)->toBe('Q133 Prompt');
+    expect($questions[3]->prompt)->toBe('Q134 Prompt');
+});
+
+test('P6-STABLE-06: Empty/Partial passage group in middle position preserves slot numbers for all groups', function () {
+    $testBuilder = app(TestBuilderService::class);
+
+    // Group 1: 4 complete
+    $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G1 Q1', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q2', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q3', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G1 Q4', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+    ]));
+
+    // Group 2: 0 complete (all untouched/partial)
+    $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G2 Q1 draft', 'choices' => ['A','','',''], 'correct_choice' => null],
+        ['prompt' => '', 'choices' => ['','','',''], 'correct_choice' => null],
+        ['prompt' => '', 'choices' => ['','','',''], 'correct_choice' => null],
+        ['prompt' => '', 'choices' => ['','','',''], 'correct_choice' => null],
+    ]));
+
+    // Group 3: 4 complete
+    $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G3 Q1', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G3 Q2', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G3 Q3', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G3 Q4', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+    ]));
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+
+    // Group 1 card
+    $res->assertSee('Questions 131–134');
+    // Group 2 card (0/4 complete)
+    $res->assertSee('Questions 135–138');
+    $res->assertSee('Progress: 0 / 4 Complete');
+    // Group 3 card (4/4 complete)
+    $res->assertSee('Questions 139–142');
+
+    $validation = $testBuilder->validateAssessment($this->toeicTest);
+    $part6Items = $validation['questions'];
+    // Group 1 has items 131..134 (index 0..3)
+    expect($part6Items[0]['number'])->toBe(131);
+    expect($part6Items[3]['number'])->toBe(134);
+    // Group 3 has items 139..142 (index 4..7)
+    expect($part6Items[4]['number'])->toBe(139);
+    expect($part6Items[4]['question']->prompt)->toBe('G3 Q1');
+    expect($part6Items[7]['number'])->toBe(142);
+});
+
+test('P6-STABLE-07: draft_slots metadata contains question_id: null on partial/untouched slots and valid ID on complete slots', function () {
+    $testBuilder = app(TestBuilderService::class);
+
+    $pg = $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'Complete Q1', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'Partial Q2', 'choices' => ['A','B','',''], 'correct_choice' => null],
+        ['prompt' => '', 'choices' => ['','','',''], 'correct_choice' => null],
+        ['prompt' => '', 'choices' => ['','','',''], 'correct_choice' => null],
+    ]));
+
+    $slots = $pg->context_metadata['draft_slots'];
+    expect($slots[0]['state'])->toBe('complete');
+    expect($slots[0]['question_id'])->not->toBeNull();
+    expect(Question::find($slots[0]['question_id']))->not->toBeNull();
+
+    expect($slots[1]['state'])->toBe('partial');
+    expect($slots[1]['question_id'])->toBeNull();
+
+    expect($slots[2]['state'])->toBe('untouched');
+    expect($slots[2]['question_id'])->toBeNull();
+
+    expect($slots[3]['state'])->toBe('untouched');
+    expect($slots[3]['question_id'])->toBeNull();
+});
+
+test('P6-STABLE-08: Cross-modal radio buttons: blade template uses scoped radio queries', function () {
+    $bladeContent = file_get_contents(resource_path('views/teacher/assessment_detail.blade.php'));
+
+    // Check that updatePassageGroupProgressAndBadges does NOT use raw unscoped input[name="questions[${i}][correct_choice]"]:checked
+    expect($bladeContent)->toContain('Array.from(document.querySelectorAll(`input[id^="pg-q${i}-correct-"]`)).some(r => r.checked)');
+    expect($bladeContent)->toContain('Array.from(document.querySelectorAll(`input[id^="ag-q${i}-correct-"]`)).some(r => r.checked)');
+    expect($bladeContent)->toContain('Array.from(document.querySelectorAll(`input[id^="pg-q${i + 1}-correct-"]`)).find(r => r.checked)');
+});
+
+test('P6-STABLE-09: Section progress numerator reflects exact count of complete questions (e.g. 15/16)', function () {
+    $testBuilder = app(TestBuilderService::class);
+
+    // 3 complete groups (12) + 1 group with 3 complete + 1 partial (total 15)
+    for ($g = 1; $g <= 3; $g++) {
+        $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+            ['prompt' => "G{$g} Q1", 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+            ['prompt' => "G{$g} Q2", 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+            ['prompt' => "G{$g} Q3", 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+            ['prompt' => "G{$g} Q4", 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ]));
+    }
+
+    $g4 = $testBuilder->createPassageGroup($this->part6Section, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G4 Q1', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G4 Q2', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G4 Q3', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G4 Q4 Partial', 'choices' => ['A','B','',''], 'correct_choice' => null],
+    ]));
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+    $res->assertSee('15/16 Complete');
+
+    $validation = $testBuilder->validateAssessment($this->toeicTest);
+    expect($validation['is_valid'])->toBeFalse();
+    $hasPart6ErrorBefore = collect($validation['errors'])->some(fn($e) => str_contains($e, 'Part 6 (Text Completion)'));
+    expect($hasPart6ErrorBefore)->toBeTrue();
+
+    // Complete the 16th question
+    $testBuilder->updatePassageGroup($g4, makePart6PassagePayload($this->part6Section->id, [
+        ['prompt' => 'G4 Q1', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G4 Q2', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G4 Q3', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+        ['prompt' => 'G4 Q4 Complete', 'choices' => ['A','B','C','D'], 'correct_choice' => 0],
+    ]), $this->part6Section);
+
+    $validation2 = $testBuilder->validateAssessment($this->toeicTest);
+    $hasPart6ErrorAfter = collect($validation2['errors'])->some(fn($e) => str_contains($e, 'Part 6 (Text Completion)'));
+    expect($hasPart6ErrorAfter)->toBeFalse();
+    expect($validation2['questions'])->toHaveCount(16);
+});

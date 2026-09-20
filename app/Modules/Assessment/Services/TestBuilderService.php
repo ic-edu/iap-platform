@@ -609,17 +609,18 @@ class TestBuilderService
                     $slotsMetadata[$slotIdx] = [
                         'slot'           => $slotIdx,
                         'state'          => 'partial',
-                        'id'             => $qData['id'] ?? null,
+                        'question_id'    => null,
                         'prompt'         => $qData['prompt'] ?? '',
                         'explanation'    => $qData['explanation'] ?? null,
                         'difficulty'     => $qData['difficulty'] ?? 'medium',
                         'choices'        => $qData['choices'] ?? ['', '', '', ''],
-                        'correct_choice' => $qData['correct_choice'] ?? null,
+                        'correct_choice' => (isset($qData['correct_choice']) && $qData['correct_choice'] !== '' && $qData['correct_choice'] !== null) ? (int)$qData['correct_choice'] : null,
                     ];
                 } else {
                     $slotsMetadata[$slotIdx] = [
-                        'slot'  => $slotIdx,
-                        'state' => 'untouched',
+                        'slot'        => $slotIdx,
+                        'state'       => 'untouched',
+                        'question_id' => null,
                     ];
                 }
             }
@@ -627,7 +628,7 @@ class TestBuilderService
             if ($partNumber === 6) {
                 for ($i = 0; $i < 4; $i++) {
                     if (!isset($slotsMetadata[$i])) {
-                        $slotsMetadata[$i] = ['slot' => $i, 'state' => 'untouched'];
+                        $slotsMetadata[$i] = ['slot' => $i, 'state' => 'untouched', 'question_id' => null];
                     }
                 }
                 ksort($slotsMetadata);
@@ -639,6 +640,10 @@ class TestBuilderService
             }
             $contextMetadata['draft_slots'] = $slotsMetadata;
             $passageGroup->update(['context_metadata' => $contextMetadata]);
+
+            if ($partNumber === 6) {
+                $this->resequencePart6TestQuestions($section);
+            }
 
             return $passageGroup->fresh(['questions.choices', 'passages']);
         });
@@ -746,9 +751,9 @@ class TestBuilderService
 
                 if ($qId && isset($existingQuestions[$qId])) {
                     $matchedQuestion = $existingQuestions[$qId];
-                } elseif (isset($prevDraftSlots[$slotIdx]['question_id']) && isset($existingQuestions[$prevDraftSlots[$slotIdx]['question_id']])) {
+                } elseif (isset($prevDraftSlots[$slotIdx]['question_id']) && !empty($prevDraftSlots[$slotIdx]['question_id']) && isset($existingQuestions[$prevDraftSlots[$slotIdx]['question_id']])) {
                     $matchedQuestion = $existingQuestions[$prevDraftSlots[$slotIdx]['question_id']];
-                } elseif (isset($existingList[$slotIdx])) {
+                } elseif ($partNumber !== 6 && empty($prevDraftSlots) && isset($existingList[$slotIdx])) {
                     $matchedQuestion = $existingList[$slotIdx];
                 }
 
@@ -872,17 +877,18 @@ class TestBuilderService
                     $slotsMetadata[$slotIdx] = [
                         'slot'           => $slotIdx,
                         'state'          => 'partial',
-                        'id'             => $qData['id'] ?? null,
+                        'question_id'    => null,
                         'prompt'         => $qData['prompt'] ?? '',
                         'explanation'    => $qData['explanation'] ?? null,
                         'difficulty'     => $qData['difficulty'] ?? 'medium',
                         'choices'        => $qData['choices'] ?? ['', '', '', ''],
-                        'correct_choice' => $qData['correct_choice'] ?? null,
+                        'correct_choice' => (isset($qData['correct_choice']) && $qData['correct_choice'] !== '' && $qData['correct_choice'] !== null) ? (int)$qData['correct_choice'] : null,
                     ];
                 } else {
                     $slotsMetadata[$slotIdx] = [
-                        'slot'  => $slotIdx,
-                        'state' => 'untouched',
+                        'slot'        => $slotIdx,
+                        'state'       => 'untouched',
+                        'question_id' => null,
                     ];
                 }
             }
@@ -890,7 +896,7 @@ class TestBuilderService
             if ($partNumber === 6) {
                 for ($i = 0; $i < 4; $i++) {
                     if (!isset($slotsMetadata[$i])) {
-                        $slotsMetadata[$i] = ['slot' => $i, 'state' => 'untouched'];
+                        $slotsMetadata[$i] = ['slot' => $i, 'state' => 'untouched', 'question_id' => null];
                     }
                 }
                 ksort($slotsMetadata);
@@ -911,6 +917,10 @@ class TestBuilderService
             }
             $contextMetadata['draft_slots'] = $slotsMetadata;
             $passageGroup->update(['context_metadata' => $contextMetadata]);
+
+            if ($partNumber === 6 && $section) {
+                $this->resequencePart6TestQuestions($section);
+            }
 
             return $passageGroup->fresh(['questions.choices', 'passages']);
         });
@@ -962,8 +972,79 @@ class TestBuilderService
                 }
             }
 
-            return (bool) $passageGroup->delete();
+            $isPart6 = ((int)$passageGroup->part_number === 6);
+            $deleted = (bool) $passageGroup->delete();
+
+            if ($isPart6) {
+                $p6Section = $test->sections()->where('order', 6)->first()
+                    ?? $test->sections()->where('section_type', 'reading')->first();
+                if ($p6Section) {
+                    $this->resequencePart6TestQuestions($p6Section);
+                }
+            }
+
+            return $deleted;
         });
+    }
+
+    /**
+     * Resequence TestQuestion orders deterministically for Part 6 based on PassageGroup ordinal and slot index.
+     */
+    public function resequencePart6TestQuestions(TestSection $section): void
+    {
+        $partNum = ToeicQuestionValidator::detectPartNumber($section);
+        if ($partNum !== 6) {
+            return;
+        }
+
+        $test = $section->test;
+        if (!$test) {
+            return;
+        }
+
+        $part6Groups = PassageGroup::where('test_id', (string) $test->id)
+            ->where('part_number', 6)
+            ->orderBy('order', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $orderCounter = 1;
+        $handledQuestionIds = [];
+
+        foreach ($part6Groups as $pg) {
+            $draftSlots = $pg->context_metadata['draft_slots'] ?? [];
+            if (is_array($draftSlots) && !empty($draftSlots)) {
+                ksort($draftSlots);
+                foreach ($draftSlots as $slotIdx => $slotData) {
+                    if (($slotData['state'] ?? '') === 'complete' && !empty($slotData['question_id'])) {
+                        $qId = (string) $slotData['question_id'];
+                        TestQuestion::where('test_section_id', $section->id)
+                            ->where('question_id', $qId)
+                            ->update(['order' => $orderCounter++]);
+                        $handledQuestionIds[] = $qId;
+                    }
+                }
+            } else {
+                $pgQuestions = $pg->questions()->orderBy('created_at', 'asc')->get();
+                foreach ($pgQuestions as $pq) {
+                    $qId = (string) $pq->id;
+                    TestQuestion::where('test_section_id', $section->id)
+                        ->where('question_id', $qId)
+                        ->update(['order' => $orderCounter++]);
+                    $handledQuestionIds[] = $qId;
+                }
+            }
+        }
+
+        // Resequence any remaining test questions in this section (e.g. standalone/unlinked)
+        $remainingTqs = TestQuestion::where('test_section_id', $section->id)
+            ->whereNotIn('question_id', $handledQuestionIds)
+            ->orderBy('order', 'asc')
+            ->get();
+
+        foreach ($remainingTqs as $remTq) {
+            $remTq->update(['order' => $orderCounter++]);
+        }
     }
 
     /**
@@ -1228,6 +1309,36 @@ class TestBuilderService
         $questionIndex = 1;
         $isToeicAssessment = ToeicQuestionValidator::isToeic($test);
 
+        // Precompute stable canonical question display map for Part 6 groups
+        $part6QuestionDisplayMap = [];
+        if ($isToeicAssessment) {
+            $part6Groups = PassageGroup::where('test_id', (string) $test->id)
+                ->where('part_number', 6)
+                ->orderBy('order', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
+            foreach ($part6Groups as $gIdx => $pg) {
+                $groupOrdinal = $gIdx + 1;
+                $draftSlots = $pg->context_metadata['draft_slots'] ?? [];
+                if (is_array($draftSlots) && !empty($draftSlots)) {
+                    ksort($draftSlots);
+                    foreach ($draftSlots as $slotIdx => $slotData) {
+                        if (($slotData['state'] ?? '') === 'complete' && !empty($slotData['question_id'])) {
+                            $slotIndexInPart = ($groupOrdinal - 1) * 4 + ($slotIdx + 1);
+                            $part6QuestionDisplayMap[(string) $slotData['question_id']] = ToeicQuestionValidator::getQuestionDisplayNumber(6, $slotIndexInPart);
+                        }
+                    }
+                } else {
+                    $pgQuestions = $pg->questions()->orderBy('created_at', 'asc')->get();
+                    foreach ($pgQuestions as $pqIdx => $pq) {
+                        $slotIndexInPart = ($groupOrdinal - 1) * 4 + ($pqIdx + 1);
+                        $part6QuestionDisplayMap[(string) $pq->id] = ToeicQuestionValidator::getQuestionDisplayNumber(6, $slotIndexInPart);
+                    }
+                }
+            }
+        }
+
         // Structural Rule 1: Section existence
         if ($test->sections->isEmpty()) {
             $errors[] = "Assessment must have at least one section.";
@@ -1260,15 +1371,19 @@ class TestBuilderService
                 $partNum = (int) ($q->part_number ?? $secPartNum ?? 0);
                 $isOptionalPromptPart = $isToeic && in_array($partNum, [2, 6], true);
 
-                $qDisplay = ($isToeic && $partNum >= 1 && $partNum <= 7)
-                    ? ToeicQuestionValidator::getQuestionDisplayNumber($partNum, $partCounter)
-                    : [
+                if ($isToeic && $partNum === 6 && isset($part6QuestionDisplayMap[(string) $q->id])) {
+                    $qDisplay = $part6QuestionDisplayMap[(string) $q->id];
+                } elseif ($isToeic && $partNum >= 1 && $partNum <= 7) {
+                    $qDisplay = ToeicQuestionValidator::getQuestionDisplayNumber($partNum, $partCounter);
+                } else {
+                    $qDisplay = [
                         'number'         => $questionIndex,
                         'display_number' => (string) $questionIndex,
                         'label'          => "Q{$questionIndex}",
                         'is_overflow'    => false,
                         'overflow_index' => null,
                     ];
+                }
 
                 $qErrors = [];
                 if (!$isOptionalPromptPart && empty(trim($q->prompt ?? ''))) {
