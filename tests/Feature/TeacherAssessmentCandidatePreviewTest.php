@@ -906,10 +906,10 @@ class TeacherAssessmentCandidatePreviewTest extends TestCase
         $response = $this->actingAs($this->teacherUser)->get(route('teacher.tests.preview', $this->testRecord->id));
         $response->assertStatus(200);
 
-        // Keyboard handler calls navigateDeliveryUnit which stops audio
+        // Keyboard handler routes forward navigation to handlePreviewNextUnit which stops audio
         $response->assertSee('event.key === \'ArrowRight\'', false);
         $response->assertSee('event.key === \'ArrowLeft\'', false);
-        $response->assertSee('navigateDeliveryUnit(currentUnitIndex + 1)', false);
+        $response->assertSee('handlePreviewNextUnit(currentUnitIndex, currentUnitIndex + 1)', false);
     }
 
     public function test_42_preview_audio_09_audio_resets_to_zero_and_permits_unrestricted_replay_on_return(): void

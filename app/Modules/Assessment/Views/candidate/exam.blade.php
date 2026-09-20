@@ -42,6 +42,16 @@
         $isAllInitiallyAnswered = ($totalQuestionsCount > 0 && $answeredQuestionIds->count() === $totalQuestionsCount);
         $isRealTest = $isRealTest ?? ($attempt->test?->isRealTest() ?? false);
         $playedAudioSet = collect($playedAudioQuestionIds ?? []);
+        $deliveryUnitsMeta = $deliveryUnits->map(function ($u, $idx) {
+            return [
+                'index' => $idx,
+                'type' => $u['type'],
+                'part_number' => (int) ($u['part_number'] ?? 0),
+                'passage_type' => $u['passage_type'] ?? null,
+                'display_question_range' => $u['display_question_range'] ?? '',
+                'documents_count' => isset($u['passages']) ? count($u['passages']) : ($u['passage_type'] === 'triple' ? 3 : ($u['passage_type'] === 'double' ? 2 : 1)),
+            ];
+        })->values();
     @endphp
 
     <!-- Fullscreen Warning Overlay for Real Test Mode -->
@@ -197,6 +207,78 @@
                     </div>
                 @endforeach
             @endif
+
+            <!-- PASSAGE TYPE TRANSITION INTERSTITIAL (Part 7 Format Boundaries: Single -> Double, Double -> Triple, Single -> Triple) -->
+            <div id="passage-type-transition-card" class="passage-type-transition-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 hidden max-w-3xl mx-auto">
+                <!-- Header Badge & Title -->
+                <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div class="flex items-center gap-2.5 mb-2 flex-wrap">
+                        <span class="px-3 py-1 text-xs font-black rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 uppercase tracking-wider">
+                            TOEIC PART 7 — READING COMPREHENSION
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 uppercase">
+                            Passage Format Change
+                        </span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Passage Format Change
+                    </h2>
+                </div>
+
+                <!-- Transition Overview Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Completed Format -->
+                    <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                        <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>✓</span> Completed Format
+                        </div>
+                        <div id="transition-from-type" class="text-base font-black text-slate-800 dark:text-slate-200">
+                            Single Passage
+                        </div>
+                    </div>
+
+                    <!-- Next Format -->
+                    <div class="p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 space-y-1">
+                        <div class="text-[11px] font-extrabold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>→</span> Next Format
+                        </div>
+                        <div id="transition-to-type" class="text-base font-black text-indigo-900 dark:text-indigo-200">
+                            Double Passage
+                        </div>
+                        <div id="transition-doc-count" class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                            2 related documents
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructions / Explanatory Box -->
+                <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div class="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Format Instructions</span>
+                    </div>
+                    <p id="transition-description" class="text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
+                        You will read 2 related documents and answer the questions that follow.
+                    </p>
+                    <div id="transition-question-range-container" class="pt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                        <span>Target Questions:</span>
+                        <span id="transition-question-range" class="font-extrabold text-indigo-600 dark:text-indigo-400">Questions 176–180</span>
+                    </div>
+                </div>
+
+                <!-- Action / CTA Strip -->
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                    <button type="button"
+                            id="btn-begin-transition-passage"
+                            onclick="proceedPassageTypeTransition()"
+                            class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-indigo-600/25 transition-all inline-flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 cursor-pointer">
+                        <span id="transition-cta-label">Begin Double Passage</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
+            </div>
 
             <!-- 2. DELIVERY UNIT CARDS -->
             @forelse ($deliveryUnits as $unitIndex => $unit)
@@ -865,9 +947,11 @@
     <script>
         const isRealTest = {{ $isRealTest ? 'true' : 'false' }};
         let remainingSeconds = {{ $remainingSeconds }};
-        let currentUnitIdx = -1; // -1 represents section intro view
+        let currentUnitIdx = -1; // -1 represents section intro view, -3 represents passage format transition
+        let pendingTransitionTargetUnitIdx = null;
         const totalQuestions = {{ $totalQuestionsCount }};
         const totalUnits = {{ $totalUnitsCount }};
+        const deliveryUnitsMeta = @json($deliveryUnitsMeta);
         const questionIds = @json($shuffledQuestions->pluck('id'));
         const questionIndexToUnitIndex = @json($questionIndexToUnitIndex);
         const questionIdToUnitIndex = @json($questionIdToUnitIndex);
@@ -1159,11 +1243,126 @@
             updateFinalSubmitState();
         }
 
+        function formatPassageTypeLabel(type) {
+            if (type === 'double') return 'Double Passage';
+            if (type === 'triple') return 'Triple Passage';
+            if (type === 'single') return 'Single Passage';
+            if (!type) return 'Passage';
+            return type.charAt(0).toUpperCase() + type.slice(1) + ' Passage';
+        }
+
+        function getPassageTypeDocumentCount(unit) {
+            if (unit && unit.documents_count && unit.documents_count > 0) {
+                return unit.documents_count === 1 ? '1 document' : `${unit.documents_count} related documents`;
+            }
+            if (unit && unit.passage_type === 'triple') return '3 related documents';
+            if (unit && unit.passage_type === 'double') return '2 related documents';
+            return '1 document';
+        }
+
+        function getPassageTypeDescription(unit) {
+            if (!unit) return 'You will read the documents and answer the questions that follow.';
+            if (unit.passage_type === 'triple' || unit.documents_count === 3) {
+                return 'You will read 3 related documents and answer the questions that follow.';
+            }
+            if (unit.passage_type === 'double' || unit.documents_count === 2) {
+                return 'You will read 2 related documents and answer the questions that follow.';
+            }
+            if (unit.passage_type === 'single' || unit.documents_count === 1) {
+                return 'You will read 1 document and answer the questions that follow.';
+            }
+            return 'You will read the documents and answer the questions that follow.';
+        }
+
+        function shouldShowPassageTypeTransition(fromIdx, toIdx) {
+            if (fromIdx < 0 || fromIdx >= totalUnits || toIdx < 0 || toIdx >= totalUnits) return false;
+            const fromUnit = deliveryUnitsMeta[fromIdx];
+            const toUnit = deliveryUnitsMeta[toIdx];
+            if (!fromUnit || !toUnit) return false;
+
+            return fromUnit.type === 'passage_group' &&
+                   fromUnit.part_number === 7 &&
+                   toUnit.type === 'passage_group' &&
+                   toUnit.part_number === 7 &&
+                   Boolean(fromUnit.passage_type) &&
+                   Boolean(toUnit.passage_type) &&
+                   fromUnit.passage_type !== toUnit.passage_type;
+        }
+
+        function showPassageTypeTransition(fromUnitIdx, toUnitIdx) {
+            CandidateExamAudioManager.beforeDeliveryTransition({
+                type: 'passage_type_transition',
+                fromUnit: fromUnitIdx,
+                toUnit: toUnitIdx
+            });
+            document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
+            pendingTransitionTargetUnitIdx = toUnitIdx;
+            currentUnitIdx = -3;
+
+            const fromUnit = deliveryUnitsMeta[fromUnitIdx] || {};
+            const toUnit = deliveryUnitsMeta[toUnitIdx] || {};
+
+            const fromTypeEl = document.getElementById('transition-from-type');
+            if (fromTypeEl) fromTypeEl.textContent = formatPassageTypeLabel(fromUnit.passage_type);
+
+            const toTypeEl = document.getElementById('transition-to-type');
+            if (toTypeEl) toTypeEl.textContent = formatPassageTypeLabel(toUnit.passage_type);
+
+            const docCountEl = document.getElementById('transition-doc-count');
+            if (docCountEl) docCountEl.textContent = getPassageTypeDocumentCount(toUnit);
+
+            const descEl = document.getElementById('transition-description');
+            if (descEl) descEl.textContent = getPassageTypeDescription(toUnit);
+
+            const qRangeEl = document.getElementById('transition-question-range');
+            const qRangeContainer = document.getElementById('transition-question-range-container');
+            if (toUnit.display_question_range) {
+                if (qRangeEl) qRangeEl.textContent = toUnit.display_question_range;
+                if (qRangeContainer) qRangeContainer.classList.remove('hidden');
+            } else if (qRangeContainer) {
+                qRangeContainer.classList.add('hidden');
+            }
+
+            const ctaLabelEl = document.getElementById('transition-cta-label');
+            if (ctaLabelEl) {
+                if (toUnit.passage_type === 'double') {
+                    ctaLabelEl.textContent = 'Begin Double Passage';
+                } else if (toUnit.passage_type === 'triple') {
+                    ctaLabelEl.textContent = 'Begin Triple Passage';
+                } else if (toUnit.passage_type === 'single') {
+                    ctaLabelEl.textContent = 'Begin Single Passage';
+                } else {
+                    ctaLabelEl.textContent = 'Continue to Next Passage';
+                }
+            }
+
+            const card = document.getElementById('passage-type-transition-card');
+            if (card) {
+                card.classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            const ctaBtn = document.getElementById('btn-begin-transition-passage');
+            if (ctaBtn) {
+                setTimeout(() => ctaBtn.focus(), 50);
+            }
+
+            updatePaletteUI();
+        }
+
+        function proceedPassageTypeTransition() {
+            if (pendingTransitionTargetUnitIdx !== null) {
+                const target = pendingTransitionTargetUnitIdx;
+                pendingTransitionTargetUnitIdx = null;
+                navigateDeliveryUnit(target);
+            }
+        }
+
         // Show Dedicated Section Introduction Screen
         function showSectionIntro(sectionId) {
             if (!sectionId) return;
             CandidateExamAudioManager.beforeDeliveryTransition({ type: 'section_intro', targetSection: sectionId });
-            document.querySelectorAll('.delivery-unit-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
+            document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
             const targetSection = document.getElementById('section-intro-card-' + sectionId);
             if (targetSection) {
                 targetSection.classList.remove('hidden');
@@ -1177,7 +1376,8 @@
         function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
             if (unitIdx < 0 || unitIdx >= totalUnits) return;
             CandidateExamAudioManager.beforeDeliveryTransition({ type: 'delivery_unit', targetUnit: unitIdx, targetQ: targetQIndex });
-            document.querySelectorAll('.delivery-unit-card, .section-intro-card').forEach(card => card.classList.add('hidden'));
+            document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
+            pendingTransitionTargetUnitIdx = null;
 
             const targetCard = document.getElementById(`delivery-unit-card-${unitIdx}`);
             if (targetCard) {
@@ -1247,7 +1447,11 @@
                 showSectionIntro(target);
             } else {
                 if (target < totalUnits) {
-                    navigateDeliveryUnit(target);
+                    if (shouldShowPassageTypeTransition(currentUnit, target)) {
+                        showPassageTypeTransition(currentUnit, target);
+                    } else {
+                        navigateDeliveryUnit(target);
+                    }
                 } else if (!isRealTest && answeredQuestionIds.size < totalQuestions) {
                     // Simulator Mode: Loop back to first unanswered question
                     for (let i = 0; i < totalQuestions; i++) {
@@ -1515,6 +1719,8 @@
             if (e.key === 'n' || e.key === 'N') {
                 if (currentUnitIdx >= 0) {
                     handleNextClick(currentUnitIdx, 'unit', currentUnitIdx + 1);
+                } else if (currentUnitIdx === -3 && pendingTransitionTargetUnitIdx !== null) {
+                    proceedPassageTypeTransition();
                 } else if (firstSectionId) {
                     startSectionQuestions(0);
                 }
@@ -1523,6 +1729,8 @@
             if (!isRealTest && (e.key === 'p' || e.key === 'P')) {
                 if (currentUnitIdx > 0) {
                     navigateDeliveryUnit(currentUnitIdx - 1);
+                } else if (currentUnitIdx === -3 && pendingTransitionTargetUnitIdx !== null) {
+                    navigateDeliveryUnit(pendingTransitionTargetUnitIdx - 1);
                 } else if (currentUnitIdx === 0 && firstSectionId) {
                     showSectionIntro(firstSectionId);
                 }
