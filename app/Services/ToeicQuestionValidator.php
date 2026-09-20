@@ -1292,7 +1292,7 @@ class ToeicQuestionValidator
 
         // Triple evaluation
         $tripleExact = ($numTripleGroups === $blueprint['triple']['group_count'] && $numTripleQuestions === $blueprint['triple']['question_total']);
-        $tripleLocked = !$doubleExact;
+        $tripleLocked = !$singleExact || !$doubleExact;
 
         // Ordering validation (Single -> Double -> Triple)
         $orderingValid = true;
@@ -1373,7 +1373,7 @@ class ToeicQuestionValidator
             $findings[] = "Part 7 Double Passage is locked until Single Passage reaches 10 groups / 29 questions.";
         }
 
-        if ($doubleExact && !$tripleExact) {
+        if ($singleExact && $doubleExact && !$tripleExact) {
             if ($numTripleGroups > $blueprint['triple']['group_count']) {
                 $findings[] = "Part 7 Triple Passage exceeds 3 groups limit ({$numTripleGroups}/3 groups).";
             } elseif ($numTripleQuestions > $blueprint['triple']['question_total']) {
@@ -1381,8 +1381,12 @@ class ToeicQuestionValidator
             } else {
                 $findings[] = "Part 7 Triple Passage: {$numTripleGroups} / 3 groups, {$numTripleQuestions} / 15 questions.";
             }
-        } elseif (!$doubleExact && ($numTripleGroups > 0 || $numTripleQuestions > 0)) {
-            $findings[] = "Part 7 Triple Passage is locked until Double Passage reaches 2 groups / 10 questions.";
+        } elseif ((!$singleExact || !$doubleExact) && ($numTripleGroups > 0 || $numTripleQuestions > 0)) {
+            if (!$singleExact) {
+                $findings[] = "Part 7 Triple Passage is locked until Single Passage reaches 10 groups / 29 questions.";
+            } else {
+                $findings[] = "Part 7 Triple Passage is locked until Double Passage reaches 2 groups / 10 questions.";
+            }
         }
 
         if ($totalQuestions === 54 && !$isReady) {

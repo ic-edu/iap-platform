@@ -832,7 +832,7 @@
                                                     $p7Standalones = $secQuestions->filter(fn($it) => empty($it['question']->passage_group_id))->count();
                                                     $p7ActionsEval = \App\Services\ToeicQuestionValidator::evaluatePart7Blueprint($secPassageGroups, $p7Standalones);
                                                 @endphp
-                                                @if(!$p7ActionsEval['single']['is_exact'] && $p7ActionsEval['single']['groups'] < 10)
+                                                @if(!$p7ActionsEval['single']['is_exact'] && $p7ActionsEval['single']['is_feasible'] && $p7ActionsEval['single']['groups'] < 10)
                                                 <button type="button"
                                                         onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'single')"
                                                         class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
@@ -844,7 +844,7 @@
                                                         class="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
                                                     <span>📄📄</span> + Add Double Passage ({{ $p7ActionsEval['double']['groups'] }}/2)
                                                 </button>
-                                                @elseif($p7ActionsEval['double']['is_exact'] && !$p7ActionsEval['triple']['is_exact'] && $p7ActionsEval['triple']['groups'] < 3)
+                                                @elseif($p7ActionsEval['single']['is_exact'] && $p7ActionsEval['double']['is_exact'] && !$p7ActionsEval['triple']['is_exact'] && $p7ActionsEval['triple']['groups'] < 3)
                                                 <button type="button"
                                                         onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }}, 'triple')"
                                                         class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
@@ -855,11 +855,21 @@
                                                     <span>✓</span> All Part 7 Blocks Complete (15/15 Groups)
                                                 </span>
                                                 @else
-                                                <button type="button"
-                                                        onclick="openCreatePassageGroupModal('{{ $sec->id }}', '7', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }})"
-                                                        class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
-                                                    <span>📖</span> + Add Passage Group
-                                                </button>
+                                                <div class="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 text-xs font-semibold inline-flex items-center gap-1.5">
+                                                    <span>⚠️</span>
+                                                    <span>
+                                                        <strong class="font-bold">Needs Attention:</strong>
+                                                        @if($p7ActionsEval['single']['groups'] >= 10 && !$p7ActionsEval['single']['is_exact'])
+                                                            Single Passage has {{ $p7ActionsEval['single']['groups'] }} / 10 groups but {{ $p7ActionsEval['single']['questions'] }} / 29 questions. Edit an existing Single Passage group to reach exactly 29 questions.
+                                                        @elseif(!$p7ActionsEval['single']['is_feasible'])
+                                                            Single Passage distribution needs repair before authoring can continue.
+                                                        @elseif(!$p7ActionsEval['ordering']['valid'])
+                                                            Passage groups are out of canonical order. Edit or reorder groups to follow Single → Double → Triple.
+                                                        @else
+                                                            Part 7 structure cannot advance by adding another passage group. Edit existing passage groups to restore canonical blueprint.
+                                                        @endif
+                                                    </span>
+                                                </div>
                                                 @endif
                                             @elseif($isToeicTest && (int)$secPartNumber === 6)
                                             <button type="button"

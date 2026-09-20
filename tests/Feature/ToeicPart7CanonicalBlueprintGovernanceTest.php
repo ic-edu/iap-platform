@@ -649,3 +649,180 @@ test('P7-BP-15: Canonical Part 7 renders expected transition boundaries on candi
     $response->assertSee('Triple Passage');
     $response->assertSee('shouldShowPassageTypeTransition');
 });
+
+/*
+|--------------------------------------------------------------------------
+| P7-EDGE-01: Triple Lock Semantics (Single Incomplete + Double Exact)
+|--------------------------------------------------------------------------
+*/
+test('P7-EDGE-01: Triple Passage is locked when Single is incomplete even if Double block is exact', function () {
+    // 1. Seed legacy state: Single incomplete (5 groups of 3 = 15 Qs), Double exact (2 groups of 5 = 10 Qs)
+    for ($g = 1; $g <= 5; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    // Direct DB creation for Double groups since normal builder service would reject it during creation
+    for ($g = 1; $g <= 2; $g++) {
+        $pg = PassageGroup::create([
+            'test_id'      => $this->toeicTest->id,
+            'part_number'  => 7,
+            'passage_type' => 'double',
+            'title'        => "Legacy Double {$g}",
+            'order'        => 5 + $g,
+        ]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 1', 'content' => 'Content', 'order_in_group' => 1]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc 2', 'content' => 'Content', 'order_in_group' => 2]);
+        for ($q = 1; $q <= 5; $q++) {
+            $cq = Question::create(['passage_group_id' => $pg->id, 'part_number' => 7, 'section' => 'reading', 'prompt' => "Prompt {$q}", 'question_type' => 'multiple_choice']);
+            foreach (['A', 'B', 'C', 'D'] as $ci => $cl) {
+                QuestionChoice::create(['question_id' => $cq->id, 'label' => $cl, 'content' => "Option {$cl}", 'is_correct' => $ci === 0, 'order' => $ci + 1]);
+            }
+        }
+    }
+
+    // 2. Evaluator check
+    $eval = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval['single']['is_exact'])->toBeFalse()
+        ->and($eval['double']['is_exact'])->toBeTrue()
+        ->and($eval['triple']['is_locked'])->toBeTrue()
+        ->and($eval['triple']['status'])->toBe('locked');
+
+    // 3. Teacher UI check
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertDontSee('+ Add Triple Passage');
+
+    // 4. Backend enforcement check
+    try {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'triple', 5));
+        $this->fail('Expected ValidationException was not thrown.');
+    } catch (ValidationException $e) {
+        expect($e->validator->errors()->first('passage_type'))->toContain('Triple Passage creation is locked until Single and Double Passage blocks are complete');
+    }
+});
+
+/*
+|--------------------------------------------------------------------------
+| P7-EDGE-02: Legacy 10 Single / 28 Questions Repair State
+|--------------------------------------------------------------------------
+*/
+test('P7-EDGE-02: Legacy 10 Single groups with 28 questions renders repair guidance and no generic create button', function () {
+    // 10 Single groups: 8 of 3 questions (24) + 2 of 2 questions (4) = 28 questions
+    for ($g = 1; $g <= 8; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    for ($g = 9; $g <= 10; $g++) {
+        $pg = PassageGroup::create([
+            'test_id'      => $this->toeicTest->id,
+            'part_number'  => 7,
+            'passage_type' => 'single',
+            'title'        => "Single {$g}",
+            'order'        => $g,
+        ]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc', 'content' => 'Content', 'order_in_group' => 1]);
+        for ($q = 1; $q <= 2; $q++) {
+            $cq = Question::create(['passage_group_id' => $pg->id, 'part_number' => 7, 'section' => 'reading', 'prompt' => "Prompt {$q}", 'question_type' => 'multiple_choice']);
+            foreach (['A', 'B', 'C', 'D'] as $ci => $cl) {
+                QuestionChoice::create(['question_id' => $cq->id, 'label' => $cl, 'content' => "Option {$cl}", 'is_correct' => $ci === 0, 'order' => $ci + 1]);
+            }
+        }
+    }
+
+    $eval = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval['single']['is_exact'])->toBeFalse()
+        ->and($eval['single']['is_feasible'])->toBeFalse()
+        ->and($eval['single']['groups'])->toBe(10)
+        ->and($eval['single']['questions'])->toBe(28);
+
+    // Teacher UI assertions
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertDontSee('+ Add Single Passage');
+    $response->assertDontSee('+ Add Passage Group');
+    $response->assertSee('Needs Attention:');
+    $response->assertSee('Single Passage has 10 / 10 groups but 28 / 29 questions. Edit an existing Single Passage group to reach exactly 29 questions.');
+});
+
+/*
+|--------------------------------------------------------------------------
+| P7-EDGE-03: Infeasible 9 Single / 24 Questions State
+|--------------------------------------------------------------------------
+*/
+test('P7-EDGE-03: Infeasible 9 Single groups with 24 questions suppresses Add Single and shows repair notice', function () {
+    for ($g = 1; $g <= 6; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    for ($g = 7; $g <= 9; $g++) {
+        $pg = PassageGroup::create([
+            'test_id'      => $this->toeicTest->id,
+            'part_number'  => 7,
+            'passage_type' => 'single',
+            'title'        => "Single {$g}",
+            'order'        => $g,
+        ]);
+        Passage::create(['passage_group_id' => $pg->id, 'title' => 'Doc', 'content' => 'Content', 'order_in_group' => 1]);
+        for ($q = 1; $q <= 2; $q++) {
+            $cq = Question::create(['passage_group_id' => $pg->id, 'part_number' => 7, 'section' => 'reading', 'prompt' => "Prompt {$q}", 'question_type' => 'multiple_choice']);
+            foreach (['A', 'B', 'C', 'D'] as $ci => $cl) {
+                QuestionChoice::create(['question_id' => $cq->id, 'label' => $cl, 'content' => "Option {$cl}", 'is_correct' => $ci === 0, 'order' => $ci + 1]);
+            }
+        }
+    }
+
+    $eval = ToeicQuestionValidator::evaluatePart7Blueprint($this->toeicTest);
+    expect($eval['single']['is_feasible'])->toBeFalse();
+
+    // Teacher UI assertions
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertDontSee('+ Add Single Passage');
+    $response->assertDontSee('+ Add Passage Group');
+    $response->assertSee('Needs Attention:');
+    $response->assertSee('Single Passage distribution needs repair before authoring can continue.');
+});
+
+/*
+|--------------------------------------------------------------------------
+| P7-EDGE-04: Valid Progressive Authoring Flow
+|--------------------------------------------------------------------------
+*/
+test('P7-EDGE-04: Progressive UI correctly advances from Single -> Double -> Triple -> Complete', function () {
+    // 1. Initial State: Empty Part 7 -> shows + Add Single Passage (0/10)
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertSee('+ Add Single Passage');
+
+    // 2. Author 10 Single groups (29 questions) -> shows + Add Double Passage (0/2)
+    for ($g = 1; $g <= 9; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 3, ['title' => "Single {$g}"]));
+    }
+    $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'single', 2, ['title' => "Single 10"]));
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertSee('+ Add Double Passage (0/2)');
+    $response->assertDontSee('+ Add Single Passage');
+    $response->assertDontSee('+ Add Triple Passage');
+
+    // 3. Author 2 Double groups (10 questions) -> shows + Add Triple Passage (0/3)
+    for ($g = 1; $g <= 2; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'double', 5, ['title' => "Double {$g}"]));
+    }
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertSee('+ Add Triple Passage (0/3)');
+    $response->assertDontSee('+ Add Double Passage');
+    $response->assertDontSee('+ Add Single Passage');
+
+    // 4. Author 3 Triple groups (15 questions) -> shows All Part 7 Blocks Complete (15/15 Groups)
+    for ($g = 1; $g <= 3; $g++) {
+        $this->builderService->createPassageGroup($this->p7Section, makePart7Payload($this->p7Section->id, 'triple', 5, ['title' => "Triple {$g}"]));
+    }
+
+    $response = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $response->assertOk();
+    $response->assertSee('All Part 7 Blocks Complete (15/15 Groups)');
+    $response->assertDontSee('+ Add Triple Passage');
+    $response->assertDontSee('+ Add Double Passage');
+    $response->assertDontSee('+ Add Single Passage');
+});
