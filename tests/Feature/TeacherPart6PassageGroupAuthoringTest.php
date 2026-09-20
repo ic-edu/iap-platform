@@ -868,3 +868,115 @@ test('P6-DRAFT-12: Part 7 passage groups continue to require all questions to be
     expect($result['is_valid'])->toBeFalse()
         ->and($result['errors'])->toHaveKey('question_count');
 });
+
+// -----------------------------------------------------------------------------
+// DYNAMIC BLANK PLACEHOLDER TESTS (P6-PLACEHOLDER-01 to P6-PLACEHOLDER-06)
+// -----------------------------------------------------------------------------
+
+test('P6-PLACEHOLDER-01: Group 1 edit payload and JS helper produce placeholders [131] to [134]', function () {
+    $bladeContent = file_get_contents(resource_path('views/teacher/assessment_detail.blade.php'));
+    expect($bladeContent)->toContain('function getPart6BlankPlaceholder(groupOrdinal, slotIndex)');
+    expect($bladeContent)->toContain('const blankNum = 131 + ((g - 1) * 4) + slotIndex;');
+
+    // Create Group 1
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        validPart6Payload($this->part6Section->id)
+    );
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+
+    // Group 1 pgJson contains group_ordinal: 1
+    $res->assertSee('&quot;group_ordinal&quot;:1', false);
+});
+
+test('P6-PLACEHOLDER-02: Group 2 edit payload and JS helper produce placeholders [135] to [138]', function () {
+    // Group 1
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        validPart6Payload($this->part6Section->id)
+    );
+    // Group 2
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        validPart6Payload($this->part6Section->id)
+    );
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+
+    // Group 2 pgJson contains group_ordinal: 2
+    $res->assertSee('&quot;group_ordinal&quot;:2', false);
+    // Add button for 3rd group passes ordinal 3
+    $res->assertSee("openCreatePassageGroupModal('{$this->part6Section->id}', '6', 'Part 6: Text Completion', 3)", false);
+});
+
+test('P6-PLACEHOLDER-03: Group 3 edit payload produces group_ordinal 3 (placeholders 139-142)', function () {
+    for ($g = 1; $g <= 3; $g++) {
+        $this->actingAs($this->teacher)->post(
+            route('teacher.tests.create-passage-group', $this->toeicTest->id),
+            validPart6Payload($this->part6Section->id)
+        );
+    }
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+    $res->assertSee('&quot;group_ordinal&quot;:3', false);
+});
+
+test('P6-PLACEHOLDER-04: Group 4 edit payload produces group_ordinal 4 (placeholders 143-146)', function () {
+    for ($g = 1; $g <= 4; $g++) {
+        $this->actingAs($this->teacher)->post(
+            route('teacher.tests.create-passage-group', $this->toeicTest->id),
+            validPart6Payload($this->part6Section->id)
+        );
+    }
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+    $res->assertSee('&quot;group_ordinal&quot;:4', false);
+});
+
+test('P6-PLACEHOLDER-05: Group 5+ produces group_ordinal 5+ and JS helper generates overflow placeholders without stealing Part 7 numbering', function () {
+    for ($g = 1; $g <= 5; $g++) {
+        $this->actingAs($this->teacher)->post(
+            route('teacher.tests.create-passage-group', $this->toeicTest->id),
+            validPart6Payload($this->part6Section->id)
+        );
+    }
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+    $res->assertSee('&quot;group_ordinal&quot;:5', false);
+
+    $bladeContent = file_get_contents(resource_path('views/teacher/assessment_detail.blade.php'));
+    expect($bladeContent)->toContain('Optional authoring note for Overflow Slot ${slotIndex + 1}...');
+    expect($bladeContent)->not->toContain('147');
+});
+
+test('P6-PLACEHOLDER-06: Incomplete Group 1 does not cause Group 2 placeholders to shift', function () {
+    // Group 1 with only 1 question complete
+    $payload1 = validPart6Payload($this->part6Section->id);
+    $payload1['questions'][1]['choices'] = ['', '', '', ''];
+    $payload1['questions'][2]['choices'] = ['', '', '', ''];
+    $payload1['questions'][3]['choices'] = ['', '', '', ''];
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        $payload1
+    );
+
+    // Group 2 with 4 questions complete
+    $this->actingAs($this->teacher)->post(
+        route('teacher.tests.create-passage-group', $this->toeicTest->id),
+        validPart6Payload($this->part6Section->id)
+    );
+
+    $res = $this->actingAs($this->teacher)->get(route('teacher.tests.show', $this->toeicTest->id));
+    $res->assertStatus(200);
+
+    // Group 1 remains group_ordinal: 1
+    $res->assertSee('&quot;group_ordinal&quot;:1', false);
+    // Group 2 remains group_ordinal: 2 even though Group 1 is incomplete (1/4 questions)
+    $res->assertSee('&quot;group_ordinal&quot;:2', false);
+});

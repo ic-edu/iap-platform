@@ -500,6 +500,7 @@
 
                                 $firstQ = $sec->testQuestions->first()?->question;
                                 $secPartNumber = \App\Services\ToeicQuestionValidator::detectPartNumber($sec, $firstQ);
+                                $secPassageGroups = ($secPartNumber && in_array((int)$secPartNumber, [6, 7])) ? ($allTestPassageGroups->get((int)$secPartNumber) ?? collect()) : collect();
                                 $canonicalBlueprint = ($isToeicTest && $secPartNumber) ? \App\Services\ToeicQuestionValidator::getPartBlueprint($secPartNumber) : null;
                                 $secTargetCount = $canonicalBlueprint['target_count'] ?? $secRollup['target_questions'] ?? $secQCount;
                                 $canonicalRange = $canonicalBlueprint ? ['start' => $canonicalBlueprint['start_number'], 'end' => $canonicalBlueprint['end_number']] : null;
@@ -681,7 +682,7 @@
                                         <div class="flex items-center gap-2 flex-wrap">
                                             @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
                                             <button type="button"
-                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
+                                                    onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }})"
                                                     class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
                                                 <span>📖</span> + Add Passage Group
                                             </button>
@@ -973,6 +974,7 @@
                                                         'id'             => $pg->id,
                                                         'title'          => $pg->title,
                                                         'part_number'    => $pg->part_number,
+                                                        'group_ordinal'  => $pgOrdinal,
                                                         'passage_type'   => $pg->passage_type,
                                                         'passages'       => $pg->passages->map(fn($p) => [
                                                             'id'             => $p->id,
@@ -1279,7 +1281,7 @@
                                                     @if(in_array($test->status, ['draft', 'needs_revision', 'revision_requested', 'rejected']))
                                                         @if($isToeicTest && in_array((int)$secPartNumber, [6, 7], true))
                                                         <button type="button"
-                                                                onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}')"
+                                                                onclick="openCreatePassageGroupModal('{{ $sec->id }}', '{{ $secPartNumber }}', '{{ addslashes($sec->title) }}', {{ $secPassageGroups->count() + 1 }})"
                                                                 class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition-all">
                                                             <span>📖</span> + Add Passage Group to this Section
                                                         </button>
@@ -5080,7 +5082,27 @@
         }
     }
 
-    function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '') {
+    function getIntendedPart6GroupOrdinal(sectionId) {
+        if (sectionId) {
+            const secCard = document.getElementById(`section-card-${sectionId}`);
+            if (secCard) {
+                const existingPgCards = secCard.querySelectorAll('[id^="passage-group-card-"]');
+                return existingPgCards.length + 1;
+            }
+        }
+        return 1;
+    }
+
+    function getPart6BlankPlaceholder(groupOrdinal, slotIndex) {
+        const g = parseInt(groupOrdinal) || 1;
+        if (g >= 1 && g <= 4) {
+            const blankNum = 131 + ((g - 1) * 4) + slotIndex;
+            return `Optional authoring note for blank [${blankNum}]...`;
+        }
+        return `Optional authoring note for Overflow Slot ${slotIndex + 1}...`;
+    }
+
+    function openCreatePassageGroupModal(sectionId, partNumber, sectionTitle = '', groupOrdinal = null) {
         const modal = document.getElementById('create-passage-group-modal');
         const form = document.getElementById('create-passage-group-form');
         const methodInput = document.getElementById('pg-form-method');
@@ -5098,6 +5120,8 @@
         const partNum = parseInt(partNumber) || 7;
         currentPassagePartNum = partNum;
         const isPart6 = partNum === 6;
+        const resolvedOrdinal = groupOrdinal ? parseInt(groupOrdinal) : getIntendedPart6GroupOrdinal(sectionId);
+        window._currentPassageGroupOrdinal = resolvedOrdinal;
 
         const secInput = document.getElementById('pg-section-id');
         const partInput = document.getElementById('pg-part-number');
@@ -5211,7 +5235,7 @@
                     if (promptNote) promptNote.textContent = 'Optional note';
                     if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
                     if (promptEl) {
-                        promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
+                        promptEl.placeholder = getPart6BlankPlaceholder(window._currentPassageGroupOrdinal, i);
                         promptEl.removeAttribute('required');
                     }
                 } else {
@@ -5302,7 +5326,7 @@
                     if (promptNote) promptNote.textContent = 'Optional note';
                     if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
                     if (promptEl) {
-                        promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
+                        promptEl.placeholder = getPart6BlankPlaceholder(window._currentPassageGroupOrdinal, i);
                         promptEl.removeAttribute('required');
                     }
                 } else {
@@ -5348,6 +5372,8 @@
         const partNum = parseInt(pgData.part_number) || 7;
         currentPassagePartNum = partNum;
         const isPart6 = partNum === 6;
+        const resolvedOrdinal = pgData.group_ordinal ? parseInt(pgData.group_ordinal) : 1;
+        window._currentPassageGroupOrdinal = resolvedOrdinal;
 
         if (form) {
             form.action = `/teacher/assessments/{{ $test->id }}/passage-groups/${pgData.id}`;
@@ -5466,7 +5492,7 @@
                     if (promptNote) promptNote.textContent = 'Optional note';
                     if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
                     if (promptEl) {
-                        promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
+                        promptEl.placeholder = getPart6BlankPlaceholder(window._currentPassageGroupOrdinal, i);
                         promptEl.removeAttribute('required');
                     }
                 } else {
@@ -5602,7 +5628,7 @@
                     if (promptNote) promptNote.textContent = 'Optional note';
                     if (promptHelp) promptHelp.textContent = 'The numbered blank is normally placed directly in the passage. Use this field only when additional authoring context is needed.';
                     if (promptEl) {
-                        promptEl.placeholder = `Optional authoring note for blank [${131 + i}]...`;
+                        promptEl.placeholder = getPart6BlankPlaceholder(window._currentPassageGroupOrdinal, i);
                         promptEl.removeAttribute('required');
                     }
                 } else {
