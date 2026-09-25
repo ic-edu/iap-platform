@@ -161,19 +161,14 @@ class AdminOperationalDashboardController extends Controller
             $groups = $allocation->membership?->groups ?? collect();
             $groupContext = $groups->isNotEmpty() ? ' — ' . $groups->pluck('name')->join(', ') : '';
             $progContext = trim(($org?->name ?? 'Organization') . $groupContext);
-            $normContext = AssessmentRequest::normalizeContext($progContext);
 
-            // Match active candidate request for this requirement
-            $matched = $activeRequests->first(function ($req) use ($candidateUser, $familyCode, $normContext) {
-                if ((int) $req->candidate_id !== (int) $candidateUser->id) {
-                    return false;
-                }
-                if (strtolower((string) $req->test_type) !== $familyCode) {
-                    return false;
-                }
-                $reqNormContext = AssessmentRequest::normalizeContext($req->program_context);
-                return empty($normContext) || empty($reqNormContext) || $reqNormContext === $normContext;
-            });
+            // Unified shared matcher across dashboard, prefilled forms, and server duplicate check
+            $matched = AssessmentRequest::findMatchingInCollection(
+                $activeRequests,
+                $candidateUser->id,
+                $familyCode,
+                $progContext
+            );
 
             if ($matched) {
                 $activeRequestsByAllocationId[$allocation->id] = $matched;

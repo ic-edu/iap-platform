@@ -93,52 +93,68 @@ class AssessmentRequestController extends Controller
             }
         }
 
+        // Requirement-specific atomic lock key to guarantee safe concurrency on SQLite and multi-process deployments
+        if ($candidateId) {
+            $lockKey = 'assessment_req_candidate_' . $candidateId . '_' . strtolower(trim($validated['test_type']));
+        } else {
+            $lockKey = 'assessment_req_generic_' . strtolower(trim($validated['test_type'])) . '_' . md5(strtolower(trim($validated['title'])));
+        }
+
         // Atomic Duplicate Check and Creation
         $createdRequest = null;
         $existingRequest = null;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $candidateId, $user, &$createdRequest, &$existingRequest) {
-            // 1. Candidate-Linked Active Requirement Check (matches candidate, test_type, program_context; ignores title)
-            if ($candidateId) {
-                $existing = AssessmentRequest::resolveActiveRequirement(
-                    (int) $candidateId,
-                    $validated['test_type'],
-                    $validated['program_context'] ?? null,
-                    lockForUpdate: true
-                );
+        $executeCheckAndCreate = function () use ($validated, $candidateId, $user, &$createdRequest, &$existingRequest) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $candidateId, $user, &$createdRequest, &$existingRequest) {
+                // 1. Candidate-Linked Active Requirement Check (matches candidate, test_type, program_context; ignores title)
+                if ($candidateId) {
+                    $existing = AssessmentRequest::resolveActiveRequirement(
+                        (int) $candidateId,
+                        $validated['test_type'],
+                        $validated['program_context'] ?? null,
+                        lockForUpdate: true
+                    );
 
-                if ($existing) {
-                    $existingRequest = $existing;
-                    return;
+                    if ($existing) {
+                        $existingRequest = $existing;
+                        return;
+                    }
+                } else {
+                    // 2. Generic Candidate-Less Active Requirement Check (matching test_type and title)
+                    $existingGeneric = AssessmentRequest::whereIn('status', ['pending', 'draft_created'])
+                        ->whereNull('candidate_id')
+                        ->where('test_type', strtolower(trim($validated['test_type'])))
+                        ->where('title', $validated['title'])
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($existingGeneric && $existingGeneric->isActive()) {
+                        $existingRequest = $existingGeneric;
+                        return;
+                    }
                 }
-            } else {
-                // 2. Generic Candidate-Less Active Requirement Check (matching test_type and title)
-                $existingGeneric = AssessmentRequest::whereIn('status', ['pending', 'draft_created'])
-                    ->whereNull('candidate_id')
-                    ->where('test_type', strtolower(trim($validated['test_type'])))
-                    ->where('title', $validated['title'])
-                    ->lockForUpdate()
-                    ->first();
 
-                if ($existingGeneric && $existingGeneric->isActive()) {
-                    $existingRequest = $existingGeneric;
-                    return;
-                }
-            }
+                // 3. Create new AssessmentRequest
+                $createdRequest = AssessmentRequest::create([
+                    'title'              => $validated['title'],
+                    'test_type'          => $validated['test_type'],
+                    'candidate_id'       => $candidateId,
+                    'program_context'    => $validated['program_context'] ?? null,
+                    'required_sections'  => $validated['required_sections'] ?? null,
+                    'notes'              => $validated['notes'] ?? null,
+                    'requested_deadline' => $validated['requested_deadline'] ?? null,
+                    'requested_by'       => $user->id,
+                    'status'             => 'pending',
+                ]);
+            }, 5);
+        };
 
-            // 3. Create new AssessmentRequest
-            $createdRequest = AssessmentRequest::create([
-                'title'              => $validated['title'],
-                'test_type'          => $validated['test_type'],
-                'candidate_id'       => $candidateId,
-                'program_context'    => $validated['program_context'] ?? null,
-                'required_sections'  => $validated['required_sections'] ?? null,
-                'notes'              => $validated['notes'] ?? null,
-                'requested_deadline' => $validated['requested_deadline'] ?? null,
-                'requested_by'       => $user->id,
-                'status'             => 'pending',
-            ]);
-        });
+        try {
+            \Illuminate\Support\Facades\Cache::lock($lockKey, 10)->block(5, $executeCheckAndCreate);
+        } catch (\Throwable $e) {
+            // Fallback for cache stores without blocking lock support
+            $executeCheckAndCreate();
+        }
 
         if ($existingRequest) {
             $candidateName = $candidateId ? (User::find($candidateId)?->name ?? 'Candidate') : null;

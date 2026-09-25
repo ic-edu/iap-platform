@@ -60,7 +60,10 @@ class AssessmentRequest extends Model
         }
 
         if ($this->test_id && $this->test) {
-            return ! $this->test->isPublished() && $this->test->status !== 'published';
+            if ($this->test->status === 'archived') {
+                return false;
+            }
+            return ! $this->test->isPublished();
         }
 
         return in_array($this->status, ['pending', 'draft_created'], true);
@@ -75,7 +78,7 @@ class AssessmentRequest extends Model
             return 'completed';
         }
 
-        if ($this->status === 'archived') {
+        if ($this->status === 'archived' || ($this->test && $this->test->status === 'archived')) {
             return 'archived';
         }
 
@@ -134,7 +137,68 @@ class AssessmentRequest extends Model
     }
 
     /**
-     * Resolve an active assessment request for a candidate requirement.
+     * Shared requirement matcher over a collection of active AssessmentRequests.
+     */
+    public static function findMatchingInCollection(
+        \Illuminate\Support\Collection $requests,
+        ?int $candidateId,
+        string $testType,
+        ?string $programContext = null
+    ): ?self {
+        $normalizedType = strtolower(trim($testType));
+        $normalizedContext = self::normalizeContext($programContext);
+
+        $filtered = $requests->filter(function (self $req) use ($candidateId, $normalizedType) {
+            if ($candidateId !== null) {
+                if ((int) $req->candidate_id !== (int) $candidateId) {
+                    return false;
+                }
+            } else {
+                if ($req->candidate_id !== null) {
+                    return false;
+                }
+            }
+
+            if (strtolower(trim((string) $req->test_type)) !== $normalizedType) {
+                return false;
+            }
+
+            return $req->isActive();
+        });
+
+        if ($filtered->isEmpty()) {
+            return null;
+        }
+
+        // 1. Exact normalized context match (strictly highest precedence)
+        $exact = $filtered->first(function (self $req) use ($normalizedContext) {
+            return self::normalizeContext($req->program_context) === $normalizedContext;
+        });
+
+        if ($exact) {
+            return $exact;
+        }
+
+        // 2. Legacy / Candidate-Level (Empty Context) Match
+        // If an active request exists with empty context, it covers general candidate requirements
+        $emptyContextReq = $filtered->first(function (self $req) {
+            return empty(self::normalizeContext($req->program_context));
+        });
+
+        if ($emptyContextReq) {
+            return $emptyContextReq;
+        }
+
+        // 3. If target context is empty, match any active candidate request
+        if (empty($normalizedContext) && $candidateId !== null) {
+            return $filtered->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve an active assessment request for a candidate requirement from the database.
      */
     public static function resolveActiveRequirement(
         ?int $candidateId,
@@ -143,7 +207,6 @@ class AssessmentRequest extends Model
         bool $lockForUpdate = false
     ): ?self {
         $normalizedType = strtolower(trim($testType));
-        $normalizedContext = self::normalizeContext($programContext);
 
         $query = self::with(['test.assignedTeacher', 'candidate', 'requester'])
             ->whereIn('status', ['pending', 'draft_created'])
@@ -161,23 +224,6 @@ class AssessmentRequest extends Model
 
         $candidates = $query->latest()->get();
 
-        // 1. Exact normalized context match
-        $exact = $candidates->first(function (self $req) use ($normalizedContext) {
-            return self::normalizeContext($req->program_context) === $normalizedContext && $req->isActive();
-        });
-
-        if ($exact) {
-            return $exact;
-        }
-
-        // 2. If no exact match and candidate is specified, find active requirement if context is empty
-        if ($candidateId !== null && empty($normalizedContext)) {
-            $anyActive = $candidates->first(fn(self $req) => $req->isActive());
-            if ($anyActive) {
-                return $anyActive;
-            }
-        }
-
-        return null;
+        return self::findMatchingInCollection($candidates, $candidateId, $testType, $programContext);
     }
 }

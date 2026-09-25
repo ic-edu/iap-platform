@@ -1653,6 +1653,10 @@ class TestBuilderController extends Controller
      */
     public function assignCandidate(Request $request, Test $test): RedirectResponse
     {
+        if (!$test->isPublished()) {
+            return back()->with('error', "Cannot assign candidate to unpublished assessment '{$test->title}'. Assessment must be published before candidate assignment.");
+        }
+
         if ($test->isSimulator()) {
             return back()->with('error', "Test Simulator '{$test->title}' uses open candidate access and does not support manual candidate assignment.");
         }

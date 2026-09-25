@@ -568,4 +568,316 @@ class OperationalDashboardInstitutionalRequestWorkflowTest extends TestCase
         $res->assertSee('Active TOEIC In-Flight Request');
         $res->assertSee('Awaiting Repository Manager');
     }
+
+    /**
+     * TEST: Exact context match takes strict precedence over empty-context request.
+     */
+    public function test_exact_context_takes_precedence_over_empty_context(): void
+    {
+        $emptyContextReq = AssessmentRequest::create([
+            'title'           => 'Legacy Empty Context Request',
+            'test_type'       => 'toeic',
+            'candidate_id'    => $this->candidate1->id,
+            'program_context' => null,
+            'requested_by'    => $this->adminUser->id,
+            'status'          => 'pending',
+        ]);
+
+        $exactContextReq = AssessmentRequest::create([
+            'title'           => 'Exact Class 9A Request',
+            'test_type'       => 'toeic',
+            'candidate_id'    => $this->candidate1->id,
+            'program_context' => 'iC.edu UAT University — Class 9A',
+            'requested_by'    => $this->adminUser->id,
+            'status'          => 'pending',
+        ]);
+
+        $resolved = AssessmentRequest::resolveActiveRequirement(
+            $this->candidate1->id,
+            'toeic',
+            'iC.edu UAT University — Class 9A'
+        );
+
+        $this->assertNotNull($resolved);
+        $this->assertEquals($exactContextReq->id, $resolved->id);
+        $this->assertEquals('Exact Class 9A Request', $resolved->title);
+
+        // Also test findMatchingInCollection directly
+        $matched = AssessmentRequest::findMatchingInCollection(
+            collect([$emptyContextReq, $exactContextReq]),
+            $this->candidate1->id,
+            'toeic',
+            'iC.edu UAT University — Class 9A'
+        );
+
+        $this->assertNotNull($matched);
+        $this->assertEquals($exactContextReq->id, $matched->id);
+    }
+
+    /**
+     * TEST: Distinct explicit contexts are not conflated.
+     */
+    public function test_distinct_explicit_contexts_are_not_conflated(): void
+    {
+        AssessmentRequest::create([
+            'title'           => 'Class 9A Request',
+            'test_type'       => 'toeic',
+            'candidate_id'    => $this->candidate1->id,
+            'program_context' => 'iC.edu UAT University — Class 9A',
+            'requested_by'    => $this->adminUser->id,
+            'status'          => 'pending',
+        ]);
+
+        // Querying for Class 9B should return null
+        $resolved = AssessmentRequest::resolveActiveRequirement(
+            $this->candidate1->id,
+            'toeic',
+            'iC.edu UAT University — Class 9B'
+        );
+
+        $this->assertNull($resolved);
+    }
+
+    /**
+     * TEST: Empty context legacy request matches when no exact context request exists.
+     */
+    public function test_empty_context_matches_candidate_when_no_exact_match_exists(): void
+    {
+        $emptyContextReq = AssessmentRequest::create([
+            'title'           => 'Legacy Empty Context Request',
+            'test_type'       => 'toeic',
+            'candidate_id'    => $this->candidate1->id,
+            'program_context' => null,
+            'requested_by'    => $this->adminUser->id,
+            'status'          => 'pending',
+        ]);
+
+        $resolved = AssessmentRequest::resolveActiveRequirement(
+            $this->candidate1->id,
+            'toeic',
+            'iC.edu UAT University — Class 9A'
+        );
+
+        $this->assertNotNull($resolved);
+        $this->assertEquals($emptyContextReq->id, $resolved->id);
+    }
+
+    /**
+     * TEST: Archived linked assessment is recognized as archived and not active.
+     */
+    public function test_archived_linked_assessment_is_recognized_as_archived_and_not_active(): void
+    {
+        $archivedTest = Test::create([
+            'title'            => 'Archived TOEIC Test',
+            'slug'             => 'archived-toeic-test',
+            'test_type'        => 'toeic',
+            'assessment_mode'  => AssessmentMode::RealTest,
+            'duration_minutes' => 60,
+            'pass_score'       => 70,
+            'status'           => 'archived',
+            'is_published'     => false,
+            'created_by'       => $this->rmUser->id,
+            'assigned_to'      => $this->teacherUser->id,
+        ]);
+
+        $req = AssessmentRequest::create([
+            'title'           => 'TOEIC Request with Archived Test',
+            'test_type'       => 'toeic',
+            'candidate_id'    => $this->candidate1->id,
+            'program_context' => 'iC.edu UAT University — Class 9A',
+            'requested_by'    => $this->adminUser->id,
+            'status'          => 'draft_created',
+            'test_id'         => $archivedTest->id,
+        ]);
+
+        $this->assertFalse($req->isActive());
+        $this->assertEquals('archived', $req->getWorkflowStage());
+        $this->assertEquals('Archived', $req->getWorkflowStageLabel());
+
+        // Because it's not active, resolveActiveRequirement returns null
+        $activeReq = AssessmentRequest::resolveActiveRequirement(
+            $this->candidate1->id,
+            'toeic',
+            'iC.edu UAT University — Class 9A'
+        );
+        $this->assertNull($activeReq);
+
+        // Dashboard allows new mock test request
+        $res = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $res->assertStatus(200);
+        $res->assertSee('Request Mock Test');
+    }
+
+    /**
+     * TEST: RA viewing unpublished assessment on admin.tests.show sees inspection details with locked assignment controls.
+     */
+    public function test_ra_viewing_unpublished_assessment_sees_inspection_details_with_locked_assignment(): void
+    {
+        $draftTest = Test::create([
+            'title'            => 'TOEIC Draft Inspection Assessment',
+            'slug'             => 'toeic-draft-inspection-assessment',
+            'test_type'        => 'toeic',
+            'assessment_mode'  => AssessmentMode::RealTest,
+            'duration_minutes' => 75,
+            'pass_score'       => 75,
+            'status'           => 'draft',
+            'is_published'     => false,
+            'created_by'       => $this->rmUser->id,
+            'assigned_to'      => $this->teacherUser->id,
+        ]);
+
+        $res = $this->actingAs($this->adminUser)->get(route('admin.tests.show', $draftTest->id));
+
+        $res->assertStatus(200);
+        $res->assertSee('In Authoring');
+        $res->assertSee('Assignment Controls Locked');
+        $res->assertSee('TOEIC Draft Inspection Assessment');
+        // Assignment form should not be rendered
+        $res->assertDontSee('Assign Assessment to Candidate');
+        $res->assertDontSee('action="' . route('admin.tests.assign-candidate', $draftTest->id) . '"', false);
+    }
+
+    /**
+     * TEST: Backend rejects direct assignment to unpublished assessment.
+     */
+    public function test_backend_rejects_candidate_assignment_to_unpublished_test(): void
+    {
+        $draftTest = Test::create([
+            'title'            => 'TOEIC Draft Guarded Assessment',
+            'slug'             => 'toeic-draft-guarded-assessment',
+            'test_type'        => 'toeic',
+            'assessment_mode'  => AssessmentMode::RealTest,
+            'duration_minutes' => 75,
+            'pass_score'       => 75,
+            'status'           => 'draft',
+            'is_published'     => false,
+            'created_by'       => $this->rmUser->id,
+            'assigned_to'      => $this->teacherUser->id,
+        ]);
+
+        $res = $this->actingAs($this->adminUser)->post(route('admin.tests.assign-candidate', $draftTest->id), [
+            'candidate_id' => $this->candidate1->id,
+        ]);
+
+        $res->assertSessionHas('error');
+        $this->assertStringContainsString('Assessment must be published before candidate assignment', session('error'));
+        $this->assertEquals(0, CandidateTestAssignment::count());
+    }
+
+    /**
+     * TEST: Multi-process concurrency test using an isolated SQLite database to verify duplicate prevention under racing requests.
+     */
+    public function test_concurrent_submissions_create_exactly_one_request_on_sqlite(): void
+    {
+        $tempDb = sys_get_temp_dir() . '/iap_concurrency_test_' . uniqid() . '.sqlite';
+        touch($tempDb);
+
+        try {
+            $bootstrapScript = base_path('scratch_concurrency_runner.php');
+            $runnerCode = <<<'PHP'
+<?php
+$tempDb = $argv[1];
+$adminId = (int)$argv[2];
+$title = $argv[3];
+$testType = $argv[4];
+
+putenv("APP_ENV=testing");
+putenv("DB_CONNECTION=sqlite");
+putenv("DB_DATABASE={$tempDb}");
+putenv("CACHE_STORE=file");
+
+require __DIR__ . '/vendor/autoload.php';
+$app = require_once __DIR__ . '/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+
+config(['database.default' => 'sqlite']);
+config(['database.connections.sqlite.database' => $tempDb]);
+config(['cache.default' => 'file']);
+\Illuminate\Support\Facades\DB::purge('sqlite');
+\Illuminate\Support\Facades\DB::reconnect('sqlite');
+
+$admin = \App\Models\User::on('sqlite')->find($adminId);
+if (!$admin) {
+    echo "ERROR: Admin not found\n";
+    exit(1);
+}
+
+\Illuminate\Support\Facades\Auth::login($admin);
+
+$request = \Illuminate\Http\Request::create('/admin/assessment-requests', 'POST', [
+    'title'     => $title,
+    'test_type' => $testType,
+]);
+$request->setUserResolver(fn() => $admin);
+$request->setLaravelSession($app['session']->driver());
+
+$controller = $app->make(\App\Http\Controllers\Admin\AssessmentRequestController::class);
+
+try {
+    $response = $controller->store($request);
+    echo "SUCCESS\n";
+} catch (\Throwable $e) {
+    echo "ERROR: " . $e->getMessage() . "\n";
+}
+PHP;
+            file_put_contents($bootstrapScript, $runnerCode);
+
+            // Run migrations on isolated temp DB
+            config(['database.connections.temp_sqlite' => [
+                'driver'   => 'sqlite',
+                'database' => $tempDb,
+                'prefix'   => '',
+            ]]);
+            \Illuminate\Support\Facades\Artisan::call('migrate', [
+                '--database' => 'temp_sqlite',
+                '--force'    => true,
+            ]);
+
+            // Seed admin user in temp db
+            $tempDbConn = \Illuminate\Support\Facades\DB::connection('temp_sqlite');
+            $adminId = $tempDbConn->table('users')->insertGetId([
+                'name'       => 'Admin User',
+                'email'      => 'admin_test_' . uniqid() . '@example.com',
+                'password'   => bcrypt('password'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Launch 2 parallel processes simultaneously
+            $cmd = sprintf(
+                'php %s %s %d %s %s',
+                escapeshellarg($bootstrapScript),
+                escapeshellarg($tempDb),
+                $adminId,
+                escapeshellarg('Concurrent TOEIC Request'),
+                escapeshellarg('toeic')
+            );
+
+            $p1 = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes1);
+            $p2 = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes2);
+
+            $out1 = stream_get_contents($pipes1[1]);
+            fclose($pipes1[1]);
+            fclose($pipes1[2]);
+            proc_close($p1);
+
+            $out2 = stream_get_contents($pipes2[1]);
+            fclose($pipes2[1]);
+            fclose($pipes2[2]);
+            proc_close($p2);
+
+            // Assert exactly 1 record was created in the temp db
+            $totalCount = $tempDbConn->table('assessment_requests')->count();
+            $this->assertEquals(1, $totalCount, "Expected exactly 1 assessment request created concurrently, found {$totalCount}. Process outputs: [P1: {$out1}, P2: {$out2}]");
+
+        } finally {
+            if (file_exists($tempDb)) {
+                @unlink($tempDb);
+            }
+            if (file_exists(base_path('scratch_concurrency_runner.php'))) {
+                @unlink(base_path('scratch_concurrency_runner.php'));
+            }
+        }
+    }
 }
