@@ -38,6 +38,23 @@ class CandidatePortalController extends Controller
     }
 
     /**
+     * Assert that the attempt is in an active mutable lifecycle state.
+     * Rejects if status is not in_progress or if server timer has expired.
+     */
+    protected function assertAttemptMutable(Attempt $attempt): void
+    {
+        $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
+
+        if ($statusValue !== AttemptStatus::InProgress->value && $statusValue !== 'in_progress') {
+            abort(403, 'Assessment attempt is no longer in progress.');
+        }
+
+        if ($this->engine->timerEngine->isExpired($attempt)) {
+            abort(403, 'Assessment attempt duration has expired.');
+        }
+    }
+
+    /**
      * Candidate Portal Dashboard.
      */
     public function portal(Request $request): View
@@ -312,6 +329,10 @@ class CandidatePortalController extends Controller
 
         $isRealTest = $test?->isRealTest() ?? false;
 
+        if ($attempt->status->value === 'in_progress' && $isRealTest && $this->engine->timerEngine->isExpired($attempt)) {
+            abort(403, 'Assessment attempt duration has expired.');
+        }
+
         $groupQuestionIds = $question->audio_group_id
             ? \App\Modules\QuestionBank\Models\Question::where('audio_group_id', $question->audio_group_id)->pluck('id')->toArray()
             : [];
@@ -414,6 +435,7 @@ class CandidatePortalController extends Controller
     public function autoSave(Request $request, Attempt $attempt): JsonResponse
     {
         $this->authorizeAttemptAccess($attempt, $request->user());
+        $this->assertAttemptMutable($attempt);
 
         $validated = $request->validate([
             'question_id' => ['required', 'string'],
@@ -453,6 +475,7 @@ class CandidatePortalController extends Controller
     public function toggleFlag(Request $request, Attempt $attempt): JsonResponse
     {
         $this->authorizeAttemptAccess($attempt, $request->user());
+        $this->assertAttemptMutable($attempt);
 
         $validated = $request->validate([
             'question_id' => ['required', 'string'],
@@ -473,6 +496,7 @@ class CandidatePortalController extends Controller
     public function recordViolation(Request $request, Attempt $attempt): JsonResponse
     {
         $this->authorizeAttemptAccess($attempt, $request->user());
+        $this->assertAttemptMutable($attempt);
 
         $questionId = $request->input('question_id');
         if ($questionId && !$attempt->hasQuestion($questionId)) {
@@ -507,6 +531,13 @@ class CandidatePortalController extends Controller
     {
         $this->authorizeAttemptAccess($attempt, $request->user());
 
+        $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
+
+        // Idempotency: If attempt is already submitted/terminal, safely redirect to review without recalculating or re-scoring
+        if ($statusValue !== AttemptStatus::InProgress->value && $statusValue !== 'in_progress') {
+            return redirect()->route('candidate.review', $attempt);
+        }
+
         $attempt->loadMissing(['test.sections.testQuestions.question', 'answers']);
 
         $totalQuestionsCount = 0;
@@ -538,9 +569,17 @@ class CandidatePortalController extends Controller
     /**
      * Candidate result review view.
      */
-    public function review(Request $request, Attempt $attempt): View
+    public function review(Request $request, Attempt $attempt): View|RedirectResponse
     {
         $this->authorizeAttemptAccess($attempt, $request->user());
+
+        $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
+
+        // Do not render review / result for an in_progress attempt
+        if ($statusValue === AttemptStatus::InProgress->value || $statusValue === 'in_progress') {
+            return redirect()->route('candidate.exam', $attempt)
+                ->with('error', 'Assessment is still in progress. Please submit before viewing results.');
+        }
 
         $summary = $this->engine->reviewAttempt($attempt);
 

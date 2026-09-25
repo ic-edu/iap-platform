@@ -297,7 +297,7 @@ class CandidateCbtAttemptAccessAndScopeSecurityTest extends TestCase
     {
         $response = $this->actingAs($this->candidateA)->get(route('candidate.exam', $this->attemptA));
         $response->assertStatus(200);
-        $response->assertSee('LISTENING SECTION');
-        $response->assertDontSee('LISTENING SECTION SECTION');
+        $response->assertSee('Listening Section');
+        $response->assertDontSee('Listening Section Section');
     }
 }

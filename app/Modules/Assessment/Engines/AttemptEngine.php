@@ -112,6 +112,11 @@ class AttemptEngine
      */
     public function submitAttempt(Attempt $attempt): Attempt
     {
+        $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
+        if ($statusValue !== AttemptStatus::InProgress->value && $statusValue !== 'in_progress') {
+            return $attempt;
+        }
+
         $attempt->loadMissing(['test', 'assignment']);
         $test = $attempt->test;
         $requiresEvaluation = $test?->requiresEvaluation() ?? false;
@@ -157,6 +162,11 @@ class AttemptEngine
      */
     public function expireAttempt(Attempt $attempt): Attempt
     {
+        $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
+        if ($statusValue !== AttemptStatus::InProgress->value && $statusValue !== 'in_progress') {
+            return $attempt;
+        }
+
         $attempt->loadMissing(['test', 'assignment']);
         $test = $attempt->test;
         $requiresEvaluation = $test?->requiresEvaluation() ?? false;
