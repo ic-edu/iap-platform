@@ -51,10 +51,10 @@
                 </h2>
 
                 @if($test->isRealTest())
-                <div class="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 text-xs sm:text-sm flex items-center gap-3">
+                <div class="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 text-indigo-900 dark:text-indigo-200 text-xs sm:text-sm flex items-center gap-3">
                     <span class="text-lg flex-shrink-0">🛡️</span>
                     <p class="leading-relaxed">
-                        <strong>Institutional Notice:</strong> This is an institutional mock test. It is not an official third-party examination.
+                        <strong class="font-bold text-indigo-950 dark:text-indigo-100">Institutional Notice:</strong> This is an institutional mock test. It is not an official third-party examination.
                     </p>
                 </div>
                 @endif
