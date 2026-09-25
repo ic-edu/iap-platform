@@ -457,8 +457,9 @@
                             <input type="text" name="notes" placeholder="Reason for archiving this submission..." class="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
                         </div>
                         <button type="submit"
+                                id="btn-send-to-archived"
                                 onclick="event.preventDefault(); iapConfirm({ title: 'Send Assessment to Archived?', message: 'This will end the current assessment submission workflow and preserve the assessment as an archived historical record. It will no longer remain in the active governance workflow.', confirmText: 'Send to Archived', variant: 'warning', form: this.form });"
-                                class="w-full p-2.5 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                                class="btn-send-to-archived w-full p-2.5 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors shadow-sm">
                             📦 Send to Archived
                         </button>
                     </form>

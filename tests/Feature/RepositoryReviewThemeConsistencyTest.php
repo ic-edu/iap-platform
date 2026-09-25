@@ -202,4 +202,27 @@ class RepositoryReviewThemeConsistencyTest extends TestCase
         $res->assertSee("iapConfirm({ title: 'Request Assessment Revision?'", false);
         $res->assertSee("iapConfirm({ title: 'Send Assessment to Archived?'", false);
     }
+
+    /**
+     * TEST: Verify send to archived button has dedicated styling hooks and CSS contrast rules.
+     */
+    public function test_send_to_archived_button_has_dedicated_contrast_class_and_app_css_rules(): void
+    {
+        $res = $this->actingAs($this->repoManager)
+            ->get(route('admin.repository-manager.assessment-review', $this->test->id));
+
+        $res->assertStatus(200);
+        $res->assertSee('id="btn-send-to-archived"', false);
+        $res->assertSee('btn-send-to-archived', false);
+
+        $cssPath = resource_path('css/app.css');
+        $this->assertFileExists($cssPath);
+        $css = file_get_contents($cssPath);
+
+        $this->assertStringContainsString('.btn-send-to-archived', $css);
+        $this->assertStringContainsString('#btn-send-to-archived', $css);
+        $this->assertStringContainsString('html.light .btn-send-to-archived', $css);
+        $this->assertStringContainsString('background-color: #475569 !important;', $css);
+        $this->assertStringContainsString('color: #ffffff !important;', $css);
+    }
 }

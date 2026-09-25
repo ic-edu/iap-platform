@@ -1387,6 +1387,98 @@ html[data-theme="light"] .gov-btn-white:hover {
     color: #0f172a !important;
 }
 
+/* Assessment Review: Send to Archived Action Button (Light & Dark Theme Contrast Guard) */
+.btn-send-to-archived,
+#btn-send-to-archived,
+#form-send-to-archived button[type="submit"] {
+    background-color: #475569;
+    color: #ffffff !important;
+    border: 1px solid #334155;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-send-to-archived:hover,
+#btn-send-to-archived:hover,
+#form-send-to-archived button[type="submit"]:hover {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+    border-color: #1e293b !important;
+}
+
+.btn-send-to-archived:active,
+#btn-send-to-archived:active,
+#form-send-to-archived button[type="submit"]:active {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+}
+
+.btn-send-to-archived:focus,
+#btn-send-to-archived:focus,
+#form-send-to-archived button[type="submit"]:focus,
+.btn-send-to-archived:focus-visible,
+#btn-send-to-archived:focus-visible,
+#form-send-to-archived button[type="submit"]:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4) !important;
+}
+
+html.light .btn-send-to-archived,
+html[data-theme="light"] .btn-send-to-archived,
+html.light #btn-send-to-archived,
+html[data-theme="light"] #btn-send-to-archived,
+html.light #form-send-to-archived button[type="submit"],
+html[data-theme="light"] #form-send-to-archived button[type="submit"] {
+    background-color: #475569 !important;
+    color: #ffffff !important;
+    border: 1px solid #334155 !important;
+}
+
+html.light .btn-send-to-archived *,
+html[data-theme="light"] .btn-send-to-archived *,
+html.light #btn-send-to-archived *,
+html[data-theme="light"] #btn-send-to-archived *,
+html.light #form-send-to-archived button[type="submit"] *,
+html[data-theme="light"] #form-send-to-archived button[type="submit"] * {
+    color: #ffffff !important;
+}
+
+html.light .btn-send-to-archived:hover,
+html[data-theme="light"] .btn-send-to-archived:hover,
+html.light #btn-send-to-archived:hover,
+html[data-theme="light"] #btn-send-to-archived:hover,
+html.light #form-send-to-archived button[type="submit"]:hover,
+html[data-theme="light"] #form-send-to-archived button[type="submit"]:hover {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+    border-color: #1e293b !important;
+}
+
+html.light .btn-send-to-archived:active,
+html[data-theme="light"] .btn-send-to-archived:active,
+html.light #btn-send-to-archived:active,
+html[data-theme="light"] #btn-send-to-archived:active,
+html.light #form-send-to-archived button[type="submit"]:active,
+html[data-theme="light"] #form-send-to-archived button[type="submit"]:active {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+}
+
+html.light .btn-send-to-archived:focus,
+html[data-theme="light"] .btn-send-to-archived:focus,
+html.light #btn-send-to-archived:focus,
+html[data-theme="light"] #btn-send-to-archived:focus,
+html.light #form-send-to-archived button[type="submit"]:focus,
+html[data-theme="light"] #form-send-to-archived button[type="submit"]:focus,
+html.light .btn-send-to-archived:focus-visible,
+html[data-theme="light"] .btn-send-to-archived:focus-visible,
+html.light #btn-send-to-archived:focus-visible,
+html[data-theme="light"] #btn-send-to-archived:focus-visible,
+html.light #form-send-to-archived button[type="submit"]:focus-visible,
+html[data-theme="light"] #form-send-to-archived button[type="submit"]:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4) !important;
+}
+
 .gov-badge-archived {
     padding: 0.25rem 0.7rem;
     border-radius: 99px;
