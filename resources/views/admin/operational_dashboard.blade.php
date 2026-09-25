@@ -436,13 +436,23 @@
                     <div class="flex items-center gap-3 flex-shrink-0">
                         @if($eligibleTests->isEmpty())
                             @php
-                                $familyCode = strtolower($product?->getEffectiveFamily() ?? 'general');
+                                $familyCode = $product?->getEffectiveFamily() ? strtolower($product->getEffectiveFamily()) : null;
                                 $groupContext = $groups->isNotEmpty() ? ' — ' . $groups->pluck('name')->join(', ') : '';
                                 $progContext = trim(($org?->name ?? 'Organization') . $groupContext);
-                                $defaultReqTitle = strtoupper($familyCode) . ' Mock Test';
+                                $defaultReqTitle = $familyCode ? strtoupper($familyCode) . ' Mock Test' : 'Assessment Request';
                                 $activeReq = $activeRequestsByAllocationId[$allocation->id] ?? null;
                             @endphp
-                            @if(!$activeReq)
+                            @if(!$familyCode)
+                                <div class="px-3.5 py-2 rounded-xl bg-slate-900/90 border border-rose-500/30 text-xs text-slate-300 max-w-md">
+                                    <div class="flex items-center gap-1.5 text-rose-400 font-bold mb-0.5">
+                                        <span>⚠️</span>
+                                        <span>Assessment package configuration incomplete</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 leading-snug">
+                                        Assessment family could not be resolved. Please configure the package before requesting or assigning an assessment.
+                                    </p>
+                                </div>
+                            @elseif(!$activeReq)
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <div class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-1.5">
                                         <span>⚠️</span>

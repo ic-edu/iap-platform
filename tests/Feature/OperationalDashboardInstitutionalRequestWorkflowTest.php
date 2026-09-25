@@ -460,6 +460,41 @@ class OperationalDashboardInstitutionalRequestWorkflowTest extends TestCase
     }
 
     /**
+     * TEST: Fail-Closed UI - Unresolved institutional package family displays configuration-incomplete warning
+     * and strictly does NOT expose "Request Mock Test", test_type=general, or assignment controls.
+     */
+    public function test_unresolved_legacy_package_family_fails_closed_in_dashboard_ui(): void
+    {
+        // 1. Create abstract product with unrecognized title/slug and null family
+        $unresolvedProduct = Product::create([
+            'title'             => 'Custom Unconfigured Package Bundle',
+            'slug'              => 'custom-unconfigured-package-bundle',
+            'product_type'      => 'assessment',
+            'assessment_family' => null,
+            'test_id'           => null,
+            'price'             => 85000,
+            'currency'          => 'IDR',
+            'is_active'         => true,
+        ]);
+
+        // 2. Link entitlement to this unresolved product
+        $this->entitlement->update([
+            'product_id' => $unresolvedProduct->id,
+        ]);
+
+        // 3. Request dashboard
+        $res = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+
+        $res->assertStatus(200);
+        $res->assertSee('Assessment package configuration incomplete');
+        $res->assertSee('Assessment family could not be resolved. Please configure the package before requesting or assigning an assessment.');
+        $res->assertDontSee('Request Mock Test');
+        $res->assertDontSee('test_type=general', false);
+        $res->assertDontSee('No published GENERAL tests');
+        $res->assertDontSee('Assign Assessment');
+    }
+
+    /**
      * TEST: Server-Side Duplicate Prevention - Repeated submission returns existing request without duplicate record or extra notification.
      */
     public function test_server_side_duplicate_prevention_on_repeated_submission(): void
