@@ -151,148 +151,175 @@
                 @else
                     @php $qIdxGlobal = 1; @endphp
                     @foreach($test->sections as $sec)
-                    <div class="bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 sm:p-5 mb-5">
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base">Section {{ $sec->order }}: {{ $sec->title ?? 'Section' }}</div>
-                            <span class="text-xs text-indigo-700 dark:text-indigo-300 font-bold bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 px-2.5 py-1 rounded-md">
-                                {{ $sec->testQuestions->count() }} Questions
-                            </span>
-                        </div>
+                    @php
+                        $secFlaggedCount = 0;
+                        foreach ($sec->testQuestions as $tq) {
+                            $qId = $tq->question?->id;
+                            if ($qId && isset($questionReviews[$qId]) && in_array($questionReviews[$qId]->status, ['needs_revision', 'critical_issue'])) {
+                                $secFlaggedCount++;
+                            }
+                        }
+                        $isFirstSec = $loop->first;
+                    @endphp
+                    <div id="section-container-{{ $sec->id }}" class="section-container bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 sm:p-5 mb-5" data-section-id="{{ $sec->id }}">
+                        <button type="button"
+                                id="section-toggle-{{ $sec->id }}"
+                                class="section-toggle-btn w-full flex justify-between items-center gap-3 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-lg py-1 transition-colors cursor-pointer"
+                                aria-expanded="{{ $isFirstSec ? 'true' : 'false' }}"
+                                aria-controls="section-content-{{ $sec->id }}"
+                                onclick="toggleSection('{{ $sec->id }}')">
+                            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                <svg id="section-chevron-{{ $sec->id }}" class="w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-200 {{ $isFirstSec ? 'rotate-90' : '' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                <span class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base">Section {{ $sec->order }}: {{ $sec->title ?? 'Section' }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span id="section-flagged-badge-{{ $sec->id }}" class="text-xs text-amber-700 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2.5 py-1 rounded-md {{ $secFlaggedCount > 0 ? 'inline-flex items-center gap-1' : 'hidden' }}">
+                                    🟡 <span id="section-flagged-count-{{ $sec->id }}">{{ $secFlaggedCount }}</span> Flagged
+                                </span>
+                                <span class="text-xs text-indigo-700 dark:text-indigo-300 font-bold bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 px-2.5 py-1 rounded-md whitespace-nowrap">
+                                    {{ $sec->testQuestions->count() }} Questions
+                                </span>
+                            </div>
+                        </button>
 
-                        @if($sec->testQuestions->isNotEmpty())
-                            <div class="flex flex-col gap-4 mt-3">
-                                @foreach($sec->testQuestions as $idx => $tq)
-                                    @php
-                                        $q = $tq->question;
-                                        $qRev = $questionReviews[$q?->id] ?? null;
-                                        $isFlagged = $qRev && in_array($qRev->status, ['needs_revision', 'critical_issue']);
-                                        $qStatus = $isFlagged ? $qRev->status : 'default_ok';
+                        <div id="section-content-{{ $sec->id }}" class="section-content {{ $isFirstSec ? '' : 'hidden' }} mt-3">
+                            @if($sec->testQuestions->isNotEmpty())
+                                <div class="flex flex-col gap-4">
+                                    @foreach($sec->testQuestions as $idx => $tq)
+                                        @php
+                                            $q = $tq->question;
+                                            $qRev = $questionReviews[$q?->id] ?? null;
+                                            $isFlagged = $qRev && in_array($qRev->status, ['needs_revision', 'critical_issue']);
+                                            $qStatus = $isFlagged ? $qRev->status : 'default_ok';
 
-                                        $cardBorderClass = $qStatus === 'critical_issue'
-                                            ? 'border-rose-400 dark:border-rose-500/60 ring-1 ring-rose-400/40'
-                                            : ($qStatus === 'needs_revision'
-                                                ? 'border-amber-400 dark:border-amber-500/60 ring-1 ring-amber-400/40'
-                                                : 'border-slate-200 dark:border-slate-700');
-                                    @endphp
-                                    @if($q)
-                                    <div id="question-card-{{ $q->id }}" class="question-card bg-white dark:bg-slate-900 rounded-xl p-4 border {{ $cardBorderClass }} transition-colors shadow-sm" data-question-id="{{ $q->id }}">
-                                        <div class="flex justify-between items-start gap-3 mb-2">
-                                            <div>
-                                                <div class="flex items-center flex-wrap gap-2 mb-1.5">
-                                                    <span class="text-xs font-extrabold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md">
-                                                        Q#{{ $qIdxGlobal }}
-                                                    </span>
-                                                    <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase">{{ $q->question_type }}</span>
-                                                    @php $diffVal = is_object($q->difficulty) ? $q->difficulty->value : $q->difficulty; @endphp
-                                                    <span class="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/40 px-2 py-0.5 rounded-md uppercase">{{ $diffVal ?? 'easy' }}</span>
+                                            $cardBorderClass = $qStatus === 'critical_issue'
+                                                ? 'border-rose-400 dark:border-rose-500/60 ring-1 ring-rose-400/40'
+                                                : ($qStatus === 'needs_revision'
+                                                    ? 'border-amber-400 dark:border-amber-500/60 ring-1 ring-amber-400/40'
+                                                    : 'border-slate-200 dark:border-slate-700');
+                                        @endphp
+                                        @if($q)
+                                        <div id="question-card-{{ $q->id }}" class="question-card bg-white dark:bg-slate-900 rounded-xl p-4 border {{ $cardBorderClass }} transition-colors shadow-sm" data-question-id="{{ $q->id }}" data-section-id="{{ $sec->id }}" data-status="{{ $qStatus }}">
+                                            <div class="flex justify-between items-start gap-3 mb-2">
+                                                <div>
+                                                    <div class="flex items-center flex-wrap gap-2 mb-1.5">
+                                                        <span class="text-xs font-extrabold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md">
+                                                            Q#{{ $qIdxGlobal }}
+                                                        </span>
+                                                        <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase">{{ $q->question_type }}</span>
+                                                        @php $diffVal = is_object($q->difficulty) ? $q->difficulty->value : $q->difficulty; @endphp
+                                                        <span class="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/40 px-2 py-0.5 rounded-md uppercase">{{ $diffVal ?? 'easy' }}</span>
 
-                                                    {{-- Status Badge (BUSINESS RULE 4: 🟢 Default OK, 🟡 Needs Revision, 🔴 Critical) --}}
-                                                    @php
-                                                        $badgeClass = $qStatus === 'critical_issue'
-                                                            ? 'text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 px-2.5 py-0.5 rounded-md'
-                                                            : ($qStatus === 'needs_revision'
-                                                                ? 'text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 px-2.5 py-0.5 rounded-md'
-                                                                : 'text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 px-2.5 py-0.5 rounded-md');
-                                                    @endphp
-                                                    <span id="badge-status-{{ $q->id }}" class="{{ $badgeClass }}">
-                                                        @if($qStatus === 'critical_issue')
-                                                            🔴 Critical Issue ({{ ucfirst($qRev->field ?? 'General') }})
-                                                        @elseif($qStatus === 'needs_revision')
-                                                            🟡 Needs Revision ({{ ucfirst($qRev->field ?? 'General') }})
-                                                        @else
-                                                            🟢 Default OK
-                                                        @endif
-                                                    </span>
-                                                </div>
-
-                                                <div class="font-bold text-slate-900 dark:text-white text-sm leading-relaxed">
-                                                    {{ $q->prompt ?? '(Empty Prompt Stem)' }}
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <button type="button" id="btn-toggle-flag-{{ $q->id }}" onclick="toggleInlineFlag('{{ $q->id }}')"
-                                                    class="{{ $isFlagged ? 'px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm' : 'px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5' }}">
-                                                    {{ $isFlagged ? '✖ Flagged (Click to Edit)' : '⚠️ Flag Revision' }}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {{-- Choices Inspection --}}
-                                        @if($q->choices && $q->choices->isNotEmpty())
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                                                @foreach($q->choices as $cIdx => $choice)
-                                                    <div class="text-xs p-2.5 rounded-lg border transition-colors {{ $choice->is_correct ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-bold' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium' }}">
-                                                        {{ chr(65 + $cIdx) }}. {{ $choice->content ?? $choice->choice_text }} {{ $choice->is_correct ? '✓ (Correct)' : '' }}
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-
-                                        {{-- Rationale --}}
-                                        @if($q->explanation)
-                                            <div class="text-xs text-slate-600 dark:text-slate-400 mt-2.5 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border-l-4 border-indigo-500 dark:border-indigo-400">
-                                                <strong class="text-slate-700 dark:text-slate-300">Rationale:</strong> {{ $q->explanation }}
-                                            </div>
-                                        @endif
-
-                                        {{-- Displayed Feedback Comment if Flagged --}}
-                                        <div id="feedback-display-{{ $q->id }}" class="text-xs mt-2.5 p-2.5 rounded-lg border {{ $isFlagged && $qRev?->comment ? 'block' : 'hidden' }} {{ $qStatus === 'critical_issue' ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/40' : 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/40' }}">
-                                            💬 <strong class="text-slate-800 dark:text-slate-200">Reviewer Feedback (<span id="feedback-field-{{ $q->id }}">{{ ucfirst($qRev?->field ?? 'general') }}</span>):</strong> "<span id="feedback-text-{{ $q->id }}">{{ $qRev?->comment }}</span>"
-                                        </div>
-
-                                        {{-- Inline Expandable Annotation Panel (BUSINESS RULES 2 & 3 & UX NO RELOAD) --}}
-                                        <div id="inline-rev-panel-{{ $q->id }}" class="mt-3 p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl {{ $isFlagged ? '' : 'hidden' }}">
-                                            <div class="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3 flex justify-between items-center">
-                                                <span>📋 Question Revision Annotation</span>
-                                                <button type="button" onclick="clearQuestionFlag('{{ $q->id }}')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer bg-transparent border-0">
-                                                    ✓ Clear Flag &amp; Mark OK
-                                                </button>
-                                            </div>
-
-                                            <form id="form-annotation-{{ $q->id }}" onsubmit="submitQuestionAnnotation(event, '{{ $q->id }}')" class="flex flex-col gap-3">
-                                                @csrf
-                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                    <div>
-                                                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Target Field *</label>
-                                                        <select name="field" required class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
-                                                            <option value="stem" {{ ($qRev?->field === 'stem') ? 'selected' : '' }}>Stem / Prompt Text</option>
-                                                            <option value="choices" {{ ($qRev?->field === 'choices') ? 'selected' : '' }}>Choices / Options</option>
-                                                            <option value="correct_answer" {{ ($qRev?->field === 'correct_answer') ? 'selected' : '' }}>Correct Answer Selection</option>
-                                                            <option value="explanation" {{ ($qRev?->field === 'explanation') ? 'selected' : '' }}>Explanation / Rationale</option>
-                                                            <option value="media" {{ ($qRev?->field === 'media') ? 'selected' : '' }}>Media Attachment</option>
-                                                            <option value="general" {{ ($qRev?->field === 'general') ? 'selected' : '' }}>General Question Quality</option>
-                                                        </select>
+                                                        {{-- Status Badge (BUSINESS RULE 4: 🟢 Default OK, 🟡 Needs Revision, 🔴 Critical) --}}
+                                                        @php
+                                                            $badgeClass = $qStatus === 'critical_issue'
+                                                                ? 'text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 px-2.5 py-0.5 rounded-md'
+                                                                : ($qStatus === 'needs_revision'
+                                                                    ? 'text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 px-2.5 py-0.5 rounded-md'
+                                                                    : 'text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 px-2.5 py-0.5 rounded-md');
+                                                        @endphp
+                                                        <span id="badge-status-{{ $q->id }}" class="{{ $badgeClass }}">
+                                                            @if($qStatus === 'critical_issue')
+                                                                🔴 Critical Issue ({{ ucfirst($qRev->field ?? 'General') }})
+                                                            @elseif($qStatus === 'needs_revision')
+                                                                🟡 Needs Revision ({{ ucfirst($qRev->field ?? 'General') }})
+                                                            @else
+                                                                🟢 Default OK
+                                                            @endif
+                                                        </span>
                                                     </div>
 
-                                                    <div>
-                                                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Severity</label>
-                                                        <select name="severity" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
-                                                            <option value="warning" {{ ($qRev?->severity === 'warning') ? 'selected' : '' }}>Warning (Requires Fix)</option>
-                                                            <option value="critical" {{ ($qRev?->severity === 'critical' || $qStatus === 'critical_issue') ? 'selected' : '' }}>Critical Blocker</option>
-                                                        </select>
+                                                    <div class="font-bold text-slate-900 dark:text-white text-sm leading-relaxed">
+                                                        {{ $q->prompt ?? '(Empty Prompt Stem)' }}
                                                     </div>
                                                 </div>
 
                                                 <div>
-                                                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Reviewer Annotation Comment *</label>
-                                                    <textarea name="comment" rows="2" required placeholder="Describe the specific correction required for the author..." class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">{{ $qRev?->comment }}</textarea>
-                                                </div>
-
-                                                <div class="flex justify-end gap-2">
-                                                    <button type="button" onclick="document.getElementById('inline-rev-panel-{{ $q->id }}').classList.add('hidden');" class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer">Close</button>
-                                                    <button type="submit" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-extrabold transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-sm">
-                                                        💾 Save Question Review
+                                                    <button type="button" id="btn-toggle-flag-{{ $q->id }}" onclick="toggleInlineFlag('{{ $q->id }}')"
+                                                        class="{{ $isFlagged ? 'px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm' : 'px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5' }}">
+                                                        {{ $isFlagged ? '✖ Flagged (Click to Edit)' : '⚠️ Flag Revision' }}
                                                     </button>
                                                 </div>
-                                            </form>
+                                            </div>
+
+                                            {{-- Choices Inspection --}}
+                                            @if($q->choices && $q->choices->isNotEmpty())
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                                                    @foreach($q->choices as $cIdx => $choice)
+                                                        <div class="text-xs p-2.5 rounded-lg border transition-colors {{ $choice->is_correct ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-bold' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium' }}">
+                                                            {{ chr(65 + $cIdx) }}. {{ $choice->content ?? $choice->choice_text }} {{ $choice->is_correct ? '✓ (Correct)' : '' }}
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+
+                                            {{-- Rationale --}}
+                                            @if($q->explanation)
+                                                <div class="text-xs text-slate-600 dark:text-slate-400 mt-2.5 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border-l-4 border-indigo-500 dark:border-indigo-400">
+                                                    <strong class="text-slate-700 dark:text-slate-300">Rationale:</strong> {{ $q->explanation }}
+                                                </div>
+                                            @endif
+
+                                            {{-- Displayed Feedback Comment if Flagged --}}
+                                            <div id="feedback-display-{{ $q->id }}" class="text-xs mt-2.5 p-2.5 rounded-lg border {{ $isFlagged && $qRev?->comment ? 'block' : 'hidden' }} {{ $qStatus === 'critical_issue' ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/40' : 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/40' }}">
+                                                💬 <strong class="text-slate-800 dark:text-slate-200">Reviewer Feedback (<span id="feedback-field-{{ $q->id }}">{{ ucfirst($qRev?->field ?? 'general') }}</span>):</strong> "<span id="feedback-text-{{ $q->id }}">{{ $qRev?->comment }}</span>"
+                                            </div>
+
+                                            {{-- Inline Expandable Annotation Panel (BUSINESS RULES 2 & 3 & UX NO RELOAD) --}}
+                                            <div id="inline-rev-panel-{{ $q->id }}" class="mt-3 p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl {{ $isFlagged ? '' : 'hidden' }}">
+                                                <div class="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3 flex justify-between items-center">
+                                                    <span>📋 Question Revision Annotation</span>
+                                                    <button type="button" onclick="clearQuestionFlag('{{ $q->id }}')" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer bg-transparent border-0">
+                                                        ✓ Clear Flag &amp; Mark OK
+                                                    </button>
+                                                </div>
+
+                                                <form id="form-annotation-{{ $q->id }}" onsubmit="submitQuestionAnnotation(event, '{{ $q->id }}')" class="flex flex-col gap-3">
+                                                    @csrf
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Target Field *</label>
+                                                            <select name="field" required class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                                                                <option value="stem" {{ ($qRev?->field === 'stem') ? 'selected' : '' }}>Stem / Prompt Text</option>
+                                                                <option value="choices" {{ ($qRev?->field === 'choices') ? 'selected' : '' }}>Choices / Options</option>
+                                                                <option value="correct_answer" {{ ($qRev?->field === 'correct_answer') ? 'selected' : '' }}>Correct Answer Selection</option>
+                                                                <option value="explanation" {{ ($qRev?->field === 'explanation') ? 'selected' : '' }}>Explanation / Rationale</option>
+                                                                <option value="media" {{ ($qRev?->field === 'media') ? 'selected' : '' }}>Media Attachment</option>
+                                                                <option value="general" {{ ($qRev?->field === 'general') ? 'selected' : '' }}>General Question Quality</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Severity</label>
+                                                            <select name="severity" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                                                                <option value="warning" {{ ($qRev?->severity === 'warning') ? 'selected' : '' }}>Warning (Requires Fix)</option>
+                                                                <option value="critical" {{ ($qRev?->severity === 'critical' || $qStatus === 'critical_issue') ? 'selected' : '' }}>Critical Blocker</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Reviewer Annotation Comment *</label>
+                                                        <textarea name="comment" rows="2" required placeholder="Describe the specific correction required for the author..." class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">{{ $qRev?->comment }}</textarea>
+                                                    </div>
+
+                                                    <div class="flex justify-end gap-2">
+                                                        <button type="button" onclick="document.getElementById('inline-rev-panel-{{ $q->id }}').classList.add('hidden');" class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer">Close</button>
+                                                        <button type="submit" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-extrabold transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-sm">
+                                                            💾 Save Question Review
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
                                         </div>
-                                    </div>
-                                    @php $qIdxGlobal++; @endphp
-                                    @endif
-                                @endforeach
-                            </div>
-                        @endif
+                                        @php $qIdxGlobal++; @endphp
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
                     @endforeach
                 @endif
@@ -324,7 +351,7 @@
                                         ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50'
                                         : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50');
                             @endphp
-                            <a id="nav-pill-{{ $tq->question->id }}" href="#question-card-{{ $tq->question->id }}" onclick="document.getElementById('question-card-{{ $tq->question->id }}').scrollIntoView({behavior:'smooth'});return false;" class="px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 transition-colors {{ $pillClass }}">
+                            <a id="nav-pill-{{ $tq->question->id }}" href="#question-card-{{ $tq->question->id }}" onclick="navigateToQuestion('{{ $tq->question->id }}', '{{ $sec->id }}');return false;" class="px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 transition-colors {{ $pillClass }}">
                                 <span id="nav-pill-symbol-{{ $tq->question->id }}">{{ $badgeSymbol }}</span> Q{{ $navQIdx }}
                             </a>
                             @php $navQIdx++; @endphp
@@ -464,6 +491,74 @@
 
 {{-- UX & ASYNCHRONOUS UPDATE SCRIPT (NO FULL PAGE RELOAD) --}}
 <script>
+function toggleSection(sectionId) {
+    const content = document.getElementById('section-content-' + sectionId);
+    const btn = document.getElementById('section-toggle-' + sectionId);
+    const chevron = document.getElementById('section-chevron-' + sectionId);
+    if (!content || !btn) return;
+
+    const isCollapsed = content.classList.contains('hidden');
+    if (isCollapsed) {
+        content.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+        if (chevron) chevron.classList.add('rotate-90');
+    } else {
+        content.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+        if (chevron) chevron.classList.remove('rotate-90');
+    }
+}
+
+function openSection(sectionId) {
+    const content = document.getElementById('section-content-' + sectionId);
+    const btn = document.getElementById('section-toggle-' + sectionId);
+    const chevron = document.getElementById('section-chevron-' + sectionId);
+    if (!content || !btn) return;
+
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+        if (chevron) chevron.classList.add('rotate-90');
+    }
+}
+
+function navigateToQuestion(questionId, sectionId) {
+    if (sectionId) {
+        openSection(sectionId);
+    } else {
+        const card = document.getElementById('question-card-' + questionId);
+        if (card && card.dataset.sectionId) {
+            openSection(card.dataset.sectionId);
+        }
+    }
+
+    requestAnimationFrame(() => {
+        const card = document.getElementById('question-card-' + questionId);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+}
+
+function updateSectionFlaggedBadge(sectionId) {
+    const sectionContainer = document.getElementById('section-container-' + sectionId);
+    const badge = document.getElementById('section-flagged-badge-' + sectionId);
+    const countEl = document.getElementById('section-flagged-count-' + sectionId);
+    if (!sectionContainer || !badge || !countEl) return;
+
+    const flaggedCards = sectionContainer.querySelectorAll('.question-card[data-status="needs_revision"], .question-card[data-status="critical_issue"]');
+    const flaggedCount = flaggedCards.length;
+
+    countEl.textContent = flaggedCount;
+    if (flaggedCount > 0) {
+        badge.classList.remove('hidden');
+        badge.classList.add('inline-flex');
+    } else {
+        badge.classList.remove('inline-flex');
+        badge.classList.add('hidden');
+    }
+}
+
 function showToast(message) {
     const toast = document.getElementById('smart-review-toast');
     const msgEl = document.getElementById('toast-message');
@@ -543,7 +638,7 @@ function updateQuestionUI(questionId, data) {
     const isCritical = (data.status === 'critical_issue' || data.severity === 'critical');
     const isFlagged = (data.status !== 'default_ok');
 
-    // 1. Update Card Border
+    // 1. Update Card Border & dataset status
     const card = document.getElementById('question-card-' + questionId);
     if (card) {
         card.classList.remove('border-rose-400', 'dark:border-rose-500/60', 'ring-1', 'ring-rose-400/40', 'border-amber-400', 'dark:border-amber-500/60', 'ring-amber-400/40', 'border-slate-200', 'dark:border-slate-700');
@@ -555,6 +650,11 @@ function updateQuestionUI(questionId, data) {
             card.classList.add('border-slate-200', 'dark:border-slate-700');
         }
         card.style.borderColor = '';
+        card.dataset.status = isCritical ? 'critical_issue' : (isFlagged ? 'needs_revision' : 'default_ok');
+
+        if (card.dataset.sectionId) {
+            updateSectionFlaggedBadge(card.dataset.sectionId);
+        }
     }
 
     // 2. Update Badge Status
