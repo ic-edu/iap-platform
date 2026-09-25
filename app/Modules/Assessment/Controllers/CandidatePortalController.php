@@ -563,7 +563,7 @@ class CandidatePortalController extends Controller
     }
 
     /**
-     * Record anti-cheating violation via AJAX.
+     * Record anti-cheating violation / session operational event via AJAX.
      */
     public function recordViolation(Request $request, Attempt $attempt): JsonResponse
     {
@@ -575,17 +575,28 @@ class CandidatePortalController extends Controller
                 $this->authorizeAttemptAccess($attempt, $request->user());
                 $this->assertAttemptMutable($attempt);
 
-                $questionId = $request->input('question_id');
+                $validated = $request->validate([
+                    'violation_type' => ['required', 'string', 'in:fullscreen_exit,window_blur,fullscreen_enter,audio_completed'],
+                    'question_id'    => ['nullable', 'string'],
+                ]);
+
+                $type = $validated['violation_type'];
+                $questionId = $validated['question_id'] ?? null;
+
                 if ($questionId && !$attempt->hasQuestion($questionId)) {
                     abort(403, 'Question does not belong to this assessment attempt.');
                 }
 
-                $type = $request->input('violation_type', 'window_blur');
-                event(new RuleViolationDetected($attempt, $type));
-
+                // 1. True security / anti-cheating violations
                 if ($type === 'fullscreen_exit') {
+                    event(new RuleViolationDetected($attempt, 'fullscreen_exit'));
                     \App\Services\ActivityLogger::log('FULLSCREEN_EXITED', 'Candidate exited secure fullscreen mode', $attempt);
-                } elseif ($type === 'fullscreen_enter') {
+                } elseif ($type === 'window_blur') {
+                    event(new RuleViolationDetected($attempt, 'window_blur'));
+                    \App\Services\ActivityLogger::log('WINDOW_BLUR_DETECTED', 'Candidate window blur detected (window_blur)', $attempt);
+                }
+                // 2. Non-violation operational events (Do NOT dispatch RuleViolationDetected, do NOT increment violations_count)
+                elseif ($type === 'fullscreen_enter') {
                     \App\Services\ActivityLogger::log('FULLSCREEN_ENTERED', 'Candidate entered secure fullscreen mode', $attempt);
                 } elseif ($type === 'audio_completed') {
                     \App\Services\ActivityLogger::log('AUDIO_PLAY_COMPLETED', "Candidate completed audio play for Question {$questionId}", $attempt);
@@ -594,8 +605,6 @@ class CandidatePortalController extends Controller
                             ->where('question_id', $questionId)
                             ->update(['completed_at' => now()]);
                     }
-                } else {
-                    \App\Services\ActivityLogger::log('WINDOW_BLUR_DETECTED', "Candidate window blur detected ({$type})", $attempt);
                 }
 
                 return response()->json(['status' => 'logged']);

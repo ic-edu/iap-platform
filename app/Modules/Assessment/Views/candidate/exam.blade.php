@@ -54,7 +54,7 @@
         })->values();
     @endphp
 
-    <!-- Fullscreen Warning Overlay for Real Test Mode -->
+    <!-- Fullscreen Warning Overlay for Real Test Mode (When Exited) -->
     @if($isRealTest)
         <div id="fullscreen-warning-overlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center hidden">
             <div class="max-w-md w-full p-8 rounded-2xl bg-white dark:bg-slate-900 border border-rose-500/40 shadow-2xl space-y-4">
@@ -63,8 +63,22 @@
                 <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     You have exited secure fullscreen mode. For official exam integrity, this incident has been logged. Please return to fullscreen mode immediately to continue your assessment.
                 </p>
-                <button type="button" onclick="enterFullscreen()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all">
+                <button type="button" onclick="returnToFullscreen()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all">
                     Return to Fullscreen &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- Fullscreen Required Recovery Overlay (When Entry Failed/Blocked) -->
+        <div id="fullscreen-required-overlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center hidden">
+            <div class="max-w-md w-full p-8 rounded-2xl bg-white dark:bg-slate-900 border border-amber-500/40 shadow-2xl space-y-4">
+                <span class="text-4xl">⛶</span>
+                <h2 class="text-xl font-black text-slate-900 dark:text-white">Fullscreen Required</h2>
+                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                    This secure assessment must run in fullscreen mode. Enter fullscreen to continue.
+                </p>
+                <button type="button" onclick="retryEnterFullscreenAndContinue()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all">
+                    Enter Fullscreen &amp; Continue &rarr;
                 </button>
             </div>
         </div>
@@ -102,12 +116,6 @@
 
         <!-- Live Server-Time Timer Countdown -->
         <div class="flex items-center gap-3">
-            @if($isRealTest)
-                <button type="button" onclick="enterFullscreen()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-300 dark:border-slate-700 transition-colors">
-                    <span>⛶</span> Fullscreen
-                </button>
-            @endif
-
             <div class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 sm:px-4 py-1.5 rounded-lg text-center shadow-inner">
                 <span class="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Time Remaining</span>
                 <span id="countdown-timer" class="text-base sm:text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">--:--:--</span>
@@ -1031,40 +1039,97 @@
         window.CandidateExamAudioManager = CandidateExamAudioManager;
         window.stopAllExamAudio = stopAllExamAudio;
 
-        // Fullscreen Mode Handler for Real Test
-        function enterFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().then(() => {
-                    logViolation('fullscreen_enter');
-                    const overlay = document.getElementById('fullscreen-warning-overlay');
-                    if (overlay) overlay.classList.add('hidden');
-                }).catch(err => {
-                    console.warn('Fullscreen request failed:', err);
-                });
-            } else {
+        // Fullscreen Mode & Secure Session Handler for Real Test
+        let secureSessionActive = false;
+        let pendingTargetUnitIdx = null;
+
+        async function enterFullscreen() {
+            if (document.fullscreenElement) {
+                return true;
+            }
+            if (!document.documentElement.requestFullscreen) {
+                console.warn('Fullscreen API is not supported on this browser/device.');
+                return false;
+            }
+            try {
+                await document.documentElement.requestFullscreen();
+                return true;
+            } catch (err) {
+                console.warn('Fullscreen request rejected/failed:', err);
+                return false;
+            }
+        }
+
+        async function returnToFullscreen() {
+            const entered = await enterFullscreen();
+            if (entered) {
                 const overlay = document.getElementById('fullscreen-warning-overlay');
                 if (overlay) overlay.classList.add('hidden');
+                logViolation('fullscreen_enter');
             }
+        }
+
+        async function retryEnterFullscreenAndContinue() {
+            const entered = await enterFullscreen();
+            if (entered) {
+                secureSessionActive = true;
+                const reqOverlay = document.getElementById('fullscreen-required-overlay');
+                if (reqOverlay) reqOverlay.classList.add('hidden');
+                logViolation('fullscreen_enter');
+                if (pendingTargetUnitIdx !== null) {
+                    navigateDeliveryUnit(pendingTargetUnitIdx);
+                    pendingTargetUnitIdx = null;
+                }
+            }
+        }
+
+        function showFullscreenRequiredOverlay() {
+            const overlay = document.getElementById('fullscreen-required-overlay');
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        function hideFullscreenRequiredOverlay() {
+            const overlay = document.getElementById('fullscreen-required-overlay');
+            if (overlay) overlay.classList.add('hidden');
         }
 
         if (isRealTest) {
             document.addEventListener('fullscreenchange', () => {
                 if (!document.fullscreenElement) {
-                    logViolation('fullscreen_exit');
-                    const overlay = document.getElementById('fullscreen-warning-overlay');
-                    if (overlay) overlay.classList.remove('hidden');
+                    if (secureSessionActive) {
+                        logViolation('fullscreen_exit');
+                        const overlay = document.getElementById('fullscreen-warning-overlay');
+                        if (overlay) overlay.classList.remove('hidden');
+                    }
                 } else {
-                    const overlay = document.getElementById('fullscreen-warning-overlay');
-                    if (overlay) overlay.classList.add('hidden');
+                    const warnOverlay = document.getElementById('fullscreen-warning-overlay');
+                    if (warnOverlay) warnOverlay.classList.add('hidden');
+                    const reqOverlay = document.getElementById('fullscreen-required-overlay');
+                    if (reqOverlay) reqOverlay.classList.add('hidden');
                 }
             });
         }
 
-        // Section Initiation
-        function startSectionQuestions(firstUnitIdx) {
+        // Section Initiation (Fullscreen-gated for Real Test)
+        async function startSectionQuestions(firstUnitIdx) {
             CandidateExamAudioManager.beforeDeliveryTransition({ type: 'start_section', targetUnit: firstUnitIdx });
             if (isRealTest) {
-                enterFullscreen();
+                if (!secureSessionActive) {
+                    pendingTargetUnitIdx = firstUnitIdx;
+                    const entered = await enterFullscreen();
+                    if (!entered) {
+                        showFullscreenRequiredOverlay();
+                        return;
+                    }
+                    secureSessionActive = true;
+                    hideFullscreenRequiredOverlay();
+                    logViolation('fullscreen_enter');
+                } else if (!document.fullscreenElement) {
+                    pendingTargetUnitIdx = firstUnitIdx;
+                    const warnOverlay = document.getElementById('fullscreen-warning-overlay');
+                    if (warnOverlay) warnOverlay.classList.remove('hidden');
+                    return;
+                }
             }
             navigateDeliveryUnit(firstUnitIdx);
         }
@@ -1700,7 +1765,15 @@
             return modal && !modal.classList.contains('hidden');
         }
 
-        window.addEventListener('blur', () => logViolation('window_blur'));
+        window.addEventListener('blur', () => {
+            if (isRealTest) {
+                if (secureSessionActive) {
+                    logViolation('window_blur');
+                }
+            } else {
+                logViolation('window_blur');
+            }
+        });
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
             if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
