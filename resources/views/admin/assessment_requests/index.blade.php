@@ -35,6 +35,39 @@
     </div>
     @endif
 
+    @if(session('info'))
+    <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center gap-2">
+        <span>ℹ️</span> {{ session('info') }}
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2">
+        <span>⚠️</span> {{ session('error') }}
+    </div>
+    @endif
+
+    @if(isset($existingActiveRequest) && $existingActiveRequest)
+    <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-semibold flex items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-2.5">
+            <span class="text-base">📋</span>
+            <div>
+                <div class="font-bold">Active Assessment Request Already Exists:</div>
+                <div class="text-[11px] text-slate-600 dark:text-slate-400">
+                    "{{ $existingActiveRequest->title }}" is currently <strong class="text-indigo-600 dark:text-indigo-400 font-bold">{{ $existingActiveRequest->getWorkflowStageLabel() }}</strong>.
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+            @if($existingActiveRequest->test_id)
+            <a href="{{ route('admin.tests.show', $existingActiveRequest->test_id) }}" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors shadow-sm">
+                👁 View Assessment
+            </a>
+            @endif
+        </div>
+    </div>
+    @endif
+
     {{-- Requests Table --}}
     <div class="gov-card p-0 overflow-hidden shadow-sm">
         @if($requests->isEmpty())
@@ -168,6 +201,23 @@
 
         <form method="POST" action="{{ route('admin.assessment-requests.store') }}" class="space-y-4">
             @csrf
+
+            @if(isset($existingActiveRequest) && $existingActiveRequest)
+            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs">
+                <div class="font-bold flex items-center gap-1.5 mb-1">
+                    <span>⚠️</span> Active Request Already Exists
+                </div>
+                <p class="text-[11px] text-slate-600 dark:text-slate-400 mb-2">
+                    An active assessment request ("{{ $existingActiveRequest->title }}") already exists for this requirement with status: <strong>{{ $existingActiveRequest->getWorkflowStageLabel() }}</strong>.
+                </p>
+                @if($existingActiveRequest->test_id)
+                <a href="{{ route('admin.tests.show', $existingActiveRequest->test_id) }}" class="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                    <span>👁 View Current Assessment Draft &rarr;</span>
+                </a>
+                @endif
+            </div>
+            @endif
+
             <div>
                 <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Assessment Title / Need <span class="text-rose-500">*</span></label>
                 <input type="text" name="title" value="{{ old('title', request('title')) }}" required placeholder="e.g. TOEIC Listening &amp; Reading for SMK Perhotelan" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 transition-colors">

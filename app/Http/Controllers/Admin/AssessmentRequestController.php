@@ -39,7 +39,16 @@ class AssessmentRequestController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.assessment_requests.index', compact('requests', 'teachers', 'eligibleCandidates', 'isRm'));
+        $existingActiveRequest = null;
+        if ($request->filled('candidate_id') && $request->filled('test_type')) {
+            $existingActiveRequest = AssessmentRequest::resolveActiveRequirement(
+                (int) $request->input('candidate_id'),
+                $request->input('test_type'),
+                $request->input('program_context')
+            );
+        }
+
+        return view('admin.assessment_requests.index', compact('requests', 'teachers', 'eligibleCandidates', 'isRm', 'existingActiveRequest'));
     }
 
     /**
@@ -84,52 +93,87 @@ class AssessmentRequestController extends Controller
             }
         }
 
-        // Duplicate Request Guard: Prevent duplicate active brief (pending or draft_created) for the same requirement & candidate
-        $duplicateQuery = AssessmentRequest::whereIn('status', ['pending', 'draft_created'])
-            ->where('test_type', $validated['test_type'])
-            ->where('title', $validated['title']);
+        // Atomic Duplicate Check and Creation
+        $createdRequest = null;
+        $existingRequest = null;
 
-        if ($candidateId) {
-            $duplicateQuery->where('candidate_id', $candidateId);
-        }
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $candidateId, $user, &$createdRequest, &$existingRequest) {
+            // 1. Candidate-Linked Active Requirement Check (matches candidate, test_type, program_context; ignores title)
+            if ($candidateId) {
+                $existing = AssessmentRequest::resolveActiveRequirement(
+                    (int) $candidateId,
+                    $validated['test_type'],
+                    $validated['program_context'] ?? null,
+                    lockForUpdate: true
+                );
 
-        if ($duplicateQuery->exists()) {
-            return redirect()->route('admin.assessment-requests.index')
-                ->with('error', "A pending assessment request '{$validated['title']}' for this requirement already exists in the intake queue.");
-        }
+                if ($existing) {
+                    $existingRequest = $existing;
+                    return;
+                }
+            } else {
+                // 2. Generic Candidate-Less Active Requirement Check (matching test_type and title)
+                $existingGeneric = AssessmentRequest::whereIn('status', ['pending', 'draft_created'])
+                    ->whereNull('candidate_id')
+                    ->where('test_type', strtolower(trim($validated['test_type'])))
+                    ->where('title', $validated['title'])
+                    ->lockForUpdate()
+                    ->first();
 
-        $assessmentRequest = AssessmentRequest::create([
-            'title'              => $validated['title'],
-            'test_type'          => $validated['test_type'],
-            'candidate_id'       => $candidateId,
-            'program_context'    => $validated['program_context'] ?? null,
-            'required_sections'  => $validated['required_sections'] ?? null,
-            'notes'              => $validated['notes'] ?? null,
-            'requested_deadline' => $validated['requested_deadline'] ?? null,
-            'requested_by'       => $user->id,
-            'status'             => 'pending',
-        ]);
-
-        // Notify Repository Managers of new Assessment Request
-        $rms = User::role('repository-manager')->get();
-        foreach ($rms as $rm) {
-            try {
-                $rm->notify(new EnterpriseSystemNotification(
-                    title: 'New Assessment Request Submitted',
-                    message: "Regular Admin {$user->name} submitted an assessment request: '{$assessmentRequest->title}'.",
-                    type: 'ASSESSMENT_REQUEST_SUBMITTED',
-                    priority: 'MEDIUM',
-                    entityType: 'assessment_request',
-                    entityId: (string) $assessmentRequest->id,
-                    targetUrl: route('admin.repository-manager.assessment-requests.index')
-                ));
-            } catch (\Throwable $e) {
-                // Silently skip if mail fails
+                if ($existingGeneric && $existingGeneric->isActive()) {
+                    $existingRequest = $existingGeneric;
+                    return;
+                }
             }
+
+            // 3. Create new AssessmentRequest
+            $createdRequest = AssessmentRequest::create([
+                'title'              => $validated['title'],
+                'test_type'          => $validated['test_type'],
+                'candidate_id'       => $candidateId,
+                'program_context'    => $validated['program_context'] ?? null,
+                'required_sections'  => $validated['required_sections'] ?? null,
+                'notes'              => $validated['notes'] ?? null,
+                'requested_deadline' => $validated['requested_deadline'] ?? null,
+                'requested_by'       => $user->id,
+                'status'             => 'pending',
+            ]);
+        });
+
+        if ($existingRequest) {
+            $candidateName = $candidateId ? (User::find($candidateId)?->name ?? 'Candidate') : null;
+            $msg = $candidateName
+                ? "An active assessment request for candidate '{$candidateName}' ('{$existingRequest->title}') already exists with status: {$existingRequest->getWorkflowStageLabel()}."
+                : "A pending assessment request '{$existingRequest->title}' for this requirement already exists in the intake queue.";
+
+            return redirect()->route('admin.assessment-requests.index')
+                ->with('info', $msg);
         }
 
-        return redirect()->route('admin.assessment-requests.index')
-            ->with('status', "Assessment request '{$assessmentRequest->title}' submitted to Repository Manager.");
+        // Notify Repository Managers ONLY when a new request is created
+        if ($createdRequest) {
+            $rms = User::role('repository-manager')->get();
+            foreach ($rms as $rm) {
+                try {
+                    $rm->notify(new EnterpriseSystemNotification(
+                        title: 'New Assessment Request Submitted',
+                        message: "Regular Admin {$user->name} submitted an assessment request: '{$createdRequest->title}'.",
+                        type: 'ASSESSMENT_REQUEST_SUBMITTED',
+                        priority: 'MEDIUM',
+                        entityType: 'assessment_request',
+                        entityId: (string) $createdRequest->id,
+                        targetUrl: route('admin.repository-manager.assessment-requests.index')
+                    ));
+                } catch (\Throwable $e) {
+                    // Silently skip if mail fails
+                }
+            }
+
+            return redirect()->route('admin.assessment-requests.index')
+                ->with('status', "Assessment request '{$createdRequest->title}' submitted to Repository Manager.");
+        }
+
+        return redirect()->route('admin.assessment-requests.index');
     }
 
     /**

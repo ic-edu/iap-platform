@@ -436,25 +436,76 @@
                     <div class="flex items-center gap-3 flex-shrink-0">
                         @if($eligibleTests->isEmpty())
                             @php
-                                $familyCode = is_object($product?->assessment_family) ? $product->assessment_family->value : ($product?->assessment_family ?? 'toeic');
+                                $familyCode = $product?->getEffectiveFamily() ?? (is_object($product?->assessment_family) ? $product->assessment_family->value : ($product?->assessment_family ?? null));
+                                if (empty($familyCode)) {
+                                    if ($product && stripos($product->name, 'toeic') !== false) {
+                                        $familyCode = 'toeic';
+                                    } elseif ($product && stripos($product->name, 'toefl') !== false) {
+                                        $familyCode = 'toefl';
+                                    } elseif ($product && stripos($product->name, 'ielts') !== false) {
+                                        $familyCode = 'ielts';
+                                    } else {
+                                        $familyCode = 'toeic';
+                                    }
+                                }
+                                $familyCode = strtolower($familyCode);
                                 $groupContext = $groups->isNotEmpty() ? ' — ' . $groups->pluck('name')->join(', ') : '';
                                 $progContext = trim(($org?->name ?? 'Organization') . $groupContext);
                                 $defaultReqTitle = strtoupper($familyCode) . ' Mock Test';
+                                $activeReq = $activeRequestsByAllocationId[$allocation->id] ?? null;
                             @endphp
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <div class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-1.5">
-                                    <span>⚠️</span>
-                                    <span>No published {{ strtoupper($familyCode) }} tests</span>
+                            @if(!$activeReq)
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <div class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-1.5">
+                                        <span>⚠️</span>
+                                        <span>No published {{ strtoupper($familyCode) }} tests</span>
+                                    </div>
+                                    <a href="{{ route('admin.assessment-requests.index', [
+                                        'candidate_id'    => $candidateUser?->id,
+                                        'test_type'       => $familyCode,
+                                        'program_context' => $progContext,
+                                        'title'           => $defaultReqTitle,
+                                    ]) }}" class="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-bold border border-indigo-500/30 transition-colors flex items-center gap-1.5 shadow-sm">
+                                        <span>📋 Request Mock Test</span>
+                                    </a>
                                 </div>
-                                <a href="{{ route('admin.assessment-requests.index', [
-                                    'candidate_id'    => $candidateUser?->id,
-                                    'test_type'       => $familyCode,
-                                    'program_context' => $progContext,
-                                    'title'           => $defaultReqTitle,
-                                ]) }}" class="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-bold border border-indigo-500/30 transition-colors flex items-center gap-1.5 shadow-sm">
-                                    <span>📋 Request Mock Test</span>
-                                </a>
-                            </div>
+                            @else
+                                @php
+                                    $stage = $activeReq->getWorkflowStage();
+                                    $stageLabel = $activeReq->getWorkflowStageLabel();
+                                    $badgeIcon = match($stage) {
+                                        'awaiting_rm'          => '⏳',
+                                        'in_authoring'         => '✍️',
+                                        'awaiting_review'      => '🔍',
+                                        'revision_in_progress' => '🔄',
+                                        'awaiting_publication' => '📦',
+                                        default                => '📋',
+                                    };
+                                    $badgeStyle = match($stage) {
+                                        'awaiting_rm'          => 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
+                                        'in_authoring'         => 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30',
+                                        'awaiting_review'      => 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+                                        'revision_in_progress' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
+                                        'awaiting_publication' => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+                                        default                => 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30',
+                                    };
+                                @endphp
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <div class="px-3 py-1.5 rounded-lg text-xs font-bold border {{ $badgeStyle }} flex items-center gap-1.5 shadow-sm">
+                                        <span>{{ $badgeIcon }}</span>
+                                        <span>{{ $stageLabel }}</span>
+                                    </div>
+                                    @if($activeReq->test_id)
+                                        <a href="{{ route('admin.tests.show', $activeReq->test_id) }}" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                                            <span>👁 View Assessment</span>
+                                        </a>
+                                    @else
+                                        <a href="{{ route('admin.assessment-requests.index') }}" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                                            <span>📋 View Request</span>
+                                        </a>
+                                    @endif
+                                </div>
+                            @endif
                         @else
                             <form action="{{ route('admin.institutional-seats.assign', $allocation->id) }}" method="POST" class="flex items-center gap-2">
                                 @csrf

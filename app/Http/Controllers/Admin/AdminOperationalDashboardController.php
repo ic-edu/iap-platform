@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AssessmentRequest;
 use App\Models\User;
 use App\Modules\Assessment\Engines\AssignmentEngine;
 use App\Modules\Assessment\Models\Attempt;
@@ -121,6 +122,64 @@ class AdminOperationalDashboardController extends Controller
             }
         }
 
+        // Resolve Active Assessment Requests for Institutional Candidates Awaiting Assignment
+        $candidateIds = $institutionalSeatsAwaitingAssignment
+            ->pluck('membership.user_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $activeRequests = AssessmentRequest::with(['test.assignedTeacher', 'candidate', 'requester'])
+            ->whereIn('status', ['pending', 'draft_created'])
+            ->whereIn('candidate_id', $candidateIds)
+            ->get()
+            ->filter(fn($req) => $req->isActive());
+
+        $activeRequestsByAllocationId = [];
+        foreach ($institutionalSeatsAwaitingAssignment as $allocation) {
+            $candidateUser = $allocation->membership?->user;
+            if (!$candidateUser) {
+                continue;
+            }
+
+            $product = $allocation->entitlement?->product;
+            $familyCode = $product?->getEffectiveFamily() ?? (is_object($product?->assessment_family) ? $product->assessment_family->value : ($product?->assessment_family ?? null));
+            if (empty($familyCode)) {
+                if ($product && stripos($product->name, 'toeic') !== false) {
+                    $familyCode = 'toeic';
+                } elseif ($product && stripos($product->name, 'toefl') !== false) {
+                    $familyCode = 'toefl';
+                } elseif ($product && stripos($product->name, 'ielts') !== false) {
+                    $familyCode = 'ielts';
+                } else {
+                    $familyCode = 'toeic';
+                }
+            }
+            $familyCode = strtolower($familyCode);
+
+            $org = $allocation->entitlement?->organization;
+            $groups = $allocation->membership?->groups ?? collect();
+            $groupContext = $groups->isNotEmpty() ? ' — ' . $groups->pluck('name')->join(', ') : '';
+            $progContext = trim(($org?->name ?? 'Organization') . $groupContext);
+            $normContext = AssessmentRequest::normalizeContext($progContext);
+
+            // Match active candidate request for this requirement
+            $matched = $activeRequests->first(function ($req) use ($candidateUser, $familyCode, $normContext) {
+                if ((int) $req->candidate_id !== (int) $candidateUser->id) {
+                    return false;
+                }
+                if (strtolower((string) $req->test_type) !== $familyCode) {
+                    return false;
+                }
+                $reqNormContext = AssessmentRequest::normalizeContext($req->program_context);
+                return empty($normContext) || empty($reqNormContext) || $reqNormContext === $normContext;
+            });
+
+            if ($matched) {
+                $activeRequestsByAllocationId[$allocation->id] = $matched;
+            }
+        }
+
         // Recent Active Assignments (Live Database Records)
         $recentAssignments = CandidateTestAssignment::with(['user', 'test', 'assignedBy'])
             ->latest('assigned_at')
@@ -152,6 +211,7 @@ class AdminOperationalDashboardController extends Controller
             'actionRequiredCandidates'             => $actionRequiredCandidates,
             'institutionalSeatsAwaitingAssignment' => $institutionalSeatsAwaitingAssignment,
             'eligibleTestsByProduct'               => $eligibleTestsByProduct,
+            'activeRequestsByAllocationId'         => $activeRequestsByAllocationId,
             'recentAssignments'                    => $recentAssignments,
             'availableTests'                       => $availableTests,
             'unreadNotificationsCount'             => $unreadNotificationsCount,
