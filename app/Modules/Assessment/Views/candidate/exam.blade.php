@@ -144,7 +144,7 @@
                         <div class="border-b border-slate-200 dark:border-slate-800 pb-4">
                             <div class="flex items-center gap-2.5 mb-2">
                                 <span class="px-3 py-1 text-xs font-extrabold rounded-lg bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
-                                    {{ is_object($sec->section_type) ? $sec->section_type->label() : strtoupper((string) $sec->section_type) }} SECTION
+                                    {{ strtoupper(is_object($sec->section_type) ? $sec->section_type->label() : (str_ends_with(strtoupper((string) $sec->section_type), 'SECTION') ? (string) $sec->section_type : $sec->section_type . ' Section')) }}
                                 </span>
                                 <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
                                     Section {{ $secIndex + 1 }} of {{ $sections->count() }}

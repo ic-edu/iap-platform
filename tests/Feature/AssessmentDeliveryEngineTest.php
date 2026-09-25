@@ -14,6 +14,8 @@ use App\Modules\Assessment\Events\RuleViolationDetected;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Models\TestQuestion;
+use App\Modules\Assessment\Models\TestSection;
 use App\Modules\QuestionBank\Enums\QuestionType;
 use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\QuestionBank\Enums\TestType;
@@ -458,6 +460,18 @@ test('candidate exam autosave endpoint updates response', function () {
 
     $attempt = Attempt::create(['test_id' => $test->id, 'user_id' => $user->id, 'status' => AttemptStatus::InProgress]);
     $question = Question::create(['question_bank_id' => $bank->id, 'prompt' => 'Prompt', 'section' => SectionType::Reading, 'question_type' => QuestionType::MultipleChoice, 'points' => 5]);
+    $section = TestSection::create([
+        'test_id' => $test->id,
+        'title' => 'Reading Section',
+        'section_type' => SectionType::Reading,
+        'order' => 1,
+    ]);
+    TestQuestion::create([
+        'test_section_id' => $section->id,
+        'question_id' => $question->id,
+        'order' => 1,
+        'points' => 5,
+    ]);
 
     $response = $this->actingAs($user)->postJson(route('candidate.exam.autosave', $attempt), [
         'question_id' => $question->id,

@@ -133,6 +133,20 @@ class Attempt extends Model
     }
 
     /**
+     * Check if a question belongs to this attempt's test.
+     */
+    public function hasQuestion(string $questionId): bool
+    {
+        if ($this->relationLoaded('test') && $this->test) {
+            return $this->test->hasQuestion($questionId);
+        }
+
+        return TestQuestion::whereHas('section', fn ($q) => $q->where('test_id', $this->test_id))
+            ->where('question_id', $questionId)
+            ->exists();
+    }
+
+    /**
      * Get test.
      *
      * @return BelongsTo<Test, $this>

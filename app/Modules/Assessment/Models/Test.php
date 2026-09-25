@@ -234,6 +234,23 @@ class Test extends Model
     }
 
     /**
+     * Check if a question belongs to any section of this test.
+     */
+    public function hasQuestion(string $questionId): bool
+    {
+        if ($this->relationLoaded('sections')) {
+            $allLoaded = $this->sections->every(fn ($s) => $s->relationLoaded('testQuestions'));
+            if ($allLoaded) {
+                return $this->sections->contains(fn ($s) => $s->testQuestions->contains('question_id', $questionId));
+            }
+        }
+
+        return TestQuestion::whereHas('section', fn ($q) => $q->where('test_id', $this->id))
+            ->where('question_id', $questionId)
+            ->exists();
+    }
+
+    /**
      * Get test attempts.
      *
      * @return HasMany<Attempt, $this>

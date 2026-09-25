@@ -3,6 +3,7 @@
 namespace App\Modules\Assessment\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Assessment\Engines\AssessmentEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
@@ -10,6 +11,8 @@ use App\Modules\Assessment\Events\RuleViolationDetected;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Certificate\Models\Certificate;
+use App\Modules\QuestionBank\Models\Question;
+use App\Modules\QuestionBank\Models\QuestionChoice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +25,17 @@ class CandidatePortalController extends Controller
     public function __construct(
         protected AssessmentEngine $engine
     ) {}
+
+    /**
+     * Authorize that the current candidate owns the given attempt session.
+     */
+    protected function authorizeAttemptAccess(Attempt $attempt, ?User $user = null): void
+    {
+        $user = $user ?? request()->user();
+        if (!$user || (int) $attempt->user_id !== (int) $user->id) {
+            abort(403, 'Unauthorized access to assessment attempt.');
+        }
+    }
 
     /**
      * Candidate Portal Dashboard.
@@ -227,8 +241,10 @@ class CandidatePortalController extends Controller
     /**
      * CBT Exam Interface.
      */
-    public function exam(Attempt $attempt): View|RedirectResponse
+    public function exam(Request $request, Attempt $attempt): View|RedirectResponse
     {
+        $this->authorizeAttemptAccess($attempt, $request->user());
+
         $attempt = $this->engine->resumeAttempt($attempt);
 
         if ($attempt->status->value !== 'in_progress') {
@@ -280,9 +296,10 @@ class CandidatePortalController extends Controller
      */
     public function streamAudio(Request $request, Attempt $attempt, \App\Modules\QuestionBank\Models\Question $question)
     {
-        $user = $request->user();
-        if (!$user || (int)$attempt->user_id !== (int)$user->id) {
-            abort(403, 'Unauthorized attempt access.');
+        $this->authorizeAttemptAccess($attempt, $request->user());
+
+        if (!$attempt->hasQuestion($question->id)) {
+            abort(403, 'Question does not belong to this assessment attempt.');
         }
 
         $test = $attempt->test;
@@ -396,11 +413,29 @@ class CandidatePortalController extends Controller
      */
     public function autoSave(Request $request, Attempt $attempt): JsonResponse
     {
+        $this->authorizeAttemptAccess($attempt, $request->user());
+
         $validated = $request->validate([
             'question_id' => ['required', 'string'],
             'selected_choice' => ['nullable'],
             'answer_text' => ['nullable', 'string'],
         ]);
+
+        if (!$attempt->hasQuestion($validated['question_id'])) {
+            abort(403, 'Question does not belong to this assessment attempt.');
+        }
+
+        $selectedChoice = $validated['selected_choice'] ?? null;
+        if (!empty($selectedChoice)) {
+            $choiceIds = is_array($selectedChoice) ? $selectedChoice : [$selectedChoice];
+            $validCount = QuestionChoice::where('question_id', $validated['question_id'])
+                ->whereIn('id', $choiceIds)
+                ->count();
+
+            if ($validCount !== count($choiceIds)) {
+                abort(422, 'Invalid choice for the specified question.');
+            }
+        }
 
         $this->engine->autoSaveEngine->saveAnswer(
             $attempt,
@@ -417,9 +452,15 @@ class CandidatePortalController extends Controller
      */
     public function toggleFlag(Request $request, Attempt $attempt): JsonResponse
     {
+        $this->authorizeAttemptAccess($attempt, $request->user());
+
         $validated = $request->validate([
             'question_id' => ['required', 'string'],
         ]);
+
+        if (!$attempt->hasQuestion($validated['question_id'])) {
+            abort(403, 'Question does not belong to this assessment attempt.');
+        }
 
         $this->engine->navigationEngine->toggleFlag($attempt, $validated['question_id']);
 
@@ -431,6 +472,13 @@ class CandidatePortalController extends Controller
      */
     public function recordViolation(Request $request, Attempt $attempt): JsonResponse
     {
+        $this->authorizeAttemptAccess($attempt, $request->user());
+
+        $questionId = $request->input('question_id');
+        if ($questionId && !$attempt->hasQuestion($questionId)) {
+            abort(403, 'Question does not belong to this assessment attempt.');
+        }
+
         $type = $request->input('violation_type', 'window_blur');
         event(new RuleViolationDetected($attempt, $type));
 
@@ -439,7 +487,6 @@ class CandidatePortalController extends Controller
         } elseif ($type === 'fullscreen_enter') {
             \App\Services\ActivityLogger::log('FULLSCREEN_ENTERED', 'Candidate entered secure fullscreen mode', $attempt);
         } elseif ($type === 'audio_completed') {
-            $questionId = $request->input('question_id');
             \App\Services\ActivityLogger::log('AUDIO_PLAY_COMPLETED', "Candidate completed audio play for Question {$questionId}", $attempt);
             if ($questionId) {
                 \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
@@ -456,8 +503,10 @@ class CandidatePortalController extends Controller
     /**
      * Submit attempt.
      */
-    public function submit(Attempt $attempt): RedirectResponse
+    public function submit(Request $request, Attempt $attempt): RedirectResponse
     {
+        $this->authorizeAttemptAccess($attempt, $request->user());
+
         $attempt->loadMissing(['test.sections.testQuestions.question', 'answers']);
 
         $totalQuestionsCount = 0;
@@ -489,8 +538,10 @@ class CandidatePortalController extends Controller
     /**
      * Candidate result review view.
      */
-    public function review(Attempt $attempt): View
+    public function review(Request $request, Attempt $attempt): View
     {
+        $this->authorizeAttemptAccess($attempt, $request->user());
+
         $summary = $this->engine->reviewAttempt($attempt);
 
         /** @var view-string $viewName */
@@ -504,10 +555,7 @@ class CandidatePortalController extends Controller
      */
     public function wrongAnswersReview(Request $request, Attempt $attempt): View|RedirectResponse
     {
-        $user = $request->user();
-        if (!$user || (int) $attempt->user_id !== (int) $user->id) {
-            abort(403, 'Unauthorized access to assessment attempt review.');
-        }
+        $this->authorizeAttemptAccess($attempt, $request->user());
 
         if ($attempt->status->value === 'in_progress') {
             abort(403, 'Wrong answer review is not available while test is in progress.');
@@ -560,10 +608,7 @@ class CandidatePortalController extends Controller
      */
     public function finalizeAttempt(Request $request, Attempt $attempt): RedirectResponse
     {
-        $user = $request->user();
-        if (!$user || $attempt->user_id !== $user->id) {
-            abort(403, 'Unauthorized access to assessment attempt.');
-        }
+        $this->authorizeAttemptAccess($attempt, $request->user());
 
         $attempt->loadMissing(['test', 'assignment.attempts']);
         $assignment = $attempt->assignment;
@@ -628,10 +673,9 @@ class CandidatePortalController extends Controller
      */
     public function retryAttempt(Request $request, Attempt $attempt): RedirectResponse
     {
+        $this->authorizeAttemptAccess($attempt, $request->user());
+
         $user = $request->user();
-        if (!$user || $attempt->user_id !== $user->id) {
-            abort(403, 'Unauthorized access to assessment attempt.');
-        }
 
         $attempt->loadMissing(['test', 'assignment.attempts']);
         $assignment = $attempt->assignment;
