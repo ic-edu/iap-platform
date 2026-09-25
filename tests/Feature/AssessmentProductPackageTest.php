@@ -484,4 +484,67 @@ class AssessmentProductPackageTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('setIapTheme');
     }
+
+    public function test_24_legacy_inference_resolves_all_standard_families_when_family_and_test_id_are_null(): void
+    {
+        $cases = [
+            ['title' => 'TOEIC Mock Test Package', 'slug' => 'toeic-mock-test-package', 'expected' => 'toeic'],
+            ['title' => 'TOEFL iBT Examination Voucher', 'slug' => 'toefl-ibt-examination-voucher', 'expected' => 'toefl'],
+            ['title' => 'IELTS General Training Bundle', 'slug' => 'ielts-general-training-bundle', 'expected' => null], // 'ielts' and 'general' -> ambiguous -> null
+            ['title' => 'IELTS Academic Master Package', 'slug' => 'ielts-academic-master-package', 'expected' => 'ielts'],
+            ['title' => 'General English Diagnostic Assessment', 'slug' => 'general-english-diagnostic-assessment', 'expected' => 'general'],
+            ['title' => 'Vocational Competency Assessment', 'slug' => 'vocational-competency-assessment', 'expected' => 'vocational'],
+        ];
+
+        foreach ($cases as $case) {
+            $product = new Product([
+                'title'             => $case['title'],
+                'slug'              => $case['slug'],
+                'product_type'      => 'assessment',
+                'assessment_family' => null,
+                'test_id'           => null,
+            ]);
+
+            $this->assertEquals($case['expected'], $product->getEffectiveFamily(), "Failed for {$case['title']}");
+        }
+    }
+
+    public function test_25_legacy_inference_returns_null_for_ambiguous_multiple_family_tokens(): void
+    {
+        $product = new Product([
+            'title'             => 'Combined TOEIC and TOEFL Preparation Package',
+            'slug'              => 'combined-toeic-toefl-package',
+            'product_type'      => 'assessment',
+            'assessment_family' => null,
+            'test_id'           => null,
+        ]);
+
+        $this->assertNull($product->getEffectiveFamily());
+    }
+
+    public function test_26_legacy_inference_prevents_substring_false_positives(): void
+    {
+        $product = new Product([
+            'title'             => 'Potatoeic Language Challenge',
+            'slug'              => 'potatoeic-language-challenge',
+            'product_type'      => 'assessment',
+            'assessment_family' => null,
+            'test_id'           => null,
+        ]);
+
+        $this->assertNull($product->getEffectiveFamily());
+    }
+
+    public function test_27_legacy_inference_does_not_trigger_for_non_assessment_product_types(): void
+    {
+        $product = new Product([
+            'title'             => 'TOEIC Complete Mastery Course',
+            'slug'              => 'toeic-complete-mastery-course',
+            'product_type'      => 'course',
+            'assessment_family' => null,
+            'test_id'           => null,
+        ]);
+
+        $this->assertNull($product->getEffectiveFamily());
+    }
 }

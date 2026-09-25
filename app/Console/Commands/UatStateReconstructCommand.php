@@ -318,11 +318,12 @@ class UatStateReconstructCommand extends Command
         $product = Product::firstOrCreate(
             ['slug' => 'toeic-mock-test-package'],
             [
-                'title'        => 'TOEIC Mock Test Package',
-                'product_type' => 'assessment',
-                'price'        => 85000.0,
-                'is_active'    => true,
-                'is_featured'  => false,
+                'title'             => 'TOEIC Mock Test Package',
+                'product_type'      => 'assessment',
+                'assessment_family' => 'toeic',
+                'price'             => 85000.0,
+                'is_active'         => true,
+                'is_featured'       => false,
             ]
         );
 

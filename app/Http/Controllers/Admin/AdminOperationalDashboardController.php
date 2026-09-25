@@ -143,17 +143,9 @@ class AdminOperationalDashboardController extends Controller
             }
 
             $product = $allocation->entitlement?->product;
-            $familyCode = $product?->getEffectiveFamily() ?? (is_object($product?->assessment_family) ? $product->assessment_family->value : ($product?->assessment_family ?? null));
+            $familyCode = $product?->getEffectiveFamily();
             if (empty($familyCode)) {
-                if ($product && stripos($product->name, 'toeic') !== false) {
-                    $familyCode = 'toeic';
-                } elseif ($product && stripos($product->name, 'toefl') !== false) {
-                    $familyCode = 'toefl';
-                } elseif ($product && stripos($product->name, 'ielts') !== false) {
-                    $familyCode = 'ielts';
-                } else {
-                    $familyCode = 'toeic';
-                }
+                continue;
             }
             $familyCode = strtolower($familyCode);
 

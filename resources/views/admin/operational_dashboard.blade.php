@@ -436,19 +436,7 @@
                     <div class="flex items-center gap-3 flex-shrink-0">
                         @if($eligibleTests->isEmpty())
                             @php
-                                $familyCode = $product?->getEffectiveFamily() ?? (is_object($product?->assessment_family) ? $product->assessment_family->value : ($product?->assessment_family ?? null));
-                                if (empty($familyCode)) {
-                                    if ($product && stripos($product->name, 'toeic') !== false) {
-                                        $familyCode = 'toeic';
-                                    } elseif ($product && stripos($product->name, 'toefl') !== false) {
-                                        $familyCode = 'toefl';
-                                    } elseif ($product && stripos($product->name, 'ielts') !== false) {
-                                        $familyCode = 'ielts';
-                                    } else {
-                                        $familyCode = 'toeic';
-                                    }
-                                }
-                                $familyCode = strtolower($familyCode);
+                                $familyCode = strtolower($product?->getEffectiveFamily() ?? 'general');
                                 $groupContext = $groups->isNotEmpty() ? ' — ' . $groups->pluck('name')->join(', ') : '';
                                 $progContext = trim(($org?->name ?? 'Organization') . $groupContext);
                                 $defaultReqTitle = strtoupper($familyCode) . ' Mock Test';

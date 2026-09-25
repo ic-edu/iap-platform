@@ -414,6 +414,52 @@ class OperationalDashboardInstitutionalRequestWorkflowTest extends TestCase
     }
 
     /**
+     * TEST: Human UAT Regression - Legacy abstract assessment package (assessment_family=null, test_id=null)
+     * resolves effective family and displays canonical published assessment assignment controls on RA Dashboard.
+     */
+    public function test_legacy_abstract_toeic_package_with_null_family_resolves_and_shows_published_assignment_controls(): void
+    {
+        // 1. Create legacy abstract product matching UAT persistent state
+        $legacyProduct = Product::create([
+            'title'             => 'TOEIC Mock Test Package',
+            'slug'              => 'toeic-mock-test-package-legacy',
+            'product_type'      => 'assessment',
+            'assessment_family' => null,
+            'test_id'           => null,
+            'price'             => 85000,
+            'currency'          => 'IDR',
+            'is_active'         => true,
+        ]);
+
+        // 2. Link entitlement to this legacy product
+        $this->entitlement->update([
+            'product_id' => $legacyProduct->id,
+        ]);
+
+        // 3. Create published real test matching RM published test
+        $publishedTest = Test::create([
+            'title'            => 'TOEIC Mock Test Group - UAT Class 9A',
+            'slug'             => 'toeic-mock-test-group-uat-class-9a',
+            'test_type'        => 'toeic',
+            'assessment_mode'  => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score'       => 650,
+            'status'           => 'published',
+            'is_published'     => true,
+            'created_by'       => $this->rmUser->id,
+        ]);
+
+        // 4. Request dashboard
+        $res = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+
+        $res->assertStatus(200);
+        $res->assertSee('Assign Assessment');
+        $res->assertSee('TOEIC Mock Test Group - UAT Class 9A');
+        $res->assertDontSee('No published TOEIC tests');
+        $res->assertDontSee('Request Mock Test');
+    }
+
+    /**
      * TEST: Server-Side Duplicate Prevention - Repeated submission returns existing request without duplicate record or extra notification.
      */
     public function test_server_side_duplicate_prevention_on_repeated_submission(): void

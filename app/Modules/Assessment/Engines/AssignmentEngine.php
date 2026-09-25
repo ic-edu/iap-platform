@@ -346,9 +346,14 @@ class AssignmentEngine
         }
 
         $testFamily = is_object($test->test_type) ? strtolower($test->test_type->value) : strtolower((string) $test->test_type);
-        $productFamily = $product->getEffectiveFamily();
-        if (!$product->test_id && $productFamily && $testFamily !== $productFamily) {
-            throw new InvalidArgumentException("Incompatible Assessment: Package family '{$productFamily}' does not match test family '{$testFamily}'.");
+        if (!$product->test_id) {
+            $productFamily = $product->getEffectiveFamily();
+            if (!$productFamily) {
+                throw new InvalidArgumentException("Cannot assign assessment: Unable to resolve assessment family for product '{$product->title}'.");
+            }
+            if ($testFamily !== $productFamily) {
+                throw new InvalidArgumentException("Incompatible Assessment: Package family '{$productFamily}' does not match test family '{$testFamily}'.");
+            }
         }
 
         // 7. Atomic assignment creation with idempotency and lock protection

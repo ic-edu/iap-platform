@@ -581,4 +581,134 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
         $responseAfter->assertSee('No active institutional seats are currently waiting for assessment assignment.');
         $responseAfter->assertSee('Candidate CA01'); // In recent active assignments
     }
+
+    /**
+     * TEST: Legacy abstract package with null assessment_family resolves family and permits assignment.
+     */
+    public function test_legacy_abstract_package_infers_family_and_permits_canonical_assignment(): void
+    {
+        $legacyProduct = Product::create([
+            'title'             => 'TOEIC Mock Test Package',
+            'slug'              => 'toeic-mock-test-package-legacy-01',
+            'product_type'      => 'assessment',
+            'assessment_family' => null,
+            'test_id'           => null,
+            'price'             => 85000,
+            'is_active'         => true,
+        ]);
+
+        $this->entitlementA->update(['product_id' => $legacyProduct->id]);
+
+        $assignmentEngine = app(AssignmentEngine::class);
+        $eligibleTests = $assignmentEngine->getEligibleTestsForPackage($legacyProduct);
+
+        $this->assertTrue($eligibleTests->contains('id', $this->publishedToeicTest->id));
+
+        $assignment = $assignmentEngine->assignFromOrganizationSeat(
+            $this->allocationA1->fresh(),
+            $this->publishedToeicTest,
+            $this->adminUser
+        );
+
+        $this->assertNotNull($assignment);
+        $this->assertEquals($this->candidateA1->id, $assignment->user_id);
+        $this->assertEquals($this->publishedToeicTest->id, $assignment->test_id);
+    }
+
+    /**
+     * TEST: Explicit assessment_family takes precedence over inferred title/slug.
+     */
+    public function test_explicit_family_takes_precedence_over_legacy_inferred_slug_and_title(): void
+    {
+        $product = Product::create([
+            'title'             => 'TOEIC Prep with TOEFL Certificate',
+            'slug'              => 'toeic-prep-package',
+            'product_type'      => 'assessment',
+            'assessment_family' => 'toefl', // Explicit family is TOEFL despite TOEIC in title/slug
+            'test_id'           => null,
+            'price'             => 85000,
+            'is_active'         => true,
+        ]);
+
+        $this->assertEquals('toefl', $product->getEffectiveFamily());
+    }
+
+    /**
+     * TEST: Unknown legacy package without resolvable family fails closed on institutional assignment.
+     */
+    public function test_unknown_legacy_package_without_family_fails_closed_on_institutional_assignment(): void
+    {
+        $unknownProduct = Product::create([
+            'title'             => 'Unknown Custom Assessment Bundle',
+            'slug'              => 'unknown-custom-assessment-bundle',
+            'product_type'      => 'assessment',
+            'assessment_family' => null,
+            'test_id'           => null,
+            'price'             => 85000,
+            'is_active'         => true,
+        ]);
+
+        $this->assertNull($unknownProduct->getEffectiveFamily());
+
+        $this->entitlementA->update(['product_id' => $unknownProduct->id]);
+
+        $assignmentEngine = app(AssignmentEngine::class);
+        $eligibleTests = $assignmentEngine->getEligibleTestsForPackage($unknownProduct);
+        $this->assertCount(0, $eligibleTests);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Unable to resolve assessment family for product '{$unknownProduct->title}'");
+
+        $assignmentEngine->assignFromOrganizationSeat(
+            $this->allocationA1->fresh(),
+            $this->publishedToeicTest,
+            $this->adminUser
+        );
+    }
+
+    /**
+     * TEST: Different assessment family is rejected during institutional assignment.
+     */
+    public function test_cross_family_assignment_is_strictly_rejected(): void
+    {
+        $toeicProduct = Product::create([
+            'title'             => 'TOEIC Mock Test Package',
+            'slug'              => 'toeic-mock-test-package-rejection-test',
+            'product_type'      => 'assessment',
+            'assessment_family' => 'toeic',
+            'test_id'           => null,
+            'price'             => 85000,
+            'is_active'         => true,
+        ]);
+
+        $this->entitlementA->update(['product_id' => $toeicProduct->id]);
+
+        $assignmentEngine = app(AssignmentEngine::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Incompatible Assessment: Package family 'toeic' does not match test family 'toefl'.");
+
+        $assignmentEngine->assignFromOrganizationSeat(
+            $this->allocationA1->fresh(),
+            $this->publishedToeflTest,
+            $this->adminUser
+        );
+    }
+
+    /**
+     * TEST: Unpublished test is strictly rejected during institutional assignment.
+     */
+    public function test_unpublished_test_is_strictly_rejected_for_legacy_package(): void
+    {
+        $assignmentEngine = app(AssignmentEngine::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cannot assign unpublished Mock Test '{$this->draftToeicTest->title}'. Mock Test must be published first.");
+
+        $assignmentEngine->assignFromOrganizationSeat(
+            $this->allocationA1->fresh(),
+            $this->draftToeicTest,
+            $this->adminUser
+        );
+    }
 }

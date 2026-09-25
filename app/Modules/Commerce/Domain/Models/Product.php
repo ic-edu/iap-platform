@@ -140,22 +140,65 @@ class Product extends Model
     }
 
     /**
-     * Get the effective assessment family (either explicitly declared or derived from linked Test).
+     * Get the effective assessment family (either explicitly declared, derived from linked Test, or deterministically inferred for legacy abstract assessment packages).
      */
     public function getEffectiveFamily(): ?string
     {
+        // Precedence A: Explicit assessment_family
         if (!empty($this->assessment_family)) {
-            return strtolower($this->assessment_family);
+            $family = is_object($this->assessment_family) ? $this->assessment_family->value : $this->assessment_family;
+            return strtolower(trim((string) $family));
         }
 
+        // Precedence B: Specific linked Test.test_type
         if ($this->test_id && $this->test) {
             $testType = $this->test->test_type;
             if (is_object($testType)) {
                 return strtolower($testType->value);
             }
             if (is_string($testType)) {
-                return strtolower($testType);
+                return strtolower(trim($testType));
             }
+        }
+
+        // Precedence C: Legacy abstract assessment-package inference, ONLY when:
+        // - product_type === 'assessment'
+        // - test_id is empty
+        // - assessment_family is empty
+        if ($this->product_type === 'assessment' && empty($this->test_id)) {
+            return $this->inferLegacyAssessmentFamily();
+        }
+
+        return null;
+    }
+
+    /**
+     * Deterministic, token-aware legacy family inference for abstract assessment packages.
+     */
+    protected function inferLegacyAssessmentFamily(): ?string
+    {
+        $allowedFamilies = AssessmentFamily::values();
+        $matchedFamilies = [];
+
+        // Extract alphanumeric tokens from slug and title
+        $tokens = array_filter(array_merge(
+            preg_split('/[^a-z0-9]+/i', (string) ($this->slug ?? '')) ?: [],
+            preg_split('/[^a-z0-9]+/i', (string) ($this->title ?? '')) ?: []
+        ));
+
+        $normalizedTokens = array_map('strtolower', $tokens);
+
+        foreach ($allowedFamilies as $family) {
+            $familyLower = strtolower($family);
+            if (in_array($familyLower, $normalizedTokens, true)) {
+                $matchedFamilies[] = $familyLower;
+            }
+        }
+
+        $uniqueMatches = array_values(array_unique($matchedFamilies));
+
+        if (count($uniqueMatches) === 1) {
+            return $uniqueMatches[0];
         }
 
         return null;
