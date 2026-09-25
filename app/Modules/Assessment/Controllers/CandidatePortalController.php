@@ -250,9 +250,32 @@ class CandidatePortalController extends Controller
             abort(403, "Unauthorized access. Mock Test '{$test->title}' requires a confirmed paid assignment before you can start.");
         }
 
-        $attempt = $this->engine->startAttempt($test, $user);
+        try {
+            $attempt = $this->engine->startAttempt($test, $user);
+        } catch (LockTimeoutException $e) {
+            return redirect()->route('candidate.available-tests')
+                ->with('error', 'Assessment start request is already being processed. Please try again.');
+        } catch (\DomainException|\InvalidArgumentException $e) {
+            $existingAttempt = Attempt::where('test_id', $test->id)
+                ->where('user_id', $user->id)
+                ->latest('attempt_number')
+                ->first();
+
+            if ($existingAttempt) {
+                if ($existingAttempt->status === AttemptStatus::InProgress && !$this->engine->timerEngine->isExpired($existingAttempt)) {
+                    return redirect()->route('candidate.exam', $existingAttempt);
+                }
+                return redirect()->route('candidate.review', $existingAttempt);
+            }
+
+            return redirect()->route('candidate.available-tests')->with('error', $e->getMessage());
+        }
 
         \App\Services\ActivityLogger::log('EXAM_STARTED', "Started assessment attempt for '{$test->title}'", $attempt);
+
+        if ($attempt->status !== AttemptStatus::InProgress || $this->engine->timerEngine->isExpired($attempt)) {
+            return redirect()->route('candidate.review', $attempt);
+        }
 
         return redirect()->route('candidate.exam', $attempt);
     }
@@ -315,76 +338,88 @@ class CandidatePortalController extends Controller
      */
     public function streamAudio(Request $request, Attempt $attempt, \App\Modules\QuestionBank\Models\Question $question)
     {
-        $this->authorizeAttemptAccess($attempt, $request->user());
-
-        if (!$attempt->hasQuestion($question->id)) {
-            abort(403, 'Question does not belong to this assessment attempt.');
-        }
-
         $test = $attempt->test;
-        $isSimulator = $test ? $test->isSimulator() : true;
-        $isCompletedAttempt = in_array($attempt->status->value, ['submitted', 'expired', 'evaluated'], true) || $attempt->isEvaluated();
-
-        if ($attempt->status->value !== 'in_progress' && !($isSimulator && $isCompletedAttempt)) {
-            abort(403, 'Test session is no longer in progress.');
-        }
-
         $isRealTest = $test?->isRealTest() ?? false;
 
-        if ($attempt->status->value === 'in_progress' && $isRealTest && $this->engine->timerEngine->isExpired($attempt)) {
-            abort(403, 'Assessment attempt duration has expired.');
-        }
-
-        $groupQuestionIds = $question->audio_group_id
-            ? Question::where('audio_group_id', $question->audio_group_id)->pluck('id')->toArray()
-            : [];
-
         if ($isRealTest) {
+            $attemptLockKey = "candidate_attempt:{$attempt->id}";
             $audioLockKey = 'audio_play:' . $attempt->id . ':' . ($question->audio_group_id ? "group_{$question->audio_group_id}" : "q_{$question->id}");
+
             try {
-                $playResponse = Cache::lock($audioLockKey, 10)->block(5, function () use ($attempt, $question, $groupQuestionIds, $request) {
-                    $existingPlayQuery = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id);
-                    if (!empty($groupQuestionIds)) {
-                        $existingPlayQuery->whereIn('question_id', $groupQuestionIds);
-                    } else {
-                        $existingPlayQuery->where('question_id', $question->id);
-                    }
-                    $existingPlay = $existingPlayQuery->first();
+                $reservationResult = Cache::lock($attemptLockKey, 15)->block(5, function () use ($request, $attempt, $question, $audioLockKey) {
+                    $attempt->refresh();
+                    $this->authorizeAttemptAccess($attempt, $request->user());
 
-                    if ($existingPlay && $existingPlay->play_count >= 1) {
-                        \App\Services\ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
-                        return response()->json(['error' => 'Audio already played for this question group.'], 403);
+                    if ($attempt->status->value !== 'in_progress') {
+                        abort(403, 'Test session is no longer in progress.');
                     }
 
-                    $targetQuestionIds = !empty($groupQuestionIds) ? $groupQuestionIds : [$question->id];
-                    foreach ($targetQuestionIds as $targetQId) {
-                        try {
-                            \App\Modules\Assessment\Models\AttemptAudioPlay::firstOrCreate([
-                                'attempt_id'  => $attempt->id,
-                                'question_id' => $targetQId,
-                            ], [
-                                'media_asset_id' => $question->audio_media_asset_id ?? $question->audioGroup?->media_asset_id ?? $question->media_asset_id,
-                                'play_count'     => 1,
-                                'started_at'     => now(),
-                                'ip_address'     => $request->ip(),
-                            ]);
-                        } catch (\Illuminate\Database\QueryException $e) {
-                            // Concurrent insertion handled cleanly
+                    if ($this->engine->timerEngine->isExpired($attempt)) {
+                        abort(403, 'Assessment attempt duration has expired.');
+                    }
+
+                    if (!$attempt->hasQuestion($question->id)) {
+                        abort(403, 'Question does not belong to this assessment attempt.');
+                    }
+
+                    return Cache::lock($audioLockKey, 15)->block(5, function () use ($attempt, $question, $request) {
+                        $groupQuestionIds = $question->audio_group_id
+                            ? Question::where('audio_group_id', $question->audio_group_id)->pluck('id')->toArray()
+                            : [];
+
+                        $existingPlayQuery = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id);
+                        if (!empty($groupQuestionIds)) {
+                            $existingPlayQuery->whereIn('question_id', $groupQuestionIds);
+                        } else {
+                            $existingPlayQuery->where('question_id', $question->id);
+                        }
+                        $existingPlay = $existingPlayQuery->first();
+
+                        if ($existingPlay && $existingPlay->play_count >= 1) {
+                            \App\Services\ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
                             return response()->json(['error' => 'Audio already played for this question group.'], 403);
                         }
-                    }
 
-                    \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
-                    return null;
+                        $targetQuestionIds = !empty($groupQuestionIds) ? $groupQuestionIds : [$question->id];
+                        foreach ($targetQuestionIds as $targetQId) {
+                            try {
+                                \App\Modules\Assessment\Models\AttemptAudioPlay::firstOrCreate([
+                                    'attempt_id'  => $attempt->id,
+                                    'question_id' => $targetQId,
+                                ], [
+                                    'media_asset_id' => $question->audio_media_asset_id ?? $question->audioGroup?->media_asset_id ?? $question->media_asset_id,
+                                    'play_count'     => 1,
+                                    'started_at'     => now(),
+                                    'ip_address'     => $request->ip(),
+                                ]);
+                            } catch (\Illuminate\Database\QueryException $e) {
+                                return response()->json(['error' => 'Audio already played for this question group.'], 403);
+                            }
+                        }
+
+                        \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
+                        return null;
+                    });
                 });
 
-                if ($playResponse instanceof JsonResponse) {
-                    return $playResponse;
+                if ($reservationResult instanceof JsonResponse) {
+                    return $reservationResult;
                 }
             } catch (LockTimeoutException $e) {
                 return response()->json(['error' => 'Audio playback request in progress.'], 409);
             }
         } else {
+            $this->authorizeAttemptAccess($attempt, $request->user());
+
+            if (!$attempt->hasQuestion($question->id)) {
+                abort(403, 'Question does not belong to this assessment attempt.');
+            }
+
+            $isCompletedAttempt = in_array($attempt->status->value, ['submitted', 'expired', 'evaluated'], true) || $attempt->isEvaluated();
+            if ($attempt->status->value !== 'in_progress' && !$isCompletedAttempt) {
+                abort(403, 'Test session is no longer in progress.');
+            }
+
             \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started simulator audio play for Question {$question->id}", $attempt);
         }
 
@@ -578,7 +613,7 @@ class CandidatePortalController extends Controller
         $lockKey = "candidate_attempt:{$attempt->id}";
 
         try {
-            return Cache::lock($lockKey, 15)->block(10, function () use ($request, $attempt) {
+            return Cache::lock($lockKey, 60)->block(15, function () use ($request, $attempt) {
                 $attempt->refresh();
                 $this->authorizeAttemptAccess($attempt, $request->user());
 

@@ -43,15 +43,17 @@ class AttemptEngine
     {
         $lockKey = "start_attempt:user_{$user->id}:test_{$test->id}";
 
-        return \Illuminate\Support\Facades\Cache::lock($lockKey, 15)->block(10, function () use ($test, $user) {
+        return \Illuminate\Support\Facades\Cache::lock($lockKey, 20)->block(10, function () use ($test, $user) {
             $existing = Attempt::where('test_id', $test->id)
                 ->where('user_id', $user->id)
                 ->where('status', AttemptStatus::InProgress)
                 ->latest('started_at')
                 ->first();
 
-            if ($existing && !$this->timerEngine->isExpired($existing)) {
-                $this->resumeAttempt($existing);
+            if ($existing) {
+                if (!$this->timerEngine->isExpired($existing)) {
+                    $this->resumeAttempt($existing);
+                }
                 return $existing;
             }
 
@@ -63,9 +65,14 @@ class AttemptEngine
                     ->first();
 
                 if ($assignment) {
-                    $completedCount = $assignment->attempts()->where('status', AttemptStatus::Submitted)->count();
-                    if ($assignment->status === 'completed' || $completedCount >= $assignment->max_attempts) {
-                        throw new InvalidArgumentException("Maximum attempts ({$assignment->max_attempts}) reached for this Mock Test assignment.");
+                    $existingAttemptsCount = $assignment->attempts()->count();
+
+                    if ($assignment->status === 'completed' || $existingAttemptsCount >= $assignment->max_attempts) {
+                        throw new \InvalidArgumentException("Maximum attempts ({$assignment->max_attempts}) reached for this Mock Test assignment.");
+                    }
+
+                    if ($existingAttemptsCount >= 1) {
+                        throw new \InvalidArgumentException("Attempt #1 already exists for this Mock Test assignment. Attempt #2 must be started via retry.");
                     }
                 }
             }
@@ -74,7 +81,7 @@ class AttemptEngine
                 ? EvaluationStatus::PendingEvaluation
                 : EvaluationStatus::NotRequired;
 
-            $attemptNumber = $assignment ? ($assignment->attempts()->count() + 1) : 1;
+            $attemptNumber = $assignment ? 1 : (Attempt::where('test_id', $test->id)->where('user_id', $user->id)->count() + 1);
 
             $attempt = Attempt::create([
                 'test_id'           => $test->id,
