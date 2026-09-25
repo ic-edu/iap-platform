@@ -13,9 +13,11 @@ use App\Modules\Assessment\Models\Test;
 use App\Modules\Certificate\Models\Certificate;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -334,37 +336,54 @@ class CandidatePortalController extends Controller
         }
 
         $groupQuestionIds = $question->audio_group_id
-            ? \App\Modules\QuestionBank\Models\Question::where('audio_group_id', $question->audio_group_id)->pluck('id')->toArray()
+            ? Question::where('audio_group_id', $question->audio_group_id)->pluck('id')->toArray()
             : [];
 
         if ($isRealTest) {
-            $existingPlayQuery = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id);
-            if (!empty($groupQuestionIds)) {
-                $existingPlayQuery->whereIn('question_id', $groupQuestionIds);
-            } else {
-                $existingPlayQuery->where('question_id', $question->id);
-            }
-            $existingPlay = $existingPlayQuery->first();
+            $audioLockKey = 'audio_play:' . $attempt->id . ':' . ($question->audio_group_id ? "group_{$question->audio_group_id}" : "q_{$question->id}");
+            try {
+                $playResponse = Cache::lock($audioLockKey, 10)->block(5, function () use ($attempt, $question, $groupQuestionIds, $request) {
+                    $existingPlayQuery = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id);
+                    if (!empty($groupQuestionIds)) {
+                        $existingPlayQuery->whereIn('question_id', $groupQuestionIds);
+                    } else {
+                        $existingPlayQuery->where('question_id', $question->id);
+                    }
+                    $existingPlay = $existingPlayQuery->first();
 
-            if ($existingPlay && $existingPlay->play_count >= 1) {
-                \App\Services\ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
-                return response()->json(['error' => 'Audio already played for this question group.'], 403);
-            }
+                    if ($existingPlay && $existingPlay->play_count >= 1) {
+                        \App\Services\ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
+                        return response()->json(['error' => 'Audio already played for this question group.'], 403);
+                    }
 
-            $targetQuestionIds = !empty($groupQuestionIds) ? $groupQuestionIds : [$question->id];
-            foreach ($targetQuestionIds as $targetQId) {
-                \App\Modules\Assessment\Models\AttemptAudioPlay::firstOrCreate([
-                    'attempt_id'  => $attempt->id,
-                    'question_id' => $targetQId,
-                ], [
-                    'media_asset_id' => $question->audio_media_asset_id ?? $question->audioGroup?->media_asset_id ?? $question->media_asset_id,
-                    'play_count'     => 1,
-                    'started_at'     => now(),
-                    'ip_address'     => $request->ip(),
-                ]);
-            }
+                    $targetQuestionIds = !empty($groupQuestionIds) ? $groupQuestionIds : [$question->id];
+                    foreach ($targetQuestionIds as $targetQId) {
+                        try {
+                            \App\Modules\Assessment\Models\AttemptAudioPlay::firstOrCreate([
+                                'attempt_id'  => $attempt->id,
+                                'question_id' => $targetQId,
+                            ], [
+                                'media_asset_id' => $question->audio_media_asset_id ?? $question->audioGroup?->media_asset_id ?? $question->media_asset_id,
+                                'play_count'     => 1,
+                                'started_at'     => now(),
+                                'ip_address'     => $request->ip(),
+                            ]);
+                        } catch (\Illuminate\Database\QueryException $e) {
+                            // Concurrent insertion handled cleanly
+                            return response()->json(['error' => 'Audio already played for this question group.'], 403);
+                        }
+                    }
 
-            \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
+                    \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
+                    return null;
+                });
+
+                if ($playResponse instanceof JsonResponse) {
+                    return $playResponse;
+                }
+            } catch (LockTimeoutException $e) {
+                return response()->json(['error' => 'Audio playback request in progress.'], 409);
+            }
         } else {
             \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started simulator audio play for Question {$question->id}", $attempt);
         }
@@ -434,39 +453,48 @@ class CandidatePortalController extends Controller
      */
     public function autoSave(Request $request, Attempt $attempt): JsonResponse
     {
-        $this->authorizeAttemptAccess($attempt, $request->user());
-        $this->assertAttemptMutable($attempt);
+        $lockKey = "candidate_attempt:{$attempt->id}";
 
-        $validated = $request->validate([
-            'question_id' => ['required', 'string'],
-            'selected_choice' => ['nullable'],
-            'answer_text' => ['nullable', 'string'],
-        ]);
+        try {
+            return Cache::lock($lockKey, 10)->block(5, function () use ($request, $attempt) {
+                $attempt->refresh();
+                $this->authorizeAttemptAccess($attempt, $request->user());
+                $this->assertAttemptMutable($attempt);
 
-        if (!$attempt->hasQuestion($validated['question_id'])) {
-            abort(403, 'Question does not belong to this assessment attempt.');
+                $validated = $request->validate([
+                    'question_id' => ['required', 'string'],
+                    'selected_choice' => ['nullable'],
+                    'answer_text' => ['nullable', 'string'],
+                ]);
+
+                if (!$attempt->hasQuestion($validated['question_id'])) {
+                    abort(403, 'Question does not belong to this assessment attempt.');
+                }
+
+                $selectedChoice = $validated['selected_choice'] ?? null;
+                if (!empty($selectedChoice)) {
+                    $choiceIds = is_array($selectedChoice) ? $selectedChoice : [$selectedChoice];
+                    $validCount = QuestionChoice::where('question_id', $validated['question_id'])
+                        ->whereIn('id', $choiceIds)
+                        ->count();
+
+                    if ($validCount !== count($choiceIds)) {
+                        abort(422, 'Invalid choice for the specified question.');
+                    }
+                }
+
+                $this->engine->autoSaveEngine->saveAnswer(
+                    $attempt,
+                    $validated['question_id'],
+                    $validated['selected_choice'] ?? null,
+                    $validated['answer_text'] ?? null
+                );
+
+                return response()->json(['status' => 'saved']);
+            });
+        } catch (LockTimeoutException $e) {
+            abort(409, 'Another operation is currently modifying this assessment attempt.');
         }
-
-        $selectedChoice = $validated['selected_choice'] ?? null;
-        if (!empty($selectedChoice)) {
-            $choiceIds = is_array($selectedChoice) ? $selectedChoice : [$selectedChoice];
-            $validCount = QuestionChoice::where('question_id', $validated['question_id'])
-                ->whereIn('id', $choiceIds)
-                ->count();
-
-            if ($validCount !== count($choiceIds)) {
-                abort(422, 'Invalid choice for the specified question.');
-            }
-        }
-
-        $this->engine->autoSaveEngine->saveAnswer(
-            $attempt,
-            $validated['question_id'],
-            $validated['selected_choice'] ?? null,
-            $validated['answer_text'] ?? null
-        );
-
-        return response()->json(['status' => 'saved']);
     }
 
     /**
@@ -474,20 +502,29 @@ class CandidatePortalController extends Controller
      */
     public function toggleFlag(Request $request, Attempt $attempt): JsonResponse
     {
-        $this->authorizeAttemptAccess($attempt, $request->user());
-        $this->assertAttemptMutable($attempt);
+        $lockKey = "candidate_attempt:{$attempt->id}";
 
-        $validated = $request->validate([
-            'question_id' => ['required', 'string'],
-        ]);
+        try {
+            return Cache::lock($lockKey, 10)->block(5, function () use ($request, $attempt) {
+                $attempt->refresh();
+                $this->authorizeAttemptAccess($attempt, $request->user());
+                $this->assertAttemptMutable($attempt);
 
-        if (!$attempt->hasQuestion($validated['question_id'])) {
-            abort(403, 'Question does not belong to this assessment attempt.');
+                $validated = $request->validate([
+                    'question_id' => ['required', 'string'],
+                ]);
+
+                if (!$attempt->hasQuestion($validated['question_id'])) {
+                    abort(403, 'Question does not belong to this assessment attempt.');
+                }
+
+                $this->engine->navigationEngine->toggleFlag($attempt, $validated['question_id']);
+
+                return response()->json(['status' => 'flagged']);
+            });
+        } catch (LockTimeoutException $e) {
+            abort(409, 'Another operation is currently modifying this assessment attempt.');
         }
-
-        $this->engine->navigationEngine->toggleFlag($attempt, $validated['question_id']);
-
-        return response()->json(['status' => 'flagged']);
     }
 
     /**
@@ -495,33 +532,42 @@ class CandidatePortalController extends Controller
      */
     public function recordViolation(Request $request, Attempt $attempt): JsonResponse
     {
-        $this->authorizeAttemptAccess($attempt, $request->user());
-        $this->assertAttemptMutable($attempt);
+        $lockKey = "candidate_attempt:{$attempt->id}";
 
-        $questionId = $request->input('question_id');
-        if ($questionId && !$attempt->hasQuestion($questionId)) {
-            abort(403, 'Question does not belong to this assessment attempt.');
+        try {
+            return Cache::lock($lockKey, 10)->block(5, function () use ($request, $attempt) {
+                $attempt->refresh();
+                $this->authorizeAttemptAccess($attempt, $request->user());
+                $this->assertAttemptMutable($attempt);
+
+                $questionId = $request->input('question_id');
+                if ($questionId && !$attempt->hasQuestion($questionId)) {
+                    abort(403, 'Question does not belong to this assessment attempt.');
+                }
+
+                $type = $request->input('violation_type', 'window_blur');
+                event(new RuleViolationDetected($attempt, $type));
+
+                if ($type === 'fullscreen_exit') {
+                    \App\Services\ActivityLogger::log('FULLSCREEN_EXITED', 'Candidate exited secure fullscreen mode', $attempt);
+                } elseif ($type === 'fullscreen_enter') {
+                    \App\Services\ActivityLogger::log('FULLSCREEN_ENTERED', 'Candidate entered secure fullscreen mode', $attempt);
+                } elseif ($type === 'audio_completed') {
+                    \App\Services\ActivityLogger::log('AUDIO_PLAY_COMPLETED', "Candidate completed audio play for Question {$questionId}", $attempt);
+                    if ($questionId) {
+                        \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
+                            ->where('question_id', $questionId)
+                            ->update(['completed_at' => now()]);
+                    }
+                } else {
+                    \App\Services\ActivityLogger::log('WINDOW_BLUR_DETECTED', "Candidate window blur detected ({$type})", $attempt);
+                }
+
+                return response()->json(['status' => 'logged']);
+            });
+        } catch (LockTimeoutException $e) {
+            abort(409, 'Another operation is currently modifying this assessment attempt.');
         }
-
-        $type = $request->input('violation_type', 'window_blur');
-        event(new RuleViolationDetected($attempt, $type));
-
-        if ($type === 'fullscreen_exit') {
-            \App\Services\ActivityLogger::log('FULLSCREEN_EXITED', 'Candidate exited secure fullscreen mode', $attempt);
-        } elseif ($type === 'fullscreen_enter') {
-            \App\Services\ActivityLogger::log('FULLSCREEN_ENTERED', 'Candidate entered secure fullscreen mode', $attempt);
-        } elseif ($type === 'audio_completed') {
-            \App\Services\ActivityLogger::log('AUDIO_PLAY_COMPLETED', "Candidate completed audio play for Question {$questionId}", $attempt);
-            if ($questionId) {
-                \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
-                    ->where('question_id', $questionId)
-                    ->update(['completed_at' => now()]);
-            }
-        } else {
-            \App\Services\ActivityLogger::log('WINDOW_BLUR_DETECTED', "Candidate window blur detected ({$type})", $attempt);
-        }
-
-        return response()->json(['status' => 'logged']);
     }
 
     /**
@@ -529,41 +575,50 @@ class CandidatePortalController extends Controller
      */
     public function submit(Request $request, Attempt $attempt): RedirectResponse
     {
-        $this->authorizeAttemptAccess($attempt, $request->user());
+        $lockKey = "candidate_attempt:{$attempt->id}";
 
-        $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
+        try {
+            return Cache::lock($lockKey, 15)->block(10, function () use ($request, $attempt) {
+                $attempt->refresh();
+                $this->authorizeAttemptAccess($attempt, $request->user());
 
-        // Idempotency: If attempt is already submitted/terminal, safely redirect to review without recalculating or re-scoring
-        if ($statusValue !== AttemptStatus::InProgress->value && $statusValue !== 'in_progress') {
+                $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
+
+                // Idempotency: If attempt is already submitted/terminal, safely redirect to review without recalculating or re-scoring
+                if ($statusValue !== AttemptStatus::InProgress->value && $statusValue !== 'in_progress') {
+                    return redirect()->route('candidate.review', $attempt);
+                }
+
+                $attempt->loadMissing(['test.sections.testQuestions.question', 'answers']);
+
+                $totalQuestionsCount = 0;
+                if ($attempt->test) {
+                    foreach ($attempt->test->sections as $sec) {
+                        $totalQuestionsCount += $sec->testQuestions->count();
+                    }
+                }
+
+                $isExpired = $this->engine->timerEngine->isExpired($attempt);
+
+                if (!$isExpired && $totalQuestionsCount > 0) {
+                    $answeredCount = $attempt->answers->filter(function ($a) {
+                        return !is_null($a->selected_choice_id) || !empty($a->text_response);
+                    })->count();
+
+                    if ($answeredCount < $totalQuestionsCount) {
+                        return redirect()->back()->with('error', 'Please answer all questions before submitting the assessment.');
+                    }
+                }
+
+                $this->engine->submitAttempt($attempt);
+
+                \App\Services\ActivityLogger::log('EXAM_SUBMITTED', "Candidate submitted assessment attempt for '{$attempt->test?->title}'", $attempt);
+
+                return redirect()->route('candidate.review', $attempt);
+            });
+        } catch (LockTimeoutException $e) {
             return redirect()->route('candidate.review', $attempt);
         }
-
-        $attempt->loadMissing(['test.sections.testQuestions.question', 'answers']);
-
-        $totalQuestionsCount = 0;
-        if ($attempt->test) {
-            foreach ($attempt->test->sections as $sec) {
-                $totalQuestionsCount += $sec->testQuestions->count();
-            }
-        }
-
-        $isExpired = $this->engine->timerEngine->isExpired($attempt);
-
-        if (!$isExpired && $totalQuestionsCount > 0) {
-            $answeredCount = $attempt->answers->filter(function ($a) {
-                return !is_null($a->selected_choice_id) || !empty($a->text_response);
-            })->count();
-
-            if ($answeredCount < $totalQuestionsCount) {
-                return redirect()->back()->with('error', 'Please answer all questions before submitting the assessment.');
-            }
-        }
-
-        $this->engine->submitAttempt($attempt);
-
-        \App\Services\ActivityLogger::log('EXAM_SUBMITTED', "Candidate submitted assessment attempt for '{$attempt->test?->title}'", $attempt);
-
-        return redirect()->route('candidate.review', $attempt);
     }
 
     /**
@@ -647,64 +702,73 @@ class CandidatePortalController extends Controller
      */
     public function finalizeAttempt(Request $request, Attempt $attempt): RedirectResponse
     {
-        $this->authorizeAttemptAccess($attempt, $request->user());
+        $lockKey = "candidate_attempt_decision:{$attempt->id}";
 
-        $attempt->loadMissing(['test', 'assignment.attempts']);
-        $assignment = $attempt->assignment;
+        try {
+            return Cache::lock($lockKey, 15)->block(10, function () use ($request, $attempt) {
+                $attempt->refresh();
+                $this->authorizeAttemptAccess($attempt, $request->user());
 
-        // Verify attempt is submitted
-        if ($attempt->status !== AttemptStatus::Submitted) {
-            return redirect()->route('candidate.review', $attempt)
-                ->with('error', 'Only completed assessments can be finalized.');
+                $attempt->loadMissing(['test', 'assignment.attempts']);
+                $assignment = $attempt->assignment;
+
+                // Verify attempt is submitted
+                if ($attempt->status !== AttemptStatus::Submitted) {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'Only completed assessments can be finalized.');
+                }
+
+                // Idempotency: if already finalized, return success
+                if ($attempt->is_final && $attempt->decision_status === 'finalized') {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('status', 'Assessment result has already been finalized.');
+                }
+
+                // Verify assignment exists and is active (or matching)
+                if (!$assignment) {
+                    $attempt->update([
+                        'is_final'        => true,
+                        'decision_status' => 'finalized',
+                    ]);
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('status', 'Assessment score finalized successfully.');
+                }
+
+                // If Attempt 2 has already been started, Attempt 1 cannot be arbitrarily finalized
+                $hasSecondAttempt = $assignment->attempts()->where('attempt_number', 2)->exists();
+                if ($hasSecondAttempt) {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'A second attempt has already been initiated for this assessment.');
+                }
+
+                \Illuminate\Support\Facades\DB::transaction(function () use ($attempt, $assignment) {
+                    $attempt->update([
+                        'is_final'        => true,
+                        'decision_status' => 'finalized',
+                    ]);
+
+                    $assignment->update([
+                        'status'           => 'completed',
+                        'completed_at'     => now(),
+                        'final_attempt_id' => $attempt->id,
+                    ]);
+
+                    \App\Services\ActivityLogger::log(
+                        'CANDIDATE_ATTEMPT_FINALIZED',
+                        "Candidate finalized Attempt #{$attempt->attempt_number} for '{$attempt->test?->title}'",
+                        $attempt
+                    );
+                });
+
+                // Issue digital certificate for authoritative final result if eligible
+                app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
+
+                return redirect()->route('candidate.review', $attempt)
+                    ->with('status', 'Result finalized. Your score has been released as your final institutional result.');
+            });
+        } catch (LockTimeoutException $e) {
+            return redirect()->route('candidate.review', $attempt);
         }
-
-        // Idempotency: if already finalized, return success
-        if ($attempt->is_final && $attempt->decision_status === 'finalized') {
-            return redirect()->route('candidate.review', $attempt)
-                ->with('status', 'Assessment result has already been finalized.');
-        }
-
-        // Verify assignment exists and is active (or matching)
-        if (!$assignment) {
-            $attempt->update([
-                'is_final'        => true,
-                'decision_status' => 'finalized',
-            ]);
-            return redirect()->route('candidate.review', $attempt)
-                ->with('status', 'Assessment score finalized successfully.');
-        }
-
-        // If Attempt 2 has already been started, Attempt 1 cannot be arbitrarily finalized
-        $hasSecondAttempt = $assignment->attempts()->where('attempt_number', 2)->exists();
-        if ($hasSecondAttempt) {
-            return redirect()->route('candidate.review', $attempt)
-                ->with('error', 'A second attempt has already been initiated for this assessment.');
-        }
-
-        \Illuminate\Support\Facades\DB::transaction(function () use ($attempt, $assignment) {
-            $attempt->update([
-                'is_final'        => true,
-                'decision_status' => 'finalized',
-            ]);
-
-            $assignment->update([
-                'status'           => 'completed',
-                'completed_at'     => now(),
-                'final_attempt_id' => $attempt->id,
-            ]);
-
-            \App\Services\ActivityLogger::log(
-                'CANDIDATE_ATTEMPT_FINALIZED',
-                "Candidate finalized Attempt #{$attempt->attempt_number} for '{$attempt->test?->title}'",
-                $attempt
-            );
-        });
-
-        // Issue digital certificate for authoritative final result if eligible
-        app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
-
-        return redirect()->route('candidate.review', $attempt)
-            ->with('status', 'Result finalized. Your score has been released as your final institutional result.');
     }
 
     /**
@@ -712,81 +776,90 @@ class CandidatePortalController extends Controller
      */
     public function retryAttempt(Request $request, Attempt $attempt): RedirectResponse
     {
-        $this->authorizeAttemptAccess($attempt, $request->user());
+        $lockKey = "candidate_attempt_decision:{$attempt->id}";
 
-        $user = $request->user();
+        try {
+            return Cache::lock($lockKey, 15)->block(10, function () use ($request, $attempt) {
+                $attempt->refresh();
+                $this->authorizeAttemptAccess($attempt, $request->user());
 
-        $attempt->loadMissing(['test', 'assignment.attempts']);
-        $assignment = $attempt->assignment;
+                $user = $request->user();
 
-        // Verify Attempt 1 is submitted
-        if ($attempt->status !== AttemptStatus::Submitted) {
-            return redirect()->route('candidate.review', $attempt)
-                ->with('error', 'Please complete your first attempt before starting a retry.');
+                $attempt->loadMissing(['test', 'assignment.attempts']);
+                $assignment = $attempt->assignment;
+
+                // Verify Attempt 1 is submitted
+                if ($attempt->status !== AttemptStatus::Submitted) {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'Please complete your first attempt before starting a retry.');
+                }
+
+                // Verify Attempt 1 is not finalized
+                if ($attempt->is_final || $attempt->decision_status === 'finalized') {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'Cannot retry an assessment that has already been finalized.');
+                }
+
+                if (!$assignment || $assignment->status !== 'active') {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'This assessment assignment is no longer active.');
+                }
+
+                // Idempotency / Double-click check: If Attempt 2 already exists, redirect to it
+                $existingAttempt2 = $assignment->attempts()->where('attempt_number', 2)->first();
+                if ($existingAttempt2) {
+                    if ($existingAttempt2->status === AttemptStatus::InProgress) {
+                        return redirect()->route('candidate.exam', $existingAttempt2);
+                    }
+                    return redirect()->route('candidate.review', $existingAttempt2);
+                }
+
+                // Verify attempt limit
+                if ($assignment->attempts()->count() >= $assignment->max_attempts) {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'Maximum number of attempts reached for this assignment.');
+                }
+
+                $attempt2 = \Illuminate\Support\Facades\DB::transaction(function () use ($attempt, $assignment, $user) {
+                    $attempt->update([
+                        'decision_status' => 'retried',
+                        'is_final'        => false,
+                    ]);
+
+                    $evaluationStatus = $attempt->test?->requiresEvaluation()
+                        ? EvaluationStatus::PendingEvaluation
+                        : EvaluationStatus::NotRequired;
+
+                    $newAttempt = Attempt::create([
+                        'test_id'           => $attempt->test_id,
+                        'user_id'           => $user->id,
+                        'assignment_id'     => $assignment->id,
+                        'attempt_number'    => 2,
+                        'is_final'          => false,
+                        'decision_status'   => 'pending_decision',
+                        'started_at'        => now(),
+                        'status'            => AttemptStatus::InProgress,
+                        'evaluation_status' => $evaluationStatus,
+                        'seed'              => \Illuminate\Support\Str::random(10),
+                    ]);
+
+                    $assignment->update([
+                        'attempts_count' => $assignment->attempts()->count(),
+                    ]);
+
+                    \App\Services\ActivityLogger::log(
+                        'CANDIDATE_ATTEMPT_RETRIED',
+                        "Candidate started Attempt #2 for '{$attempt->test?->title}'",
+                        $newAttempt
+                    );
+
+                    return $newAttempt;
+                });
+
+                return redirect()->route('candidate.exam', $attempt2);
+            });
+        } catch (LockTimeoutException $e) {
+            return redirect()->route('candidate.review', $attempt);
         }
-
-        // Verify Attempt 1 is not finalized
-        if ($attempt->is_final || $attempt->decision_status === 'finalized') {
-            return redirect()->route('candidate.review', $attempt)
-                ->with('error', 'Cannot retry an assessment that has already been finalized.');
-        }
-
-        if (!$assignment || $assignment->status !== 'active') {
-            return redirect()->route('candidate.review', $attempt)
-                ->with('error', 'This assessment assignment is no longer active.');
-        }
-
-        // Idempotency / Double-click check: If Attempt 2 already exists, redirect to it
-        $existingAttempt2 = $assignment->attempts()->where('attempt_number', 2)->first();
-        if ($existingAttempt2) {
-            if ($existingAttempt2->status === AttemptStatus::InProgress) {
-                return redirect()->route('candidate.exam', $existingAttempt2);
-            }
-            return redirect()->route('candidate.review', $existingAttempt2);
-        }
-
-        // Verify attempt limit
-        if ($assignment->attempts()->count() >= $assignment->max_attempts) {
-            return redirect()->route('candidate.review', $attempt)
-                ->with('error', 'Maximum number of attempts reached for this assignment.');
-        }
-
-        $attempt2 = \Illuminate\Support\Facades\DB::transaction(function () use ($attempt, $assignment, $user) {
-            $attempt->update([
-                'decision_status' => 'retried',
-                'is_final'        => false,
-            ]);
-
-            $evaluationStatus = $attempt->test?->requiresEvaluation()
-                ? EvaluationStatus::PendingEvaluation
-                : EvaluationStatus::NotRequired;
-
-            $newAttempt = Attempt::create([
-                'test_id'           => $attempt->test_id,
-                'user_id'           => $user->id,
-                'assignment_id'     => $assignment->id,
-                'attempt_number'    => 2,
-                'is_final'          => false,
-                'decision_status'   => 'pending_decision',
-                'started_at'        => now(),
-                'status'            => AttemptStatus::InProgress,
-                'evaluation_status' => $evaluationStatus,
-                'seed'              => \Illuminate\Support\Str::random(10),
-            ]);
-
-            $assignment->update([
-                'attempts_count' => 2,
-            ]);
-
-            \App\Services\ActivityLogger::log(
-                'CANDIDATE_ATTEMPT_RETRIED',
-                "Candidate started Attempt #2 for '{$attempt->test?->title}'",
-                $newAttempt
-            );
-
-            return $newAttempt;
-        });
-
-        return redirect()->route('candidate.exam', $attempt2);
     }
 }

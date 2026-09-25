@@ -41,60 +41,64 @@ class AttemptEngine
      */
     public function startAttempt(Test $test, User $user): Attempt
     {
-        $existing = Attempt::where('test_id', $test->id)
-            ->where('user_id', $user->id)
-            ->where('status', AttemptStatus::InProgress)
-            ->latest('started_at')
-            ->first();
+        $lockKey = "start_attempt:user_{$user->id}:test_{$test->id}";
 
-        if ($existing && !$this->timerEngine->isExpired($existing)) {
-            $this->resumeAttempt($existing);
-            return $existing;
-        }
-
-        $assignment = null;
-        if ($test->isRealTest()) {
-            $assignment = CandidateTestAssignment::where('user_id', $user->id)
-                ->where('test_id', $test->id)
-                ->latest('assigned_at')
+        return \Illuminate\Support\Facades\Cache::lock($lockKey, 15)->block(10, function () use ($test, $user) {
+            $existing = Attempt::where('test_id', $test->id)
+                ->where('user_id', $user->id)
+                ->where('status', AttemptStatus::InProgress)
+                ->latest('started_at')
                 ->first();
 
-            if ($assignment) {
-                $completedCount = $assignment->attempts()->where('status', AttemptStatus::Submitted)->count();
-                if ($assignment->status === 'completed' || $completedCount >= $assignment->max_attempts) {
-                    throw new InvalidArgumentException("Maximum attempts ({$assignment->max_attempts}) reached for this Mock Test assignment.");
+            if ($existing && !$this->timerEngine->isExpired($existing)) {
+                $this->resumeAttempt($existing);
+                return $existing;
+            }
+
+            $assignment = null;
+            if ($test->isRealTest()) {
+                $assignment = CandidateTestAssignment::where('user_id', $user->id)
+                    ->where('test_id', $test->id)
+                    ->latest('assigned_at')
+                    ->first();
+
+                if ($assignment) {
+                    $completedCount = $assignment->attempts()->where('status', AttemptStatus::Submitted)->count();
+                    if ($assignment->status === 'completed' || $completedCount >= $assignment->max_attempts) {
+                        throw new InvalidArgumentException("Maximum attempts ({$assignment->max_attempts}) reached for this Mock Test assignment.");
+                    }
                 }
             }
-        }
 
-        $evaluationStatus = $test->requiresEvaluation()
-            ? EvaluationStatus::PendingEvaluation
-            : EvaluationStatus::NotRequired;
+            $evaluationStatus = $test->requiresEvaluation()
+                ? EvaluationStatus::PendingEvaluation
+                : EvaluationStatus::NotRequired;
 
-        $attemptNumber = $assignment ? ($assignment->attempts()->count() + 1) : 1;
+            $attemptNumber = $assignment ? ($assignment->attempts()->count() + 1) : 1;
 
-        $attempt = Attempt::create([
-            'test_id'           => $test->id,
-            'user_id'           => $user->id,
-            'assignment_id'     => ($assignment && $assignment->status === 'active') ? $assignment->id : null,
-            'attempt_number'    => $attemptNumber,
-            'is_final'          => false,
-            'decision_status'   => $test->isRealTest() ? 'pending_decision' : null,
-            'started_at'        => now(),
-            'status'            => AttemptStatus::InProgress,
-            'evaluation_status' => $evaluationStatus,
-            'seed'              => Str::random(10),
-        ]);
-
-        if ($assignment && $assignment->status === 'active') {
-            $assignment->update([
-                'attempts_count' => $assignment->attempts()->count(),
+            $attempt = Attempt::create([
+                'test_id'           => $test->id,
+                'user_id'           => $user->id,
+                'assignment_id'     => ($assignment && $assignment->status === 'active') ? $assignment->id : null,
+                'attempt_number'    => $attemptNumber,
+                'is_final'          => false,
+                'decision_status'   => $test->isRealTest() ? 'pending_decision' : null,
+                'started_at'        => now(),
+                'status'            => AttemptStatus::InProgress,
+                'evaluation_status' => $evaluationStatus,
+                'seed'              => Str::random(10),
             ]);
-        }
 
-        event(new AttemptStarted($attempt));
+            if ($assignment && $assignment->status === 'active') {
+                $assignment->update([
+                    'attempts_count' => $assignment->attempts()->count(),
+                ]);
+            }
 
-        return $attempt;
+            event(new AttemptStarted($attempt));
+
+            return $attempt;
+        });
     }
 
     /**
