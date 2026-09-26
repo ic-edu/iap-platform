@@ -25,4 +25,12 @@ enum AttemptStatus: string
     {
         return in_array($this, [self::Submitted, self::Expired], true);
     }
+
+    /**
+     * @return array<string>
+     */
+    public static function completedValues(): array
+    {
+        return [self::Submitted->value, self::Expired->value];
+    }
 }

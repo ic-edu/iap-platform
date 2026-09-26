@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Modules\Assessment\Engines\AssignmentEngine;
 use App\Modules\Assessment\Engines\AttemptEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
-use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
@@ -33,12 +32,19 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $candidate;
+
     protected User $otherCandidate;
+
     protected Test $mockTest;
+
     protected Product $product;
+
     protected CandidateTestAssignment $assignment;
+
     protected Question $q1;
+
     protected Question $q2;
 
     protected function setUp(): void
@@ -64,101 +70,101 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
 
         // Create Question Bank & 2 Questions
         $bank = QuestionBank::create([
-            'title'       => 'TOEIC Bank Lifecycle',
-            'slug'        => 'toeic-bank-lifecycle',
-            'type'        => 'toeic',
-            'created_by'  => $this->admin->id,
+            'title' => 'TOEIC Bank Lifecycle',
+            'slug' => 'toeic-bank-lifecycle',
+            'type' => 'toeic',
+            'created_by' => $this->admin->id,
             'is_approved' => true,
         ]);
 
         $this->q1 = Question::create([
             'question_bank_id' => $bank->id,
-            'prompt'           => 'What is the correct answer for Q1?',
-            'points'           => 100,
+            'prompt' => 'What is the correct answer for Q1?',
+            'points' => 100,
         ]);
         QuestionChoice::create(['question_id' => $this->q1->id, 'label' => 'A', 'content' => 'Option A (Correct)', 'is_correct' => true]);
         QuestionChoice::create(['question_id' => $this->q1->id, 'label' => 'B', 'content' => 'Option B (Wrong)', 'is_correct' => false]);
 
         $this->q2 = Question::create([
             'question_bank_id' => $bank->id,
-            'prompt'           => 'What is the correct answer for Q2?',
-            'points'           => 100,
+            'prompt' => 'What is the correct answer for Q2?',
+            'points' => 100,
         ]);
         QuestionChoice::create(['question_id' => $this->q2->id, 'label' => 'A', 'content' => 'Option A (Correct)', 'is_correct' => true]);
         QuestionChoice::create(['question_id' => $this->q2->id, 'label' => 'B', 'content' => 'Option B (Wrong)', 'is_correct' => false]);
 
         // Create Published Real Test (Mock Test)
         $this->mockTest = Test::create([
-            'title'           => 'TOEIC Full Simulation Test 2026',
-            'slug'            => 'toeic-full-sim-2026',
+            'title' => 'TOEIC Full Simulation Test 2026',
+            'slug' => 'toeic-full-sim-2026',
             'assessment_mode' => 'real_test',
-            'status'          => 'published',
-            'is_published'    => true,
-            'duration'        => 120,
-            'pass_score'      => 700,
-            'created_by'      => $this->admin->id,
+            'status' => 'published',
+            'is_published' => true,
+            'duration' => 120,
+            'pass_score' => 700,
+            'created_by' => $this->admin->id,
         ]);
 
         $section = TestSection::create([
             'test_id' => $this->mockTest->id,
-            'title'   => 'Core Section',
-            'order'   => 1,
+            'title' => 'Core Section',
+            'order' => 1,
         ]);
 
         TestQuestion::create([
             'test_section_id' => $section->id,
-            'question_id'     => $this->q1->id,
-            'order'           => 1,
+            'question_id' => $this->q1->id,
+            'order' => 1,
         ]);
         TestQuestion::create([
             'test_section_id' => $section->id,
-            'question_id'     => $this->q2->id,
-            'order'           => 2,
+            'question_id' => $this->q2->id,
+            'order' => 2,
         ]);
 
         // Commerce setup: Product, Order, Invoice, Payment
         $this->product = Product::create([
-            'title'        => 'TOEIC Simulation Product',
-            'slug'         => 'toeic-sim-prod',
+            'title' => 'TOEIC Simulation Product',
+            'slug' => 'toeic-sim-prod',
             'product_type' => 'placement_test',
-            'price'        => 250000,
-            'test_id'      => $this->mockTest->id,
-            'is_active'    => true,
+            'price' => 250000,
+            'test_id' => $this->mockTest->id,
+            'is_active' => true,
         ]);
 
         $order = Order::create([
-            'order_number'    => 'ORD-MOCK-001',
-            'user_id'         => $this->candidate->id,
-            'total_amount'    => 250000,
-            'status'          => OrderStatus::Completed,
+            'order_number' => 'ORD-MOCK-001',
+            'user_id' => $this->candidate->id,
+            'total_amount' => 250000,
+            'status' => OrderStatus::Completed,
             'billing_details' => ['name' => 'Jane Candidate'],
         ]);
 
         $inv = Invoice::create([
             'invoice_number' => 'INV-MOCK-001',
-            'order_id'       => $order->id,
-            'user_id'        => $this->candidate->id,
-            'amount'         => 250000,
-            'status'         => 'paid',
-            'due_date'       => now()->addDays(7),
+            'order_id' => $order->id,
+            'user_id' => $this->candidate->id,
+            'amount' => 250000,
+            'status' => 'paid',
+            'due_date' => now()->addDays(7),
         ]);
 
         $payment = Payment::create([
-            'invoice_id'       => $inv->id,
-            'user_id'          => $this->candidate->id,
-            'amount'           => 250000,
-            'payment_method'   => 'credit_card',
+            'invoice_id' => $inv->id,
+            'user_id' => $this->candidate->id,
+            'amount' => 250000,
+            'payment_method' => 'credit_card',
             'reference_number' => 'PAY-MOCK-001',
-            'status'           => PaymentStatus::Paid,
-            'paid_at'          => now(),
+            'status' => PaymentStatus::Paid,
+            'paid_at' => now(),
         ]);
 
         OrderItem::create([
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'product_id' => $this->product->id,
-            'quantity'   => 1,
-            'price'      => 250000,
-            'total'      => 250000,
+            'quantity' => 1,
+            'price' => 250000,
+            'total' => 250000,
         ]);
 
         // Assign Mock Test to Candidate
@@ -209,7 +215,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         // Review page renders Finalize and Retry buttons
         $response = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
         $response->assertStatus(200);
-        $response->assertSee('Institutional Mock Test Result Decision');
+        $response->assertSee('Mock Test Result Decision');
         $response->assertSee('Finalize Result &amp; Release Final Score', false);
         $response->assertSee('Retry Second Attempt');
     }
@@ -558,35 +564,35 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
 
         // 2. New Paid Order for Cycle 2
         $order2 = Order::create([
-            'order_number'    => 'ORD-MOCK-002',
-            'user_id'         => $this->candidate->id,
-            'total_amount'    => 250000,
-            'status'          => OrderStatus::Completed,
+            'order_number' => 'ORD-MOCK-002',
+            'user_id' => $this->candidate->id,
+            'total_amount' => 250000,
+            'status' => OrderStatus::Completed,
             'billing_details' => ['name' => 'Jane Candidate'],
         ]);
         $inv2 = Invoice::create([
             'invoice_number' => 'INV-MOCK-002',
-            'order_id'       => $order2->id,
-            'user_id'        => $this->candidate->id,
-            'amount'         => 250000,
-            'status'         => 'paid',
-            'due_date'       => now()->addDays(7),
+            'order_id' => $order2->id,
+            'user_id' => $this->candidate->id,
+            'amount' => 250000,
+            'status' => 'paid',
+            'due_date' => now()->addDays(7),
         ]);
         $payment2 = Payment::create([
-            'invoice_id'       => $inv2->id,
-            'user_id'          => $this->candidate->id,
-            'amount'           => 250000,
-            'payment_method'   => 'bank_transfer',
+            'invoice_id' => $inv2->id,
+            'user_id' => $this->candidate->id,
+            'amount' => 250000,
+            'payment_method' => 'bank_transfer',
             'reference_number' => 'PAY-MOCK-002',
-            'status'           => PaymentStatus::Paid,
-            'paid_at'          => now(),
+            'status' => PaymentStatus::Paid,
+            'paid_at' => now(),
         ]);
         OrderItem::create([
-            'order_id'   => $order2->id,
+            'order_id' => $order2->id,
             'product_id' => $this->product->id,
-            'quantity'   => 1,
-            'price'      => 250000,
-            'total'      => 250000,
+            'quantity' => 1,
+            'price' => 250000,
+            'total' => 250000,
         ]);
 
         $assignmentEngine = app(AssignmentEngine::class);

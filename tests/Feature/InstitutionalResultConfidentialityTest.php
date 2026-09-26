@@ -10,6 +10,8 @@ use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
+use App\Modules\Certificate\Enums\CertificateStatus;
+use App\Modules\Certificate\Models\Certificate;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionBank\Models\QuestionChoice;
@@ -151,10 +153,15 @@ class InstitutionalResultConfidentialityTest extends TestCase
         $response = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
         $response->assertOk();
 
-        // Assert aggregate score and notice are visible
-        $response->assertSee('Institutional Mock Test Result Decision');
+        // Assert aggregate score and notice are visible with neutral terminology
+        $response->assertSee('Mock Test Result Decision');
         $response->assertSee('Final Test Score');
-        $response->assertSee('Question-level review is not available for secure institutional assessments');
+        $response->assertSee('Question-level review is not available for secure Mock Tests. Detailed assessment items and answer keys are protected assessment content.');
+
+        // Assert absence of legacy assessment branding words
+        $response->assertDontSee('Institutional Mock Test Result Decision');
+        $response->assertDontSee('secure institutional assessments');
+        $response->assertDontSee('protected institutional content');
 
         // Assert NO leakage of confidential questions, choices, or explanations
         $response->assertDontSee('CONFIDENTIAL_QUESTION_PROMPT_1_XYZ');
@@ -185,9 +192,9 @@ class InstitutionalResultConfidentialityTest extends TestCase
         $response = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
         $response->assertOk();
 
-        $response->assertSee('Institutional Mock Test Result Decision');
+        $response->assertSee('Mock Test Result Decision');
         $response->assertSee('Final Test Score');
-        $response->assertSee('Question-level review is not available for secure institutional assessments');
+        $response->assertSee('Question-level review is not available for secure Mock Tests. Detailed assessment items and answer keys are protected assessment content.');
         $response->assertDontSee('CONFIDENTIAL_QUESTION_PROMPT_1_XYZ');
         $response->assertDontSee('CONFIDENTIAL_EXPLANATION_1_ABC');
         $response->assertDontSee('CONFIDENTIAL_OPTION_A_CORRECT');
@@ -215,7 +222,7 @@ class InstitutionalResultConfidentialityTest extends TestCase
         $response = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
         $response->assertOk();
 
-        $response->assertSee('Question-level review is not available for secure institutional assessments');
+        $response->assertSee('Question-level review is not available for secure Mock Tests. Detailed assessment items and answer keys are protected assessment content.');
         $response->assertDontSee('CONFIDENTIAL_QUESTION_PROMPT_1_XYZ');
         $response->assertDontSee('Detailed Question Review');
     }
@@ -241,8 +248,9 @@ class InstitutionalResultConfidentialityTest extends TestCase
         $response->assertOk();
 
         // Even finalized real tests MUST NEVER disclose question items
-        $response->assertSee('Authoritative Institutional Result Finalized');
-        $response->assertSee('Question-level review is not available for secure institutional assessments');
+        $response->assertSee('Final Mock Test Result Confirmed');
+        $response->assertSee('Question-level review is not available for secure Mock Tests. Detailed assessment items and answer keys are protected assessment content.');
+        $response->assertDontSee('Authoritative Institutional Result Finalized');
         $response->assertDontSee('CONFIDENTIAL_QUESTION_PROMPT_1_XYZ');
         $response->assertDontSee('Detailed Question Review');
     }
@@ -267,7 +275,7 @@ class InstitutionalResultConfidentialityTest extends TestCase
         $response = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
         $response->assertOk();
 
-        $response->assertSee('Question-level review is not available for secure institutional assessments');
+        $response->assertSee('Question-level review is not available for secure Mock Tests. Detailed assessment items and answer keys are protected assessment content.');
         $response->assertDontSee('CONFIDENTIAL_QUESTION_PROMPT_1_XYZ');
         $response->assertDontSee('Detailed Question Review');
     }
@@ -292,7 +300,7 @@ class InstitutionalResultConfidentialityTest extends TestCase
         $response = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
         $response->assertOk();
 
-        $response->assertSee('Question-level review is not available for secure institutional assessments');
+        $response->assertSee('Question-level review is not available for secure Mock Tests. Detailed assessment items and answer keys are protected assessment content.');
         $response->assertDontSee('CONFIDENTIAL_QUESTION_PROMPT_1_XYZ');
         $response->assertDontSee('CONFIDENTIAL_OPTION_A_CORRECT');
         $response->assertDontSee('CONFIDENTIAL_EXPLANATION_1_ABC');
@@ -612,5 +620,179 @@ class InstitutionalResultConfidentialityTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $resolver = new BestResultResolver;
         $resolver->resolve($this->assignment);
+    }
+
+    public function test_candidate_pages_do_not_render_assessment_branding_words_official_or_institutional(): void
+    {
+        // 1. Instructions screen
+        $instructionsResponse = $this->actingAs($this->candidate)->get(route('candidate.tests.instructions', $this->realTest));
+        $instructionsResponse->assertOk();
+        $instructionsResponse->assertSee('Mock Test Notice:');
+        $instructionsResponse->assertSee('This Mock Test is independently prepared for assessment purposes and is not affiliated with, endorsed by, or produced by any third-party test provider.');
+        $instructionsResponse->assertDontSee('Institutional Notice:');
+        $instructionsResponse->assertDontSee('This is an institutional mock test.');
+        $instructionsResponse->assertDontSee('official third-party examination');
+
+        // 2. Exam screen fullscreen overlay
+        $attempt = Attempt::create([
+            'user_id' => $this->candidate->id,
+            'test_id' => $this->realTest->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::InProgress,
+            'score' => 0,
+            'total_score' => 0,
+            'started_at' => now(),
+        ]);
+
+        $examResponse = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
+        $examResponse->assertOk();
+        $examResponse->assertSee('For secure test integrity, this incident has been logged.');
+        $examResponse->assertDontSee('For official exam integrity, this incident has been logged.');
+
+        // 3. Review screen
+        $attempt->update([
+            'status' => AttemptStatus::Submitted,
+            'score' => 700,
+            'total_score' => 700,
+            'evaluation_status' => EvaluationStatus::Evaluated,
+            'decision_status' => 'pending_decision',
+            'is_final' => false,
+            'submitted_at' => now(),
+        ]);
+
+        $reviewResponse = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
+        $reviewResponse->assertOk();
+        $reviewResponse->assertSee('Mock Test Result Decision');
+        $reviewResponse->assertSee('final Mock Test result');
+        $reviewResponse->assertDontSee('Institutional Mock Test Result Decision');
+        $reviewResponse->assertDontSee('final institutional Mock Test result');
+        $reviewResponse->assertDontSee('Institutional Scaled Score');
+        $reviewResponse->assertDontSee('Institutional Conversion Scoring');
+        $reviewResponse->assertDontSee('Official Digital Certificate Issued');
+    }
+
+    public function test_certificate_views_do_not_render_official_or_institutional_branding(): void
+    {
+        // 1. Verify screen
+        $verifyResponse = $this->get(route('public.verify'));
+        $verifyResponse->assertOk();
+        $verifyResponse->assertSee('Certificate Verification — iC.edu');
+        $verifyResponse->assertSee('iC.edu Certificate Verification');
+        $verifyResponse->assertDontSee('Official Certificate Verification — iC.edu');
+        $verifyResponse->assertDontSee('iC.edu Official Verification Portal');
+
+        // 2. PDF template view rendering
+        $attempt = Attempt::create([
+            'user_id' => $this->candidate->id,
+            'test_id' => $this->realTest->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Submitted,
+            'score' => 800,
+            'total_score' => 800,
+            'is_final' => true,
+            'decision_status' => 'finalized',
+            'started_at' => now()->subHours(2),
+            'submitted_at' => now()->subHour(),
+        ]);
+
+        $cert = Certificate::create([
+            'certificate_number' => 'CERT-2026-TEST-001',
+            'verification_code' => 'VRF-2026-TEST',
+            'status' => CertificateStatus::Valid,
+            'attempt_id' => $attempt->id,
+            'user_id' => $this->candidate->id,
+            'template' => 'default',
+            'issued_at' => now(),
+        ]);
+
+        $html = view('certificate::pdf_template', [
+            'certificate' => $cert,
+            'qrSvg' => '<svg></svg>',
+            'verifyUrl' => 'http://example.com/verify',
+        ])->render();
+
+        $this->assertStringContainsString('This certificate is presented to', $html);
+        $this->assertStringContainsString('Verification QR Code', $html);
+        $this->assertStringNotContainsString('This official certificate is proudly presented to', $html);
+        $this->assertStringNotContainsString('Official Verification QR Code', $html);
+        $this->assertStringNotContainsString('Institutional Scaled Score', $html);
+        $this->assertStringNotContainsString('official third-party examination score', $html);
+    }
+
+    public function test_candidate_completed_queries_include_submitted_and_expired_attempts_consistently(): void
+    {
+        // Create 1 Submitted, 1 Expired, 1 InProgress, 1 Cancelled attempt
+        $submittedAttempt = Attempt::create([
+            'user_id' => $this->candidate->id,
+            'test_id' => $this->realTest->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Submitted,
+            'score' => 700,
+            'total_score' => 700,
+            'started_at' => now()->subDays(3),
+            'submitted_at' => now()->subDays(3)->addHours(2),
+        ]);
+
+        $expiredAttempt = Attempt::create([
+            'user_id' => $this->candidate->id,
+            'test_id' => $this->simulatorTest->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Expired,
+            'score' => 0,
+            'total_score' => 0,
+            'decision_status' => 'pending_decision',
+            'is_final' => false,
+            'started_at' => now()->subDays(2),
+            'submitted_at' => now()->subDays(2)->addHours(1),
+        ]);
+
+        $inProgressAttempt = Attempt::create([
+            'user_id' => $this->candidate->id,
+            'test_id' => $this->realTest->id,
+            'attempt_number' => 2,
+            'status' => AttemptStatus::InProgress,
+            'score' => 0,
+            'total_score' => 0,
+            'started_at' => now()->subMinutes(10),
+        ]);
+
+        $cancelledAttempt = Attempt::create([
+            'user_id' => $this->candidate->id,
+            'test_id' => $this->simulatorTest->id,
+            'attempt_number' => 2,
+            'status' => AttemptStatus::Cancelled,
+            'score' => 0,
+            'total_score' => 0,
+            'started_at' => now()->subDays(4),
+        ]);
+
+        // 1. Portal dashboard completed count
+        $portalResponse = $this->actingAs($this->candidate)->get(route('candidate.portal'));
+        $portalResponse->assertOk();
+        // Completed count should be 2 (Submitted + Expired)
+        $this->assertEquals(2, Attempt::where('user_id', $this->candidate->id)->completed()->count());
+        $portalResponse->assertSee('Completed Tests: 2');
+
+        // 2. My Attempts filter=completed includes Submitted + Expired
+        $myAttemptsResponse = $this->actingAs($this->candidate)->get(route('candidate.my-attempts', ['filter' => 'completed']));
+        $myAttemptsResponse->assertOk();
+        $myAttemptsResponse->assertSee($submittedAttempt->test->title);
+        $myAttemptsResponse->assertSee($expiredAttempt->test->title);
+        $myAttemptsResponse->assertSee('TIME EXPIRED');
+        $myAttemptsResponse->assertDontSee($inProgressAttempt->test->title.' (active)');
+
+        // 3. My Results includes Submitted + Expired
+        $myResultsResponse = $this->actingAs($this->candidate)->get(route('candidate.my-results'));
+        $myResultsResponse->assertOk();
+        $myResultsResponse->assertSee($submittedAttempt->test->title);
+        $myResultsResponse->assertSee($expiredAttempt->test->title);
+
+        // 4. Ensure Expired Real Test in pending_decision is NOT auto-finalized
+        $expiredAttempt->refresh();
+        $this->assertFalse($expiredAttempt->is_final);
+        $this->assertEquals('pending_decision', $expiredAttempt->decision_status);
     }
 }

@@ -62,7 +62,7 @@
             <div class="flex items-center gap-3 mb-3">
                 <span class="text-3xl">⚖️</span>
                 <div>
-                    <h2 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">Institutional Mock Test Result Decision</h2>
+                    <h2 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">Mock Test Result Decision</h2>
                     <p class="text-xs text-indigo-700 dark:text-indigo-300">You have completed Attempt #1. Choose whether to lock in this result or use your 2nd attempt.</p>
                 </div>
             </div>
@@ -76,7 +76,7 @@
                         </div>
                         <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-1.5">Finalize Result &amp; Release Final Score</h3>
                         <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                            Your current score (<strong>{{ $summary['total_score'] ?? 0 }} pts</strong>) will become your final institutional Mock Test result. The second attempt will no longer be available.
+                            Your current score (<strong>{{ $summary['total_score'] ?? 0 }} pts</strong>) will become your final Mock Test result. The second attempt will no longer be available.
                         </p>
                     </div>
                     <form method="POST" action="{{ route('candidate.exam.finalize', $attempt) }}" class="mt-4">
@@ -110,7 +110,7 @@
         @elseif($attempt->is_final)
         <div class="mb-8 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between flex-wrap gap-2">
             <span class="text-xs text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-2">
-                <span>✅</span> Authoritative Institutional Result Finalized
+                <span>✅</span> Final Mock Test Result Confirmed
             </span>
             <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
                 Final Score Released
@@ -119,14 +119,14 @@
         @endif
 
         @if($isToeic && $isFullToeic)
-        <!-- Full Mock Test Institutional Scaled Score Summary Card -->
+        <!-- Full Mock Test Scaled Score Summary Card -->
         <div class="mb-8 p-6 bg-gradient-to-r from-indigo-50/60 via-white to-indigo-50/60 dark:from-slate-900 dark:via-indigo-950/40 dark:to-slate-900 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl shadow-md dark:shadow-xl">
             <div class="flex items-center justify-between flex-wrap gap-3 pb-4 mb-4 border-b border-indigo-200 dark:border-indigo-500/20">
                 <div class="flex items-center gap-2">
                     <span class="text-2xl">🏆</span>
                     <div>
-                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Institutional Scaled Score</h2>
-                        <p class="text-xs text-indigo-700 dark:text-indigo-300">Institutional Conversion Scoring</p>
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Scaled Score</h2>
+                        <p class="text-xs text-indigo-700 dark:text-indigo-300">Mock Test Scoring</p>
                     </div>
                 </div>
                 <div class="text-right">
@@ -158,7 +158,7 @@
             </div>
 
             <div class="mt-4 pt-3 border-t border-indigo-200 dark:border-indigo-500/20 text-[11px] text-slate-500 dark:text-slate-400 italic">
-                This is an institutional mock assessment result and is not an official third-party examination score.
+                This score is generated from an independently prepared Mock Test and does not indicate affiliation with, endorsement by, or production by any third-party test provider.
             </div>
         </div>
         @elseif($isToeic && $isPractice)
@@ -166,7 +166,7 @@
         <div class="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-2.5 text-xs text-amber-700 dark:text-amber-300">
                 <span class="text-lg">ℹ️</span>
-                <span><strong>Practice Score Mode:</strong> Simulator results are evaluated by accuracy. 75% or higher is considered passing. Institutional scaled scoring applies to governed full mock assessments.</span>
+                <span><strong>Practice Score Mode:</strong> Simulator results are evaluated by accuracy. 75% or higher is considered passing. Scaled scoring applies to full Mock Tests.</span>
             </div>
             <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 uppercase tracking-wider">
                 Practice Assessment
@@ -177,7 +177,7 @@
         <!-- Metrics & Performance Card Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-center shadow-sm">
-                <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $isToeic ? ($isFullToeic ? 'Institutional Scaled Score' : 'Practice Score') : 'Final Test Score' }}</span>
+                <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $isToeic ? ($isFullToeic ? 'Scaled Score' : 'Practice Score') : 'Final Test Score' }}</span>
                 <span class="text-3xl font-extrabold {{ ($summary['is_passed'] ?? false) ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }} mt-1 block">
                     {{ $summary['total_score'] ?? 0 }}
                 </span>
@@ -224,7 +224,7 @@
                     <span class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1 block">
                         {{ $incorrectCount }}
                     </span>
-                    <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">{{ $incorrectCount === 0 ? 'No review required' : (($summary['can_review_detailed'] ?? false) ? 'Review items below' : 'Institutional assessment') }}</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">{{ $incorrectCount === 0 ? 'No review required' : (($summary['can_review_detailed'] ?? false) ? 'Review items below' : 'Question-level review unavailable') }}</span>
                 </div>
             @endif
         </div>
@@ -234,7 +234,7 @@
             <div class="mb-8 p-6 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h3 class="text-base font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
-                        <span>🎓</span> Official Digital Certificate Issued!
+                        <span>🎓</span> Digital Certificate Issued!
                     </h3>
                     <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Certificate #{{ $summary['certificate_number'] ?? '' }}</p>
                 </div>
@@ -438,10 +438,10 @@
             @endforelse
         </div>
         @else
-        <!-- Secure Institutional Assessment Confidentiality Notice -->
+        <!-- Secure Mock Test Confidentiality Notice -->
         <div class="mb-8 p-5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center gap-3">
             <span class="text-xl">🔒</span>
-            <span>Question-level review is not available for secure institutional assessments. Detailed assessment items and answer keys are protected institutional content.</span>
+            <span>Question-level review is not available for secure Mock Tests. Detailed assessment items and answer keys are protected assessment content.</span>
         </div>
         @endif
 

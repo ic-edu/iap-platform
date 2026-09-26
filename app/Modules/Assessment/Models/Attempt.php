@@ -7,6 +7,7 @@ use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Certificate\Models\Certificate;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -134,6 +135,17 @@ class Attempt extends Model
         $statusValue = (string) $this->status;
 
         return in_array($statusValue, [AttemptStatus::Submitted->value, AttemptStatus::Expired->value, 'submitted', 'expired'], true);
+    }
+
+    /**
+     * Scope a query to only include completed attempts (Submitted and Expired).
+     *
+     * @param  Builder<Attempt>  $query
+     * @return Builder<Attempt>
+     */
+    public function scopeCompleted($query)
+    {
+        return $query->whereIn('status', AttemptStatus::completedValues());
     }
 
     /**

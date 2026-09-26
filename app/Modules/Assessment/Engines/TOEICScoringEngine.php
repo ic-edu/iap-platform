@@ -125,6 +125,7 @@ class TOEICScoringEngine
     public function convertListeningScore(int $correctCount): int
     {
         $clamped = max(0, min(100, $correctCount));
+
         return self::CONVERSION_TABLE[$clamped]['listening'] ?? 0;
     }
 
@@ -134,6 +135,7 @@ class TOEICScoringEngine
     public function convertReadingScore(int $correctCount): int
     {
         $clamped = max(0, min(100, $correctCount));
+
         return self::CONVERSION_TABLE[$clamped]['reading'] ?? 0;
     }
 
@@ -269,7 +271,7 @@ class TOEICScoringEngine
             $readingScore = $this->convertReadingScore($readingCorrect);
             $totalScore = (float) ($listeningScore + $readingScore);
             $isPractice = false;
-            $scoreLabel = 'Institutional Scaled Score';
+            $scoreLabel = 'Scaled Score';
             $passed = ($totalScore >= $passScore);
         } else {
             // Simulator (40-50 questions) / Mini Mock / Practice / UAT / Partial test
@@ -291,20 +293,20 @@ class TOEICScoringEngine
         }
 
         return [
-            'assessment_mode'   => $userFacingMode,
-            'listening_total'   => $listeningTotal,
+            'assessment_mode' => $userFacingMode,
+            'listening_total' => $listeningTotal,
             'listening_correct' => $listeningCorrect,
-            'listening_score'   => $listeningScore,
-            'reading_total'     => $readingTotal,
-            'reading_correct'   => $readingCorrect,
-            'reading_score'     => $readingScore,
-            'total_questions'   => $totalQuestions,
-            'total_correct'     => $totalCorrect,
-            'total_score'       => $totalScore,
-            'is_full_toeic'     => $isFullToeic,
-            'is_practice'       => $isPractice,
-            'score_label'       => $scoreLabel,
-            'passed'            => $passed,
+            'listening_score' => $listeningScore,
+            'reading_total' => $readingTotal,
+            'reading_correct' => $readingCorrect,
+            'reading_score' => $readingScore,
+            'total_questions' => $totalQuestions,
+            'total_correct' => $totalCorrect,
+            'total_score' => $totalScore,
+            'is_full_toeic' => $isFullToeic,
+            'is_practice' => $isPractice,
+            'score_label' => $scoreLabel,
+            'passed' => $passed,
         ];
     }
 }

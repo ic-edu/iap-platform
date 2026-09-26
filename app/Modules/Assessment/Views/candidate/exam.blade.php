@@ -61,7 +61,7 @@
                 <span class="text-4xl">⚠️</span>
                 <h2 class="text-xl font-black text-slate-900 dark:text-white">Secure Fullscreen Exited</h2>
                 <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    You have exited secure fullscreen mode. For official exam integrity, this incident has been logged. Please return to fullscreen mode immediately to continue your assessment.
+                    You have exited secure fullscreen mode. For secure test integrity, this incident has been logged. Please return to fullscreen mode immediately to continue your assessment.
                 </p>
                 <button type="button" onclick="returnToFullscreen()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all">
                     Return to Fullscreen &rarr;

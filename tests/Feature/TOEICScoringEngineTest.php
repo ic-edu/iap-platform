@@ -5,12 +5,12 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Assessment\Engines\AttemptEngine;
 use App\Modules\Assessment\Engines\ResultEngine;
-use App\Modules\Assessment\Engines\ScoringEngine;
 use App\Modules\Assessment\Engines\TOEICScoringEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\ScoringMethod;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
+use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
@@ -30,7 +30,9 @@ class TOEICScoringEngineTest extends TestCase
     use RefreshDatabase;
 
     protected User $teacher;
+
     protected User $candidate;
+
     protected TOEICScoringEngine $engine;
 
     protected function setUp(): void
@@ -119,7 +121,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Full Mock Test 01',
-            'slug' => 'toeic-full-mock-test-01-' . uniqid(),
+            'slug' => 'toeic-full-mock-test-01-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest, // Internal enum represents Mock Test
             'scoring_method' => ScoringMethod::Automatic,
@@ -146,7 +148,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'TOEIC Bank',
-            'slug' => 'toeic-bank-' . uniqid(),
+            'slug' => 'toeic-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -215,13 +217,13 @@ class TOEICScoringEngineTest extends TestCase
         $this->assertEquals(355, $sectionScores['reading']['score']);
         $this->assertTrue($sectionScores['is_full_toeic']);
         $this->assertFalse($sectionScores['is_practice']);
-        $this->assertEquals('Institutional Scaled Score', $sectionScores['score_label']);
+        $this->assertEquals('Scaled Score', $sectionScores['score_label']);
 
         $result = app(ResultEngine::class)->generateResult($attempt);
         $this->assertEquals(795.0, (float) $result['final_score']);
         $this->assertTrue($result['is_passed']); // 795 >= 700
         $this->assertTrue($result['is_full_toeic']);
-        $this->assertEquals('Institutional Scaled Score', $result['score_label']);
+        $this->assertEquals('Scaled Score', $result['score_label']);
 
         // Digital certificate is decoupled from raw attempt submission in Phase 3
         $this->assertDatabaseMissing('certificates', [
@@ -237,7 +239,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC 40-Question Simulator',
-            'slug' => 'toeic-40-simulator-' . uniqid(),
+            'slug' => 'toeic-40-simulator-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::Simulator,
             'duration_minutes' => 45,
@@ -255,7 +257,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Simulator Bank',
-            'slug' => 'sim-bank-' . uniqid(),
+            'slug' => 'sim-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -305,7 +307,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC 50-Question Diagnostic Simulator',
-            'slug' => 'toeic-50-simulator-' . uniqid(),
+            'slug' => 'toeic-50-simulator-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::Simulator,
             'duration_minutes' => 50,
@@ -323,7 +325,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Diagnostic Bank',
-            'slug' => 'diag-bank-' . uniqid(),
+            'slug' => 'diag-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -372,7 +374,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Short Mock Assessment',
-            'slug' => 'toeic-short-mock-' . uniqid(),
+            'slug' => 'toeic-short-mock-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 30,
@@ -390,7 +392,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Mini Mock Bank',
-            'slug' => 'mini-mock-bank-' . uniqid(),
+            'slug' => 'mini-mock-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -437,7 +439,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Difficulty Invariant Test',
-            'slug' => 'toeic-diff-invariant-' . uniqid(),
+            'slug' => 'toeic-diff-invariant-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::Simulator,
             'scoring_method' => ScoringMethod::Automatic,
@@ -456,7 +458,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Diff Bank',
-            'slug' => 'diff-bank-' . uniqid(),
+            'slug' => 'diff-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -493,7 +495,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $bank = QuestionBank::create([
             'title' => 'Authoring Bank',
-            'slug' => 'authoring-bank-' . uniqid(),
+            'slug' => 'authoring-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'draft',
             'created_by' => $this->teacher->id,
@@ -539,7 +541,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Asymmetric Mock 150L 50R',
-            'slug' => 'toeic-asym-150-50-' . uniqid(),
+            'slug' => 'toeic-asym-150-50-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
@@ -564,7 +566,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Asym Bank',
-            'slug' => 'asym-bank-' . uniqid(),
+            'slug' => 'asym-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -619,7 +621,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Asymmetric Mock 50L 150R',
-            'slug' => 'toeic-asym-50-150-' . uniqid(),
+            'slug' => 'toeic-asym-50-150-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
@@ -644,7 +646,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Asym Bank 2',
-            'slug' => 'asym-bank-2-' . uniqid(),
+            'slug' => 'asym-bank-2-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -699,7 +701,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC 200L 0R Mock',
-            'slug' => 'toeic-200l-0r-' . uniqid(),
+            'slug' => 'toeic-200l-0r-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
@@ -717,7 +719,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'L200 Bank',
-            'slug' => 'l200-bank-' . uniqid(),
+            'slug' => 'l200-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -757,7 +759,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC 0L 200R Mock',
-            'slug' => 'toeic-0l-200r-' . uniqid(),
+            'slug' => 'toeic-0l-200r-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
@@ -775,7 +777,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'R200 Bank',
-            'slug' => 'r200-bank-' . uniqid(),
+            'slug' => 'r200-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -815,7 +817,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC 200-Question Simulator',
-            'slug' => 'toeic-200-sim-' . uniqid(),
+            'slug' => 'toeic-200-sim-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::Simulator,
             'duration_minutes' => 120,
@@ -840,7 +842,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Sim 200 Bank',
-            'slug' => 'sim-200-bank-' . uniqid(),
+            'slug' => 'sim-200-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -895,7 +897,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Full Real Test 200Q',
-            'slug' => 'toeic-full-real-test-200q-' . uniqid(),
+            'slug' => 'toeic-full-real-test-200q-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
@@ -922,7 +924,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Full Bank',
-            'slug' => 'full-bank-' . uniqid(),
+            'slug' => 'full-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -972,14 +974,14 @@ class TOEICScoringEngineTest extends TestCase
         $this->assertEquals(0, $sectionScores['reading']['score']);
         $this->assertTrue($sectionScores['is_full_toeic']);
         $this->assertFalse($sectionScores['is_practice']);
-        $this->assertEquals('Institutional Scaled Score', $sectionScores['score_label']);
+        $this->assertEquals('Scaled Score', $sectionScores['score_label']);
 
         $result = app(ResultEngine::class)->generateResult($attempt);
         $this->assertEquals(0.0, (float) $result['final_score']);
         $this->assertFalse($result['is_passed']); // 0 < 650
         $this->assertTrue($result['is_full_toeic']);
         $this->assertFalse($result['is_practice']);
-        $this->assertEquals('Institutional Scaled Score', $result['score_label']);
+        $this->assertEquals('Scaled Score', $result['score_label']);
         $this->assertEquals(200, $result['total_questions']);
         $this->assertEquals(0, $result['correct_count']);
         $this->assertEquals(0, $result['answered_questions']);
@@ -993,7 +995,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Full Real Test Partial Answers',
-            'slug' => 'toeic-full-partial-' . uniqid(),
+            'slug' => 'toeic-full-partial-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
@@ -1020,7 +1022,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'Full Bank Partial',
-            'slug' => 'full-bank-part-' . uniqid(),
+            'slug' => 'full-bank-part-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -1107,7 +1109,7 @@ class TOEICScoringEngineTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Mock Test Group - UAT Class 9A',
-            'slug' => 'toeic-mock-test-uat-' . uniqid(),
+            'slug' => 'toeic-mock-test-uat-'.uniqid(),
             'test_type' => TestType::Toeic,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
@@ -1134,7 +1136,7 @@ class TOEICScoringEngineTest extends TestCase
 
         $bank = QuestionBank::create([
             'title' => 'UAT Bank',
-            'slug' => 'uat-bank-' . uniqid(),
+            'slug' => 'uat-bank-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'created_by' => $this->teacher->id,
@@ -1164,7 +1166,7 @@ class TOEICScoringEngineTest extends TestCase
             TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $j]);
         }
 
-        $assignment = \App\Modules\Assessment\Models\CandidateTestAssignment::create([
+        $assignment = CandidateTestAssignment::create([
             'user_id' => $this->candidate->id,
             'test_id' => $test->id,
             'status' => 'active',
@@ -1184,19 +1186,19 @@ class TOEICScoringEngineTest extends TestCase
 
         $content = $response->getContent();
 
-        // Must display Institutional Scaled Score treatment
-        $this->assertStringContainsString('Institutional Scaled Score', $content);
+        // Must display Scaled Score treatment
+        $this->assertStringContainsString('Scaled Score', $content);
         $this->assertStringContainsString('0 <span class="text-sm font-normal text-slate-500 dark:text-slate-400">/ 990</span>', $content);
         $this->assertStringContainsString('0 / 100 correct', $content);
         $this->assertStringContainsString('0 <span class="text-xs font-normal text-slate-500 dark:text-slate-400">/ 495</span>', $content);
-        $this->assertStringContainsString('This is an institutional mock assessment result and is not an official third-party examination score.', $content);
+        $this->assertStringContainsString('This score is generated from an independently prepared Mock Test and does not indicate affiliation with, endorsement by, or production by any third-party test provider.', $content);
 
         // Must NOT display Practice Score Mode notice
         $this->assertStringNotContainsString('Practice Score Mode:', $content);
         $this->assertStringNotContainsString('Simulator results are evaluated by accuracy', $content);
 
         // Must preserve Attempt #1 Decision UI
-        $this->assertStringContainsString('Institutional Mock Test Result Decision', $content);
+        $this->assertStringContainsString('Mock Test Result Decision', $content);
         $this->assertStringContainsString('Option A', $content);
         $this->assertStringContainsString('Finalize Result &amp; Release Final Score', $content);
         $this->assertStringContainsString('Option B', $content);

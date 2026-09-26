@@ -89,7 +89,7 @@ class CandidatePortalController extends Controller
             ->count();
 
         $myAttemptsCount = Attempt::where('user_id', $userId)->count();
-        $completedAttemptsCount = Attempt::where('user_id', $userId)->where('status', AttemptStatus::Submitted->value)->count();
+        $completedAttemptsCount = Attempt::where('user_id', $userId)->completed()->count();
         $issuedCertificatesCount = Certificate::where('user_id', $userId)
             ->whereHas('attempt.test', function ($q) {
                 $q->where('assessment_mode', '!=', AssessmentMode::Simulator->value);
@@ -175,7 +175,7 @@ class CandidatePortalController extends Controller
         $query = Attempt::where('user_id', $userId)->with(['test', 'certificate']);
 
         if ($request->input('filter') === 'completed' || $request->input('status') === 'completed') {
-            $query->where('status', AttemptStatus::Submitted->value);
+            $query->completed();
         }
 
         $attempts = $query->latest('started_at')->latest('created_at')->paginate(10)->withQueryString();
@@ -194,7 +194,7 @@ class CandidatePortalController extends Controller
         $userId = (int) $request->user()?->id;
 
         $results = Attempt::where('user_id', $userId)
-            ->where('status', AttemptStatus::Submitted->value)
+            ->completed()
             ->with(['test', 'certificate'])
             ->latest('submitted_at')
             ->latest('created_at')
@@ -826,7 +826,7 @@ class CandidatePortalController extends Controller
                 app(CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
 
                 return redirect()->route('candidate.review', $attempt)
-                    ->with('status', 'Result finalized. Your score has been released as your final institutional result.');
+                    ->with('status', 'Result finalized. Your score has been released as your final Mock Test result.');
             });
         } catch (LockTimeoutException $e) {
             return redirect()->route('candidate.review', $attempt);

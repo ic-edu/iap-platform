@@ -20,7 +20,7 @@
     <div class="cert-border">
         <div class="logo">🎓 iC.edu Assessment Platform</div>
         <div class="title">Certificate of Achievement</div>
-        <div class="subtitle">This official certificate is proudly presented to</div>
+        <div class="subtitle">This certificate is presented to</div>
 
         <div class="recipient">{{ $certificate->user?->name ?? 'Candidate Name' }}</div>
 
@@ -37,20 +37,20 @@
 
         @if($isToeic && $isFullToeic && !empty($summary['final_score']))
             <div style="margin: 20px 0; font-size: 15px; color: #1e1b4b;">
-                <strong>Institutional Scaled Score:</strong> <span style="font-size: 22px; font-weight: 900; color: #4338ca;">{{ $summary['final_score'] }}</span> <span style="font-size: 13px; color: #64748b;">/ 990</span>
+                <strong>Scaled Score:</strong> <span style="font-size: 22px; font-weight: 900; color: #4338ca;">{{ $summary['final_score'] }}</span> <span style="font-size: 13px; color: #64748b;">/ 990</span>
                 @if(!empty($summary['toeic_breakdown']))
                     <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
                         Listening: {{ $summary['toeic_breakdown']['listening_score'] }}/495 • Reading: {{ $summary['toeic_breakdown']['reading_score'] }}/495
                     </div>
                 @endif
                 <div style="font-size: 10px; color: #64748b; font-style: italic; margin-top: 6px;">
-                    This document certifies performance on an institutional mock assessment and is not an official third-party examination score.
+                    This certificate records performance on an independently prepared Mock Test and does not indicate affiliation with or endorsement by any third-party test provider.
                 </div>
             </div>
         @endif
 
         <div class="qr-box">
-            <div class="qr-title">Official Verification QR Code</div>
+            <div class="qr-title">Verification QR Code</div>
             <div style="margin-bottom: 8px;">
                 {!! $qrSvg ?? '' !!}
             </div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Official Certificate Verification — iC.edu</title>
+    <title>Certificate Verification — iC.edu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style> body { font-family: 'Inter', sans-serif; } </style>
@@ -13,7 +13,7 @@
         <div class="max-w-5xl mx-auto flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">iC</div>
-                <span class="font-bold text-lg text-white tracking-wide">iC.edu Official Verification Portal</span>
+                <span class="font-bold text-lg text-white tracking-wide">iC.edu Certificate Verification</span>
             </div>
             <a href="/" class="text-sm text-slate-400 hover:text-white transition-colors">Return to Home</a>
         </div>
