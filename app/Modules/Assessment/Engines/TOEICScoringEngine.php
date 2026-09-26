@@ -185,19 +185,50 @@ class TOEICScoringEngine
         $test = $attempt->test;
         $sections = $test?->sections ?? collect();
 
-        // Build question-to-section map
+        // 1. Build question-to-section map & derive BLUEPRINT totals
         $questionSectionMap = [];
+        $blueprintListeningTotal = 0;
+        $blueprintReadingTotal = 0;
+
         foreach ($sections as $section) {
             foreach ($section->testQuestions as $tq) {
-                if ($tq->question_id) {
+                if ($tq->question) {
                     $questionSectionMap[$tq->question_id] = $section;
+                    $isListening = $this->isListeningQuestion($tq->question, $section);
+                    if ($isListening) {
+                        $blueprintListeningTotal++;
+                    } else {
+                        $blueprintReadingTotal++;
+                    }
                 }
             }
         }
 
-        $listeningTotal = 0;
+        // Fallback for tests without structured sections/testQuestions (derive totals from answers)
+        if ($blueprintListeningTotal === 0 && $blueprintReadingTotal === 0) {
+            $fallbackListeningTotal = 0;
+            $fallbackReadingTotal = 0;
+            foreach ($attempt->answers as $answer) {
+                $question = $answer->question;
+                if (!$question) {
+                    continue;
+                }
+                $section = $questionSectionMap[$question->id] ?? null;
+                if ($this->isListeningQuestion($question, $section)) {
+                    $fallbackListeningTotal++;
+                } else {
+                    $fallbackReadingTotal++;
+                }
+            }
+            $listeningTotal = $fallbackListeningTotal;
+            $readingTotal = $fallbackReadingTotal;
+        } else {
+            $listeningTotal = $blueprintListeningTotal;
+            $readingTotal = $blueprintReadingTotal;
+        }
+
+        // 2. Derive CORRECT counts from candidate responses
         $listeningCorrect = 0;
-        $readingTotal = 0;
         $readingCorrect = 0;
 
         foreach ($attempt->answers as $answer) {
@@ -208,30 +239,19 @@ class TOEICScoringEngine
 
             $section = $questionSectionMap[$question->id] ?? null;
             $isListening = $this->isListeningQuestion($question, $section);
-
             $isCorrect = (bool) ($answer->is_correct ?? false);
 
-            if ($isListening) {
-                $listeningTotal++;
-                if ($isCorrect) {
+            if ($isCorrect) {
+                if ($isListening) {
                     $listeningCorrect++;
-                }
-            } else {
-                $readingTotal++;
-                if ($isCorrect) {
+                } else {
                     $readingCorrect++;
                 }
             }
         }
 
-        // If all categorized into one side or untagged, handle gracefully:
-        if ($listeningTotal === 0 && $readingTotal === 0) {
-            $totalQuestions = $attempt->answers->count();
-            $totalCorrect = $attempt->answers->where('is_correct', true)->count();
-        } else {
-            $totalQuestions = $listeningTotal + $readingTotal;
-            $totalCorrect = $listeningCorrect + $readingCorrect;
-        }
+        $totalQuestions = $listeningTotal + $readingTotal;
+        $totalCorrect = $listeningCorrect + $readingCorrect;
 
         $passScore = (float) ($test?->pass_score ?? 0.0);
 
@@ -239,7 +259,7 @@ class TOEICScoringEngine
         $isMockTest = in_array($assessmentMode, ['mock_test', 'real_test'], true);
         $userFacingMode = $isMockTest ? 'mock_test' : 'simulator';
 
-        // A full institutional mock test strictly requires Mock Test mode AND exactly 100 Listening + 100 Reading questions
+        // A full institutional mock test strictly requires Mock Test / Real Test mode AND exactly 100 Listening + 100 Reading questions in the test blueprint
         $isFullToeic = $isMockTest
             && $listeningTotal === 100
             && $readingTotal === 100;

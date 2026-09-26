@@ -15,29 +15,33 @@ class ResultEngine
      */
     public function generateResult(Attempt $attempt): array
     {
-        $attempt->loadMissing(['test', 'answers.question']);
+        $attempt->loadMissing(['test.sections.testQuestions.question', 'answers.question']);
 
         $isPendingEvaluation = $attempt->isPendingEvaluation() || ($attempt->evaluation_status === EvaluationStatus::InProgress);
 
-        $totalQuestions = $attempt->answers->count();
-        $correctCount = $attempt->answers->where('is_correct', true)->count();
-        $percentage = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0.0;
-        $rawScore = (float) ($attempt->total_score ?? 0.0);
-        $passScore = (float) ($attempt->test ? $attempt->test->pass_score : 0);
-
-        $testType = $attempt->test?->test_type;
+        $test = $attempt->test;
+        $testType = $test?->test_type;
         $isToeic = $testType === TestType::Toeic || (is_string($testType) && strtolower($testType) === 'toeic');
+        $isSimulator = $test ? $test->isSimulator() : true;
 
-        $isSimulator = $attempt->test ? $attempt->test->isSimulator() : true;
+        $rawScore = (float) ($attempt->total_score ?? 0.0);
+        $passScore = (float) ($test ? $test->pass_score : 0);
 
         if ($isToeic) {
             $toeicEval = app(TOEICScoringEngine::class)->evaluateAttempt($attempt);
             $finalScore = (float) $toeicEval['total_score'];
+            $totalQuestions = $toeicEval['total_questions'];
+            $correctCount = $toeicEval['total_correct'];
+            $percentage = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0.0;
             $isPassed = !$isPendingEvaluation && $toeicEval['passed'];
             $toeicData = $toeicEval;
             $isPractice = $toeicEval['is_practice'] ?? false;
         } else {
             // General or standard test scoring
+            $blueprintTotal = $test ? $test->sections->sum(fn ($s) => $s->testQuestions->count()) : 0;
+            $totalQuestions = $blueprintTotal > 0 ? $blueprintTotal : $attempt->answers->count();
+            $correctCount = $attempt->answers->where('is_correct', true)->count();
+            $percentage = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0.0;
             $finalScore = $rawScore;
             $isPractice = $isSimulator;
             if ($isPractice) {
@@ -50,6 +54,9 @@ class ResultEngine
             }
             $toeicData = null;
         }
+
+        $answeredQuestions = $attempt->answers->count();
+        $unansweredQuestions = max(0, $totalQuestions - $answeredQuestions);
 
         $grade = match (true) {
             $isPendingEvaluation => 'Pending Evaluation',
@@ -82,6 +89,8 @@ class ResultEngine
             'completion_status' => $completionStatus,
             'total_questions' => $totalQuestions,
             'correct_count' => $correctCount,
+            'answered_questions' => $answeredQuestions,
+            'unanswered_questions' => $unansweredQuestions,
             'toeic_breakdown' => $toeicData,
             'is_full_toeic' => $toeicData['is_full_toeic'] ?? false,
             'is_practice' => $isPractice,

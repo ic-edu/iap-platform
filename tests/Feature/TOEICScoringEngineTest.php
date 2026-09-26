@@ -887,4 +887,319 @@ class TOEICScoringEngineTest extends TestCase
         $this->assertTrue($result['is_practice']);
         $this->assertEquals('Practice Score', $result['score_label']);
     }
+
+    /**
+     * 14. Full Real Test TOEIC with 0 answers evaluates as full TOEIC with 200 denominator and 0 scaled score.
+     */
+    public function test_full_real_test_toeic_with_zero_answers_evaluates_as_full_toeic_and_zero_scaled_score(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC Full Real Test 200Q',
+            'slug' => 'toeic-full-real-test-200q-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score' => 650,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $listeningSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Listening Section',
+            'section_type' => SectionType::Listening,
+            'duration_minutes' => 45,
+            'order' => 1,
+        ]);
+
+        $readingSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Reading Section',
+            'section_type' => SectionType::Reading,
+            'duration_minutes' => 75,
+            'order' => 2,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'Full Bank',
+            'slug' => 'full-bank-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        // 100 Listening questions in blueprint
+        for ($i = 1; $i <= 100; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "L Question #{$i}",
+                'section' => SectionType::Listening,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $listeningSection->id, 'question_id' => $q->id, 'order' => $i]);
+        }
+
+        // 100 Reading questions in blueprint
+        for ($j = 1; $j <= 100; $j++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "R Question #{$j}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $j]);
+        }
+
+        $attempt = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+
+        // 0 answers submitted
+        app(AttemptEngine::class)->submitAttempt($attempt);
+        $attempt->refresh();
+
+        // Evaluates score = 0, listening = 0, reading = 0, total_questions = 200
+        $this->assertEquals(0.0, (float) $attempt->total_score);
+
+        $sectionScores = $attempt->section_scores;
+        $this->assertEquals(0, $sectionScores['listening']['correct']);
+        $this->assertEquals(100, $sectionScores['listening']['total']);
+        $this->assertEquals(0, $sectionScores['listening']['score']);
+        $this->assertEquals(0, $sectionScores['reading']['correct']);
+        $this->assertEquals(100, $sectionScores['reading']['total']);
+        $this->assertEquals(0, $sectionScores['reading']['score']);
+        $this->assertTrue($sectionScores['is_full_toeic']);
+        $this->assertFalse($sectionScores['is_practice']);
+        $this->assertEquals('Institutional Scaled Score', $sectionScores['score_label']);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertEquals(0.0, (float) $result['final_score']);
+        $this->assertFalse($result['is_passed']); // 0 < 650
+        $this->assertTrue($result['is_full_toeic']);
+        $this->assertFalse($result['is_practice']);
+        $this->assertEquals('Institutional Scaled Score', $result['score_label']);
+        $this->assertEquals(200, $result['total_questions']);
+        $this->assertEquals(0, $result['correct_count']);
+        $this->assertEquals(0, $result['answered_questions']);
+        $this->assertEquals(200, $result['unanswered_questions']);
+    }
+
+    /**
+     * 15. Full Real Test TOEIC partially answered maintains 200 denominator and full TOEIC classification.
+     */
+    public function test_full_real_test_toeic_with_partial_answers_retains_full_toeic_status_and_200_denominator(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC Full Real Test Partial Answers',
+            'slug' => 'toeic-full-partial-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score' => 650,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $listeningSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Listening Section',
+            'section_type' => SectionType::Listening,
+            'duration_minutes' => 45,
+            'order' => 1,
+        ]);
+
+        $readingSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Reading Section',
+            'section_type' => SectionType::Reading,
+            'duration_minutes' => 75,
+            'order' => 2,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'Full Bank Partial',
+            'slug' => 'full-bank-part-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $attempt = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+
+        // 100 Listening questions in blueprint, candidate answers 10 (8 correct, 2 wrong)
+        for ($i = 1; $i <= 100; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "L Question #{$i}",
+                'section' => SectionType::Listening,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $cCorrect = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true, 'order' => 1]);
+            $cWrong = QuestionChoice::create(['question_id' => $q->id, 'label' => 'B', 'content' => 'Choice B', 'is_correct' => false, 'order' => 2]);
+            TestQuestion::create(['test_section_id' => $listeningSection->id, 'question_id' => $q->id, 'order' => $i]);
+
+            if ($i <= 10) {
+                Answer::create([
+                    'attempt_id' => $attempt->id,
+                    'question_id' => $q->id,
+                    'selected_choice_id' => ($i <= 8) ? $cCorrect->id : $cWrong->id,
+                ]);
+            }
+        }
+
+        // 100 Reading questions in blueprint, candidate answers 5 (4 correct, 1 wrong)
+        for ($j = 1; $j <= 100; $j++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "R Question #{$j}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $cCorrect = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true, 'order' => 1]);
+            $cWrong = QuestionChoice::create(['question_id' => $q->id, 'label' => 'B', 'content' => 'Choice B', 'is_correct' => false, 'order' => 2]);
+            TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $j]);
+
+            if ($j <= 5) {
+                Answer::create([
+                    'attempt_id' => $attempt->id,
+                    'question_id' => $q->id,
+                    'selected_choice_id' => ($j <= 4) ? $cCorrect->id : $cWrong->id,
+                ]);
+            }
+        }
+
+        app(AttemptEngine::class)->submitAttempt($attempt);
+        $attempt->refresh();
+
+        // 8 Listening correct -> 5
+        // 4 Reading correct -> 5
+        // Total score = 10
+        $this->assertEquals(10.0, (float) $attempt->total_score);
+
+        $sectionScores = $attempt->section_scores;
+        $this->assertEquals(8, $sectionScores['listening']['correct']);
+        $this->assertEquals(100, $sectionScores['listening']['total']);
+        $this->assertEquals(5, $sectionScores['listening']['score']);
+        $this->assertEquals(4, $sectionScores['reading']['correct']);
+        $this->assertEquals(100, $sectionScores['reading']['total']);
+        $this->assertEquals(5, $sectionScores['reading']['score']);
+        $this->assertTrue($sectionScores['is_full_toeic']);
+        $this->assertFalse($sectionScores['is_practice']);
+
+        $result = app(ResultEngine::class)->generateResult($attempt);
+        $this->assertEquals(10.0, (float) $result['final_score']);
+        $this->assertTrue($result['is_full_toeic']);
+        $this->assertFalse($result['is_practice']);
+        $this->assertEquals(200, $result['total_questions']);
+        $this->assertEquals(12, $result['correct_count']);
+        $this->assertEquals(15, $result['answered_questions']);
+        $this->assertEquals(185, $result['unanswered_questions']);
+    }
+
+    /**
+     * 16. Timeout-expired full TOEIC with zero answers renders Institutional Scaled Score and Decision UI.
+     */
+    public function test_timeout_expired_full_toeic_with_zero_answers_renders_institutional_scaled_score_in_review(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC Mock Test Group - UAT Class 9A',
+            'slug' => 'toeic-mock-test-uat-' . uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score' => 650,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $listeningSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Listening Section',
+            'section_type' => SectionType::Listening,
+            'duration_minutes' => 45,
+            'order' => 1,
+        ]);
+
+        $readingSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Reading Section',
+            'section_type' => SectionType::Reading,
+            'duration_minutes' => 75,
+            'order' => 2,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'UAT Bank',
+            'slug' => 'uat-bank-' . uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        for ($i = 1; $i <= 100; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "L UAT Q#{$i}",
+                'section' => SectionType::Listening,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $listeningSection->id, 'question_id' => $q->id, 'order' => $i]);
+        }
+
+        for ($j = 1; $j <= 100; $j++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "R UAT Q#{$j}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true, 'order' => 1]);
+            TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $j]);
+        }
+
+        $assignment = \App\Modules\Assessment\Models\CandidateTestAssignment::create([
+            'user_id' => $this->candidate->id,
+            'test_id' => $test->id,
+            'status' => 'active',
+            'max_attempts' => 2,
+            'attempts_count' => 0,
+            'assigned_at' => now(),
+        ]);
+
+        $attempt = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+
+        // Simulate timeout expiration
+        app(AttemptEngine::class)->expireAttempt($attempt);
+        $attempt->refresh();
+
+        $response = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+
+        // Must display Institutional Scaled Score treatment
+        $this->assertStringContainsString('Institutional Scaled Score', $content);
+        $this->assertStringContainsString('0 <span class="text-sm font-normal text-slate-500 dark:text-slate-400">/ 990</span>', $content);
+        $this->assertStringContainsString('0 / 100 correct', $content);
+        $this->assertStringContainsString('0 <span class="text-xs font-normal text-slate-500 dark:text-slate-400">/ 495</span>', $content);
+        $this->assertStringContainsString('This is an institutional mock assessment result and is not an official third-party examination score.', $content);
+
+        // Must NOT display Practice Score Mode notice
+        $this->assertStringNotContainsString('Practice Score Mode:', $content);
+        $this->assertStringNotContainsString('Simulator results are evaluated by accuracy', $content);
+
+        // Must preserve Attempt #1 Decision UI
+        $this->assertStringContainsString('Institutional Mock Test Result Decision', $content);
+        $this->assertStringContainsString('Option A', $content);
+        $this->assertStringContainsString('Finalize Result &amp; Release Final Score', $content);
+        $this->assertStringContainsString('Option B', $content);
+        $this->assertStringContainsString('Retry Second Attempt', $content);
+    }
 }
