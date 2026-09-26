@@ -2,15 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\MediaAsset;
+use App\Models\User;
 use App\Modules\Assessment\Engines\RandomizationEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Models\Attempt;
-use App\Modules\Assessment\Models\AttemptAudioPlay;
 use App\Modules\Assessment\Models\Test;
-use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Assessment\Models\TestQuestion;
+use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Assessment\Services\DeliveryUnitBuilder;
 use App\Modules\QuestionBank\Models\AudioGroup;
 use App\Modules\QuestionBank\Models\Passage;
@@ -26,6 +25,7 @@ class CandidateCbtDeliveryEngineConsolidationTest extends TestCase
     use RefreshDatabase;
 
     protected User $candidate;
+
     protected Test $toeicTest;
 
     protected function setUp(): void
@@ -48,7 +48,7 @@ class CandidateCbtDeliveryEngineConsolidationTest extends TestCase
     {
         $test = Test::create([
             'title' => 'TOEIC Listening & Reading Simulation Test Specimen',
-            'slug' => 'toeic-listening-reading-simulation-test-' . uniqid(),
+            'slug' => 'toeic-listening-reading-simulation-test-'.uniqid(),
             'test_type' => 'toeic',
             'status' => 'published',
             'is_published' => true,
@@ -393,7 +393,7 @@ class CandidateCbtDeliveryEngineConsolidationTest extends TestCase
             'question_id' => $question->id,
         ]);
         $response1->assertStatus(200);
-        $response1->assertJson(['status' => 'flagged']);
+        $response1->assertJson(['status' => 'saved', 'flagged' => true]);
         $this->assertContains($question->id, $attempt->fresh()->flagged_questions ?? []);
 
         // Second toggle: unflag question
@@ -401,7 +401,7 @@ class CandidateCbtDeliveryEngineConsolidationTest extends TestCase
             'question_id' => $question->id,
         ]);
         $response2->assertStatus(200);
-        $response2->assertJson(['status' => 'flagged']);
+        $response2->assertJson(['status' => 'saved', 'flagged' => false]);
         $this->assertNotContains($question->id, $attempt->fresh()->flagged_questions ?? []);
     }
 }

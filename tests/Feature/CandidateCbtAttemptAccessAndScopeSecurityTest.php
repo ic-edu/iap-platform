@@ -3,13 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Modules\Assessment\Engines\AssignmentEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
-use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
-use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
@@ -27,15 +24,25 @@ class CandidateCbtAttemptAccessAndScopeSecurityTest extends TestCase
     use RefreshDatabase;
 
     protected User $candidateA;
+
     protected User $candidateB;
+
     protected Test $testA;
+
     protected Test $testB;
+
     protected Question $questionA1;
+
     protected Question $questionA2;
+
     protected Question $questionB1;
+
     protected QuestionChoice $choiceA1_1;
+
     protected QuestionChoice $choiceA1_2;
+
     protected QuestionChoice $choiceA2_1;
+
     protected Attempt $attemptA;
 
     protected function setUp(): void
@@ -238,7 +245,7 @@ class CandidateCbtAttemptAccessAndScopeSecurityTest extends TestCase
         $response = $this->actingAs($this->candidateA)->postJson(route('candidate.exam.flag', $this->attemptA), [
             'question_id' => $this->questionA1->id,
         ]);
-        $response->assertStatus(200)->assertJson(['status' => 'flagged']);
+        $response->assertStatus(200)->assertJson(['status' => 'saved', 'flagged' => true]);
     }
 
     public function test_cross_test_question_submission_is_rejected(): void

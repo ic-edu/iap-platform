@@ -37,6 +37,8 @@
     @php
         $existingAnswers = $attempt->answers->keyBy('question_id');
         $answeredQuestionIds = $existingAnswers->filter(fn($a) => !is_null($a->selected_choice_id))->keys()->values();
+        $existingChoiceMap = $existingAnswers->filter(fn($a) => !is_null($a->selected_choice_id))->mapWithKeys(fn($a) => [$a->question_id => $a->selected_choice_id]);
+        $flaggedQuestionIds = $attempt->flagged_questions ?? [];
         $totalQuestionsCount = $totalQuestionsCount ?? $shuffledQuestions->count();
         $totalUnitsCount = $totalUnitsCount ?? $deliveryUnits->count();
         $isAllInitiallyAnswered = ($totalQuestionsCount > 0 && $answeredQuestionIds->count() === $totalQuestionsCount);
@@ -388,13 +390,16 @@
                                 @endphp
 
                                 <div id="unit-question-block-{{ $globalQIdx }}" class="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4 transition-all">
+                                    @php
+                                        $isFlagged = in_array($question->id, $flaggedQuestionIds, true);
+                                    @endphp
                                     <!-- Child Header with Flag -->
                                     <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2.5 flex-wrap gap-2">
                                         <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                                             Question {{ $agn }}
                                         </span>
-                                        <button type="button" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
-                                                class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+                                        <button type="button" id="btn-flag-{{ $question->id }}" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
+                                                class="btn-flag text-xs font-semibold px-3 py-1 rounded {{ $isFlagged ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300' }} transition-colors">
                                             🚩 Flag Question
                                         </button>
                                     </div>
@@ -625,14 +630,17 @@
                                         $existingAnswer = $existingAnswers->get($question->id);
                                     @endphp
 
+                                    @php
+                                        $isFlagged = in_array($question->id, $flaggedQuestionIds, true);
+                                    @endphp
                                     <div id="unit-question-block-{{ $globalQIdx }}" class="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4 transition-all">
                                         <!-- Header with AGN & Flag -->
                                         <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2.5 flex-wrap gap-2">
                                             <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                                                 Question {{ $agn }}
                                             </span>
-                                            <button type="button" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
-                                                    class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+                                            <button type="button" id="btn-flag-{{ $question->id }}" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
+                                                    class="btn-flag text-xs font-semibold px-3 py-1 rounded {{ $isFlagged ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300' }} transition-colors">
                                                 🚩 Flag Question
                                             </button>
                                         </div>
@@ -754,8 +762,11 @@
                                         <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">{{ $section->title }}</span>
                                     @endif
                                 </div>
-                                <button type="button" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
-                                        class="btn-flag text-xs font-semibold px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+                                @php
+                                    $isFlagged = in_array($question->id, $flaggedQuestionIds, true);
+                                @endphp
+                                <button type="button" id="btn-flag-{{ $question->id }}" onclick="toggleFlag('{{ $question->id }}', {{ $globalQIdx }}, this)"
+                                        class="btn-flag text-xs font-semibold px-3 py-1 rounded {{ $isFlagged ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300' }} transition-colors">
                                     🚩 Flag Question
                                 </button>
                             </div>
@@ -965,10 +976,43 @@
         const questionIdToUnitIndex = @json($questionIdToUnitIndex);
         const unitIndexToQuestionIndices = @json($unitIndexToQuestionIndices);
         const sectionFirstUnitIndex = @json($sectionFirstUnitIndex);
-        const answeredQuestionIds = new Set(@json($answeredQuestionIds));
-        const flaggedQuestionIndices = new Set();
         const firstSectionId = "{{ isset($sections) && $sections->isNotEmpty() ? $sections->first()->id : '' }}";
         let timerInterval = null;
+        const answeredQuestionIds = new Set(@json($answeredQuestionIds));
+        const confirmedAnswerChoiceByQuestion = @json($existingChoiceMap);
+        const pendingAnswerQuestionIds = new Set();
+        const initialFlaggedQuestionIds = @json($flaggedQuestionIds);
+        const flaggedQuestionIndices = new Set();
+        initialFlaggedQuestionIds.forEach(qId => {
+            const idx = questionIds.indexOf(qId);
+            if (idx !== -1) {
+                flaggedQuestionIndices.add(idx);
+            }
+        });
+
+        function setQuestionRadiosDisabled(questionId, disabled) {
+            document.querySelectorAll(`input[name="q_${questionId}"]`).forEach(input => {
+                input.disabled = disabled;
+            });
+        }
+
+        function updateFlagButtonUI(btn, isFlagged) {
+            if (!btn) return;
+            if (isFlagged) {
+                btn.classList.remove('bg-slate-100', 'bg-slate-200', 'hover:bg-slate-200', 'hover:bg-slate-300', 'text-slate-700', 'dark:bg-slate-800', 'dark:hover:bg-slate-700', 'dark:text-slate-300');
+                btn.classList.add('bg-amber-500/20', 'text-amber-600', 'dark:text-amber-400');
+            } else {
+                btn.classList.remove('bg-amber-500/20', 'text-amber-600', 'dark:text-amber-400');
+                btn.classList.add('bg-slate-100', 'hover:bg-slate-200', 'dark:bg-slate-800', 'dark:hover:bg-slate-700', 'text-slate-700', 'dark:text-slate-300');
+            }
+        }
+
+        function hasPendingSaveInCurrentUnit() {
+            if (pendingAnswerQuestionIds.size === 0) return false;
+            if (currentUnitIdx < 0) return pendingAnswerQuestionIds.size > 0;
+            const currentUnitQIndices = unitIndexToQuestionIndices[currentUnitIdx] || [];
+            return currentUnitQIndices.some(qIdx => pendingAnswerQuestionIds.has(questionIds[qIdx]));
+        }
 
         // Universal Candidate Examination Audio Lifecycle Manager
         const CandidateExamAudioManager = (function() {
@@ -1155,6 +1199,15 @@
 
         // Exit Simulator Confirmation
         function confirmExitSimulator() {
+            if (hasPendingSaveInCurrentUnit()) {
+                iapAlert({
+                    title: 'Saving Answer',
+                    message: 'Saving your answer. Please wait.',
+                    variant: 'info',
+                    okText: 'Understood'
+                });
+                return;
+            }
             CandidateExamAudioManager.beforeDeliveryTransition({ type: 'exit_simulator' });
             iapConfirm({
                 title: 'Return to Dashboard?',
@@ -1171,6 +1224,15 @@
 
         // Trigger Final Submit Confirmation Modal
         function triggerFinalSubmitModal() {
+            if (pendingAnswerQuestionIds.size > 0) {
+                iapAlert({
+                    title: 'Saving Answer',
+                    message: 'Saving your answer. Please wait.',
+                    variant: 'info',
+                    okText: 'Understood'
+                });
+                return;
+            }
             CandidateExamAudioManager.beforeDeliveryTransition({ type: 'final_submit' });
             if (answeredQuestionIds.size < totalQuestions) {
                 const unansweredCount = totalQuestions - answeredQuestionIds.size;
@@ -1341,6 +1403,15 @@
         }
 
         function showPassageTypeTransition(fromUnitIdx, toUnitIdx) {
+            if (hasPendingSaveInCurrentUnit()) {
+                iapAlert({
+                    title: 'Saving Answer',
+                    message: 'Saving your answer. Please wait.',
+                    variant: 'info',
+                    okText: 'Understood'
+                });
+                return;
+            }
             CandidateExamAudioManager.beforeDeliveryTransition({
                 type: 'passage_type_transition',
                 fromUnit: fromUnitIdx,
@@ -1412,6 +1483,15 @@
         // Show Dedicated Section Introduction Screen
         function showSectionIntro(sectionId) {
             if (!sectionId) return;
+            if (hasPendingSaveInCurrentUnit()) {
+                iapAlert({
+                    title: 'Saving Answer',
+                    message: 'Saving your answer. Please wait.',
+                    variant: 'info',
+                    okText: 'Understood'
+                });
+                return;
+            }
             CandidateExamAudioManager.beforeDeliveryTransition({ type: 'section_intro', targetSection: sectionId });
             document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
             const targetSection = document.getElementById('section-intro-card-' + sectionId);
@@ -1453,6 +1533,15 @@
         // Navigate to Delivery Unit (Group Page or Single Question Page) - Secure Gate in Real Test Mode
         function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
             if (unitIdx < 0 || unitIdx >= totalUnits) return;
+            if (currentUnitIdx >= 0 && unitIdx !== currentUnitIdx && hasPendingSaveInCurrentUnit()) {
+                iapAlert({
+                    title: 'Saving Answer',
+                    message: 'Saving your answer. Please wait.',
+                    variant: 'info',
+                    okText: 'Understood'
+                });
+                return;
+            }
             CandidateExamAudioManager.beforeDeliveryTransition({ type: 'delivery_unit', targetUnit: unitIdx, targetQ: targetQIndex });
             if (isRealTest) {
                 if (!secureSessionActive) {
@@ -1507,6 +1596,15 @@
 
         // Mode-Aware Next Action Handler
         function handleNextClick(currentUnit, type, target) {
+            if (hasPendingSaveInCurrentUnit()) {
+                iapAlert({
+                    title: 'Saving Answer',
+                    message: 'Saving your answer. Please wait.',
+                    variant: 'info',
+                    okText: 'Understood'
+                });
+                return;
+            }
             if (isRealTest) {
                 // Real Test / Mock Test: All child questions in current group must be answered before forward navigation
                 const unitQIndices = unitIndexToQuestionIndices[currentUnit] || [];
@@ -1553,6 +1651,15 @@
 
         // Mode-Aware Palette Click Handler
         function handlePaletteClick(targetQIdx) {
+            if (hasPendingSaveInCurrentUnit()) {
+                iapAlert({
+                    title: 'Saving Answer',
+                    message: 'Saving your answer. Please wait.',
+                    variant: 'info',
+                    okText: 'Understood'
+                });
+                return;
+            }
             const targetUnitIdx = questionIndexToUnitIndex[targetQIdx];
 
             if (isRealTest) {
@@ -1686,46 +1793,119 @@
             });
         }
 
-        // Auto Save Answer AJAX with Palette & Submit State Synchronization
-        function autoSaveAnswer(questionId, choiceId, index) {
-            answeredQuestionIds.add(questionId);
-            updatePaletteUI();
+        // Auto Save Answer AJAX with Server-Acknowledged Persistence & State Synchronization
+        async function autoSaveAnswer(questionId, choiceId, index) {
+            pendingAnswerQuestionIds.add(questionId);
+            setQuestionRadiosDisabled(questionId, true);
 
-            fetch("{{ route('candidate.exam.autosave', $attempt) }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ question_id: questionId, selected_choice: choiceId })
-            });
+            try {
+                const response = await fetch("{{ route('candidate.exam.autosave', $attempt) }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ question_id: questionId, selected_choice: choiceId })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.status === 'saved') {
+                        answeredQuestionIds.add(questionId);
+                        confirmedAnswerChoiceByQuestion[questionId] = choiceId;
+                        updatePaletteUI();
+                        return;
+                    }
+                }
+
+                // If non-2xx or status != 'saved', handle rollback
+                handleAutoSaveFailure(questionId);
+            } catch (err) {
+                console.error('Autosave error:', err);
+                handleAutoSaveFailure(questionId);
+            } finally {
+                pendingAnswerQuestionIds.delete(questionId);
+                setQuestionRadiosDisabled(questionId, false);
+            }
         }
 
-        // Toggle Flag AJAX with Palette State Synchronization
-        function toggleFlag(questionId, index, btn) {
-            if (flaggedQuestionIndices.has(index)) {
-                flaggedQuestionIndices.delete(index);
-                if (btn) {
-                    btn.classList.remove('bg-amber-500/20', 'text-amber-600', 'dark:text-amber-400');
-                    btn.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
+        function handleAutoSaveFailure(questionId) {
+            const prevChoiceId = confirmedAnswerChoiceByQuestion[questionId];
+            if (prevChoiceId) {
+                const prevInput = document.querySelector(`input[name="q_${questionId}"][value="${prevChoiceId}"]`);
+                if (prevInput) {
+                    prevInput.checked = true;
                 }
+                answeredQuestionIds.add(questionId);
             } else {
-                flaggedQuestionIndices.add(index);
-                if (btn) {
-                    btn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
-                    btn.classList.add('bg-amber-500/20', 'text-amber-600', 'dark:text-amber-400');
-                }
+                document.querySelectorAll(`input[name="q_${questionId}"]`).forEach(input => {
+                    input.checked = false;
+                });
+                answeredQuestionIds.delete(questionId);
             }
             updatePaletteUI();
 
-            fetch("{{ route('candidate.exam.flag', $attempt) }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ question_id: questionId })
+            iapAlert({
+                title: 'Save Failed',
+                message: 'Answer could not be saved. Please select your answer again.',
+                variant: 'danger',
+                okText: 'Understood'
             });
+        }
+
+        // Toggle Flag AJAX with Server Acknowledgement & State Synchronization
+        async function toggleFlag(questionId, index, btn) {
+            const targetBtn = btn || document.getElementById('btn-flag-' + questionId);
+            if (targetBtn) {
+                targetBtn.disabled = true;
+            }
+
+            try {
+                const response = await fetch("{{ route('candidate.exam.flag', $attempt) }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ question_id: questionId })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.status === 'saved') {
+                        const isFlagged = Boolean(data.flagged);
+                        if (isFlagged) {
+                            flaggedQuestionIndices.add(index);
+                        } else {
+                            flaggedQuestionIndices.delete(index);
+                        }
+                        updateFlagButtonUI(targetBtn, isFlagged);
+                        updatePaletteUI();
+                        return;
+                    }
+                }
+
+                iapAlert({
+                    title: 'Flag Update Failed',
+                    message: 'Flag state could not be updated. Please try again.',
+                    variant: 'danger',
+                    okText: 'Understood'
+                });
+            } catch (err) {
+                console.error('Flag toggle error:', err);
+                iapAlert({
+                    title: 'Flag Update Failed',
+                    message: 'Flag state could not be updated. Please try again.',
+                    variant: 'danger',
+                    okText: 'Understood'
+                });
+            } finally {
+                if (targetBtn) {
+                    targetBtn.disabled = false;
+                }
+            }
         }
 
         // Anti-Cheating Violation Logger

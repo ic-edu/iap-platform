@@ -542,7 +542,11 @@ class CandidatePortalController extends Controller
                     $validated['answer_text'] ?? null
                 );
 
-                return response()->json(['status' => 'saved']);
+                return response()->json([
+                    'status' => 'saved',
+                    'question_id' => $validated['question_id'],
+                    'selected_choice' => $validated['selected_choice'] ?? null,
+                ]);
             });
         } catch (LockTimeoutException $e) {
             abort(409, 'Another operation is currently modifying this assessment attempt.');
@@ -570,9 +574,15 @@ class CandidatePortalController extends Controller
                     abort(403, 'Question does not belong to this assessment attempt.');
                 }
 
-                $this->engine->navigationEngine->toggleFlag($attempt, $validated['question_id']);
+                $updatedAttempt = $this->engine->navigationEngine->toggleFlag($attempt, $validated['question_id']);
+                $flaggedList = $updatedAttempt->flagged_questions ?? [];
+                $isFlagged = in_array($validated['question_id'], $flaggedList, true);
 
-                return response()->json(['status' => 'flagged']);
+                return response()->json([
+                    'status' => 'saved',
+                    'flagged' => $isFlagged,
+                    'question_id' => $validated['question_id'],
+                ]);
             });
         } catch (LockTimeoutException $e) {
             abort(409, 'Another operation is currently modifying this assessment attempt.');
