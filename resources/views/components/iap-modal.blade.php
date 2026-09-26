@@ -158,7 +158,7 @@
         }
 
         pendingForm = options.form || null;
-        pendingCallback = options.onConfirm || null;
+        pendingCallback = options.onConfirm || options.onOk || null;
 
         if (typeof dialog.showModal === 'function') {
             if (!dialog.open) {

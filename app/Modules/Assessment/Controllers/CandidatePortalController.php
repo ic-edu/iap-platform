@@ -60,6 +60,16 @@ class CandidatePortalController extends Controller
     {
         $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
 
+        // 1. If status is already Expired: return machine-readable ATTEMPT_EXPIRED
+        if ($statusValue === AttemptStatus::Expired->value || $statusValue === 'expired') {
+            abort(response()->json([
+                'status' => 'error',
+                'error_code' => 'ATTEMPT_EXPIRED',
+                'message' => 'Assessment attempt duration has expired.',
+            ], 403));
+        }
+
+        // 2. If another terminal/non-in-progress status (e.g. submitted, cancelled): return ATTEMPT_NOT_IN_PROGRESS
         if ($statusValue !== AttemptStatus::InProgress->value && $statusValue !== 'in_progress') {
             abort(response()->json([
                 'status' => 'error',
@@ -68,6 +78,7 @@ class CandidatePortalController extends Controller
             ], 403));
         }
 
+        // 3. If status is in_progress but server deadline elapsed: return ATTEMPT_EXPIRED
         if ($this->engine->timerEngine->isExpired($attempt)) {
             abort(response()->json([
                 'status' => 'error',

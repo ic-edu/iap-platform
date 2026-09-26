@@ -389,7 +389,106 @@ class CandidateCbtServerAuthoritativeTimeoutTest extends TestCase
         $this->assertEquals(AttemptStatus::Expired, $attempt->fresh()->status);
     }
 
-    public function test_duplicate_expiry_submission_is_idempotent(): void
+    public function test_persisted_expired_attempt_autosave_returns_attempt_expired(): void
+    {
+        $attempt = Attempt::create([
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Expired,
+            'started_at' => now()->subHours(2),
+            'submitted_at' => now()->subHour(),
+        ]);
+
+        $response = $this->actingAs($this->student)->postJson(route('candidate.exam.autosave', $attempt), [
+            'question_id' => $this->q1->id,
+            'selected_choice' => $this->c1->id,
+        ]);
+
+        $response->assertStatus(403);
+        $response->assertJson([
+            'status' => 'error',
+            'error_code' => 'ATTEMPT_EXPIRED',
+            'message' => 'Assessment attempt duration has expired.',
+        ]);
+    }
+
+    public function test_persisted_expired_attempt_flag_returns_attempt_expired(): void
+    {
+        $attempt = Attempt::create([
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Expired,
+            'started_at' => now()->subHours(2),
+            'submitted_at' => now()->subHour(),
+        ]);
+
+        $response = $this->actingAs($this->student)->postJson(route('candidate.exam.flag', $attempt), [
+            'question_id' => $this->q1->id,
+        ]);
+
+        $response->assertStatus(403);
+        $response->assertJson([
+            'status' => 'error',
+            'error_code' => 'ATTEMPT_EXPIRED',
+        ]);
+    }
+
+    public function test_persisted_submitted_attempt_autosave_returns_attempt_not_in_progress(): void
+    {
+        $attempt = Attempt::create([
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Submitted,
+            'started_at' => now()->subMinutes(30),
+            'submitted_at' => now()->subMinutes(5),
+        ]);
+
+        $response = $this->actingAs($this->student)->postJson(route('candidate.exam.autosave', $attempt), [
+            'question_id' => $this->q1->id,
+            'selected_choice' => $this->c1->id,
+        ]);
+
+        $response->assertStatus(403);
+        $response->assertJson([
+            'status' => 'error',
+            'error_code' => 'ATTEMPT_NOT_IN_PROGRESS',
+            'message' => 'Assessment attempt is no longer in progress.',
+        ]);
+        $this->assertNotEquals('ATTEMPT_EXPIRED', $response->json('error_code'));
+    }
+
+    public function test_persisted_cancelled_attempt_autosave_returns_attempt_not_in_progress(): void
+    {
+        $attempt = Attempt::create([
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Cancelled,
+            'started_at' => now()->subMinutes(30),
+        ]);
+
+        $response = $this->actingAs($this->student)->postJson(route('candidate.exam.autosave', $attempt), [
+            'question_id' => $this->q1->id,
+            'selected_choice' => $this->c1->id,
+        ]);
+
+        $response->assertStatus(403);
+        $response->assertJson([
+            'status' => 'error',
+            'error_code' => 'ATTEMPT_NOT_IN_PROGRESS',
+            'message' => 'Assessment attempt is no longer in progress.',
+        ]);
+        $this->assertNotEquals('ATTEMPT_EXPIRED', $response->json('error_code'));
+    }
+
+    public function test_exam_blade_contains_single_flight_guard_and_correct_modal_bindings(): void
     {
         $attempt = Attempt::create([
             'test_id' => $this->test->id,
@@ -397,17 +496,16 @@ class CandidateCbtServerAuthoritativeTimeoutTest extends TestCase
             'assignment_id' => $this->assignment->id,
             'attempt_number' => 1,
             'status' => AttemptStatus::InProgress,
-            'started_at' => now()->subMinutes(75),
+            'started_at' => now()->subMinutes(10),
         ]);
 
-        // First submit call
-        $resp1 = $this->actingAs($this->student)->post(route('candidate.exam.submit', $attempt));
-        $resp1->assertRedirect(route('candidate.review', $attempt));
-        $this->assertEquals(AttemptStatus::Expired, $attempt->fresh()->status);
+        $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
 
-        // Duplicate submit call
-        $resp2 = $this->actingAs($this->student)->post(route('candidate.exam.submit', $attempt));
-        $resp2->assertRedirect(route('candidate.review', $attempt));
-        $this->assertEquals(AttemptStatus::Expired, $attempt->fresh()->status);
+        $response->assertOk();
+        $response->assertSee('expirySubmissionStarted');
+        $response->assertSee('submitExpiredAttemptOnce');
+        $response->assertSee('iap-modal-confirm-btn');
+        $response->assertSee('onConfirm');
+        $response->assertDontSee('onOk:');
     }
 }

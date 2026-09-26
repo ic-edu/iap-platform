@@ -993,6 +993,20 @@
             }
         });
 
+        let expirySubmissionStarted = false;
+
+        function submitExpiredAttemptOnce() {
+            if (expirySubmissionStarted) return;
+            expirySubmissionStarted = true;
+
+            const form = document.getElementById('form-final-submit');
+            if (form) {
+                form.submit();
+            } else {
+                window.location.href = "{{ route('candidate.review', $attempt) }}";
+            }
+        }
+
         function triggerExpiryFlow(reason = 'time_expired') {
             if (expiryFlowTriggered) return;
             expiryFlowTriggered = true;
@@ -1005,7 +1019,7 @@
             CandidateExamAudioManager.stopAll({ forceReset: true });
 
             document.querySelectorAll('input[type="radio"], button').forEach(el => {
-                if (el.id !== 'btn-confirm-ok' && el.id !== 'btn-modal-ok') {
+                if (el.id !== 'iap-modal-confirm-btn' && el.id !== 'iap-modal-cancel-btn' && !el.closest('#iap-global-dialog')) {
                     el.disabled = true;
                 }
             });
@@ -1020,15 +1034,13 @@
                 message: 'The test time has ended. Your saved answers are being submitted.',
                 okText: 'Submit Now',
                 variant: 'warning',
-                onOk: () => {
-                    const form = document.getElementById('form-final-submit');
-                    if (form) form.submit();
+                onConfirm: () => {
+                    submitExpiredAttemptOnce();
                 }
             });
 
             setTimeout(() => {
-                const form = document.getElementById('form-final-submit');
-                if (form) form.submit();
+                submitExpiredAttemptOnce();
             }, 2500);
         }
 
@@ -1273,7 +1285,7 @@
                     message: `You still have ${unansweredCount} unanswered question(s). Please answer all questions before submitting.`,
                     variant: 'warning',
                     okText: 'Review Questions',
-                    onOk: () => reviewFirstUnanswered()
+                    onConfirm: () => reviewFirstUnanswered()
                 });
                 return;
             }
@@ -1672,7 +1684,7 @@
                                 message: 'You have reached the end of the simulation. Navigating to your first unanswered question.',
                                 variant: 'info',
                                 okText: 'Continue',
-                                onOk: () => navigateDeliveryUnit(uIdx, i)
+                                onConfirm: () => navigateDeliveryUnit(uIdx, i)
                             });
                             return;
                         }
