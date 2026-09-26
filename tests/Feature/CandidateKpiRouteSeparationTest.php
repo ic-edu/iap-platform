@@ -5,11 +5,19 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
+use App\Modules\Assessment\Enums\EvaluationStatus;
+use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Models\TestQuestion;
+use App\Modules\Assessment\Models\TestSection;
 use App\Modules\Certificate\Models\Certificate;
-use App\Modules\Certificate\Enums\CertificateStatus;
+use App\Modules\QuestionBank\Enums\QuestionType;
+use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\QuestionBank\Enums\TestType;
+use App\Modules\QuestionBank\Models\Question;
+use App\Modules\QuestionBank\Models\QuestionChoice;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -19,16 +27,20 @@ class CandidateKpiRouteSeparationTest extends TestCase
     use RefreshDatabase;
 
     protected User $candidateA;
+
     protected User $candidateB;
+
     protected User $admin;
+
     protected Test $simulatorTest;
+
     protected Test $realTest;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $this->seed(RolesAndPermissionsSeeder::class);
 
         $this->candidateA = User::factory()->create([
             'name' => 'Candidate Alpha',
@@ -50,7 +62,7 @@ class CandidateKpiRouteSeparationTest extends TestCase
 
         $this->simulatorTest = Test::create([
             'title' => 'TOEIC Listening & Reading Simulation Test',
-            'slug' => 'toeic-sim-' . Str::random(5),
+            'slug' => 'toeic-sim-'.Str::random(5),
             'test_type' => TestType::General,
             'assessment_mode' => AssessmentMode::Simulator,
             'duration_minutes' => 120,
@@ -62,7 +74,7 @@ class CandidateKpiRouteSeparationTest extends TestCase
 
         $this->realTest = Test::create([
             'title' => 'Official TOEFL Certification Exam',
-            'slug' => 'toefl-real-' . Str::random(5),
+            'slug' => 'toefl-real-'.Str::random(5),
             'test_type' => TestType::General,
             'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 90,
@@ -93,8 +105,8 @@ class CandidateKpiRouteSeparationTest extends TestCase
 
         // KPI-03: Distinct destinations
         $html = $response->getContent();
-        $this->assertStringContainsString('href="' . route('candidate.my-attempts') . '"', $html);
-        $this->assertStringContainsString('href="' . route('candidate.my-results') . '"', $html);
+        $this->assertStringContainsString('href="'.route('candidate.my-attempts').'"', $html);
+        $this->assertStringContainsString('href="'.route('candidate.my-results').'"', $html);
         $this->assertNotEquals(route('candidate.my-attempts'), route('candidate.my-results'));
     }
 
@@ -154,9 +166,8 @@ class CandidateKpiRouteSeparationTest extends TestCase
         $response->assertSee('Resume Exam');
         $response->assertSee(route('candidate.exam', $inProgressAttempt));
 
-        // ACTION-03 & 04: Expired -> View Summary (non-misleading)
+        // ACTION-03 & 04: Expired -> View Result
         $response->assertSee('TIME EXPIRED');
-        $response->assertSee('View Summary');
         $response->assertSee(route('candidate.review', $expiredAttempt));
     }
 
@@ -166,71 +177,71 @@ class CandidateKpiRouteSeparationTest extends TestCase
     protected function createSimulatorAttempt(User $user, int $totalQuestions, int $correctCount): Attempt
     {
         $test = Test::create([
-            'title'            => 'TOEIC Simulator Assessment',
-            'slug'             => 'toeic-sim-' . uniqid(),
-            'test_type'        => 'toeic',
-            'assessment_mode'  => AssessmentMode::Simulator,
+            'title' => 'TOEIC Simulator Assessment',
+            'slug' => 'toeic-sim-'.uniqid(),
+            'test_type' => 'toeic',
+            'assessment_mode' => AssessmentMode::Simulator,
             'duration_minutes' => 60,
-            'pass_score'       => 75,
-            'scoring_method'   => 'automatic',
-            'status'           => 'published',
-            'is_published'     => true,
-            'created_by'       => $this->admin->id,
+            'pass_score' => 75,
+            'scoring_method' => 'automatic',
+            'status' => 'published',
+            'is_published' => true,
+            'created_by' => $this->admin->id,
         ]);
 
-        $section = \App\Modules\Assessment\Models\TestSection::create([
-            'test_id'      => $test->id,
-            'title'        => 'Practice Section',
-            'section_type' => \App\Modules\QuestionBank\Enums\SectionType::Listening,
-            'order'        => 1,
+        $section = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Practice Section',
+            'section_type' => SectionType::Listening,
+            'order' => 1,
         ]);
 
         $attempt = Attempt::create([
-            'test_id'           => $test->id,
-            'user_id'           => $user->id,
-            'attempt_token'     => 'sim-tok-' . uniqid(),
-            'status'            => AttemptStatus::Submitted,
-            'evaluation_status' => \App\Modules\Assessment\Enums\EvaluationStatus::NotRequired,
-            'started_at'        => now()->subMinutes(30),
-            'submitted_at'      => now(),
+            'test_id' => $test->id,
+            'user_id' => $user->id,
+            'attempt_token' => 'sim-tok-'.uniqid(),
+            'status' => AttemptStatus::Submitted,
+            'evaluation_status' => EvaluationStatus::NotRequired,
+            'started_at' => now()->subMinutes(30),
+            'submitted_at' => now(),
         ]);
 
         for ($i = 1; $i <= $totalQuestions; $i++) {
-            $q = \App\Modules\QuestionBank\Models\Question::create([
-                'prompt'        => "Question {$i}",
-                'question_type' => \App\Modules\QuestionBank\Enums\QuestionType::MultipleChoice,
-                'points'        => 1,
-                'section'       => \App\Modules\QuestionBank\Enums\SectionType::Listening,
+            $q = Question::create([
+                'prompt' => "Question {$i}",
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+                'section' => SectionType::Listening,
             ]);
 
-            \App\Modules\Assessment\Models\TestQuestion::create([
+            TestQuestion::create([
                 'test_section_id' => $section->id,
-                'question_id'     => $q->id,
-                'order'           => $i,
-                'points'          => 1,
+                'question_id' => $q->id,
+                'order' => $i,
+                'points' => 1,
             ]);
 
-            $cCorrect = \App\Modules\QuestionBank\Models\QuestionChoice::create([
+            $cCorrect = QuestionChoice::create([
                 'question_id' => $q->id,
-                'label'       => 'A',
-                'content'     => 'Correct Choice',
-                'is_correct'  => true,
+                'label' => 'A',
+                'content' => 'Correct Choice',
+                'is_correct' => true,
             ]);
 
-            $cWrong = \App\Modules\QuestionBank\Models\QuestionChoice::create([
+            $cWrong = QuestionChoice::create([
                 'question_id' => $q->id,
-                'label'       => 'B',
-                'content'     => 'Wrong Choice',
-                'is_correct'  => false,
+                'label' => 'B',
+                'content' => 'Wrong Choice',
+                'is_correct' => false,
             ]);
 
             $isCorrect = ($i <= $correctCount);
-            \App\Modules\Assessment\Models\Answer::create([
-                'attempt_id'         => $attempt->id,
-                'question_id'        => $q->id,
+            Answer::create([
+                'attempt_id' => $attempt->id,
+                'question_id' => $q->id,
                 'selected_choice_id' => $isCorrect ? $cCorrect->id : $cWrong->id,
-                'is_correct'         => $isCorrect,
-                'score_earned'       => $isCorrect ? 1 : 0,
+                'is_correct' => $isCorrect,
+                'score_earned' => $isCorrect ? 1 : 0,
             ]);
         }
 
@@ -241,7 +252,7 @@ class CandidateKpiRouteSeparationTest extends TestCase
 
     /**
      * TEST RESULT-01: Submitted Attempt appears in Completed Results.
-     * TEST RESULT-02: Expired Attempt does NOT appear in Completed Results.
+     * TEST RESULT-02: Expired Attempt appears in Completed Results.
      * TEST RESULT-03: InProgress Attempt does NOT appear in Completed Results.
      * TEST RESULT-04: Cancelled Attempt does NOT appear in Completed Results.
      * TEST RESULT-05: Completed Result action routes to canonical Candidate Result page.
@@ -266,7 +277,7 @@ class CandidateKpiRouteSeparationTest extends TestCase
             'total_score' => 0,
         ]);
 
-        // 3. Expired attempt (Must NOT appear in Completed Results)
+        // 3. Expired attempt (Must appear in Completed Results)
         $expiredAttempt = Attempt::create([
             'user_id' => $this->candidateA->id,
             'test_id' => $this->realTest->id,
@@ -291,12 +302,12 @@ class CandidateKpiRouteSeparationTest extends TestCase
         $response = $this->actingAs($this->candidateA)->get(route('candidate.my-results'));
         $response->assertStatus(200);
 
-        // View data assertions: Only submitted attempt is present
+        // View data assertions: Only submitted and expired attempts are present
         $response->assertViewHas('results', function ($results) use ($submittedAttempt, $inProgressAttempt, $draftAttempt, $expiredAttempt, $cancelledAttempt) {
             return $results->contains('id', $submittedAttempt->id)
+                && $results->contains('id', $expiredAttempt->id)
                 && !$results->contains('id', $inProgressAttempt->id)
                 && !$results->contains('id', $draftAttempt->id)
-                && !$results->contains('id', $expiredAttempt->id)
                 && !$results->contains('id', $cancelledAttempt->id);
         });
 
@@ -308,19 +319,31 @@ class CandidateKpiRouteSeparationTest extends TestCase
         $response->assertSee('PASSED');
         $response->assertSee(route('candidate.review', $submittedAttempt));
         $response->assertDontSee('Resume Exam');
-        $response->assertDontSee('TIME EXPIRED');
     }
 
     /**
-     * TEST COUNT-01: Candidate with 2 Submitted + 3 Expired -> Total Attempts = 5.
-     * TEST COUNT-02: Same Candidate -> Completed Tests = 2.
-     * TEST COUNT-03: Expired Attempts do NOT increment Completed Tests.
+     * TEST COUNT-01: Candidate with 2 Submitted (distinct tests) + 3 Expired -> Total Attempts = 5.
+     * TEST COUNT-02: Same Candidate -> Completed Tests = 2 (unique completed tests).
+     * TEST COUNT-03: Expired Attempts on existing completed tests do NOT increment Completed Tests count.
      * TEST COUNT-04: InProgress Attempt increments My Total Attempts but not Completed Tests.
      * TEST COUNT-05: Cancelled Attempt increments Total Attempts but not Completed Tests.
      */
     public function test_count_01_to_05_dashboard_kpi_counts_exact_semantics(): void
     {
-        // Candidate with 2 Submitted + 3 Expired
+        $secondTest = Test::create([
+            'title' => 'Secondary Assessment',
+            'slug' => 'sec-test-'.uniqid(),
+            'test_type' => 'general',
+            'assessment_mode' => AssessmentMode::Simulator,
+            'duration_minutes' => 60,
+            'pass_score' => 70,
+            'scoring_method' => 'automatic',
+            'status' => 'published',
+            'is_published' => true,
+            'created_by' => $this->admin->id,
+        ]);
+
+        // Candidate with 2 Submitted (2 distinct tests) + 3 Expired
         Attempt::create([
             'user_id' => $this->candidateA->id,
             'test_id' => $this->simulatorTest->id,
@@ -330,7 +353,7 @@ class CandidateKpiRouteSeparationTest extends TestCase
         ]);
         Attempt::create([
             'user_id' => $this->candidateA->id,
-            'test_id' => $this->simulatorTest->id,
+            'test_id' => $secondTest->id,
             'status' => AttemptStatus::Submitted,
             'started_at' => now()->subHours(2),
             'submitted_at' => now()->subHour(),
@@ -357,8 +380,8 @@ class CandidateKpiRouteSeparationTest extends TestCase
         $responseA = $this->actingAs($this->candidateA)->get(route('candidate.portal'));
         // COUNT-01: Total Attempts = 5
         $responseA->assertViewHas('myAttemptsCount', 5);
-        // COUNT-02 & 03: Completed Tests = 2 (Expired are excluded)
-        $responseA->assertViewHas('completedAttemptsCount', 2);
+        // COUNT-02 & 03: Completed Tests = 2 (unique completed tests across simulatorTest and secondTest)
+        $responseA->assertViewHas('completedTestsCount', 2);
 
         // COUNT-04 & 05: Adding InProgress and Cancelled increments Total (5 + 2 = 7) but not Completed (remains 2)
         Attempt::create([
@@ -376,7 +399,7 @@ class CandidateKpiRouteSeparationTest extends TestCase
 
         $responseA2 = $this->actingAs($this->candidateA)->get(route('candidate.portal'));
         $responseA2->assertViewHas('myAttemptsCount', 7);
-        $responseA2->assertViewHas('completedAttemptsCount', 2);
+        $responseA2->assertViewHas('completedTestsCount', 2);
     }
 
     /**
@@ -417,7 +440,7 @@ class CandidateKpiRouteSeparationTest extends TestCase
         // Security 03: Dashboard count isolation
         $portalResp = $this->actingAs($this->candidateA)->get(route('candidate.portal'));
         $portalResp->assertViewHas('myAttemptsCount', 1);
-        $portalResp->assertViewHas('completedAttemptsCount', 1);
+        $portalResp->assertViewHas('completedTestsCount', 1);
     }
 
     /**

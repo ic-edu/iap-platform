@@ -576,7 +576,7 @@ class TeacherAssessmentPartAwareUxTest extends TestCase
 
         $response = $this->actingAs($this->student)->get(route('candidate.tests.instructions', $this->test->id));
         $response->assertOk();
-        $response->assertSee('Institutional Notice', false);
+        $response->assertSee('Mock Test Notice', false);
     }
 
     /** @test */

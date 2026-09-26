@@ -160,7 +160,7 @@ class LightThemeAccentContrastTest extends TestCase
         $response->assertSee('650 Points');
         $response->assertSee('7 Section(s)');
         $response->assertSee('200 Questions');
-        $response->assertSee('Institutional Notice');
+        $response->assertSee('Mock Test Notice');
         $response->assertSee('I Understand &amp; Begin Assessment', false);
     }
 }

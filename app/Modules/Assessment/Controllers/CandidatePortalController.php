@@ -119,7 +119,6 @@ class CandidatePortalController extends Controller
                 ? 'assignment:'.$attempt->assignment_id
                 : 'test:'.$attempt->test_id;
         })->unique()->count();
-        $completedAttemptsCount = $completedTestsCount;
 
         $issuedCertificatesCount = Certificate::where('user_id', $userId)
             ->whereHas('attempt.test', function ($q) {
@@ -162,7 +161,6 @@ class CandidatePortalController extends Controller
             'availableTestsCount',
             'myAttemptsCount',
             'completedTestsCount',
-            'completedAttemptsCount',
             'issuedCertificatesCount',
             'ongoingAttempts',
             'openOrdersCount',

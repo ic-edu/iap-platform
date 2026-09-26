@@ -245,7 +245,7 @@ class Attempt extends Model
     }
 
     /**
-     * Get the completion label for display ("Submitted at" vs "Time expired at").
+     * Get the completion label for display ("Submitted at" vs "Time expired at" vs "Cancelled at").
      */
     public function getCompletionLabel(): string
     {
@@ -255,12 +255,17 @@ class Attempt extends Model
             return 'Time expired at';
         }
 
+        if ($statusValue === AttemptStatus::Cancelled->value || $statusValue === 'cancelled') {
+            return 'Cancelled at';
+        }
+
         return 'Submitted at';
     }
 
     /**
      * Get canonical completion timestamp for display.
      * For expired attempts, derives the canonical deadline (started_at + duration_minutes).
+     * For cancelled attempts, returns updated_at.
      * For submitted attempts, returns submitted_at (or updated_at fallback).
      */
     public function getCanonicalCompletionTimestamp(): ?Carbon
@@ -272,6 +277,10 @@ class Attempt extends Model
             if ($this->started_at && $test && $test->duration_minutes > 0) {
                 return $this->started_at->copy()->addMinutes($test->duration_minutes);
             }
+        }
+
+        if ($statusValue === AttemptStatus::Cancelled->value || $statusValue === 'cancelled') {
+            return $this->updated_at;
         }
 
         return $this->submitted_at ?? $this->updated_at;

@@ -1243,6 +1243,7 @@
 
         // Exit Simulator Confirmation
         function confirmExitSimulator() {
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'exit_simulator' });
             if (hasPendingSaveInCurrentUnit()) {
                 iapAlert({
                     title: 'Saving Answer',
@@ -1252,7 +1253,6 @@
                 });
                 return;
             }
-            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'exit_simulator' });
             iapConfirm({
                 title: 'Return to Dashboard?',
                 message: 'Your saved Simulator progress will be preserved. You can resume the test later.',
@@ -1268,6 +1268,7 @@
 
         // Trigger Final Submit Confirmation Modal
         function triggerFinalSubmitModal() {
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'final_submit' });
             if (pendingAnswerQuestionIds.size > 0) {
                 iapAlert({
                     title: 'Saving Answer',
@@ -1277,7 +1278,6 @@
                 });
                 return;
             }
-            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'final_submit' });
             if (answeredQuestionIds.size < totalQuestions) {
                 const unansweredCount = totalQuestions - answeredQuestionIds.size;
                 iapAlert({
@@ -1526,6 +1526,7 @@
 
         // Show Dedicated Section Introduction Screen
         function showSectionIntro(sectionId) {
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'section_intro', targetSection: sectionId });
             if (!sectionId) return;
             if (hasPendingSaveInCurrentUnit()) {
                 iapAlert({
@@ -1536,7 +1537,6 @@
                 });
                 return;
             }
-            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'section_intro', targetSection: sectionId });
             document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
             const targetSection = document.getElementById('section-intro-card-' + sectionId);
             if (targetSection) {
@@ -1581,6 +1581,7 @@
 
         // Navigate to Delivery Unit (Group Page or Single Question Page) - Secure Gate in Real Test Mode
         function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'delivery_unit', targetUnit: unitIdx, targetQ: targetQIndex });
             if (unitIdx < 0 || unitIdx >= totalUnits) return;
             if (currentUnitIdx >= 0 && unitIdx !== currentUnitIdx && hasPendingSaveInCurrentUnit()) {
                 iapAlert({
@@ -1591,7 +1592,6 @@
                 });
                 return;
             }
-            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'delivery_unit', targetUnit: unitIdx, targetQ: targetQIndex });
             if (isRealTest) {
                 if (!secureSessionActive) {
                     pendingTargetUnitIdx = unitIdx;

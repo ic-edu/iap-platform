@@ -198,6 +198,38 @@ class CandidatePostUatUxSemanticsTest extends TestCase
         $this->assertEquals('Time expired at', $expired->getCompletionLabel());
         $this->assertEquals('2026-09-26 15:45:09', $expired->getCanonicalCompletionTimestamp()->format('Y-m-d H:i:s'));
         $this->assertEquals('Time expired at 26 Sep 2026, 15:45', $expired->getFormattedCompletionDisplay());
+
+        $cancelled = Attempt::create([
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 3,
+            'status' => AttemptStatus::Cancelled,
+            'started_at' => now()->parse('2026-09-26 14:00:00'),
+        ]);
+
+        $this->assertEquals('Cancelled at', $cancelled->getCompletionLabel());
+        $this->assertEquals($cancelled->updated_at->format('Y-m-d H:i:s'), $cancelled->getCanonicalCompletionTimestamp()->format('Y-m-d H:i:s'));
+        $this->assertEquals("Cancelled at {$cancelled->updated_at->format('d M Y, H:i')}", $cancelled->getFormattedCompletionDisplay());
+    }
+
+    public function test_cancelled_result_review_renders_cancelled_at_label(): void
+    {
+        $attempt = Attempt::create([
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Cancelled,
+            'started_at' => now()->parse('2026-09-26 10:00:00'),
+        ]);
+
+        $response = $this->actingAs($this->student)->get(route('candidate.review', $attempt));
+
+        $response->assertOk();
+        $response->assertSee('Cancelled at '.$attempt->updated_at->format('d M Y, H:i'));
+        $response->assertDontSee('Submitted at');
+        $response->assertDontSee('Time expired at');
     }
 
     public function test_attempt_history_score_visibility_and_no_pass_score_denominator(): void

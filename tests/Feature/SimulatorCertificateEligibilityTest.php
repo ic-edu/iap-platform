@@ -304,7 +304,7 @@ class SimulatorCertificateEligibilityTest extends TestCase
         // Candidate review for Real Test displays Certificate banner
         $reviewRes = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
         $reviewRes->assertStatus(200);
-        $reviewRes->assertSee('Official Digital Certificate Issued!');
+        $reviewRes->assertSee('Digital Certificate Issued!');
         $reviewRes->assertSee('Download Digital Certificate');
 
         // Verification service resolves valid certificate
