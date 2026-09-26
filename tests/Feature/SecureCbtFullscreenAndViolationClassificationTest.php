@@ -376,4 +376,37 @@ class SecureCbtFullscreenAndViolationClassificationTest extends TestCase
         $this->assertStringNotContainsString('id="fullscreen-warning-overlay"', $content);
         $this->assertStringNotContainsString('id="fullscreen-required-overlay"', $content);
     }
+
+    public function test_real_test_cbt_view_contains_unified_navigate_and_render_delivery_unit_gates_and_palette_direction_guard(): void
+    {
+        $attempt = Attempt::create([
+            'test_id' => $this->realTest->id,
+            'user_id' => $this->candidate->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::InProgress,
+            'evaluation_status' => EvaluationStatus::PendingEvaluation,
+            'started_at' => now(),
+            'seed' => 'seed123',
+        ]);
+
+        $response = $this->actingAs($this->candidate)->get(route('candidate.exam', $attempt));
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+
+        // 1. Canonical gate functions defined
+        $this->assertStringContainsString('function renderDeliveryUnit(unitIdx, targetQIndex = null)', $content);
+        $this->assertStringContainsString('function navigateDeliveryUnit(unitIdx, targetQIndex = null)', $content);
+
+        // 2. Directions screen palette guard exists
+        $this->assertStringContainsString('if (currentUnitIdx === -1)', $content);
+        $this->assertStringContainsString('Please begin the section to start the assessment in secure fullscreen mode.', $content);
+
+        // 3. Hash preservation of pending target question index
+        $this->assertStringContainsString('let pendingTargetQIndex = null;', $content);
+        $this->assertStringContainsString('pendingTargetQIndex = resolvedQIdx;', $content);
+        $this->assertStringContainsString('renderDeliveryUnit(targetU, targetQ);', $content);
+    }
 }
+

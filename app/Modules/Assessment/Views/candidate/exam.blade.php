@@ -1042,6 +1042,7 @@
         // Fullscreen Mode & Secure Session Handler for Real Test
         let secureSessionActive = false;
         let pendingTargetUnitIdx = null;
+        let pendingTargetQIndex = null;
 
         async function enterFullscreen() {
             if (document.fullscreenElement) {
@@ -1077,8 +1078,11 @@
                 if (reqOverlay) reqOverlay.classList.add('hidden');
                 logViolation('fullscreen_enter');
                 if (pendingTargetUnitIdx !== null) {
-                    navigateDeliveryUnit(pendingTargetUnitIdx);
+                    const targetU = pendingTargetUnitIdx;
+                    const targetQ = pendingTargetQIndex;
                     pendingTargetUnitIdx = null;
+                    pendingTargetQIndex = null;
+                    renderDeliveryUnit(targetU, targetQ);
                 }
             }
         }
@@ -1110,27 +1114,9 @@
             });
         }
 
-        // Section Initiation (Fullscreen-gated for Real Test)
+        // Section Initiation (Fullscreen-gated for Real Test via navigateDeliveryUnit)
         async function startSectionQuestions(firstUnitIdx) {
             CandidateExamAudioManager.beforeDeliveryTransition({ type: 'start_section', targetUnit: firstUnitIdx });
-            if (isRealTest) {
-                if (!secureSessionActive) {
-                    pendingTargetUnitIdx = firstUnitIdx;
-                    const entered = await enterFullscreen();
-                    if (!entered) {
-                        showFullscreenRequiredOverlay();
-                        return;
-                    }
-                    secureSessionActive = true;
-                    hideFullscreenRequiredOverlay();
-                    logViolation('fullscreen_enter');
-                } else if (!document.fullscreenElement) {
-                    pendingTargetUnitIdx = firstUnitIdx;
-                    const warnOverlay = document.getElementById('fullscreen-warning-overlay');
-                    if (warnOverlay) warnOverlay.classList.remove('hidden');
-                    return;
-                }
-            }
             navigateDeliveryUnit(firstUnitIdx);
         }
 
@@ -1437,10 +1423,9 @@
             }
         }
 
-        // Navigate to Delivery Unit (Group Page or Single Question Page)
-        function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
+        // Render Delivery Unit to DOM (Ungated rendering logic)
+        function renderDeliveryUnit(unitIdx, targetQIndex = null) {
             if (unitIdx < 0 || unitIdx >= totalUnits) return;
-            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'delivery_unit', targetUnit: unitIdx, targetQ: targetQIndex });
             document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
             pendingTransitionTargetUnitIdx = null;
 
@@ -1463,6 +1448,36 @@
             const firstQInUnit = unitIndexToQuestionIndices[unitIdx]?.[0] ?? 0;
             window.location.hash = 'q=' + (targetQIndex !== null ? targetQIndex : firstQInUnit);
             updatePaletteUI();
+        }
+
+        // Navigate to Delivery Unit (Group Page or Single Question Page) - Secure Gate in Real Test Mode
+        function navigateDeliveryUnit(unitIdx, targetQIndex = null) {
+            if (unitIdx < 0 || unitIdx >= totalUnits) return;
+            CandidateExamAudioManager.beforeDeliveryTransition({ type: 'delivery_unit', targetUnit: unitIdx, targetQ: targetQIndex });
+            if (isRealTest) {
+                if (!secureSessionActive) {
+                    pendingTargetUnitIdx = unitIdx;
+                    pendingTargetQIndex = targetQIndex;
+                    enterFullscreen().then(entered => {
+                        if (!entered) {
+                            showFullscreenRequiredOverlay();
+                            return;
+                        }
+                        secureSessionActive = true;
+                        hideFullscreenRequiredOverlay();
+                        logViolation('fullscreen_enter');
+                        renderDeliveryUnit(unitIdx, targetQIndex);
+                    });
+                    return;
+                } else if (!document.fullscreenElement) {
+                    pendingTargetUnitIdx = unitIdx;
+                    pendingTargetQIndex = targetQIndex;
+                    const warnOverlay = document.getElementById('fullscreen-warning-overlay');
+                    if (warnOverlay) warnOverlay.classList.remove('hidden');
+                    return;
+                }
+            }
+            renderDeliveryUnit(unitIdx, targetQIndex);
         }
 
         // Quick-Jump to Passage Document in Passage Group Unit (Multi-Document Part 7 Double/Triple Passages)
@@ -1540,20 +1555,32 @@
         function handlePaletteClick(targetQIdx) {
             const targetUnitIdx = questionIndexToUnitIndex[targetQIdx];
 
-            if (isRealTest && currentUnitIdx >= 0) {
-                // Mock Test: cannot jump forward over unanswered questions in current group
-                if (targetUnitIdx > currentUnitIdx) {
-                    const currentUnitQIndices = unitIndexToQuestionIndices[currentUnitIdx] || [];
-                    const hasUnansweredInCurrent = currentUnitQIndices.some(qIdx => !answeredQuestionIds.has(questionIds[qIdx]));
+            if (isRealTest) {
+                if (currentUnitIdx === -1) {
+                    iapAlert({
+                        title: 'Begin Section Required',
+                        message: 'Please begin the section to start the assessment in secure fullscreen mode.',
+                        variant: 'info',
+                        okText: 'Understood'
+                    });
+                    return;
+                }
 
-                    if (hasUnansweredInCurrent) {
-                        iapAlert({
-                            title: 'Answer Current Group First',
-                            message: 'You must answer all questions in the current group before moving forward in Mock Test mode.',
-                            variant: 'warning',
-                            okText: 'Understood'
-                        });
-                        return;
+                if (currentUnitIdx >= 0) {
+                    // Mock Test: cannot jump forward over unanswered questions in current group
+                    if (targetUnitIdx > currentUnitIdx) {
+                        const currentUnitQIndices = unitIndexToQuestionIndices[currentUnitIdx] || [];
+                        const hasUnansweredInCurrent = currentUnitQIndices.some(qIdx => !answeredQuestionIds.has(questionIds[qIdx]));
+
+                        if (hasUnansweredInCurrent) {
+                            iapAlert({
+                                title: 'Answer Current Group First',
+                                message: 'You must answer all questions in the current group before moving forward in Mock Test mode.',
+                                variant: 'warning',
+                                okText: 'Understood'
+                            });
+                            return;
+                        }
                     }
                 }
             }
@@ -1816,10 +1843,16 @@
             if (hash.startsWith('#q=')) {
                 const qIdx = parseInt(hash.replace('#q=', ''), 10);
                 const unitIdx = questionIndexToUnitIndex[qIdx];
-                if (unitIdx !== undefined) {
-                    navigateDeliveryUnit(unitIdx, qIdx);
+                const resolvedUnitIdx = (unitIdx !== undefined) ? unitIdx : 0;
+                const resolvedQIdx = (unitIdx !== undefined) ? qIdx : (unitIndexToQuestionIndices[0]?.[0] ?? 0);
+
+                if (isRealTest && !document.fullscreenElement) {
+                    pendingTargetUnitIdx = resolvedUnitIdx;
+                    pendingTargetQIndex = resolvedQIdx;
+                    document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
+                    showFullscreenRequiredOverlay();
                 } else {
-                    navigateDeliveryUnit(0);
+                    renderDeliveryUnit(resolvedUnitIdx, resolvedQIdx);
                 }
             } else if (hash.startsWith('#section=')) {
                 const sId = hash.replace('#section=', '');
@@ -1827,7 +1860,14 @@
             } else if (firstSectionId) {
                 showSectionIntro(firstSectionId);
             } else {
-                navigateDeliveryUnit(0);
+                if (isRealTest && !document.fullscreenElement) {
+                    pendingTargetUnitIdx = 0;
+                    pendingTargetQIndex = 0;
+                    document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
+                    showFullscreenRequiredOverlay();
+                } else {
+                    renderDeliveryUnit(0);
+                }
             }
 
             updatePaletteUI();
