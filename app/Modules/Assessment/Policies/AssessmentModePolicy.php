@@ -13,17 +13,27 @@ abstract class AssessmentModePolicy
     {
         return match ($test->assessment_mode ?? AssessmentMode::Simulator) {
             AssessmentMode::RealTest => new RealTestPolicy($test),
-            default                  => new SimulatorPolicy($test),
+            default => new SimulatorPolicy($test),
         };
     }
 
     abstract public function canSkipQuestion(): bool;
+
     abstract public function canGoPrevious(): bool;
+
     abstract public function canJumpToQuestion(): bool;
+
     abstract public function requiresAnswerBeforeNext(): bool;
+
     abstract public function shouldRevisitUnanswered(): bool;
+
     abstract public function canRetry(): bool;
+
     abstract public function requiresPaymentBeforeAssignment(): bool;
+
     abstract public function requiresFullscreen(): bool;
+
     abstract public function canReplayAudio(): bool;
+
+    abstract public function canCandidateViewDetailedQuestionReview(): bool;
 }

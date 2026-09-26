@@ -14,6 +14,7 @@ use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Certificate\Engines\CertificateEngine;
 use App\Services\BestResultResolver;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -43,7 +44,7 @@ class AttemptEngine
     {
         $lockKey = "start_attempt:user_{$user->id}:test_{$test->id}";
 
-        return \Illuminate\Support\Facades\Cache::lock($lockKey, 20)->block(10, function () use ($test, $user) {
+        return Cache::lock($lockKey, 20)->block(10, function () use ($test, $user) {
             $existing = Attempt::where('test_id', $test->id)
                 ->where('user_id', $user->id)
                 ->where('status', AttemptStatus::InProgress)
@@ -54,6 +55,7 @@ class AttemptEngine
                 if (!$this->timerEngine->isExpired($existing)) {
                     $this->resumeAttempt($existing);
                 }
+
                 return $existing;
             }
 
@@ -68,11 +70,11 @@ class AttemptEngine
                     $existingAttemptsCount = $assignment->attempts()->count();
 
                     if ($assignment->status === 'completed' || $existingAttemptsCount >= $assignment->max_attempts) {
-                        throw new \InvalidArgumentException("Maximum attempts ({$assignment->max_attempts}) reached for this Mock Test assignment.");
+                        throw new InvalidArgumentException("Maximum attempts ({$assignment->max_attempts}) reached for this Mock Test assignment.");
                     }
 
                     if ($existingAttemptsCount >= 1) {
-                        throw new \InvalidArgumentException("Attempt #1 already exists for this Mock Test assignment. Attempt #2 must be started via retry.");
+                        throw new InvalidArgumentException('Attempt #1 already exists for this Mock Test assignment. Attempt #2 must be started via retry.');
                     }
                 }
             }
@@ -84,16 +86,16 @@ class AttemptEngine
             $attemptNumber = $assignment ? 1 : (Attempt::where('test_id', $test->id)->where('user_id', $user->id)->count() + 1);
 
             $attempt = Attempt::create([
-                'test_id'           => $test->id,
-                'user_id'           => $user->id,
-                'assignment_id'     => ($assignment && $assignment->status === 'active') ? $assignment->id : null,
-                'attempt_number'    => $attemptNumber,
-                'is_final'          => false,
-                'decision_status'   => $test->isRealTest() ? 'pending_decision' : null,
-                'started_at'        => now(),
-                'status'            => AttemptStatus::InProgress,
+                'test_id' => $test->id,
+                'user_id' => $user->id,
+                'assignment_id' => ($assignment && $assignment->status === 'active') ? $assignment->id : null,
+                'attempt_number' => $attemptNumber,
+                'is_final' => false,
+                'decision_status' => $test->isRealTest() ? 'pending_decision' : null,
+                'started_at' => now(),
+                'status' => AttemptStatus::InProgress,
                 'evaluation_status' => $evaluationStatus,
-                'seed'              => Str::random(10),
+                'seed' => Str::random(10),
             ]);
 
             if ($assignment && $assignment->status === 'active') {
@@ -139,10 +141,10 @@ class AttemptEngine
             : EvaluationStatus::NotRequired;
 
         $attempt->update([
-            'status'            => AttemptStatus::Submitted,
+            'status' => AttemptStatus::Submitted,
             'evaluation_status' => $evaluationStatus,
-            'submitted_at'      => now(),
-            'decision_status'   => ($test && $test->isRealTest()) ? 'pending_decision' : null,
+            'submitted_at' => now(),
+            'decision_status' => ($test && $test->isRealTest()) ? 'pending_decision' : null,
         ]);
 
         $attempt->refresh();
@@ -157,8 +159,8 @@ class AttemptEngine
         // Best Result Resolution: If Mock Test Attempt 2+ submitted, determine the winning attempt and complete assignment
         if ($test && $test->isRealTest() && $attempt->assignment) {
             $assignment = $attempt->assignment;
-            $submittedCount = $assignment->attempts()->where('status', AttemptStatus::Submitted)->count();
-            if ($attempt->attempt_number >= $assignment->max_attempts || $submittedCount >= $assignment->max_attempts) {
+            $completedCount = $assignment->attempts()->whereIn('status', [AttemptStatus::Submitted, AttemptStatus::Expired])->count();
+            if ($attempt->attempt_number >= $assignment->max_attempts || $completedCount >= $assignment->max_attempts) {
                 app(BestResultResolver::class)->resolve($assignment);
             }
         }
@@ -189,10 +191,10 @@ class AttemptEngine
             : EvaluationStatus::NotRequired;
 
         $attempt->update([
-            'status'            => AttemptStatus::Expired,
+            'status' => AttemptStatus::Expired,
             'evaluation_status' => $evaluationStatus,
-            'submitted_at'      => now(),
-            'decision_status'   => ($test && $test->isRealTest()) ? 'pending_decision' : null,
+            'submitted_at' => now(),
+            'decision_status' => ($test && $test->isRealTest()) ? 'pending_decision' : null,
         ]);
 
         $attempt->refresh();

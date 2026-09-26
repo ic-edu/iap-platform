@@ -48,4 +48,9 @@ class SimulatorPolicy extends AssessmentModePolicy
     {
         return true;
     }
+
+    public function canCandidateViewDetailedQuestionReview(): bool
+    {
+        return true;
+    }
 }

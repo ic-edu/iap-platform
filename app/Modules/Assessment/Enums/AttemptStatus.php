@@ -20,4 +20,9 @@ enum AttemptStatus: string
             self::Cancelled => 'Cancelled',
         };
     }
+
+    public function isCompleted(): bool
+    {
+        return in_array($this, [self::Submitted, self::Expired], true);
+    }
 }

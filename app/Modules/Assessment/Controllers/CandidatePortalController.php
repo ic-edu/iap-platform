@@ -3,22 +3,35 @@
 namespace App\Modules\Assessment\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\MediaAsset;
 use App\Models\User;
 use App\Modules\Assessment\Engines\AssessmentEngine;
+use App\Modules\Assessment\Engines\AssignmentEngine;
+use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Assessment\Events\RuleViolationDetected;
 use App\Modules\Assessment\Models\Attempt;
+use App\Modules\Assessment\Models\AttemptAudioPlay;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Services\DeliveryUnitBuilder;
+use App\Modules\Certificate\Engines\CertificateEngine;
 use App\Modules\Certificate\Models\Certificate;
+use App\Modules\Commerce\Domain\Enums\OrderStatus;
+use App\Modules\Commerce\Domain\Enums\PaymentStatus;
+use App\Modules\Commerce\Domain\Models\Order;
+use App\Modules\Commerce\Domain\Models\Payment;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
+use App\Services\ActivityLogger;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -68,9 +81,9 @@ class CandidatePortalController extends Controller
                 $query->where('assessment_mode', 'simulator')
                     ->orWhere(function ($q) use ($userId) {
                         $q->where('assessment_mode', 'real_test')
-                          ->whereHas('assignments', function ($a) use ($userId) {
-                              $a->where('user_id', $userId)->where('status', 'active');
-                          });
+                            ->whereHas('assignments', function ($a) use ($userId) {
+                                $a->where('user_id', $userId)->where('status', 'active');
+                            });
                     });
             })
             ->count();
@@ -79,7 +92,7 @@ class CandidatePortalController extends Controller
         $completedAttemptsCount = Attempt::where('user_id', $userId)->where('status', AttemptStatus::Submitted->value)->count();
         $issuedCertificatesCount = Certificate::where('user_id', $userId)
             ->whereHas('attempt.test', function ($q) {
-                $q->where('assessment_mode', '!=', \App\Modules\Assessment\Enums\AssessmentMode::Simulator->value);
+                $q->where('assessment_mode', '!=', AssessmentMode::Simulator->value);
             })
             ->count();
         $ongoingAttempts = Attempt::with(['test.sections'])
@@ -92,11 +105,11 @@ class CandidatePortalController extends Controller
             })
             ->values();
 
-        $openOrdersCount = \App\Modules\Commerce\Domain\Models\Order::where('user_id', $userId)
-            ->where('status', \App\Modules\Commerce\Domain\Enums\OrderStatus::Pending)
+        $openOrdersCount = Order::where('user_id', $userId)
+            ->where('status', OrderStatus::Pending)
             ->count();
-        $pendingPaymentsCount = \App\Modules\Commerce\Domain\Models\Payment::where('user_id', $userId)
-            ->where('status', \App\Modules\Commerce\Domain\Enums\PaymentStatus::Pending)
+        $pendingPaymentsCount = Payment::where('user_id', $userId)
+            ->where('status', PaymentStatus::Pending)
             ->count();
 
         $user = $request->user();
@@ -139,9 +152,9 @@ class CandidatePortalController extends Controller
                 $query->where('assessment_mode', 'simulator')
                     ->orWhere(function ($q) use ($userId) {
                         $q->where('assessment_mode', 'real_test')
-                          ->whereHas('assignments', function ($a) use ($userId) {
-                              $a->where('user_id', $userId)->where('status', 'active');
-                          });
+                            ->whereHas('assignments', function ($a) use ($userId) {
+                                $a->where('user_id', $userId)->where('status', 'active');
+                            });
                     });
             })
             ->with('sections')
@@ -202,7 +215,7 @@ class CandidatePortalController extends Controller
         $userId = (int) $request->user()?->id;
         $certificates = Certificate::where('user_id', $userId)
             ->whereHas('attempt.test', function ($q) {
-                $q->where('assessment_mode', '!=', \App\Modules\Assessment\Enums\AssessmentMode::Simulator->value);
+                $q->where('assessment_mode', '!=', AssessmentMode::Simulator->value);
             })
             ->with(['attempt.test'])
             ->latest('issued_at')
@@ -220,13 +233,13 @@ class CandidatePortalController extends Controller
     public function instructions(Request $request, Test $test): View
     {
         $user = $request->user();
-        $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
+        $assignmentEngine = app(AssignmentEngine::class);
         if (!$assignmentEngine->isEligibleToStart($test, $user)) {
             abort(403, "Unauthorized access. Mock Test '{$test->title}' requires an active paid assignment.");
         }
 
         $test->loadMissing('sections.testQuestions');
-        $totalQuestions = $test->sections->sum(fn($s) => $s->testQuestions->count());
+        $totalQuestions = $test->sections->sum(fn ($s) => $s->testQuestions->count());
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.instructions';
@@ -245,7 +258,7 @@ class CandidatePortalController extends Controller
         }
 
         // Eligibility check for Real Tests
-        $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
+        $assignmentEngine = app(AssignmentEngine::class);
         if (!$assignmentEngine->isEligibleToStart($test, $user)) {
             abort(403, "Unauthorized access. Mock Test '{$test->title}' requires a confirmed paid assignment before you can start.");
         }
@@ -265,13 +278,14 @@ class CandidatePortalController extends Controller
                 if ($existingAttempt->status === AttemptStatus::InProgress && !$this->engine->timerEngine->isExpired($existingAttempt)) {
                     return redirect()->route('candidate.exam', $existingAttempt);
                 }
+
                 return redirect()->route('candidate.review', $existingAttempt);
             }
 
             return redirect()->route('candidate.available-tests')->with('error', $e->getMessage());
         }
 
-        \App\Services\ActivityLogger::log('EXAM_STARTED', "Started assessment attempt for '{$test->title}'", $attempt);
+        ActivityLogger::log('EXAM_STARTED', "Started assessment attempt for '{$test->title}'", $attempt);
 
         if ($attempt->status !== AttemptStatus::InProgress || $this->engine->timerEngine->isExpired($attempt)) {
             return redirect()->route('candidate.review', $attempt);
@@ -309,14 +323,14 @@ class CandidatePortalController extends Controller
             'answers',
         ]);
 
-        $deliveryData = \App\Modules\Assessment\Services\DeliveryUnitBuilder::build($attempt->test, $attempt);
+        $deliveryData = DeliveryUnitBuilder::build($attempt->test, $attempt);
         $questions = $deliveryData['questions'];
         $sections = $deliveryData['sections'];
         $remainingSeconds = $this->engine->timerEngine->getRemainingSeconds($attempt);
         $isRealTest = $attempt->test?->isRealTest() ?? false;
 
         // Played audio tracking for Real Test single-play
-        $playedAudioQuestionIds = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
+        $playedAudioQuestionIds = AttemptAudioPlay::where('attempt_id', $attempt->id)
             ->pluck('question_id')
             ->toArray();
 
@@ -324,11 +338,11 @@ class CandidatePortalController extends Controller
         $viewName = 'assessment::candidate.exam';
 
         return view($viewName, array_merge([
-            'attempt'                => $attempt,
-            'shuffledQuestions'      => $questions,
-            'remainingSeconds'       => $remainingSeconds,
-            'sections'               => $sections,
-            'isRealTest'             => $isRealTest,
+            'attempt' => $attempt,
+            'shuffledQuestions' => $questions,
+            'remainingSeconds' => $remainingSeconds,
+            'sections' => $sections,
+            'isRealTest' => $isRealTest,
             'playedAudioQuestionIds' => $playedAudioQuestionIds,
         ], $deliveryData));
     }
@@ -336,14 +350,14 @@ class CandidatePortalController extends Controller
     /**
      * Secure Audio Streaming Endpoint (Enforces Single Play for Real Tests).
      */
-    public function streamAudio(Request $request, Attempt $attempt, \App\Modules\QuestionBank\Models\Question $question)
+    public function streamAudio(Request $request, Attempt $attempt, Question $question)
     {
         $test = $attempt->test;
         $isRealTest = $test?->isRealTest() ?? false;
 
         if ($isRealTest) {
             $attemptLockKey = "candidate_attempt:{$attempt->id}";
-            $audioLockKey = 'audio_play:' . $attempt->id . ':' . ($question->audio_group_id ? "group_{$question->audio_group_id}" : "q_{$question->id}");
+            $audioLockKey = 'audio_play:'.$attempt->id.':'.($question->audio_group_id ? "group_{$question->audio_group_id}" : "q_{$question->id}");
 
             try {
                 $reservationResult = Cache::lock($attemptLockKey, 15)->block(5, function () use ($request, $attempt, $question, $audioLockKey) {
@@ -367,7 +381,7 @@ class CandidatePortalController extends Controller
                             ? Question::where('audio_group_id', $question->audio_group_id)->pluck('id')->toArray()
                             : [];
 
-                        $existingPlayQuery = \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id);
+                        $existingPlayQuery = AttemptAudioPlay::where('attempt_id', $attempt->id);
                         if (!empty($groupQuestionIds)) {
                             $existingPlayQuery->whereIn('question_id', $groupQuestionIds);
                         } else {
@@ -376,28 +390,30 @@ class CandidatePortalController extends Controller
                         $existingPlay = $existingPlayQuery->first();
 
                         if ($existingPlay && $existingPlay->play_count >= 1) {
-                            \App\Services\ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
+                            ActivityLogger::log('AUDIO_REPLAY_BLOCKED', "Blocked audio replay for Question {$question->id}".($question->audio_group_id ? " (Group {$question->audio_group_id})" : ''), $attempt);
+
                             return response()->json(['error' => 'Audio already played for this question group.'], 403);
                         }
 
                         $targetQuestionIds = !empty($groupQuestionIds) ? $groupQuestionIds : [$question->id];
                         foreach ($targetQuestionIds as $targetQId) {
                             try {
-                                \App\Modules\Assessment\Models\AttemptAudioPlay::firstOrCreate([
-                                    'attempt_id'  => $attempt->id,
+                                AttemptAudioPlay::firstOrCreate([
+                                    'attempt_id' => $attempt->id,
                                     'question_id' => $targetQId,
                                 ], [
                                     'media_asset_id' => $question->audio_media_asset_id ?? $question->audioGroup?->media_asset_id ?? $question->media_asset_id,
-                                    'play_count'     => 1,
-                                    'started_at'     => now(),
-                                    'ip_address'     => $request->ip(),
+                                    'play_count' => 1,
+                                    'started_at' => now(),
+                                    'ip_address' => $request->ip(),
                                 ]);
-                            } catch (\Illuminate\Database\QueryException $e) {
+                            } catch (QueryException $e) {
                                 return response()->json(['error' => 'Audio already played for this question group.'], 403);
                             }
                         }
 
-                        \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}" . ($question->audio_group_id ? " (Group {$question->audio_group_id})" : ""), $attempt);
+                        ActivityLogger::log('AUDIO_PLAY_STARTED', "Started single audio play for Question {$question->id}".($question->audio_group_id ? " (Group {$question->audio_group_id})" : ''), $attempt);
+
                         return null;
                     });
                 });
@@ -420,7 +436,7 @@ class CandidatePortalController extends Controller
                 abort(403, 'Test session is no longer in progress.');
             }
 
-            \App\Services\ActivityLogger::log('AUDIO_PLAY_STARTED', "Started simulator audio play for Question {$question->id}", $attempt);
+            ActivityLogger::log('AUDIO_PLAY_STARTED', "Started simulator audio play for Question {$question->id}", $attempt);
         }
 
         // Resolve audio source (Group or Question)
@@ -428,11 +444,11 @@ class CandidatePortalController extends Controller
         $filePath = null;
 
         if ($mediaAsset && !empty($mediaAsset->path)) {
-            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            $disk = Storage::disk('public');
             if ($disk->exists($mediaAsset->path)) {
                 $filePath = $disk->path($mediaAsset->path);
-            } elseif (file_exists(storage_path('app/public/' . $mediaAsset->path))) {
-                $filePath = storage_path('app/public/' . $mediaAsset->path);
+            } elseif (file_exists(storage_path('app/public/'.$mediaAsset->path))) {
+                $filePath = storage_path('app/public/'.$mediaAsset->path);
             } elseif (file_exists(public_path($mediaAsset->path))) {
                 $filePath = public_path($mediaAsset->path);
             }
@@ -443,10 +459,10 @@ class CandidatePortalController extends Controller
         if (!$filePath && !empty($audioUrl)) {
             // If it's a preview URL containing media ID, extract and resolve
             if (preg_match('#/media/([0-9a-zA-Z]+)/preview#', $audioUrl, $matches)) {
-                $foundAsset = \App\Models\MediaAsset::find($matches[1]);
+                $foundAsset = MediaAsset::find($matches[1]);
                 if ($foundAsset && !empty($foundAsset->path)) {
-                    if (file_exists(storage_path('app/public/' . $foundAsset->path))) {
-                        $filePath = storage_path('app/public/' . $foundAsset->path);
+                    if (file_exists(storage_path('app/public/'.$foundAsset->path))) {
+                        $filePath = storage_path('app/public/'.$foundAsset->path);
                     } elseif (file_exists(public_path($foundAsset->path))) {
                         $filePath = public_path($foundAsset->path);
                     }
@@ -455,8 +471,8 @@ class CandidatePortalController extends Controller
 
             if (!$filePath) {
                 $cleanedPath = ltrim(parse_url($audioUrl, PHP_URL_PATH) ?: $audioUrl, '/');
-                if (file_exists(storage_path('app/public/' . $cleanedPath))) {
-                    $filePath = storage_path('app/public/' . $cleanedPath);
+                if (file_exists(storage_path('app/public/'.$cleanedPath))) {
+                    $filePath = storage_path('app/public/'.$cleanedPath);
                 } elseif (file_exists(public_path($cleanedPath))) {
                     $filePath = public_path($cleanedPath);
                 }
@@ -466,12 +482,13 @@ class CandidatePortalController extends Controller
         if ($filePath && file_exists($filePath)) {
             $mime = $mediaAsset?->mime_type ?: (mime_content_type($filePath) ?: 'audio/mpeg');
             $filesize = filesize($filePath);
+
             return response()->file($filePath, [
-                'Content-Type'        => $mime,
-                'Content-Length'      => (string) $filesize,
-                'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
-                'Cache-Control'       => 'no-store, no-cache, must-revalidate, private',
-                'Accept-Ranges'       => 'bytes',
+                'Content-Type' => $mime,
+                'Content-Length' => (string) $filesize,
+                'Content-Disposition' => 'inline; filename="'.basename($filePath).'"',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, private',
+                'Accept-Ranges' => 'bytes',
             ]);
         }
 
@@ -577,7 +594,7 @@ class CandidatePortalController extends Controller
 
                 $validated = $request->validate([
                     'violation_type' => ['required', 'string', 'in:fullscreen_exit,window_blur,fullscreen_enter,audio_completed'],
-                    'question_id'    => ['nullable', 'string'],
+                    'question_id' => ['nullable', 'string'],
                 ]);
 
                 $type = $validated['violation_type'];
@@ -590,18 +607,18 @@ class CandidatePortalController extends Controller
                 // 1. True security / anti-cheating violations
                 if ($type === 'fullscreen_exit') {
                     event(new RuleViolationDetected($attempt, 'fullscreen_exit'));
-                    \App\Services\ActivityLogger::log('FULLSCREEN_EXITED', 'Candidate exited secure fullscreen mode', $attempt);
+                    ActivityLogger::log('FULLSCREEN_EXITED', 'Candidate exited secure fullscreen mode', $attempt);
                 } elseif ($type === 'window_blur') {
                     event(new RuleViolationDetected($attempt, 'window_blur'));
-                    \App\Services\ActivityLogger::log('WINDOW_BLUR_DETECTED', 'Candidate window blur detected (window_blur)', $attempt);
+                    ActivityLogger::log('WINDOW_BLUR_DETECTED', 'Candidate window blur detected (window_blur)', $attempt);
                 }
                 // 2. Non-violation operational events (Do NOT dispatch RuleViolationDetected, do NOT increment violations_count)
                 elseif ($type === 'fullscreen_enter') {
-                    \App\Services\ActivityLogger::log('FULLSCREEN_ENTERED', 'Candidate entered secure fullscreen mode', $attempt);
+                    ActivityLogger::log('FULLSCREEN_ENTERED', 'Candidate entered secure fullscreen mode', $attempt);
                 } elseif ($type === 'audio_completed') {
-                    \App\Services\ActivityLogger::log('AUDIO_PLAY_COMPLETED', "Candidate completed audio play for Question {$questionId}", $attempt);
+                    ActivityLogger::log('AUDIO_PLAY_COMPLETED', "Candidate completed audio play for Question {$questionId}", $attempt);
                     if ($questionId) {
-                        \App\Modules\Assessment\Models\AttemptAudioPlay::where('attempt_id', $attempt->id)
+                        AttemptAudioPlay::where('attempt_id', $attempt->id)
                             ->where('question_id', $questionId)
                             ->update(['completed_at' => now()]);
                     }
@@ -656,7 +673,7 @@ class CandidatePortalController extends Controller
 
                 $this->engine->submitAttempt($attempt);
 
-                \App\Services\ActivityLogger::log('EXAM_SUBMITTED', "Candidate submitted assessment attempt for '{$attempt->test?->title}'", $attempt);
+                ActivityLogger::log('EXAM_SUBMITTED', "Candidate submitted assessment attempt for '{$attempt->test?->title}'", $attempt);
 
                 return redirect()->route('candidate.review', $attempt);
             });
@@ -704,8 +721,8 @@ class CandidatePortalController extends Controller
         }
 
         $attempt->loadMissing([
-            'test.sections' => fn($q) => $q->orderBy('order'),
-            'test.sections.testQuestions' => fn($q) => $q->orderBy('order'),
+            'test.sections' => fn ($q) => $q->orderBy('order'),
+            'test.sections.testQuestions' => fn ($q) => $q->orderBy('order'),
             'test.sections.testQuestions.question.choices',
             'test.sections.testQuestions.question.passage',
             'test.sections.testQuestions.question.passageGroup.passages',
@@ -718,26 +735,26 @@ class CandidatePortalController extends Controller
         ]);
 
         $summary = $this->engine->reviewAttempt($attempt);
-        $deliveryData = \App\Modules\Assessment\Services\DeliveryUnitBuilder::build($attempt->test, $attempt);
+        $deliveryData = DeliveryUnitBuilder::build($attempt->test, $attempt);
 
         $answersByQuestion = $attempt->answers->keyBy('question_id');
         $incorrectQuestionIds = $attempt->answers->where('is_correct', false)->pluck('question_id')->toArray();
 
         $wrongDeliveryUnits = $deliveryData['deliveryUnits']->filter(function ($unit) use ($incorrectQuestionIds) {
-            return $unit['questions']->contains(fn($q) => in_array($q->id, $incorrectQuestionIds, true));
+            return $unit['questions']->contains(fn ($q) => in_array($q->id, $incorrectQuestionIds, true));
         })->values();
 
         /** @var view-string $viewName */
         $viewName = 'assessment::candidate.wrong_answers';
 
         return view($viewName, [
-            'attempt'              => $attempt,
-            'summary'              => $summary,
-            'wrongDeliveryUnits'   => $wrongDeliveryUnits,
+            'attempt' => $attempt,
+            'summary' => $summary,
+            'wrongDeliveryUnits' => $wrongDeliveryUnits,
             'incorrectQuestionIds' => $incorrectQuestionIds,
-            'answersByQuestion'    => $answersByQuestion,
-            'deliveryData'         => $deliveryData,
-            'totalQuestionsCount'  => $deliveryData['totalQuestionsCount'],
+            'answersByQuestion' => $answersByQuestion,
+            'deliveryData' => $deliveryData,
+            'totalQuestionsCount' => $deliveryData['totalQuestionsCount'],
         ]);
     }
 
@@ -756,8 +773,8 @@ class CandidatePortalController extends Controller
                 $attempt->loadMissing(['test', 'assignment.attempts']);
                 $assignment = $attempt->assignment;
 
-                // Verify attempt is submitted
-                if ($attempt->status !== AttemptStatus::Submitted) {
+                // Verify attempt is completed (Submitted or Expired)
+                if (!$attempt->isCompleted()) {
                     return redirect()->route('candidate.review', $attempt)
                         ->with('error', 'Only completed assessments can be finalized.');
                 }
@@ -771,9 +788,10 @@ class CandidatePortalController extends Controller
                 // Verify assignment exists and is active (or matching)
                 if (!$assignment) {
                     $attempt->update([
-                        'is_final'        => true,
+                        'is_final' => true,
                         'decision_status' => 'finalized',
                     ]);
+
                     return redirect()->route('candidate.review', $attempt)
                         ->with('status', 'Assessment score finalized successfully.');
                 }
@@ -785,19 +803,19 @@ class CandidatePortalController extends Controller
                         ->with('error', 'A second attempt has already been initiated for this assessment.');
                 }
 
-                \Illuminate\Support\Facades\DB::transaction(function () use ($attempt, $assignment) {
+                DB::transaction(function () use ($attempt, $assignment) {
                     $attempt->update([
-                        'is_final'        => true,
+                        'is_final' => true,
                         'decision_status' => 'finalized',
                     ]);
 
                     $assignment->update([
-                        'status'           => 'completed',
-                        'completed_at'     => now(),
+                        'status' => 'completed',
+                        'completed_at' => now(),
                         'final_attempt_id' => $attempt->id,
                     ]);
 
-                    \App\Services\ActivityLogger::log(
+                    ActivityLogger::log(
                         'CANDIDATE_ATTEMPT_FINALIZED',
                         "Candidate finalized Attempt #{$attempt->attempt_number} for '{$attempt->test?->title}'",
                         $attempt
@@ -805,7 +823,7 @@ class CandidatePortalController extends Controller
                 });
 
                 // Issue digital certificate for authoritative final result if eligible
-                app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
+                app(CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
 
                 return redirect()->route('candidate.review', $attempt)
                     ->with('status', 'Result finalized. Your score has been released as your final institutional result.');
@@ -832,8 +850,8 @@ class CandidatePortalController extends Controller
                 $attempt->loadMissing(['test', 'assignment.attempts']);
                 $assignment = $attempt->assignment;
 
-                // Verify Attempt 1 is submitted
-                if ($attempt->status !== AttemptStatus::Submitted) {
+                // Verify Attempt 1 is completed (Submitted or Expired)
+                if (!$attempt->isCompleted()) {
                     return redirect()->route('candidate.review', $attempt)
                         ->with('error', 'Please complete your first attempt before starting a retry.');
                 }
@@ -855,6 +873,7 @@ class CandidatePortalController extends Controller
                     if ($existingAttempt2->status === AttemptStatus::InProgress) {
                         return redirect()->route('candidate.exam', $existingAttempt2);
                     }
+
                     return redirect()->route('candidate.review', $existingAttempt2);
                 }
 
@@ -864,10 +883,10 @@ class CandidatePortalController extends Controller
                         ->with('error', 'Maximum number of attempts reached for this assignment.');
                 }
 
-                $attempt2 = \Illuminate\Support\Facades\DB::transaction(function () use ($attempt, $assignment, $user) {
+                $attempt2 = DB::transaction(function () use ($attempt, $assignment, $user) {
                     $attempt->update([
                         'decision_status' => 'retried',
-                        'is_final'        => false,
+                        'is_final' => false,
                     ]);
 
                     $evaluationStatus = $attempt->test?->requiresEvaluation()
@@ -875,23 +894,23 @@ class CandidatePortalController extends Controller
                         : EvaluationStatus::NotRequired;
 
                     $newAttempt = Attempt::create([
-                        'test_id'           => $attempt->test_id,
-                        'user_id'           => $user->id,
-                        'assignment_id'     => $assignment->id,
-                        'attempt_number'    => 2,
-                        'is_final'          => false,
-                        'decision_status'   => 'pending_decision',
-                        'started_at'        => now(),
-                        'status'            => AttemptStatus::InProgress,
+                        'test_id' => $attempt->test_id,
+                        'user_id' => $user->id,
+                        'assignment_id' => $assignment->id,
+                        'attempt_number' => 2,
+                        'is_final' => false,
+                        'decision_status' => 'pending_decision',
+                        'started_at' => now(),
+                        'status' => AttemptStatus::InProgress,
                         'evaluation_status' => $evaluationStatus,
-                        'seed'              => \Illuminate\Support\Str::random(10),
+                        'seed' => Str::random(10),
                     ]);
 
                     $assignment->update([
                         'attempts_count' => $assignment->attempts()->count(),
                     ]);
 
-                    \App\Services\ActivityLogger::log(
+                    ActivityLogger::log(
                         'CANDIDATE_ATTEMPT_RETRIED',
                         "Candidate started Attempt #2 for '{$attempt->test?->title}'",
                         $newAttempt

@@ -224,7 +224,7 @@
                     <span class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1 block">
                         {{ $incorrectCount }}
                     </span>
-                    <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">{{ $incorrectCount === 0 ? 'No review required' : 'Review items below' }}</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">{{ $incorrectCount === 0 ? 'No review required' : (($summary['can_review_detailed'] ?? false) ? 'Review items below' : 'Institutional assessment') }}</span>
                 </div>
             @endif
         </div>
@@ -290,6 +290,7 @@
             </div>
         @endif
 
+        @if($summary['can_review_detailed'] ?? false)
         <!-- Detailed Question Review Header -->
         <div class="mb-4 flex items-center justify-between">
             <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -436,6 +437,13 @@
                 </div>
             @endforelse
         </div>
+        @else
+        <!-- Secure Institutional Assessment Confidentiality Notice -->
+        <div class="mb-8 p-5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center gap-3">
+            <span class="text-xl">🔒</span>
+            <span>Question-level review is not available for secure institutional assessments. Detailed assessment items and answer keys are protected institutional content.</span>
+        </div>
+        @endif
 
         <!-- Action Footer -->
         <div class="flex items-center justify-end pb-8 border-t border-slate-200 dark:border-slate-800 pt-6">

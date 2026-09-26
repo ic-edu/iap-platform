@@ -48,4 +48,9 @@ class RealTestPolicy extends AssessmentModePolicy
     {
         return false;
     }
+
+    public function canCandidateViewDetailedQuestionReview(): bool
+    {
+        return false;
+    }
 }

@@ -49,8 +49,8 @@ class Attempt extends Model
 
     protected $attributes = [
         'evaluation_status' => 'not_required',
-        'attempt_number'    => 1,
-        'is_final'          => false,
+        'attempt_number' => 1,
+        'is_final' => false,
     ];
 
     protected $fillable = [
@@ -76,17 +76,17 @@ class Attempt extends Model
     protected function casts(): array
     {
         return [
-            'started_at'             => 'datetime',
-            'submitted_at'           => 'datetime',
-            'total_score'            => 'float',
-            'attempt_number'         => 'integer',
-            'is_final'               => 'boolean',
-            'section_scores'         => 'array',
-            'flagged_questions'      => 'array',
+            'started_at' => 'datetime',
+            'submitted_at' => 'datetime',
+            'total_score' => 'float',
+            'attempt_number' => 'integer',
+            'is_final' => 'boolean',
+            'section_scores' => 'array',
+            'flagged_questions' => 'array',
             'review_later_questions' => 'array',
-            'violations_count'       => 'integer',
-            'status'                 => AttemptStatus::class,
-            'evaluation_status'      => EvaluationStatus::class,
+            'violations_count' => 'integer',
+            'status' => AttemptStatus::class,
+            'evaluation_status' => EvaluationStatus::class,
         ];
     }
 
@@ -120,6 +120,42 @@ class Attempt extends Model
     public function isPassed(): bool
     {
         return (bool) ($this->result_summary['is_passed'] ?? false);
+    }
+
+    /**
+     * Check if attempt is in a completed terminal state (Submitted or Expired).
+     */
+    public function isCompleted(): bool
+    {
+        if ($this->status instanceof AttemptStatus) {
+            return $this->status->isCompleted();
+        }
+
+        $statusValue = (string) $this->status;
+
+        return in_array($statusValue, [AttemptStatus::Submitted->value, AttemptStatus::Expired->value, 'submitted', 'expired'], true);
+    }
+
+    /**
+     * Check if candidate is authorized to view item-level detailed question review.
+     * Real / Mock Tests NEVER expose question-level review at any lifecycle state.
+     */
+    public function canCandidateViewDetailedQuestionReview(): bool
+    {
+        $test = $this->relationLoaded('test') && $this->test ? $this->test : $this->test()->first();
+        if (!$test) {
+            return false;
+        }
+
+        if ($test->isRealTest()) {
+            return false;
+        }
+
+        if ($test->isSimulator()) {
+            return $this->isCompleted();
+        }
+
+        return false;
     }
 
     /**

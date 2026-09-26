@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
+use App\Modules\Certificate\Engines\CertificateEngine;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -25,11 +26,11 @@ class BestResultResolver
     {
         return DB::transaction(function () use ($assignment) {
             $attempts = $assignment->attempts()
-                ->where('status', AttemptStatus::Submitted)
+                ->whereIn('status', [AttemptStatus::Submitted, AttemptStatus::Expired])
                 ->get();
 
             if ($attempts->isEmpty()) {
-                throw new InvalidArgumentException("Cannot resolve best result: Assignment has no submitted attempts.");
+                throw new InvalidArgumentException('Cannot resolve best result: Assignment has no submitted or completed attempts.');
             }
 
             if ($attempts->count() === 1) {
@@ -62,31 +63,31 @@ class BestResultResolver
             foreach ($attempts as $attempt) {
                 if ($attempt->id === $winner->id) {
                     $attempt->update([
-                        'is_final'        => true,
+                        'is_final' => true,
                         'decision_status' => 'finalized',
                     ]);
                 } else {
                     $attempt->update([
-                        'is_final'        => false,
+                        'is_final' => false,
                         'decision_status' => 'retried',
                     ]);
                 }
             }
 
             $assignment->update([
-                'status'           => 'completed',
-                'completed_at'     => $assignment->completed_at ?? now(),
+                'status' => 'completed',
+                'completed_at' => $assignment->completed_at ?? now(),
                 'final_attempt_id' => $winner->id,
             ]);
 
-            \App\Services\ActivityLogger::log(
+            ActivityLogger::log(
                 'BEST_RESULT_RESOLVED',
                 "Resolved best result for assignment {$assignment->id}: Winner Attempt #{$winner->attempt_number} ({$winner->total_score} pts)",
                 $winner
             );
 
             // Issue authoritative certificate for final winning result if eligible
-            app(\App\Modules\Certificate\Engines\CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
+            app(CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
 
             return $winner->fresh();
         });
