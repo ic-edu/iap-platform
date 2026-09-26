@@ -4,17 +4,17 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Modules\Assessment\Enums\AttemptStatus;
-use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
 use App\Modules\QuestionBank\Enums\QuestionType;
+use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\QuestionBank\Enums\TestType;
-use App\Modules\QuestionBank\Models\QuestionChoice;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
+use App\Modules\QuestionBank\Models\QuestionChoice;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,14 +24,23 @@ class CandidateCbtSessionHardeningTest extends TestCase
     use RefreshDatabase;
 
     protected User $student;
+
     protected User $teacher;
+
     protected Test $test;
+
     protected QuestionBank $bank;
+
     protected Question $q1;
+
     protected Question $q2;
+
     protected Question $q3;
+
     protected QuestionChoice $c1;
+
     protected QuestionChoice $c2;
+
     protected QuestionChoice $c3;
 
     protected function setUp(): void
@@ -46,36 +55,36 @@ class CandidateCbtSessionHardeningTest extends TestCase
         $this->teacher->assignRole('teacher');
 
         $this->test = Test::create([
-            'title'            => 'TOEIC Listening & Reading Hardening',
-            'slug'             => 'toeic-listening-reading-hardening',
-            'test_type'        => TestType::Toeic,
+            'title' => 'TOEIC Listening & Reading Hardening',
+            'slug' => 'toeic-listening-reading-hardening',
+            'test_type' => TestType::Toeic,
             'duration_minutes' => 60,
-            'pass_score'       => 500,
-            'is_published'     => true,
-            'status'           => 'approved',
-            'created_by'       => $this->teacher->id,
+            'pass_score' => 500,
+            'is_published' => true,
+            'status' => 'approved',
+            'created_by' => $this->teacher->id,
         ]);
 
         $section = TestSection::create([
-            'test_id'      => $this->test->id,
-            'title'        => 'Part 1: Photographs',
+            'test_id' => $this->test->id,
+            'title' => 'Part 1: Photographs',
             'section_type' => SectionType::Listening,
             'instructions' => 'Look at the photograph and select the statement that best describes what you see.',
-            'order'        => 1,
+            'order' => 1,
         ]);
 
         $this->bank = QuestionBank::create([
-            'title'      => 'TOEIC Bank',
-            'slug'       => 'toeic-bank',
-            'test_type'  => TestType::Toeic,
+            'title' => 'TOEIC Bank',
+            'slug' => 'toeic-bank',
+            'test_type' => TestType::Toeic,
             'created_by' => $this->teacher->id,
         ]);
 
         $this->q1 = Question::create([
             'question_bank_id' => $this->bank->id,
-            'prompt'           => 'Question 1: Look at the photo.',
-            'question_type'    => QuestionType::MultipleChoice,
-            'points'           => 5,
+            'prompt' => 'Question 1: Look at the photo.',
+            'question_type' => QuestionType::MultipleChoice,
+            'points' => 5,
         ]);
         $this->c1 = QuestionChoice::create(['question_id' => $this->q1->id, 'label' => 'A', 'content' => '-', 'is_correct' => true]);
         QuestionChoice::create(['question_id' => $this->q1->id, 'label' => 'B', 'content' => '-', 'is_correct' => false]);
@@ -83,9 +92,9 @@ class CandidateCbtSessionHardeningTest extends TestCase
 
         $this->q2 = Question::create([
             'question_bank_id' => $this->bank->id,
-            'prompt'           => 'Question 2: Look at the photo.',
-            'question_type'    => QuestionType::MultipleChoice,
-            'points'           => 5,
+            'prompt' => 'Question 2: Look at the photo.',
+            'question_type' => QuestionType::MultipleChoice,
+            'points' => 5,
         ]);
         $this->c2 = QuestionChoice::create(['question_id' => $this->q2->id, 'label' => 'A', 'content' => '-', 'is_correct' => false]);
         QuestionChoice::create(['question_id' => $this->q2->id, 'label' => 'B', 'content' => '-', 'is_correct' => true]);
@@ -93,9 +102,9 @@ class CandidateCbtSessionHardeningTest extends TestCase
 
         $this->q3 = Question::create([
             'question_bank_id' => $this->bank->id,
-            'prompt'           => 'Question 3: Look at the photo.',
-            'question_type'    => QuestionType::MultipleChoice,
-            'points'           => 5,
+            'prompt' => 'Question 3: Look at the photo.',
+            'question_type' => QuestionType::MultipleChoice,
+            'points' => 5,
         ]);
         $this->c3 = QuestionChoice::create(['question_id' => $this->q3->id, 'label' => 'A', 'content' => '-', 'is_correct' => true]);
         QuestionChoice::create(['question_id' => $this->q3->id, 'label' => 'B', 'content' => '-', 'is_correct' => false]);
@@ -108,10 +117,10 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_timer_initialization_and_countdown_engine(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now()->subMinutes(10), // 10 minutes elapsed of 60 mins -> ~50 mins remaining
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
@@ -120,7 +129,8 @@ class CandidateCbtSessionHardeningTest extends TestCase
         // Assert countdown elements and script
         $response->assertSee('id="countdown-timer"', false);
         $response->assertSee('function updateTimerDisplay()', false);
-        $response->assertSee('remainingSeconds--', false);
+        $response->assertSee('timerDeadlineMs', false);
+        $response->assertSee('triggerExpiryFlow', false);
         $response->assertSee('setInterval(updateTimerDisplay, 1000)', false);
     }
 
@@ -130,10 +140,10 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_final_submit_button_is_disabled_when_zero_of_three_questions_answered(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now(),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
@@ -150,15 +160,15 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_final_submit_button_is_disabled_when_partially_answered(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now(),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         Answer::create([
-            'attempt_id'         => $attempt->id,
-            'question_id'        => $this->q1->id,
+            'attempt_id' => $attempt->id,
+            'question_id' => $this->q1->id,
             'selected_choice_id' => $this->c1->id,
         ]);
 
@@ -176,10 +186,10 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_final_submit_button_is_enabled_when_all_questions_answered(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now(),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         Answer::create(['attempt_id' => $attempt->id, 'question_id' => $this->q1->id, 'selected_choice_id' => $this->c1->id]);
@@ -199,16 +209,16 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_server_rejects_incomplete_manual_submission(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now(),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         // Only 1 of 3 answered
         Answer::create([
-            'attempt_id'         => $attempt->id,
-            'question_id'        => $this->q1->id,
+            'attempt_id' => $attempt->id,
+            'question_id' => $this->q1->id,
             'selected_choice_id' => $this->c1->id,
         ]);
 
@@ -226,10 +236,10 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_server_accepts_complete_manual_submission(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now(),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         Answer::create(['attempt_id' => $attempt->id, 'question_id' => $this->q1->id, 'selected_choice_id' => $this->c1->id]);
@@ -249,17 +259,17 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_expired_attempt_submits_even_if_unanswered(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now()->subMinutes(120), // Exceeded 60 min duration
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         $submitRes = $this->actingAs($this->student)->post(route('candidate.exam.submit', $attempt));
         $submitRes->assertRedirect(route('candidate.review', $attempt));
 
         $attempt->refresh();
-        $this->assertEquals(AttemptStatus::Submitted, $attempt->status);
+        $this->assertEquals(AttemptStatus::Expired, $attempt->status);
     }
 
     /**
@@ -268,15 +278,15 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_question_palette_renders_compact_status_indicators(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now(),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         Answer::create([
-            'attempt_id'         => $attempt->id,
-            'question_id'        => $this->q1->id,
+            'attempt_id' => $attempt->id,
+            'question_id' => $this->q1->id,
             'selected_choice_id' => $this->c1->id,
         ]);
 
@@ -299,10 +309,10 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_dedicated_section_directions_screen_renders_with_begin_action(): void
     {
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now(),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
@@ -325,27 +335,27 @@ class CandidateCbtSessionHardeningTest extends TestCase
     {
         // Add Section 2 (Reading Section)
         $section2 = TestSection::create([
-            'test_id'      => $this->test->id,
-            'title'        => 'Part 5: Incomplete Sentences',
+            'test_id' => $this->test->id,
+            'title' => 'Part 5: Incomplete Sentences',
             'section_type' => SectionType::Reading,
             'instructions' => 'Select the one word or phrase that best completes the sentence.',
-            'order'        => 2,
+            'order' => 2,
         ]);
 
         $q4 = Question::create([
             'question_bank_id' => $this->bank->id,
-            'prompt'           => 'Question 4: Complete the sentence.',
-            'question_type'    => QuestionType::MultipleChoice,
-            'points'           => 5,
+            'prompt' => 'Question 4: Complete the sentence.',
+            'question_type' => QuestionType::MultipleChoice,
+            'points' => 5,
         ]);
         QuestionChoice::create(['question_id' => $q4->id, 'label' => 'A', 'content' => 'Option A', 'is_correct' => true]);
         TestQuestion::create(['test_section_id' => $section2->id, 'question_id' => $q4->id, 'order' => 1]);
 
         $attempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now(),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         $response = $this->actingAs($this->student)->get(route('candidate.exam', $attempt));
@@ -368,29 +378,29 @@ class CandidateCbtSessionHardeningTest extends TestCase
     public function test_candidate_portal_shows_multiple_ongoing_sessions_ordered_latest_first(): void
     {
         $test2 = Test::create([
-            'title'            => 'TOEIC Full Simulation Test 01',
-            'slug'             => 'toeic-full-sim-01',
-            'test_type'        => TestType::Toeic,
+            'title' => 'TOEIC Full Simulation Test 01',
+            'slug' => 'toeic-full-sim-01',
+            'test_type' => TestType::Toeic,
             'duration_minutes' => 120,
-            'pass_score'       => 500,
-            'is_published'     => true,
-            'created_by'       => $this->teacher->id,
+            'pass_score' => 500,
+            'is_published' => true,
+            'created_by' => $this->teacher->id,
         ]);
 
         // Old attempt started 30 mins ago
         $oldAttempt = Attempt::create([
-            'test_id'    => $test2->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $test2->id,
+            'user_id' => $this->student->id,
             'started_at' => now()->subMinutes(30),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         // Recent attempt started 5 mins ago
         $recentAttempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now()->subMinutes(5),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         $response = $this->actingAs($this->student)->get(route('candidate.portal'));
@@ -418,10 +428,10 @@ class CandidateCbtSessionHardeningTest extends TestCase
     {
         // Expired attempt (started 2 hours ago for 60 min test)
         $expiredAttempt = Attempt::create([
-            'test_id'    => $this->test->id,
-            'user_id'    => $this->student->id,
+            'test_id' => $this->test->id,
+            'user_id' => $this->student->id,
             'started_at' => now()->subMinutes(120),
-            'status'     => AttemptStatus::InProgress,
+            'status' => AttemptStatus::InProgress,
         ]);
 
         $response = $this->actingAs($this->student)->get(route('candidate.portal'));

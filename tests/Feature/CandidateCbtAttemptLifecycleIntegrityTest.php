@@ -8,7 +8,6 @@ use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
-use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
@@ -26,12 +25,19 @@ class CandidateCbtAttemptLifecycleIntegrityTest extends TestCase
     use RefreshDatabase;
 
     protected User $candidate;
+
     protected Test $simulatorTest;
+
     protected Test $realTest;
+
     protected Question $questionSim;
+
     protected QuestionChoice $choiceSimA;
+
     protected QuestionChoice $choiceSimB;
+
     protected Question $questionReal;
+
     protected QuestionChoice $choiceRealA;
 
     protected function setUp(): void
@@ -269,7 +275,7 @@ class CandidateCbtAttemptLifecycleIntegrityTest extends TestCase
         $response->assertRedirect(route('candidate.review', $attempt));
 
         $attempt->refresh();
-        $this->assertEquals(AttemptStatus::Submitted, $attempt->status);
+        $this->assertEquals(AttemptStatus::Expired, $attempt->status);
     }
 
     public function test_review_gating_redirects_in_progress_attempt_to_exam(): void
@@ -309,7 +315,7 @@ class CandidateCbtAttemptLifecycleIntegrityTest extends TestCase
                 'status' => $terminalStatus,
                 'evaluation_status' => EvaluationStatus::NotRequired,
                 'started_at' => now()->subHours(5),
-                'seed' => 'seed-lifecycle-terminal-' . $terminalStatus->value,
+                'seed' => 'seed-lifecycle-terminal-'.$terminalStatus->value,
             ]);
 
             $this->actingAs($this->candidate)->postJson(route('candidate.exam.autosave', $attempt), [

@@ -61,11 +61,19 @@ class CandidatePortalController extends Controller
         $statusValue = is_object($attempt->status) ? $attempt->status->value : (string) $attempt->status;
 
         if ($statusValue !== AttemptStatus::InProgress->value && $statusValue !== 'in_progress') {
-            abort(403, 'Assessment attempt is no longer in progress.');
+            abort(response()->json([
+                'status' => 'error',
+                'error_code' => 'ATTEMPT_NOT_IN_PROGRESS',
+                'message' => 'Assessment attempt is no longer in progress.',
+            ], 403));
         }
 
         if ($this->engine->timerEngine->isExpired($attempt)) {
-            abort(403, 'Assessment attempt duration has expired.');
+            abort(response()->json([
+                'status' => 'error',
+                'error_code' => 'ATTEMPT_EXPIRED',
+                'message' => 'Assessment attempt duration has expired.',
+            ], 403));
         }
     }
 
@@ -364,13 +372,7 @@ class CandidatePortalController extends Controller
                     $attempt->refresh();
                     $this->authorizeAttemptAccess($attempt, $request->user());
 
-                    if ($attempt->status->value !== 'in_progress') {
-                        abort(403, 'Test session is no longer in progress.');
-                    }
-
-                    if ($this->engine->timerEngine->isExpired($attempt)) {
-                        abort(403, 'Assessment attempt duration has expired.');
-                    }
+                    $this->assertAttemptMutable($attempt);
 
                     if (!$attempt->hasQuestion($question->id)) {
                         abort(403, 'Question does not belong to this assessment attempt.');
@@ -671,7 +673,14 @@ class CandidatePortalController extends Controller
 
                 $isExpired = $this->engine->timerEngine->isExpired($attempt);
 
-                if (!$isExpired && $totalQuestionsCount > 0) {
+                if ($isExpired) {
+                    $this->engine->expireAttempt($attempt);
+                    ActivityLogger::log('EXAM_EXPIRED', "Candidate assessment attempt expired due to time limit for '{$attempt->test?->title}'", $attempt);
+
+                    return redirect()->route('candidate.review', $attempt);
+                }
+
+                if ($totalQuestionsCount > 0) {
                     $answeredCount = $attempt->answers->filter(function ($a) {
                         return !is_null($a->selected_choice_id) || !empty($a->text_response);
                     })->count();

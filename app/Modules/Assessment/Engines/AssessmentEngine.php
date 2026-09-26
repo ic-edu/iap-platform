@@ -37,6 +37,11 @@ class AssessmentEngine
         return $this->attemptEngine->submitAttempt($attempt);
     }
 
+    public function expireAttempt(Attempt $attempt): Attempt
+    {
+        return $this->attemptEngine->expireAttempt($attempt);
+    }
+
     public function cancelAttempt(Attempt $attempt): Attempt
     {
         return $this->attemptEngine->cancelAttempt($attempt);

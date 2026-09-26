@@ -965,7 +965,10 @@
     <!-- CBT Exam Runtime JavaScript Engine -->
     <script>
         const isRealTest = {{ $isRealTest ? 'true' : 'false' }};
-        let remainingSeconds = {{ $remainingSeconds }};
+        const serverRemainingSeconds = {{ $remainingSeconds }};
+        const timerDeadlineMs = Date.now() + (serverRemainingSeconds * 1000);
+        let remainingSeconds = serverRemainingSeconds;
+        let expiryFlowTriggered = false;
         let currentUnitIdx = -1; // -1 represents section intro view, -3 represents passage format transition
         let pendingTransitionTargetUnitIdx = null;
         const totalQuestions = {{ $totalQuestionsCount }};
@@ -989,6 +992,45 @@
                 flaggedQuestionIndices.add(idx);
             }
         });
+
+        function triggerExpiryFlow(reason = 'time_expired') {
+            if (expiryFlowTriggered) return;
+            expiryFlowTriggered = true;
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            CandidateExamAudioManager.stopAll({ forceReset: true });
+
+            document.querySelectorAll('input[type="radio"], button').forEach(el => {
+                if (el.id !== 'btn-confirm-ok' && el.id !== 'btn-modal-ok') {
+                    el.disabled = true;
+                }
+            });
+
+            const timerEl = document.getElementById('countdown-timer');
+            if (timerEl) {
+                timerEl.innerText = "00:00:00";
+            }
+
+            iapAlert({
+                title: 'Time Expired',
+                message: 'The test time has ended. Your saved answers are being submitted.',
+                okText: 'Submit Now',
+                variant: 'warning',
+                onOk: () => {
+                    const form = document.getElementById('form-final-submit');
+                    if (form) form.submit();
+                }
+            });
+
+            setTimeout(() => {
+                const form = document.getElementById('form-final-submit');
+                if (form) form.submit();
+            }, 2500);
+        }
 
         function setQuestionRadiosDisabled(questionId, disabled) {
             document.querySelectorAll(`input[name="q_${questionId}"]`).forEach(input => {
@@ -1164,34 +1206,24 @@
             navigateDeliveryUnit(firstUnitIdx);
         }
 
-        // Timer Countdown Engine
+        // Timer Countdown Engine (Wall-Clock Absolute Deadline Driven)
         function updateTimerDisplay() {
+            if (expiryFlowTriggered) return;
+
+            remainingSeconds = Math.max(0, Math.ceil((timerDeadlineMs - Date.now()) / 1000));
+
             if (remainingSeconds <= 0) {
-                if (timerInterval) clearInterval(timerInterval);
-                document.getElementById('countdown-timer').innerText = "00:00:00";
-
-                iapAlert({
-                    title: 'Time Expired',
-                    message: 'Time has expired! Submitting test session automatically.',
-                    okText: 'Submit Now',
-                    variant: 'warning',
-                    onOk: () => {
-                        document.getElementById('form-final-submit').submit();
-                    }
-                });
-
-                setTimeout(() => {
-                    document.getElementById('form-final-submit').submit();
-                }, 3000);
+                triggerExpiryFlow('time_expired');
                 return;
             }
 
             const hours = Math.floor(remainingSeconds / 3600);
             const minutes = Math.floor((remainingSeconds % 3600) / 60);
             const seconds = remainingSeconds % 60;
-            document.getElementById('countdown-timer').innerText =
-                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            remainingSeconds--;
+            const timerEl = document.getElementById('countdown-timer');
+            if (timerEl) {
+                timerEl.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
         }
 
         timerInterval = setInterval(updateTimerDisplay, 1000);
@@ -1795,6 +1827,8 @@
 
         // Auto Save Answer AJAX with Server-Acknowledged Persistence & State Synchronization
         async function autoSaveAnswer(questionId, choiceId, index) {
+            if (expiryFlowTriggered) return;
+
             pendingAnswerQuestionIds.add(questionId);
             setQuestionRadiosDisabled(questionId, true);
 
@@ -1809,28 +1843,35 @@
                     body: JSON.stringify({ question_id: questionId, selected_choice: choiceId })
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.status === 'saved') {
-                        answeredQuestionIds.add(questionId);
-                        confirmedAnswerChoiceByQuestion[questionId] = choiceId;
-                        updatePaletteUI();
-                        return;
-                    }
+                const data = await response.json().catch(() => null);
+
+                if (response.ok && data && data.status === 'saved') {
+                    answeredQuestionIds.add(questionId);
+                    confirmedAnswerChoiceByQuestion[questionId] = choiceId;
+                    updatePaletteUI();
+                    return;
+                }
+
+                if (data && data.error_code === 'ATTEMPT_EXPIRED') {
+                    handleAutoSaveFailure(questionId, true);
+                    triggerExpiryFlow('attempt_expired');
+                    return;
                 }
 
                 // If non-2xx or status != 'saved', handle rollback
-                handleAutoSaveFailure(questionId);
+                handleAutoSaveFailure(questionId, false);
             } catch (err) {
                 console.error('Autosave error:', err);
-                handleAutoSaveFailure(questionId);
+                handleAutoSaveFailure(questionId, false);
             } finally {
                 pendingAnswerQuestionIds.delete(questionId);
-                setQuestionRadiosDisabled(questionId, false);
+                if (!expiryFlowTriggered) {
+                    setQuestionRadiosDisabled(questionId, false);
+                }
             }
         }
 
-        function handleAutoSaveFailure(questionId) {
+        function handleAutoSaveFailure(questionId, isExpired = false) {
             const prevChoiceId = confirmedAnswerChoiceByQuestion[questionId];
             if (prevChoiceId) {
                 const prevInput = document.querySelector(`input[name="q_${questionId}"][value="${prevChoiceId}"]`);
@@ -1846,16 +1887,20 @@
             }
             updatePaletteUI();
 
-            iapAlert({
-                title: 'Save Failed',
-                message: 'Answer could not be saved. Please select your answer again.',
-                variant: 'danger',
-                okText: 'Understood'
-            });
+            if (!isExpired) {
+                iapAlert({
+                    title: 'Save Failed',
+                    message: 'Answer could not be saved. Please select your answer again.',
+                    variant: 'danger',
+                    okText: 'Understood'
+                });
+            }
         }
 
         // Toggle Flag AJAX with Server Acknowledgement & State Synchronization
         async function toggleFlag(questionId, index, btn) {
+            if (expiryFlowTriggered) return;
+
             const targetBtn = btn || document.getElementById('btn-flag-' + questionId);
             if (targetBtn) {
                 targetBtn.disabled = true;
@@ -1872,19 +1917,23 @@
                     body: JSON.stringify({ question_id: questionId })
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.status === 'saved') {
-                        const isFlagged = Boolean(data.flagged);
-                        if (isFlagged) {
-                            flaggedQuestionIndices.add(index);
-                        } else {
-                            flaggedQuestionIndices.delete(index);
-                        }
-                        updateFlagButtonUI(targetBtn, isFlagged);
-                        updatePaletteUI();
-                        return;
+                const data = await response.json().catch(() => null);
+
+                if (response.ok && data && data.status === 'saved') {
+                    const isFlagged = Boolean(data.flagged);
+                    if (isFlagged) {
+                        flaggedQuestionIndices.add(index);
+                    } else {
+                        flaggedQuestionIndices.delete(index);
                     }
+                    updateFlagButtonUI(targetBtn, isFlagged);
+                    updatePaletteUI();
+                    return;
+                }
+
+                if (data && data.error_code === 'ATTEMPT_EXPIRED') {
+                    triggerExpiryFlow('attempt_expired');
+                    return;
                 }
 
                 iapAlert({
@@ -1902,7 +1951,7 @@
                     okText: 'Understood'
                 });
             } finally {
-                if (targetBtn) {
+                if (targetBtn && !expiryFlowTriggered) {
                     targetBtn.disabled = false;
                 }
             }
@@ -2019,6 +2068,11 @@
 
         // Initialize view based on URL hash or default to Section 1 Intro
         document.addEventListener('DOMContentLoaded', () => {
+            if (serverRemainingSeconds <= 0) {
+                triggerExpiryFlow('initial_zero_time');
+                return;
+            }
+
             const hash = window.location.hash;
             if (hash.startsWith('#q=')) {
                 const qIdx = parseInt(hash.replace('#q=', ''), 10);
