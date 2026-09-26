@@ -190,6 +190,12 @@ class ReviewEngine
                 : 'Focus on reviewing core section materials to boost performance.';
         }
 
+        $answeredQuestions = (int) ($resultPayload['answered_questions'] ?? $attempt->answers->count());
+        $correctAnswers = (int) ($resultPayload['correct_count'] ?? 0);
+        $totalQuestions = (int) ($resultPayload['total_questions'] ?? 0);
+        $incorrectAnswers = max(0, $answeredQuestions - $correctAnswers);
+        $unansweredQuestions = (int) ($resultPayload['unanswered_questions'] ?? max(0, $totalQuestions - $answeredQuestions));
+
         return array_merge($resultPayload, [
             'attempt_id' => $attempt->id,
             'test_title' => $attempt->test?->title,
@@ -201,9 +207,11 @@ class ReviewEngine
             'certificate_id' => $certificate?->id,
             'certificate_number' => $certificate?->certificate_number,
             'submitted_at' => $attempt->submitted_at?->toIso8601String(),
-            'total_questions' => $resultPayload['total_questions'],
-            'correct_answers' => $resultPayload['correct_count'],
-            'incorrect_answers' => max(0, $resultPayload['total_questions'] - $resultPayload['correct_count']),
+            'total_questions' => $totalQuestions,
+            'answered_questions' => $answeredQuestions,
+            'correct_answers' => $correctAnswers,
+            'incorrect_answers' => $incorrectAnswers,
+            'unanswered_questions' => $unansweredQuestions,
             'detailed_questions' => $detailedQuestions,
             'section_stats' => $sectionStats,
             'suggested_learning_areas' => $suggestedAreas,

@@ -175,7 +175,7 @@
         @endif
 
         <!-- Metrics & Performance Card Grid -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-center shadow-sm">
                 <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $isToeic ? ($isFullToeic ? 'Scaled Score' : 'Practice Score') : 'Final Test Score' }}</span>
                 <span class="text-3xl font-extrabold {{ ($summary['is_passed'] ?? false) ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }} mt-1 block">
@@ -227,6 +227,14 @@
                     <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">{{ $incorrectCount === 0 ? 'No review required' : (($summary['can_review_detailed'] ?? false) ? 'Review items below' : 'Question-level review unavailable') }}</span>
                 </div>
             @endif
+
+            <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-center shadow-sm col-span-2 sm:col-span-1">
+                <span class="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Unanswered</span>
+                <span class="text-3xl font-extrabold text-slate-600 dark:text-slate-400 mt-1 block">
+                    {{ $summary['unanswered_questions'] ?? 0 }}
+                </span>
+                <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 block">out of {{ $summary['total_questions'] ?? 0 }} questions</span>
+            </div>
         </div>
 
         <!-- Certificate Issued Card (If Passed & Eligible) -->

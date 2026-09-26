@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Assessment\Engines\AttemptEngine;
 use App\Modules\Assessment\Engines\ResultEngine;
+use App\Modules\Assessment\Engines\ReviewEngine;
 use App\Modules\Assessment\Engines\TOEICScoringEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\ScoringMethod;
@@ -1203,5 +1204,160 @@ class TOEICScoringEngineTest extends TestCase
         $this->assertStringContainsString('Finalize Result &amp; Release Final Score', $content);
         $this->assertStringContainsString('Option B', $content);
         $this->assertStringContainsString('Retry Second Attempt', $content);
+
+        // Must display Correct (0), Incorrect (0), Unanswered (200) without leaking questions
+        $this->assertStringContainsString('Correct Answers', $content);
+        $this->assertStringContainsString('Incorrect Answers', $content);
+        $this->assertStringContainsString('Unanswered', $content);
+        $this->assertStringContainsString('200', $content);
+        $this->assertStringContainsString('No review required', $content);
+        $this->assertStringContainsString('Question-level review is not available for secure Mock Tests', $content);
+        $this->assertStringNotContainsString('Detailed Question Review', $content);
+    }
+
+    /**
+     * 17. Canonical result semantics: test 200Q across zero-answered, partial-answered, and fully-answered.
+     */
+    public function test_canonical_result_semantics_across_zero_partial_and_full_answers(): void
+    {
+        $test = Test::create([
+            'title' => 'TOEIC Full Blueprint Semantics Test',
+            'slug' => 'toeic-full-semantics-'.uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
+            'duration_minutes' => 120,
+            'pass_score' => 650,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $listeningSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Listening Section',
+            'section_type' => SectionType::Listening,
+            'duration_minutes' => 45,
+            'order' => 1,
+        ]);
+
+        $readingSection = TestSection::create([
+            'test_id' => $test->id,
+            'title' => 'Reading Section',
+            'section_type' => SectionType::Reading,
+            'duration_minutes' => 75,
+            'order' => 2,
+        ]);
+
+        $bank = QuestionBank::create([
+            'title' => 'Semantics Bank',
+            'slug' => 'semantics-bank-'.uniqid(),
+            'test_type' => 'toeic',
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
+        ]);
+
+        $allQuestions = [];
+        $choicesMap = [];
+
+        for ($i = 1; $i <= 100; $i++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "L Question #{$i}",
+                'section' => SectionType::Listening,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $cCorrect = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true, 'order' => 1]);
+            $cWrong = QuestionChoice::create(['question_id' => $q->id, 'label' => 'B', 'content' => 'Choice B', 'is_correct' => false, 'order' => 2]);
+            TestQuestion::create(['test_section_id' => $listeningSection->id, 'question_id' => $q->id, 'order' => $i]);
+            $allQuestions[] = $q;
+            $choicesMap[$q->id] = ['correct' => $cCorrect, 'wrong' => $cWrong];
+        }
+
+        for ($j = 1; $j <= 100; $j++) {
+            $q = Question::create([
+                'question_bank_id' => $bank->id,
+                'prompt' => "R Question #{$j}",
+                'section' => SectionType::Reading,
+                'question_type' => QuestionType::MultipleChoice,
+                'points' => 1,
+            ]);
+            $cCorrect = QuestionChoice::create(['question_id' => $q->id, 'label' => 'A', 'content' => 'Choice A', 'is_correct' => true, 'order' => 1]);
+            $cWrong = QuestionChoice::create(['question_id' => $q->id, 'label' => 'B', 'content' => 'Choice B', 'is_correct' => false, 'order' => 2]);
+            TestQuestion::create(['test_section_id' => $readingSection->id, 'question_id' => $q->id, 'order' => $j]);
+            $allQuestions[] = $q;
+            $choicesMap[$q->id] = ['correct' => $cCorrect, 'wrong' => $cWrong];
+        }
+
+        // Case 1: 200Q / 0 answered -> correct = 0, incorrect = 0, unanswered = 200
+        $attemptZero = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+        app(AttemptEngine::class)->submitAttempt($attemptZero);
+        $attemptZero->refresh();
+
+        $resultZero = app(ResultEngine::class)->generateResult($attemptZero);
+        $this->assertEquals(200, $resultZero['total_questions']);
+        $this->assertEquals(0, $resultZero['answered_questions']);
+        $this->assertEquals(0, $resultZero['correct_count']);
+        $this->assertEquals(0, $resultZero['incorrect_count']);
+        $this->assertEquals(0, $resultZero['incorrect_answers']);
+        $this->assertEquals(200, $resultZero['unanswered_questions']);
+
+        $summaryZero = app(ReviewEngine::class)->getReviewSummary($attemptZero);
+        $this->assertEquals(0, $summaryZero['correct_answers']);
+        $this->assertEquals(0, $summaryZero['incorrect_answers']);
+        $this->assertEquals(200, $summaryZero['unanswered_questions']);
+
+        // Case 2: 200Q / 150 answered / 120 correct -> correct = 120, incorrect = 30, unanswered = 50
+        $attemptPartial = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+        for ($k = 0; $k < 150; $k++) {
+            $q = $allQuestions[$k];
+            $isCorrectAnswer = ($k < 120);
+            Answer::create([
+                'attempt_id' => $attemptPartial->id,
+                'question_id' => $q->id,
+                'selected_choice_id' => $isCorrectAnswer ? $choicesMap[$q->id]['correct']->id : $choicesMap[$q->id]['wrong']->id,
+            ]);
+        }
+        app(AttemptEngine::class)->submitAttempt($attemptPartial);
+        $attemptPartial->refresh();
+
+        $resultPartial = app(ResultEngine::class)->generateResult($attemptPartial);
+        $this->assertEquals(200, $resultPartial['total_questions']);
+        $this->assertEquals(150, $resultPartial['answered_questions']);
+        $this->assertEquals(120, $resultPartial['correct_count']);
+        $this->assertEquals(30, $resultPartial['incorrect_count']);
+        $this->assertEquals(30, $resultPartial['incorrect_answers']);
+        $this->assertEquals(50, $resultPartial['unanswered_questions']);
+
+        $summaryPartial = app(ReviewEngine::class)->getReviewSummary($attemptPartial);
+        $this->assertEquals(120, $summaryPartial['correct_answers']);
+        $this->assertEquals(30, $summaryPartial['incorrect_answers']);
+        $this->assertEquals(50, $summaryPartial['unanswered_questions']);
+
+        // Case 3: 200Q / all answered (200) / 150 correct -> correct = 150, incorrect = 50, unanswered = 0
+        $attemptFull = app(AttemptEngine::class)->startAttempt($test, $this->candidate);
+        for ($k = 0; $k < 200; $k++) {
+            $q = $allQuestions[$k];
+            $isCorrectAnswer = ($k < 150);
+            Answer::create([
+                'attempt_id' => $attemptFull->id,
+                'question_id' => $q->id,
+                'selected_choice_id' => $isCorrectAnswer ? $choicesMap[$q->id]['correct']->id : $choicesMap[$q->id]['wrong']->id,
+            ]);
+        }
+        app(AttemptEngine::class)->submitAttempt($attemptFull);
+        $attemptFull->refresh();
+
+        $resultFull = app(ResultEngine::class)->generateResult($attemptFull);
+        $this->assertEquals(200, $resultFull['total_questions']);
+        $this->assertEquals(200, $resultFull['answered_questions']);
+        $this->assertEquals(150, $resultFull['correct_count']);
+        $this->assertEquals(50, $resultFull['incorrect_count']);
+        $this->assertEquals(50, $resultFull['incorrect_answers']);
+        $this->assertEquals(0, $resultFull['unanswered_questions']);
+
+        $summaryFull = app(ReviewEngine::class)->getReviewSummary($attemptFull);
+        $this->assertEquals(150, $summaryFull['correct_answers']);
+        $this->assertEquals(50, $summaryFull['incorrect_answers']);
+        $this->assertEquals(0, $summaryFull['unanswered_questions']);
     }
 }

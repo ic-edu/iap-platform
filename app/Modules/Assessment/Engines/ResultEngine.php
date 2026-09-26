@@ -56,6 +56,7 @@ class ResultEngine
         }
 
         $answeredQuestions = $attempt->answers->count();
+        $incorrectCount = max(0, $answeredQuestions - $correctCount);
         $unansweredQuestions = max(0, $totalQuestions - $answeredQuestions);
 
         $grade = match (true) {
@@ -89,7 +90,10 @@ class ResultEngine
             'completion_status' => $completionStatus,
             'total_questions' => $totalQuestions,
             'correct_count' => $correctCount,
+            'correct_answers' => $correctCount,
             'answered_questions' => $answeredQuestions,
+            'incorrect_count' => $incorrectCount,
+            'incorrect_answers' => $incorrectCount,
             'unanswered_questions' => $unansweredQuestions,
             'toeic_breakdown' => $toeicData,
             'is_full_toeic' => $toeicData['is_full_toeic'] ?? false,

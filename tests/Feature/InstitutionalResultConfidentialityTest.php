@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Modules\Assessment\Engines\ResultEngine;
+use App\Modules\Assessment\Engines\ReviewEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
 use App\Modules\Assessment\Models\Attempt;
@@ -794,5 +796,45 @@ class InstitutionalResultConfidentialityTest extends TestCase
         $expiredAttempt->refresh();
         $this->assertFalse($expiredAttempt->is_final);
         $this->assertEquals('pending_decision', $expiredAttempt->decision_status);
+    }
+
+    public function test_incorrect_vs_unanswered_semantics_and_five_card_ui_rendering(): void
+    {
+        // 1. Zero answers on Real Test (2 questions in fixture)
+        $zeroAnswerAttempt = Attempt::create([
+            'user_id' => $this->candidate->id,
+            'test_id' => $this->realTest->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Expired,
+            'score' => 0,
+            'total_score' => 0,
+            'decision_status' => 'pending_decision',
+            'is_final' => false,
+            'started_at' => now()->subHours(2),
+            'submitted_at' => now(),
+        ]);
+
+        $resultPayload = app(ResultEngine::class)->generateResult($zeroAnswerAttempt);
+        $this->assertEquals(2, $resultPayload['total_questions']);
+        $this->assertEquals(0, $resultPayload['correct_count']);
+        $this->assertEquals(0, $resultPayload['answered_questions']);
+        $this->assertEquals(0, $resultPayload['incorrect_count']);
+        $this->assertEquals(0, $resultPayload['incorrect_answers']);
+        $this->assertEquals(2, $resultPayload['unanswered_questions']);
+
+        $summary = app(ReviewEngine::class)->getReviewSummary($zeroAnswerAttempt);
+        $this->assertEquals(2, $summary['total_questions']);
+        $this->assertEquals(0, $summary['correct_answers']);
+        $this->assertEquals(0, $summary['incorrect_answers']);
+        $this->assertEquals(2, $summary['unanswered_questions']);
+
+        $reviewResponse = $this->actingAs($this->candidate)->get(route('candidate.review', $zeroAnswerAttempt));
+        $reviewResponse->assertOk();
+        $reviewResponse->assertSee('Correct Answers');
+        $reviewResponse->assertSee('Incorrect Answers');
+        $reviewResponse->assertSee('Unanswered');
+        $reviewResponse->assertSee('Question-level review is not available for secure Mock Tests');
+        $reviewResponse->assertDontSee('Detailed Question Review');
     }
 }
