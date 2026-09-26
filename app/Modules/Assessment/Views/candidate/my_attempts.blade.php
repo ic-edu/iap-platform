@@ -26,10 +26,11 @@
                         $isPassed = $res['is_passed'] ?? false;
                         $isSim = $att->test?->isSimulator() ?? false;
                         $isInProgress = $att->status->value === 'in_progress';
+                        $isFullToeic = $res['is_full_toeic'] ?? ($att->test?->isToeic() && in_array($att->test?->assessment_mode?->value ?? '', ['real_test', 'mock_test'], true));
                         $correctCount = $res['correct_count'] ?? ($att->correct_answers_count ?? 0);
                         $totalQ = $res['total_questions'] ?? ($att->total_questions_count ?? 0);
-                        $finalScore = $res['final_score'] ?? ($att->total_score ?? 0);
-                        $passScore = $res['pass_score'] ?? ($att->test?->pass_score ?? 0);
+                        $finalScore = ($res['final_score'] ?? 0) > 0 ? $res['final_score'] : ($att->total_score ?? 0);
+                        $maxScore = $res['max_score'] ?? ($isFullToeic ? 990 : ($att->test?->total_points ?? null));
                     @endphp
                     <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                         <td class="p-4 font-semibold text-slate-900 dark:text-white">
@@ -63,30 +64,37 @@
                             {{ $att->started_at?->format('d M Y, H:i') ?? 'N/A' }}
                         </td>
                         <td class="p-4 text-slate-500 dark:text-slate-400 text-xs">
-                            {{ ($att->submitted_at ?? $att->updated_at)?->format('d M Y, H:i') ?? 'N/A' }}
+                            {{ $att->getCanonicalCompletionTimestamp()?->format('d M Y, H:i') ?? 'N/A' }}
                         </td>
                         <td class="p-4">
                             @if ($isInProgress)
                                 <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">Active Session</span>
-                            @elseif ($att->status->value === 'expired')
-                                <span class="text-xs text-slate-500 dark:text-slate-400">Time Expired</span>
                             @elseif ($att->status->value === 'cancelled')
                                 <span class="text-xs text-slate-500 dark:text-slate-400">Cancelled</span>
-                            @elseif ($isSim)
-                                <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $correctCount }} / {{ $totalQ }}</span>
                             @else
-                                <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $finalScore }} <span class="font-normal text-slate-500 dark:text-slate-400">/ {{ $passScore }}</span></span>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    @if ($isSim)
+                                        <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $correctCount }} / {{ $totalQ }}</span>
+                                    @elseif ($isFullToeic)
+                                        <span class="text-xs font-bold text-slate-900 dark:text-white">{{ (int) $finalScore }} <span class="font-normal text-slate-500 dark:text-slate-400">/ 990</span></span>
+                                    @elseif ($maxScore)
+                                        <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $finalScore }} <span class="font-normal text-slate-500 dark:text-slate-400">/ {{ $maxScore }}</span></span>
+                                    @else
+                                        <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $finalScore }}</span>
+                                    @endif
+
+                                    @if ($att->is_final)
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                            Final Result
+                                        </span>
+                                    @endif
+                                </div>
                             @endif
                         </td>
                         <td class="p-4 text-right space-x-2">
                             @if ($isInProgress)
                                 <a href="{{ route('candidate.exam', $att) }}" class="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-1.5 py-0.5">
                                     <span>Resume Exam</span>
-                                    <span>&rarr;</span>
-                                </a>
-                            @elseif ($att->status->value === 'expired')
-                                <a href="{{ route('candidate.review', $att) }}" class="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-semibold hover:underline focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-1.5 py-0.5">
-                                    <span>View Summary</span>
                                     <span>&rarr;</span>
                                 </a>
                             @elseif ($att->status->value === 'cancelled')

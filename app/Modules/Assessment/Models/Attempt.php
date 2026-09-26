@@ -243,4 +243,49 @@ class Attempt extends Model
     {
         return $this->hasOne(Certificate::class, 'attempt_id');
     }
+
+    /**
+     * Get the completion label for display ("Submitted at" vs "Time expired at").
+     */
+    public function getCompletionLabel(): string
+    {
+        $statusValue = is_object($this->status) ? $this->status->value : (string) $this->status;
+
+        if ($statusValue === AttemptStatus::Expired->value || $statusValue === 'expired') {
+            return 'Time expired at';
+        }
+
+        return 'Submitted at';
+    }
+
+    /**
+     * Get canonical completion timestamp for display.
+     * For expired attempts, derives the canonical deadline (started_at + duration_minutes).
+     * For submitted attempts, returns submitted_at (or updated_at fallback).
+     */
+    public function getCanonicalCompletionTimestamp(): ?Carbon
+    {
+        $statusValue = is_object($this->status) ? $this->status->value : (string) $this->status;
+
+        if ($statusValue === AttemptStatus::Expired->value || $statusValue === 'expired') {
+            $test = $this->relationLoaded('test') && $this->test ? $this->test : $this->test()->first();
+            if ($this->started_at && $test && $test->duration_minutes > 0) {
+                return $this->started_at->copy()->addMinutes($test->duration_minutes);
+            }
+        }
+
+        return $this->submitted_at ?? $this->updated_at;
+    }
+
+    /**
+     * Get candidate-facing formatted completion string (e.g. "Time expired at 26 Sep 2026, 15:45").
+     */
+    public function getFormattedCompletionDisplay(): string
+    {
+        $label = $this->getCompletionLabel();
+        $timestamp = $this->getCanonicalCompletionTimestamp();
+        $formattedTime = $timestamp ? $timestamp->format('d M Y, H:i') : 'N/A';
+
+        return "{$label} {$formattedTime}";
+    }
 }

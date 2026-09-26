@@ -9,7 +9,7 @@
                 <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
                     {{ $summary['test_title'] ?? 'Assessment Review' }}
                 </h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Submitted at {{ $summary['submitted_at'] ?? now()->toIso8601String() }}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ $summary['formatted_completion'] ?? $attempt->getFormattedCompletionDisplay() }}</p>
             </div>
 
             <!-- Pass / Fail / Pending Evaluation Badge -->

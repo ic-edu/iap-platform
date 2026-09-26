@@ -210,7 +210,7 @@
                                 <div></div>
                             @endif
 
-                            <button type="button" onclick="startSectionQuestions({{ $firstUnitIdx }})" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                            <button type="button" id="btn-begin-section-{{ $sec->id }}" onclick="startSectionQuestions({{ $firstUnitIdx }})" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
                                 <span>🚀 {{ $btnLabel }} &rarr;</span>
                             </button>
                         </div>
@@ -1543,6 +1543,11 @@
                 targetSection.classList.remove('hidden');
                 currentUnitIdx = -1;
                 window.location.hash = 'section=' + sectionId;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                const ctaBtn = document.getElementById('btn-begin-section-' + sectionId);
+                if (ctaBtn) {
+                    setTimeout(() => ctaBtn.focus(), 50);
+                }
                 updatePaletteUI();
             }
         }

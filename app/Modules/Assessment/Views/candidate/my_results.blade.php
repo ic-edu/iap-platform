@@ -25,11 +25,12 @@
                         $res = $att->result_summary;
                         $isPassed = $res['is_passed'] ?? false;
                         $isSim = $att->test?->isSimulator() ?? false;
+                        $isFullToeic = $res['is_full_toeic'] ?? ($att->test?->isToeic() && in_array($att->test?->assessment_mode?->value ?? '', ['real_test', 'mock_test'], true));
                         $correctCount = $res['correct_count'] ?? ($att->correct_answers_count ?? 0);
                         $totalQ = $res['total_questions'] ?? ($att->total_questions_count ?? 0);
                         $accuracy = $res['percentage'] ?? ($totalQ > 0 ? ($correctCount / $totalQ * 100) : 0);
-                        $finalScore = $res['final_score'] ?? ($att->total_score ?? 0);
-                        $passScore = $res['pass_score'] ?? ($att->test?->pass_score ?? 0);
+                        $finalScore = ($res['final_score'] ?? 0) > 0 ? $res['final_score'] : ($att->total_score ?? 0);
+                        $maxScore = $res['max_score'] ?? ($isFullToeic ? 990 : ($att->test?->total_points ?? null));
                     @endphp
                     <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                         <td class="p-4 font-semibold text-slate-900 dark:text-white">
@@ -47,7 +48,7 @@
                             @endif
                         </td>
                         <td class="p-4 text-slate-500 dark:text-slate-400 text-xs">
-                            {{ ($att->submitted_at ?? $att->updated_at)?->format('d M Y, H:i') ?? 'N/A' }}
+                            {{ $att->getCanonicalCompletionTimestamp()?->format('d M Y, H:i') ?? 'N/A' }}
                         </td>
                         <td class="p-4">
                             @if ($isSim)
@@ -57,8 +58,12 @@
                                 </div>
                             @else
                                 <div class="flex items-baseline gap-1.5">
-                                    <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ $finalScore }}</span>
-                                    <span class="text-xs text-slate-500 dark:text-slate-400 font-normal">/ {{ $passScore }}</span>
+                                    <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ (int) $finalScore }}</span>
+                                    @if ($isFullToeic)
+                                        <span class="text-xs text-slate-500 dark:text-slate-400 font-normal">/ 990</span>
+                                    @elseif ($maxScore)
+                                        <span class="text-xs text-slate-500 dark:text-slate-400 font-normal">/ {{ $maxScore }}</span>
+                                    @endif
                                 </div>
                             @endif
                         </td>

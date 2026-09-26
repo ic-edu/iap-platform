@@ -108,7 +108,19 @@ class CandidatePortalController extends Controller
             ->count();
 
         $myAttemptsCount = Attempt::where('user_id', $userId)->count();
-        $completedAttemptsCount = Attempt::where('user_id', $userId)->completed()->count();
+
+        // Completed assessment lifecycles (deduplicating attempts by assignment or test)
+        $completedAttempts = Attempt::where('user_id', $userId)
+            ->completed()
+            ->get(['id', 'assignment_id', 'test_id']);
+
+        $completedTestsCount = $completedAttempts->map(function (Attempt $attempt) {
+            return $attempt->assignment_id
+                ? 'assignment:'.$attempt->assignment_id
+                : 'test:'.$attempt->test_id;
+        })->unique()->count();
+        $completedAttemptsCount = $completedTestsCount;
+
         $issuedCertificatesCount = Certificate::where('user_id', $userId)
             ->whereHas('attempt.test', function ($q) {
                 $q->where('assessment_mode', '!=', AssessmentMode::Simulator->value);
@@ -149,6 +161,7 @@ class CandidatePortalController extends Controller
         return view($viewName, compact(
             'availableTestsCount',
             'myAttemptsCount',
+            'completedTestsCount',
             'completedAttemptsCount',
             'issuedCertificatesCount',
             'ongoingAttempts',

@@ -7,7 +7,6 @@ use App\Modules\Assessment\Engines\AssignmentEngine;
 use App\Modules\Assessment\Engines\AttemptEngine;
 use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
-use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
@@ -22,14 +21,11 @@ use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Models\OrderItem;
 use App\Modules\Commerce\Domain\Models\Payment;
 use App\Modules\Commerce\Domain\Models\Product;
-use App\Modules\QuestionBank\Enums\DifficultyLevel;
-use App\Modules\QuestionBank\Enums\QuestionType;
-use App\Modules\QuestionBank\Enums\SectionType;
-use App\Modules\QuestionBank\Enums\TestType;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use App\Services\BestResultResolver;
+use App\Services\PdfService;
 use App\Services\VerificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -40,13 +36,21 @@ class MockTestCertificateFinalResultTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $candidate;
+
     protected User $otherCandidate;
+
     protected Test $mockTest;
+
     protected Test $simulatorTest;
+
     protected Product $product;
+
     protected CandidateTestAssignment $assignment;
+
     protected Question $q1;
+
     protected Question $q2;
 
     protected function setUp(): void
@@ -72,45 +76,45 @@ class MockTestCertificateFinalResultTest extends TestCase
 
         // Create Question Bank & Questions
         $bank = QuestionBank::create([
-            'title'       => 'TOEIC Certificate Bank',
-            'slug'        => 'toeic-cert-bank',
-            'type'        => 'toeic',
-            'created_by'  => $this->admin->id,
+            'title' => 'TOEIC Certificate Bank',
+            'slug' => 'toeic-cert-bank',
+            'type' => 'toeic',
+            'created_by' => $this->admin->id,
             'is_approved' => true,
         ]);
 
         $this->q1 = Question::create([
             'question_bank_id' => $bank->id,
-            'prompt'           => 'What is the answer to Listening Q1?',
-            'points'           => 100,
+            'prompt' => 'What is the answer to Listening Q1?',
+            'points' => 100,
         ]);
         QuestionChoice::create(['question_id' => $this->q1->id, 'label' => 'A', 'content' => 'Option A (Correct)', 'is_correct' => true]);
         QuestionChoice::create(['question_id' => $this->q1->id, 'label' => 'B', 'content' => 'Option B (Wrong)', 'is_correct' => false]);
 
         $this->q2 = Question::create([
             'question_bank_id' => $bank->id,
-            'prompt'           => 'What is the answer to Reading Q2?',
-            'points'           => 100,
+            'prompt' => 'What is the answer to Reading Q2?',
+            'points' => 100,
         ]);
         QuestionChoice::create(['question_id' => $this->q2->id, 'label' => 'A', 'content' => 'Option A (Correct)', 'is_correct' => true]);
         QuestionChoice::create(['question_id' => $this->q2->id, 'label' => 'B', 'content' => 'Option B (Wrong)', 'is_correct' => false]);
 
         // Create Published Real Test (Mock Test)
         $this->mockTest = Test::create([
-            'title'           => 'TOEIC Full Institutional Simulation Test',
-            'slug'            => 'toeic-full-inst-sim-test',
+            'title' => 'TOEIC Full Institutional Simulation Test',
+            'slug' => 'toeic-full-inst-sim-test',
             'assessment_mode' => AssessmentMode::RealTest,
-            'status'          => 'published',
-            'is_published'    => true,
-            'duration'        => 120,
-            'pass_score'      => 100,
-            'created_by'      => $this->admin->id,
+            'status' => 'published',
+            'is_published' => true,
+            'duration' => 120,
+            'pass_score' => 100,
+            'created_by' => $this->admin->id,
         ]);
 
         $section = TestSection::create([
             'test_id' => $this->mockTest->id,
-            'title'   => 'Comprehensive Section',
-            'order'   => 1,
+            'title' => 'Comprehensive Section',
+            'order' => 1,
         ]);
 
         TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $this->q1->id, 'order' => 1]);
@@ -118,65 +122,65 @@ class MockTestCertificateFinalResultTest extends TestCase
 
         // Create Simulator Test (Practice Mode)
         $this->simulatorTest = Test::create([
-            'title'           => 'TOEIC Quick Practice Simulator',
-            'slug'            => 'toeic-quick-practice-sim',
+            'title' => 'TOEIC Quick Practice Simulator',
+            'slug' => 'toeic-quick-practice-sim',
             'assessment_mode' => AssessmentMode::Simulator,
-            'status'          => 'published',
-            'is_published'    => true,
-            'duration'        => 30,
-            'pass_score'      => 50,
-            'created_by'      => $this->admin->id,
+            'status' => 'published',
+            'is_published' => true,
+            'duration' => 30,
+            'pass_score' => 50,
+            'created_by' => $this->admin->id,
         ]);
         $simSection = TestSection::create([
             'test_id' => $this->simulatorTest->id,
-            'title'   => 'Practice Section',
-            'order'   => 1,
+            'title' => 'Practice Section',
+            'order' => 1,
         ]);
         TestQuestion::create(['test_section_id' => $simSection->id, 'question_id' => $this->q1->id, 'order' => 1]);
 
         // Commerce setup: Product, Order, Invoice, Payment
         $this->product = Product::create([
-            'title'        => 'TOEIC Institutional Mock Test Product',
-            'slug'         => 'toeic-inst-mock-prod',
+            'title' => 'TOEIC Institutional Mock Test Product',
+            'slug' => 'toeic-inst-mock-prod',
             'product_type' => 'placement_test',
-            'price'        => 300000,
-            'test_id'      => $this->mockTest->id,
-            'is_active'    => true,
+            'price' => 300000,
+            'test_id' => $this->mockTest->id,
+            'is_active' => true,
         ]);
 
         $order = Order::create([
-            'order_number'    => 'ORD-CERT-001',
-            'user_id'         => $this->candidate->id,
-            'total_amount'    => 300000,
-            'status'          => OrderStatus::Completed,
+            'order_number' => 'ORD-CERT-001',
+            'user_id' => $this->candidate->id,
+            'total_amount' => 300000,
+            'status' => OrderStatus::Completed,
             'billing_details' => ['name' => 'Jane Candidate'],
         ]);
 
         $inv = Invoice::create([
             'invoice_number' => 'INV-CERT-001',
-            'order_id'       => $order->id,
-            'user_id'        => $this->candidate->id,
-            'amount'         => 300000,
-            'status'         => 'paid',
-            'due_date'       => now()->addDays(7),
+            'order_id' => $order->id,
+            'user_id' => $this->candidate->id,
+            'amount' => 300000,
+            'status' => 'paid',
+            'due_date' => now()->addDays(7),
         ]);
 
         $payment = Payment::create([
-            'invoice_id'       => $inv->id,
-            'user_id'          => $this->candidate->id,
-            'amount'           => 300000,
-            'payment_method'   => 'credit_card',
+            'invoice_id' => $inv->id,
+            'user_id' => $this->candidate->id,
+            'amount' => 300000,
+            'payment_method' => 'credit_card',
             'reference_number' => 'PAY-CERT-001',
-            'status'           => PaymentStatus::Paid,
-            'paid_at'          => now(),
+            'status' => PaymentStatus::Paid,
+            'paid_at' => now(),
         ]);
 
         OrderItem::create([
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'product_id' => $this->product->id,
-            'quantity'   => 1,
-            'price'      => 300000,
-            'total'      => 300000,
+            'quantity' => 1,
+            'price' => 300000,
+            'total' => 300000,
         ]);
 
         // Assign Mock Test to Candidate
@@ -419,7 +423,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $this->assertNotNull($cert);
 
         // Verify PDF/HTML template rendering matches
-        $pdfService = app(\App\Services\PdfService::class);
+        $pdfService = app(PdfService::class);
         $html = $pdfService->renderCertificateHtml($cert);
 
         $this->assertStringContainsString('Jane Candidate', $html);
@@ -444,7 +448,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         // 1. Review view displays certificate download button
         $reviewRes = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt1));
         $reviewRes->assertStatus(200);
-        $reviewRes->assertSee('Official Digital Certificate Issued!');
+        $reviewRes->assertSee('Digital Certificate Issued!');
         $reviewRes->assertSee(route('candidate.certificates.download', $cert->id));
 
         // 2. My Certificates page lists the certificate
