@@ -95,7 +95,12 @@ class RepositoryManagerController extends Controller
         $duplicatesData = $globalSummary['duplicates'] ?? [];
         $duplicatesCount = count($duplicatesData['duplicate_titles'] ?? []) + count($duplicatesData['duplicate_prompts'] ?? []);
         $repositoryHealthScore = $globalSummary['avg_health_score'] ?? 100;
-        $metadataCompleteness = $qualityService->getAnalyticsData()['metadata_completion'] ?? 100;
+
+        $audits = $globalSummary['audits'] ?? [];
+        $totalAudits = count($audits);
+        $metadataCompleteness = $totalAudits > 0
+            ? (int) round(array_sum(array_map(fn ($audit) => $audit['scores']['metadata'] ?? 0, $audits)) / $totalAudits)
+            : 100;
 
         $recentActivityLogs = RepositoryActivityLog::with(['actor', 'reviewer'])
             ->latest()
