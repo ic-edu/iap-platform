@@ -18,7 +18,9 @@ class RepositorySmartReviewEngineTest extends TestCase
     use RefreshDatabase;
 
     protected User $teacherA;
+
     protected User $repoManager;
+
     protected QuestionBank $bankA;
 
     protected function setUp(): void
@@ -27,24 +29,24 @@ class RepositorySmartReviewEngineTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $this->teacherA = User::factory()->create([
-            'name'   => 'Dr. Eleanor Vance',
-            'email'  => 'vance_s11_5@icedu.org',
+            'name' => 'Dr. Eleanor Vance',
+            'email' => 'vance_s11_5@icedu.org',
             'status' => 'active',
         ]);
         $this->teacherA->assignRole('teacher');
 
         $this->repoManager = User::factory()->create([
-            'name'   => 'Repository Manager S11_5',
-            'email'  => 'repomanager_s11_5@icedu.org',
+            'name' => 'Repository Manager S11_5',
+            'email' => 'repomanager_s11_5@icedu.org',
             'status' => 'active',
         ]);
         $this->repoManager->assignRole('repository-manager');
 
         $this->bankA = QuestionBank::create([
-            'title'      => 'Smart Review Engine Bank',
-            'slug'       => 'smart-review-engine-bank',
-            'test_type'  => 'toeic',
-            'status'     => 'draft',
+            'title' => 'Smart Review Engine Bank',
+            'slug' => 'smart-review-engine-bank',
+            'test_type' => 'toeic',
+            'status' => 'draft',
             'created_by' => $this->teacherA->id,
         ]);
     }
@@ -55,13 +57,13 @@ class RepositorySmartReviewEngineTest extends TestCase
     public function test_1_implicit_approval_allows_instant_approval_when_zero_questions_flagged()
     {
         $test = AssessmentTest::create([
-            'title'            => 'TOEIC Smart Review 01',
-            'slug'             => 'toeic-smart-review-01',
-            'test_type'        => 'toeic',
+            'title' => 'TOEIC Smart Review 01',
+            'slug' => 'toeic-smart-review-01',
+            'test_type' => 'toeic',
             'duration_minutes' => 60,
-            'pass_score'       => 70,
-            'status'           => 'pending_approval',
-            'created_by'       => $this->teacherA->id,
+            'pass_score' => 70,
+            'status' => 'pending_approval',
+            'created_by' => $this->teacherA->id,
         ]);
 
         $section = TestSection::create(['test_id' => $test->id, 'title' => 'Listening', 'order' => 1]);
@@ -80,7 +82,7 @@ class RepositorySmartReviewEngineTest extends TestCase
         // Execute Instant Approval without clicking Reviewed OK on every question
         $approveRes = $this->actingAs($this->repoManager)->post(route('admin.repository-manager.assessment-approve', $test->id));
         $approveRes->assertRedirect();
-        
+
         $this->assertEquals('approved', $test->fresh()->status);
         $this->assertFalse((bool) $test->fresh()->is_published);
     }
@@ -91,13 +93,13 @@ class RepositorySmartReviewEngineTest extends TestCase
     public function test_2_flagging_question_disables_approval_and_enables_revision_request()
     {
         $test = AssessmentTest::create([
-            'title'            => 'TOEIC Smart Review 02',
-            'slug'             => 'toeic-smart-review-02',
-            'test_type'        => 'toeic',
+            'title' => 'TOEIC Smart Review 02',
+            'slug' => 'toeic-smart-review-02',
+            'test_type' => 'toeic',
             'duration_minutes' => 60,
-            'pass_score'       => 70,
-            'status'           => 'pending_approval',
-            'created_by'       => $this->teacherA->id,
+            'pass_score' => 70,
+            'status' => 'pending_approval',
+            'created_by' => $this->teacherA->id,
         ]);
 
         $section = TestSection::create(['test_id' => $test->id, 'title' => 'Listening', 'order' => 1]);
@@ -108,17 +110,17 @@ class RepositorySmartReviewEngineTest extends TestCase
         $ajaxRes = $this->actingAs($this->repoManager)
             ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
             ->postJson(route('admin.repository-manager.question-request-revision', ['test' => $test->id, 'question' => $q1->id]), [
-                'field'    => 'choices',
-                'comment'  => 'Choice B is duplicate',
+                'field' => 'choices',
+                'comment' => 'Choice B is duplicate',
                 'severity' => 'warning',
             ]);
 
         $ajaxRes->assertStatus(200);
         $ajaxRes->assertJson([
-            'success'             => true,
-            'message'             => 'Review saved.',
-            'flagged_count'       => 1,
-            'is_allowed'          => false,
+            'success' => true,
+            'message' => 'Review saved.',
+            'flagged_count' => 1,
+            'is_allowed' => false,
             'is_revision_allowed' => true,
         ]);
 
@@ -135,13 +137,13 @@ class RepositorySmartReviewEngineTest extends TestCase
     public function test_3_clearing_flag_restores_default_ok_and_enables_approval()
     {
         $test = AssessmentTest::create([
-            'title'            => 'TOEIC Smart Review 03',
-            'slug'             => 'toeic-smart-review-03',
-            'test_type'        => 'toeic',
+            'title' => 'TOEIC Smart Review 03',
+            'slug' => 'toeic-smart-review-03',
+            'test_type' => 'toeic',
             'duration_minutes' => 60,
-            'pass_score'       => 70,
-            'status'           => 'needs_revision',
-            'created_by'       => $this->teacherA->id,
+            'pass_score' => 70,
+            'status' => 'needs_revision',
+            'created_by' => $this->teacherA->id,
         ]);
 
         $section = TestSection::create(['test_id' => $test->id, 'title' => 'Listening', 'order' => 1]);
@@ -156,11 +158,76 @@ class RepositorySmartReviewEngineTest extends TestCase
 
         $clearRes->assertStatus(200);
         $clearRes->assertJson([
-            'success'             => true,
-            'message'             => 'Flag cleared — Question marked OK.',
-            'flagged_count'       => 0,
-            'is_allowed'          => true,
+            'success' => true,
+            'message' => 'Flag cleared — Question marked OK.',
+            'flagged_count' => 0,
+            'is_allowed' => true,
             'is_revision_allowed' => false,
         ]);
+    }
+
+    /**
+     * TEST 4: Assessment with status='pending' renders Governance Decision controls (Approve, Revision, Archive).
+     */
+    public function test_4_pending_status_renders_governance_decision_controls_and_enforces_guards(): void
+    {
+        $test = AssessmentTest::create([
+            'title' => 'TOEIC Smart Review Pending State',
+            'slug' => 'toeic-smart-review-pending-state',
+            'test_type' => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score' => 70,
+            'status' => 'pending',
+            'created_by' => $this->teacherA->id,
+        ]);
+
+        $section = TestSection::create(['test_id' => $test->id, 'title' => 'Listening', 'order' => 1]);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question 1 Stem']);
+        TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
+
+        $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
+        $res->assertStatus(200);
+
+        // Header shows Pending Review
+        $res->assertSee('Pending Review');
+
+        // Decision controls rendered
+        $res->assertSee('Governance Decision');
+        $res->assertSee(route('admin.repository-manager.assessment-approve', $test->id));
+        $res->assertSee(route('admin.repository-manager.assessment-revision', $test->id));
+        $res->assertSee(route('admin.repository-manager.assessment-archive', $test->id));
+        $res->assertSee('✓ Approve Assessment');
+        $res->assertSee('⚠️ Request Assessment Revision');
+        $res->assertSee('📦 Send to Archived');
+
+        // With 0 flagged questions, Approve button is enabled and does not say "Status: Pending" fallback
+        $res->assertDontSee('Status: <strong class="text-slate-900 dark:text-white capitalize">Pending</strong>', false);
+    }
+
+    /**
+     * TEST 5: Assessment with status='pending_approval' renders Governance Decision controls.
+     */
+    public function test_5_pending_approval_status_renders_governance_decision_controls(): void
+    {
+        $test = AssessmentTest::create([
+            'title' => 'TOEIC Smart Review Pending Approval State',
+            'slug' => 'toeic-smart-review-pending-approval-state',
+            'test_type' => 'toeic',
+            'duration_minutes' => 60,
+            'pass_score' => 70,
+            'status' => 'pending_approval',
+            'created_by' => $this->teacherA->id,
+        ]);
+
+        $section = TestSection::create(['test_id' => $test->id, 'title' => 'Listening', 'order' => 1]);
+        $q1 = Question::create(['question_bank_id' => $this->bankA->id, 'prompt' => 'Question 1 Stem']);
+        TestQuestion::create(['test_section_id' => $section->id, 'question_id' => $q1->id, 'order' => 1]);
+
+        $res = $this->actingAs($this->repoManager)->get(route('admin.repository-manager.assessment-review', $test->id));
+        $res->assertStatus(200);
+        $res->assertSee('Governance Decision');
+        $res->assertSee(route('admin.repository-manager.assessment-approve', $test->id));
+        $res->assertSee(route('admin.repository-manager.assessment-revision', $test->id));
+        $res->assertSee(route('admin.repository-manager.assessment-archive', $test->id));
     }
 }

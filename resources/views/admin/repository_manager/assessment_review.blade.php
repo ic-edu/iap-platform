@@ -395,7 +395,7 @@
                             </button>
                         </form>
                     </div>
-                @elseif(in_array($test->status, ['pending_approval', 'needs_revision']))
+                @elseif(in_array($test->status, ['pending', 'pending_approval', 'needs_revision']))
                     {{-- BUSINESS RULE 5: Approve Form with Review by Exception Guard --}}
                     <form action="{{ route('admin.repository-manager.assessment-approve', $test->id) }}" method="POST" class="mb-4">
                         @csrf
