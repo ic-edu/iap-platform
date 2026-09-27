@@ -2,9 +2,16 @@
 
 namespace App\Modules\Assessment\Models;
 
+use App\Models\AssessmentRequest;
 use App\Models\User;
+use App\Modules\Assessment\Enums\AssessmentMode;
+use App\Modules\Assessment\Enums\ResultReleaseMode;
 use App\Modules\Assessment\Enums\ScoringMethod;
+use App\Modules\Assessment\Policies\AssessmentModePolicy;
 use App\Modules\QuestionBank\Enums\TestType;
+use App\Modules\QuestionBank\Models\AudioGroup;
+use App\Modules\QuestionBank\Models\PassageGroup;
+use App\Services\ToeicQuestionValidator;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,8 +25,11 @@ use Illuminate\Support\Carbon;
  * @property string $title
  * @property string $slug
  * @property TestType $test_type
+ * @property AssessmentMode $assessment_mode
  * @property int $duration_minutes
  * @property int $pass_score
+ * @property int $result_release_delay_hours
+ * @property ResultReleaseMode|string $result_release_mode
  * @property ScoringMethod $scoring_method
  * @property bool $shuffle_questions
  * @property bool $shuffle_choices
@@ -36,8 +46,10 @@ class Test extends Model
     protected $table = 'tests';
 
     protected $attributes = [
-        'scoring_method'  => 'automatic',
+        'scoring_method' => 'automatic',
         'assessment_mode' => 'simulator',
+        'result_release_delay_hours' => 24,
+        'result_release_mode' => 'ra_controlled',
     ];
 
     protected $fillable = [
@@ -47,6 +59,8 @@ class Test extends Model
         'assessment_mode',
         'duration_minutes',
         'pass_score',
+        'result_release_delay_hours',
+        'result_release_mode',
         'scoring_method',
         'shuffle_questions',
         'shuffle_choices',
@@ -61,14 +75,16 @@ class Test extends Model
     protected function casts(): array
     {
         return [
-            'test_type'         => TestType::class,
-            'assessment_mode'   => \App\Modules\Assessment\Enums\AssessmentMode::class,
-            'scoring_method'    => ScoringMethod::class,
-            'duration_minutes'  => 'integer',
-            'pass_score'        => 'integer',
+            'test_type' => TestType::class,
+            'assessment_mode' => AssessmentMode::class,
+            'scoring_method' => ScoringMethod::class,
+            'duration_minutes' => 'integer',
+            'pass_score' => 'integer',
+            'result_release_delay_hours' => 'integer',
+            'result_release_mode' => ResultReleaseMode::class,
             'shuffle_questions' => 'boolean',
-            'shuffle_choices'   => 'boolean',
-            'is_published'      => 'boolean',
+            'shuffle_choices' => 'boolean',
+            'is_published' => 'boolean',
         ];
     }
 
@@ -77,7 +93,7 @@ class Test extends Model
      */
     public function isSimulator(): bool
     {
-        return ($this->assessment_mode ?? \App\Modules\Assessment\Enums\AssessmentMode::Simulator) === \App\Modules\Assessment\Enums\AssessmentMode::Simulator;
+        return ($this->assessment_mode ?? AssessmentMode::Simulator) === AssessmentMode::Simulator;
     }
 
     /**
@@ -85,7 +101,50 @@ class Test extends Model
      */
     public function isRealTest(): bool
     {
-        return $this->assessment_mode === \App\Modules\Assessment\Enums\AssessmentMode::RealTest;
+        return $this->assessment_mode === AssessmentMode::RealTest;
+    }
+
+    /**
+     * Check whether this assessment test uses delayed result release policy.
+     * Practice simulators are always instant (never delayed).
+     */
+    public function usesDelayedResultRelease(): bool
+    {
+        if ($this->isSimulator()) {
+            return false;
+        }
+
+        return $this->isRealTest();
+    }
+
+    /**
+     * Get configured result release delay in hours.
+     * Practice simulators return 0 hours.
+     */
+    public function getResultReleaseDelayHours(): int
+    {
+        if ($this->isSimulator()) {
+            return 0;
+        }
+
+        return (int) ($this->result_release_delay_hours ?? 24);
+    }
+
+    /**
+     * Get configured result release mode string.
+     * Practice simulators return 'automatic'.
+     */
+    public function getResultReleaseMode(): string
+    {
+        if ($this->isSimulator()) {
+            return 'automatic';
+        }
+
+        if ($this->result_release_mode instanceof ResultReleaseMode) {
+            return $this->result_release_mode->value;
+        }
+
+        return (string) ($this->result_release_mode ?? 'ra_controlled');
     }
 
     /**
@@ -103,9 +162,9 @@ class Test extends Model
     /**
      * Get Assessment Mode Policy instance.
      */
-    public function policy(): \App\Modules\Assessment\Policies\AssessmentModePolicy
+    public function policy(): AssessmentModePolicy
     {
-        return \App\Modules\Assessment\Policies\AssessmentModePolicy::for($this);
+        return AssessmentModePolicy::for($this);
     }
 
     /**
@@ -192,7 +251,7 @@ class Test extends Model
             return true;
         }
 
-        return \App\Services\ToeicQuestionValidator::isToeic($this);
+        return ToeicQuestionValidator::isToeic($this);
     }
 
     /**
@@ -220,7 +279,7 @@ class Test extends Model
      */
     public function assessmentRequest(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\AssessmentRequest::class, 'assessment_request_id');
+        return $this->belongsTo(AssessmentRequest::class, 'assessment_request_id');
     }
 
     /**
@@ -255,38 +314,38 @@ class Test extends Model
      *
      * @return HasMany<Attempt, $this>
      */
-     public function attempts(): HasMany
-     {
-         return $this->hasMany(Attempt::class, 'test_id');
-     }
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(Attempt::class, 'test_id');
+    }
 
     /**
      * Get candidate test assignments.
      *
-     * @return HasMany<\App\Modules\Assessment\Models\CandidateTestAssignment, $this>
+     * @return HasMany<CandidateTestAssignment, $this>
      */
     public function assignments(): HasMany
     {
-        return $this->hasMany(\App\Modules\Assessment\Models\CandidateTestAssignment::class, 'test_id');
+        return $this->hasMany(CandidateTestAssignment::class, 'test_id');
     }
 
     /**
      * Get associated shared audio groups.
      *
-     * @return HasMany<\App\Modules\QuestionBank\Models\AudioGroup, $this>
+     * @return HasMany<AudioGroup, $this>
      */
     public function audioGroups(): HasMany
     {
-        return $this->hasMany(\App\Modules\QuestionBank\Models\AudioGroup::class, 'test_id');
+        return $this->hasMany(AudioGroup::class, 'test_id');
     }
 
     /**
      * Get associated shared passage groups (Part 6 & Part 7).
      *
-     * @return HasMany<\App\Modules\QuestionBank\Models\PassageGroup, $this>
+     * @return HasMany<PassageGroup, $this>
      */
     public function passageGroups(): HasMany
     {
-        return $this->hasMany(\App\Modules\QuestionBank\Models\PassageGroup::class, 'test_id');
+        return $this->hasMany(PassageGroup::class, 'test_id');
     }
 }

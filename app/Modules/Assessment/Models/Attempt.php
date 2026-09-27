@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
+use App\Modules\Assessment\Enums\ResultReleaseStatus;
 use App\Modules\Certificate\Models\Certificate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -24,6 +25,10 @@ use Illuminate\Support\Carbon;
  * @property int $attempt_number
  * @property bool $is_final
  * @property string|null $decision_status
+ * @property ResultReleaseStatus|null $result_release_status
+ * @property Carbon|null $result_release_at
+ * @property Carbon|null $result_released_at
+ * @property int|null $result_released_by
  * @property Carbon|null $started_at
  * @property Carbon|null $submitted_at
  * @property float|null $total_score
@@ -37,6 +42,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $seed
  * @property Carbon|null $updated_at
  * @property User|null $user
+ * @property User|null $resultReleasedBy
  * @property Test|null $test
  * @property CandidateTestAssignment|null $assignment
  * @property Certificate|null $certificate
@@ -61,6 +67,10 @@ class Attempt extends Model
         'attempt_number',
         'is_final',
         'decision_status',
+        'result_release_status',
+        'result_release_at',
+        'result_released_at',
+        'result_released_by',
         'started_at',
         'submitted_at',
         'total_score',
@@ -88,6 +98,10 @@ class Attempt extends Model
             'violations_count' => 'integer',
             'status' => AttemptStatus::class,
             'evaluation_status' => EvaluationStatus::class,
+            'result_release_status' => ResultReleaseStatus::class,
+            'result_release_at' => 'datetime',
+            'result_released_at' => 'datetime',
+            'result_released_by' => 'integer',
         ];
     }
 
@@ -242,6 +256,68 @@ class Attempt extends Model
     public function certificate(): HasOne
     {
         return $this->hasOne(Certificate::class, 'attempt_id');
+    }
+
+    /**
+     * Get user who authorized/released the results.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function resultReleasedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'result_released_by');
+    }
+
+    /**
+     * Check if attempt result is released and candidate-accessible.
+     */
+    public function isResultReleased(): bool
+    {
+        if ($this->result_release_status instanceof ResultReleaseStatus) {
+            return $this->result_release_status->isReleased();
+        }
+
+        return $this->result_release_status === 'released' || $this->result_released_at !== null;
+    }
+
+    /**
+     * Check if attempt result is still in processing state.
+     */
+    public function isResultProcessing(): bool
+    {
+        if ($this->result_release_status instanceof ResultReleaseStatus) {
+            return $this->result_release_status->isProcessing();
+        }
+
+        return $this->result_release_status === 'processing';
+    }
+
+    /**
+     * Check if attempt result is ready for release.
+     */
+    public function isResultReady(): bool
+    {
+        if ($this->result_release_status instanceof ResultReleaseStatus) {
+            return $this->result_release_status->isReady();
+        }
+
+        return $this->result_release_status === 'ready';
+    }
+
+    /**
+     * Check if attempt result can be released (delay elapsed and not already released).
+     */
+    public function canResultBeReleased(): bool
+    {
+        if ($this->isResultReleased()) {
+            return false;
+        }
+
+        if ($this->result_release_at === null) {
+            return false;
+        }
+
+        return now()->greaterThanOrEqualTo($this->result_release_at);
     }
 
     /**
