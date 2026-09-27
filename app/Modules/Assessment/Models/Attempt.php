@@ -352,7 +352,7 @@ class Attempt extends Model
     {
         $deadline = $this->getDecisionDeadline();
 
-        return $deadline ? now()->greaterThan($deadline) : false;
+        return $deadline ? now()->greaterThanOrEqualTo($deadline) : false;
     }
 
     /**

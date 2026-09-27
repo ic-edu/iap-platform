@@ -857,4 +857,81 @@ class DelayedResultDecisionAndExpiryTest extends TestCase
 
         $this->releaseService->release($attempt2, $this->admin);
     }
+
+    /**
+     * TEST AE: Exact 72-hour boundary consistency between candidate and worker semantics.
+     */
+    public function test_ae_exact_72_hour_boundary_semantics(): void
+    {
+        // 1. result_released_at = now - 71h59m59s -> retry window NOT expired
+        $attemptNotExpired = Attempt::create([
+            'user_id' => $this->student->id,
+            'test_id' => $this->mockTest->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Submitted,
+            'started_at' => now()->subHours(80),
+            'submitted_at' => now()->subHours(75),
+            'total_score' => 710,
+            'is_final' => false,
+            'decision_status' => 'pending_decision',
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_release_at' => now()->subHours(75),
+            'result_released_at' => now()->subHours(72)->addSecond(), // 71h59m59s ago
+            'result_released_by' => $this->admin->id,
+        ]);
+
+        $this->assertFalse($attemptNotExpired->isDecisionWindowExpired());
+        $this->assertTrue($attemptNotExpired->canCandidateDecide());
+
+        // 2. result_released_at = now - exactly 72h -> retry window IS expired
+        $assignment2 = CandidateTestAssignment::create([
+            'user_id' => $this->student->id,
+            'test_id' => $this->mockTest->id,
+            'status' => 'active',
+            'attempts_count' => 1,
+        ]);
+
+        $attemptExact72h = Attempt::create([
+            'user_id' => $this->student->id,
+            'test_id' => $this->mockTest->id,
+            'assignment_id' => $assignment2->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Submitted,
+            'started_at' => now()->subHours(80),
+            'submitted_at' => now()->subHours(75),
+            'total_score' => 720,
+            'is_final' => false,
+            'decision_status' => 'pending_decision',
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_release_at' => now()->subHours(75),
+            'result_released_at' => now()->subHours(72), // exactly 72 hours ago
+            'result_released_by' => $this->admin->id,
+        ]);
+
+        $this->assertTrue($attemptExact72h->isDecisionWindowExpired());
+        $this->assertFalse($attemptExact72h->canCandidateDecide());
+
+        // 3. Direct Retry at exact 72h is rejected
+        $response = $this->actingAs($this->student)
+            ->post(route('candidate.exam.retry', $attemptExact72h));
+
+        $response->assertRedirect(route('candidate.review', $attemptExact72h));
+        $response->assertSessionHas('error', 'The retry decision window has expired. Your first result is being finalized.');
+        $this->assertNull(Attempt::where('assignment_id', $assignment2->id)->where('attempt_number', 2)->first());
+
+        // 4. Worker at exact 72h may auto-finalize Attempt #1
+        $this->artisan('iap:finalize-expired-result-decisions')
+            ->assertSuccessful();
+
+        $this->assertTrue($attemptExact72h->fresh()->is_final);
+        $this->assertEquals('finalized', $attemptExact72h->fresh()->decision_status);
+        $this->assertEquals('completed', $assignment2->fresh()->status);
+        $this->assertEquals($attemptExact72h->id, $assignment2->fresh()->final_attempt_id);
+
+        // 5. Non-expired attempt (71h59m59s) remains untouched by worker
+        $this->assertFalse($attemptNotExpired->fresh()->is_final);
+        $this->assertEquals('pending_decision', $attemptNotExpired->fresh()->decision_status);
+        $this->assertEquals('active', $this->assignment->fresh()->status);
+    }
 }
