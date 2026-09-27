@@ -249,6 +249,41 @@ class AssignmentEngine
     }
 
     /**
+     * Unassign an exact candidate test assignment if eligible (active with zero attempts).
+     *
+     * @throws InvalidArgumentException
+     */
+    public function unassignAssignment(CandidateTestAssignment $assignment): bool
+    {
+        if ($assignment->status !== 'active') {
+            throw new InvalidArgumentException("Cannot unassign assessment. Assignment status is {$assignment->status}.");
+        }
+
+        if ($assignment->attempts_count > 0 || $assignment->final_attempt_id !== null || $assignment->completed_at !== null || $assignment->attempts()->exists()) {
+            throw new InvalidArgumentException('Cannot unassign assessment: candidate has already started or completed assessment attempts.');
+        }
+
+        $assignment->update(['status' => 'unassigned']);
+
+        event(new AssignmentRevoked($assignment));
+
+        $candidate = $assignment->user;
+        $test = $assignment->test;
+        ActivityLogger::log(
+            action: 'CANDIDATE_UNASSIGNED',
+            description: "Unassigned candidate '{$candidate?->name}' from test '{$test?->title}'",
+            subject: $assignment,
+            properties: [
+                'assignment_id' => $assignment->id,
+                'user_id' => $assignment->user_id,
+                'test_id' => $assignment->test_id,
+            ]
+        );
+
+        return true;
+    }
+
+    /**
      * Unassign / Revoke test assignment for a candidate.
      */
     public function unassign(Test $test, User $user): bool
@@ -258,13 +293,11 @@ class AssignmentEngine
             ->where('status', 'active')
             ->first();
 
-        if ($assignment) {
-            $assignment->update(['status' => 'unassigned']);
-
-            return true;
+        if (!$assignment) {
+            return false;
         }
 
-        return false;
+        return $this->unassignAssignment($assignment);
     }
 
     /**
@@ -389,6 +422,23 @@ class AssignmentEngine
 
             if ($existingSeatAssignment) {
                 throw new InvalidArgumentException('Active assessment assignment already exists for this institutional seat allocation.');
+            }
+
+            // Check if this seat allocation was already consumed by a completed or finalized assignment
+            $consumedSeatAssignment = CandidateTestAssignment::where('organization_seat_allocation_id', $lockedAlloc->id)
+                ->where(function ($q) {
+                    $q->where('status', 'completed')
+                        ->orWhereNotNull('final_attempt_id')
+                        ->orWhereNotNull('completed_at')
+                        ->orWhereHas('attempts', function ($at) {
+                            $at->whereIn('status', ['submitted', 'completed', 'in_progress', 'expired']);
+                        });
+                })
+                ->lockForUpdate()
+                ->first();
+
+            if ($consumedSeatAssignment) {
+                throw new InvalidArgumentException('Cannot assign assessment. This institutional seat has already been consumed by a completed assessment.');
             }
 
             $assignment = CandidateTestAssignment::where('user_id', $candidate->id)

@@ -5,6 +5,7 @@ namespace App\Modules\Assessment\Models;
 use App\Models\User;
 use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Models\Payment;
+use App\Modules\Organization\Models\OrganizationSeatAllocation;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +29,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $completed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property \App\Modules\Organization\Models\OrganizationSeatAllocation|null $seatAllocation
+ * @property OrganizationSeatAllocation|null $seatAllocation
  */
 class CandidateTestAssignment extends Model
 {
@@ -37,7 +38,7 @@ class CandidateTestAssignment extends Model
     protected $table = 'candidate_test_assignments';
 
     protected $attributes = [
-        'max_attempts'   => 2,
+        'max_attempts' => 2,
         'attempts_count' => 0,
     ];
 
@@ -59,12 +60,12 @@ class CandidateTestAssignment extends Model
     protected function casts(): array
     {
         return [
-            'user_id'        => 'integer',
-            'assigned_by'    => 'integer',
-            'max_attempts'   => 'integer',
+            'user_id' => 'integer',
+            'assigned_by' => 'integer',
+            'max_attempts' => 'integer',
             'attempts_count' => 'integer',
-            'assigned_at'    => 'datetime',
-            'completed_at'   => 'datetime',
+            'assigned_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
     }
 
@@ -95,7 +96,7 @@ class CandidateTestAssignment extends Model
 
     public function seatAllocation(): BelongsTo
     {
-        return $this->belongsTo(\App\Modules\Organization\Models\OrganizationSeatAllocation::class, 'organization_seat_allocation_id');
+        return $this->belongsTo(OrganizationSeatAllocation::class, 'organization_seat_allocation_id');
     }
 
     public function attempts(): HasMany
@@ -111,5 +112,22 @@ class CandidateTestAssignment extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    public function canBeUnassigned(): bool
+    {
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        if ($this->attempts_count > 0 || $this->final_attempt_id !== null || $this->completed_at !== null) {
+            return false;
+        }
+
+        if ($this->relationLoaded('attempts')) {
+            return $this->attempts->isEmpty();
+        }
+
+        return !$this->attempts()->exists();
     }
 }

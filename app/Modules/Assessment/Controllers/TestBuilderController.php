@@ -3,19 +3,32 @@
 namespace App\Modules\Assessment\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\AssessmentRequest;
 use App\Models\MediaAsset;
+use App\Models\RepositoryActivityLog;
+use App\Models\TestQuestionReview;
+use App\Models\User;
+use App\Modules\Assessment\Engines\AssignmentEngine;
+use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
+use App\Modules\Assessment\Services\DeliveryUnitBuilder;
 use App\Modules\Assessment\Services\TestBuilderService;
 use App\Modules\QuestionBank\Models\AudioGroup;
 use App\Modules\QuestionBank\Models\PassageGroup;
 use App\Modules\QuestionBank\Models\Question;
+use App\Modules\QuestionBank\Models\QuestionBank;
+use App\Notifications\EnterpriseSystemNotification;
+use App\Services\ActivityLogger;
 use App\Services\QuestionDifficultyDetectionService;
 use App\Services\ToeicQuestionValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class TestBuilderController extends Controller
@@ -29,14 +42,14 @@ class TestBuilderController extends Controller
      */
     public function index(Request $request): View
     {
-        $user  = $request->user();
+        $user = $request->user();
         $query = Test::with(['sections.testQuestions', 'creator']);
 
         // Search by Assessment Title or Test Type (Section 9)
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('test_type', 'like', "%{$search}%");
+                    ->orWhere('test_type', 'like', "%{$search}%");
             });
         }
 
@@ -68,7 +81,7 @@ class TestBuilderController extends Controller
         if ($user && $user->hasRole('teacher')) {
             $query->where(function ($q) use ($user) {
                 $q->where('created_by', $user->id)
-                  ->orWhere('assigned_to', $user->id);
+                    ->orWhere('assigned_to', $user->id);
             });
         }
 
@@ -84,7 +97,7 @@ class TestBuilderController extends Controller
             if ($search = $request->input('search')) {
                 $adminQuery->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('test_type', 'like', "%{$search}%");
+                        ->orWhere('test_type', 'like', "%{$search}%");
                 });
             }
 
@@ -128,24 +141,24 @@ class TestBuilderController extends Controller
         if ($user && $user->hasRole('teacher')) {
             $allMyTestsQuery->where(function ($q) use ($user) {
                 $q->where('created_by', $user->id)
-                  ->orWhere('assigned_to', $user->id);
+                    ->orWhere('assigned_to', $user->id);
             });
         }
 
-        $totalTests           = (clone $allMyTestsQuery)->count();
-        $draftTests           = (clone $allMyTestsQuery)->where('status', 'draft')->count();
+        $totalTests = (clone $allMyTestsQuery)->count();
+        $draftTests = (clone $allMyTestsQuery)->where('status', 'draft')->count();
         $pendingApprovalTests = (clone $allMyTestsQuery)->where('status', 'pending_approval')->count();
-        $approvedTests        = (clone $allMyTestsQuery)->where('status', 'approved')->count();
-        $publishedTests       = (clone $allMyTestsQuery)->where(function ($q) {
+        $approvedTests = (clone $allMyTestsQuery)->where('status', 'approved')->count();
+        $publishedTests = (clone $allMyTestsQuery)->where(function ($q) {
             $q->where('status', 'published')->orWhere('is_published', true);
         })->count();
-        $rejectedTests        = (clone $allMyTestsQuery)->where('status', 'rejected')->count();
+        $rejectedTests = (clone $allMyTestsQuery)->where('status', 'rejected')->count();
 
         // Latest active draft for "Continue Draft" Quick Action
         $latestDraft = (clone $allMyTestsQuery)->where('status', 'draft')->latest('updated_at')->first();
 
         $questions = Question::all();
-        $publishedQuestionBanks = \App\Modules\QuestionBank\Models\QuestionBank::with(['questions', 'aclCategory'])
+        $publishedQuestionBanks = QuestionBank::with(['questions', 'aclCategory'])
             ->whereIn('status', ['published', 'approved'])
             ->get();
 
@@ -251,7 +264,7 @@ class TestBuilderController extends Controller
         $validationResult = $this->validateAssessment($test);
         if (!$validationResult['is_valid']) {
             return redirect()->route('admin.tests.index')
-                ->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
+                ->with('error', 'Cannot submit Assessment for review: '.implode(' | ', $validationResult['errors']));
         }
 
         $previousStatus = $test->status;
@@ -272,7 +285,7 @@ class TestBuilderController extends Controller
     public function publish(Test $test): RedirectResponse
     {
         $user = request()->user();
-        if (! $user || (! $user->hasRole('repository-manager') && ! $user->hasRole('super-admin'))) {
+        if (!$user || (!$user->hasRole('repository-manager') && !$user->hasRole('super-admin'))) {
             abort(403, 'Operational Admins and Teachers cannot publish assessments. Assessment publishing is strictly reserved for Repository Managers.');
         }
 
@@ -300,11 +313,11 @@ class TestBuilderController extends Controller
         if (($test->is_published || in_array($test->status, ['published', 'approved'])) && !$user->hasRole('super-admin')) {
             $test->update(['status' => 'pending_deletion']);
 
-            \App\Models\RepositoryActivityLog::create([
+            RepositoryActivityLog::create([
                 'resource_type' => 'Test',
-                'resource_id'   => (string) $test->id,
-                'actor_id'      => $user->id,
-                'action'        => 'test_deletion_requested',
+                'resource_id' => (string) $test->id,
+                'actor_id' => $user->id,
+                'action' => 'test_deletion_requested',
                 'approval_note' => "Deletion requested for published assessment test '{$test->title}'. Awaiting Super Admin approval.",
             ]);
 
@@ -314,11 +327,11 @@ class TestBuilderController extends Controller
 
         $test->delete();
 
-        \App\Models\RepositoryActivityLog::create([
+        RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $user->id,
-            'action'        => 'test_deleted',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $user->id,
+            'action' => 'test_deleted',
             'approval_note' => "Assessment '{$test->title}' soft deleted.",
         ]);
 
@@ -335,14 +348,15 @@ class TestBuilderController extends Controller
 
         // Regular Admin Operational View: Render Assessment Candidate Assignment & Management workspace
         if ($user && $user->hasRole('admin') && !$user->hasRole(['teacher', 'repository-manager'])) {
-            $assignedCandidates = $test->assignments()->with(['user', 'assignedBy'])->latest('assigned_at')->get();
-            $availableStudents = $test->isSimulator() ? collect() : app(\App\Modules\Assessment\Engines\AssignmentEngine::class)->getEligibleCandidates($test);
+            $assignedCandidates = $test->assignments()->with(['user', 'assignedBy', 'attempts'])->latest('assigned_at')->get();
+            $availableStudents = $test->isSimulator() ? collect() : app(AssignmentEngine::class)->getEligibleCandidates($test);
+
             return view('assessment::admin_show', compact('test', 'assignedCandidates', 'availableStudents'));
         }
 
         // Repository Manager Governance: Prevent RM from accessing Teacher authoring surface
         if ($user && $user->hasRole('repository-manager') && !$user->hasRole('teacher')) {
-            $assessmentRequest = $test->assessmentRequest ?? \App\Models\AssessmentRequest::where('test_id', $test->id)->first();
+            $assessmentRequest = $test->assessmentRequest ?? AssessmentRequest::where('test_id', $test->id)->first();
             if ($assessmentRequest) {
                 return redirect()->route('admin.repository-manager.assessment-requests.assessment-show', $assessmentRequest->id);
             }
@@ -356,7 +370,7 @@ class TestBuilderController extends Controller
 
         // Super Admin Governance (when not acting as Teacher): Redirect to RM inspection if linked to a request
         if ($user && $user->hasRole('super-admin') && !$user->hasRole('teacher')) {
-            $assessmentRequest = $test->assessmentRequest ?? \App\Models\AssessmentRequest::where('test_id', $test->id)->first();
+            $assessmentRequest = $test->assessmentRequest ?? AssessmentRequest::where('test_id', $test->id)->first();
             if ($assessmentRequest) {
                 return redirect()->route('admin.repository-manager.assessment-requests.assessment-show', $assessmentRequest->id);
             }
@@ -368,28 +382,28 @@ class TestBuilderController extends Controller
 
         $test->load(['sections.testQuestions.question.choices', 'sections.testQuestions.question.questionBank', 'sections.mediaAssets', 'creator', 'assignedTeacher']);
 
-        $publishedQuestionBanks = \App\Modules\QuestionBank\Models\QuestionBank::with(['questions.choices'])
+        $publishedQuestionBanks = QuestionBank::with(['questions.choices'])
             ->whereIn('status', ['published', 'approved'])
             ->get();
 
-        $latestFeedbackLog = \App\Models\RepositoryActivityLog::where('resource_type', 'Test')
+        $latestFeedbackLog = RepositoryActivityLog::where('resource_type', 'Test')
             ->where('resource_id', (string) $test->id)
             ->whereIn('action', ['revision_requested', 'rejected'])
             ->with(['reviewer'])
             ->latest()
             ->first();
 
-        $testLogs = \App\Models\RepositoryActivityLog::where('resource_type', 'Test')
+        $testLogs = RepositoryActivityLog::where('resource_type', 'Test')
             ->where('resource_id', (string) $test->id)
             ->with(['reviewer', 'actor'])
             ->orderBy('created_at', 'asc')
             ->get();
 
         $submissionLog = $testLogs->firstWhere('action', 'submitted') ?? $testLogs->firstWhere('action', 'submission');
-        $revisionLog   = $testLogs->filter(fn($l) => in_array($l->action, ['revision_requested', 'rejected']))->last();
-        $approvalLog   = $testLogs->firstWhere('action', 'approved');
-        $publishLog    = $testLogs->filter(fn($l) => in_array($l->action, ['published', 'PUBLISH']))->last();
-        $unpublishLog  = $testLogs->filter(fn($l) => in_array($l->action, ['unpublished', 'UNPUBLISH']))->last();
+        $revisionLog = $testLogs->filter(fn ($l) => in_array($l->action, ['revision_requested', 'rejected']))->last();
+        $approvalLog = $testLogs->firstWhere('action', 'approved');
+        $publishLog = $testLogs->filter(fn ($l) => in_array($l->action, ['published', 'PUBLISH']))->last();
+        $unpublishLog = $testLogs->filter(fn ($l) => in_array($l->action, ['unpublished', 'UNPUBLISH']))->last();
 
         $hadRevision = $revisionLog !== null || in_array($test->status, ['needs_revision', 'revision_requested']);
         $isApproved = in_array($test->status, ['approved', 'published']) || $approvalLog !== null;
@@ -399,18 +413,18 @@ class TestBuilderController extends Controller
 
         // 1. Draft Created
         $workflowTimeline[] = [
-            'step'   => 'Draft Created',
+            'step' => 'Draft Created',
             'status' => 'completed',
-            'date'   => $test->created_at?->format('M d, Y H:i'),
-            'note'   => null,
+            'date' => $test->created_at?->format('M d, Y H:i'),
+            'note' => null,
         ];
 
         // 2. Submitted for Approval
         $workflowTimeline[] = [
-            'step'   => 'Submitted for Approval',
+            'step' => 'Submitted for Approval',
             'status' => ($test->status !== 'draft') ? 'completed' : 'pending',
-            'date'   => $submissionLog?->created_at?->format('M d, Y H:i') ?? ($test->status !== 'draft' ? $test->created_at?->format('M d, Y H:i') : null),
-            'note'   => null,
+            'date' => $submissionLog?->created_at?->format('M d, Y H:i') ?? ($test->status !== 'draft' ? $test->created_at?->format('M d, Y H:i') : null),
+            'note' => null,
         ];
 
         // 3. Repository Review
@@ -421,28 +435,28 @@ class TestBuilderController extends Controller
             $reviewStatus = 'active';
         }
         $workflowTimeline[] = [
-            'step'   => 'Repository Review',
+            'step' => 'Repository Review',
             'status' => $reviewStatus,
-            'date'   => $approvalLog?->created_at?->format('M d, Y H:i') ?? ($revisionLog?->created_at?->format('M d, Y H:i') ?? null),
-            'note'   => null,
+            'date' => $approvalLog?->created_at?->format('M d, Y H:i') ?? ($revisionLog?->created_at?->format('M d, Y H:i') ?? null),
+            'note' => null,
         ];
 
         // 4. Needs Revision (ONLY if applicable in lifecycle/history)
         if ($hadRevision) {
             $workflowTimeline[] = [
-                'step'   => 'Needs Revision',
+                'step' => 'Needs Revision',
                 'status' => in_array($test->status, ['needs_revision', 'revision_requested']) ? 'active' : 'completed',
-                'date'   => $revisionLog?->created_at?->format('M d, Y H:i'),
-                'note'   => $revisionLog?->approval_note,
+                'date' => $revisionLog?->created_at?->format('M d, Y H:i'),
+                'note' => $revisionLog?->approval_note,
             ];
         }
 
         // 5. Approved
         $workflowTimeline[] = [
-            'step'   => 'Approved',
+            'step' => 'Approved',
             'status' => $isApproved ? 'completed' : 'pending',
-            'date'   => $approvalLog?->created_at?->format('M d, Y H:i'),
-            'note'   => $isApproved ? 'Governance accepted, ready for publication.' : null,
+            'date' => $approvalLog?->created_at?->format('M d, Y H:i'),
+            'note' => $isApproved ? 'Governance accepted, ready for publication.' : null,
         ];
 
         // 6. Published
@@ -457,10 +471,10 @@ class TestBuilderController extends Controller
         }
 
         $workflowTimeline[] = [
-            'step'   => 'Published',
+            'step' => 'Published',
             'status' => $publishStatus,
-            'date'   => $isPublished ? $publishLog?->created_at?->format('M d, Y H:i') : null,
-            'note'   => $publishNote,
+            'date' => $isPublished ? $publishLog?->created_at?->format('M d, Y H:i') : null,
+            'note' => $publishNote,
         ];
 
         $validationResult = $this->validateAssessment($test);
@@ -484,21 +498,33 @@ class TestBuilderController extends Controller
         }
 
         $validated = $request->validate([
-            'title'            => ['sometimes', 'required', 'string', 'max:255'],
-            'test_type'        => ['sometimes', 'required', 'string'],
-            'scoring_method'   => ['nullable', 'string', 'in:automatic,human,hybrid'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'test_type' => ['sometimes', 'required', 'string'],
+            'scoring_method' => ['nullable', 'string', 'in:automatic,human,hybrid'],
             'duration_minutes' => ['sometimes', 'required', 'integer', 'min:1'],
-            'pass_score'       => ['sometimes', 'required', 'integer', 'min:0'],
-            'instructions'     => ['nullable', 'string'],
+            'pass_score' => ['sometimes', 'required', 'integer', 'min:0'],
+            'instructions' => ['nullable', 'string'],
         ]);
 
         $updateData = [];
-        if (isset($validated['title'])) $updateData['title'] = $validated['title'];
-        if (isset($validated['test_type'])) $updateData['test_type'] = $validated['test_type'];
-        if (isset($validated['scoring_method'])) $updateData['scoring_method'] = $validated['scoring_method'];
-        if (isset($validated['duration_minutes'])) $updateData['duration_minutes'] = $validated['duration_minutes'];
-        if (isset($validated['pass_score'])) $updateData['pass_score'] = $validated['pass_score'];
-        if (array_key_exists('instructions', $validated)) $updateData['instructions'] = $validated['instructions'];
+        if (isset($validated['title'])) {
+            $updateData['title'] = $validated['title'];
+        }
+        if (isset($validated['test_type'])) {
+            $updateData['test_type'] = $validated['test_type'];
+        }
+        if (isset($validated['scoring_method'])) {
+            $updateData['scoring_method'] = $validated['scoring_method'];
+        }
+        if (isset($validated['duration_minutes'])) {
+            $updateData['duration_minutes'] = $validated['duration_minutes'];
+        }
+        if (isset($validated['pass_score'])) {
+            $updateData['pass_score'] = $validated['pass_score'];
+        }
+        if (array_key_exists('instructions', $validated)) {
+            $updateData['instructions'] = $validated['instructions'];
+        }
 
         $test->update($updateData);
 
@@ -528,11 +554,11 @@ class TestBuilderController extends Controller
 
         $validationResult = $this->validateAssessment($test);
         $sections = $test->sections->sortBy('order')->values();
-        $deliveryData = \App\Modules\Assessment\Services\DeliveryUnitBuilder::build($test);
+        $deliveryData = DeliveryUnitBuilder::build($test);
 
         return view('teacher.assessment_preview', array_merge([
-            'test'             => $test,
-            'sections'         => $sections,
+            'test' => $test,
+            'sections' => $sections,
             'validationResult' => $validationResult,
         ], $deliveryData));
     }
@@ -554,7 +580,7 @@ class TestBuilderController extends Controller
 
         $validated = $request->validate([
             'test_section_id' => ['required', 'exists:test_sections,id'],
-            'question_id'     => ['required', 'exists:questions,id'],
+            'question_id' => ['required', 'exists:questions,id'],
         ]);
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
@@ -567,7 +593,7 @@ class TestBuilderController extends Controller
 
         try {
             $this->builderService->assignQuestionToSection($section, $question->id);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return redirect()->route('teacher.tests.show', $test->id)
                 ->with('error', $e->getMessage());
         }
@@ -598,22 +624,22 @@ class TestBuilderController extends Controller
 
         $validated = $request->validate([
             'test_section_id' => ['required', 'exists:test_sections,id'],
-            'prompt'          => $promptRule,
-            'question_type'   => ['required', 'string'],
-            'difficulty'      => ['nullable', 'string'],
-            'points'          => ['nullable', 'integer', 'min:1'],
-            'explanation'     => ['nullable', 'string'],
-            'choices'         => ['nullable', 'array'],
-            'correct_choice'  => ['nullable'],
-            'media_asset_id'       => ['nullable', 'string'],
+            'prompt' => $promptRule,
+            'question_type' => ['required', 'string'],
+            'difficulty' => ['nullable', 'string'],
+            'points' => ['nullable', 'integer', 'min:1'],
+            'explanation' => ['nullable', 'string'],
+            'choices' => ['nullable', 'array'],
+            'correct_choice' => ['nullable'],
+            'media_asset_id' => ['nullable', 'string'],
             'image_media_asset_id' => ['nullable', 'string'],
             'audio_media_asset_id' => ['nullable', 'string'],
-            'image_url'            => ['nullable', 'string'],
-            'audio_url'            => ['nullable', 'string'],
-            'passage_id'           => ['nullable', 'string'],
-            'passage_text'         => ['nullable', 'string'],
-            'part_number'          => ['nullable', 'integer', 'between:1,7'],
-            'section'              => ['nullable', 'string'],
+            'image_url' => ['nullable', 'string'],
+            'audio_url' => ['nullable', 'string'],
+            'passage_id' => ['nullable', 'string'],
+            'passage_text' => ['nullable', 'string'],
+            'part_number' => ['nullable', 'integer', 'between:1,7'],
+            'section' => ['nullable', 'string'],
         ]);
 
         $section = TestSection::where('test_id', $test->id)->where('id', $validated['test_section_id'])->firstOrFail();
@@ -623,7 +649,7 @@ class TestBuilderController extends Controller
         if ($request->filled('part_number')) {
             $partNumber = (int) $request->input('part_number');
             if (in_array($partNumber, [6, 7], true)) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'part_number' => "Part {$partNumber} questions must be authored through a Passage Group.",
                 ]);
             }
@@ -648,7 +674,7 @@ class TestBuilderController extends Controller
             // Server-side Integrity Defense: Ensure Part Number matches target Section type
             $targetSecType = is_object($section->section_type) ? $section->section_type->value : (string) $section->section_type;
             if ($sectionType !== $targetSecType) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'part_number' => "Part {$partNumber} ({$sectionType}) cannot be assigned to '{$section->title}' ({$targetSecType} section).",
                 ]);
             }
@@ -665,7 +691,7 @@ class TestBuilderController extends Controller
 
         $correctChoice = $request->input('correct_choice');
         if ($isMcq && (is_null($correctChoice) || $correctChoice === '')) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'correct_choice' => 'Please select the correct answer.',
             ]);
         }
@@ -675,49 +701,55 @@ class TestBuilderController extends Controller
         $isAudioOnlyChoice = ToeicQuestionValidator::isAudioOnlyChoicePart($partNumber);
         if (!empty($validated['choices'])) {
             foreach ($validated['choices'] as $idx => $choiceText) {
-                if ($partNumber === 1 && count($choices) >= 4) break;
-                if ($partNumber === 2 && count($choices) >= 3) break;
-                if (!$isAudioOnlyChoice && empty(trim((string)$choiceText))) continue;
+                if ($partNumber === 1 && count($choices) >= 4) {
+                    break;
+                }
+                if ($partNumber === 2 && count($choices) >= 3) {
+                    break;
+                }
+                if (!$isAudioOnlyChoice && empty(trim((string) $choiceText))) {
+                    continue;
+                }
                 $isCorrect = (!is_null($correctChoice) && $correctChoice !== '' && (string) $idx === (string) $correctChoice);
                 if ($isCorrect) {
                     $hasCorrect = true;
                 }
                 $choices[] = [
-                    'label'      => chr(65 + count($choices)),
-                    'content'    => $choiceText ?? '',
+                    'label' => chr(65 + count($choices)),
+                    'content' => $choiceText ?? '',
                     'is_correct' => $isCorrect,
-                    'order'      => count($choices) + 1,
+                    'order' => count($choices) + 1,
                 ];
             }
         }
 
         if ($isMcq && !$hasCorrect) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'correct_choice' => 'Please select the correct answer.',
             ]);
         }
 
         $this->builderService->createAssessmentQuestion($section, [
-            'prompt'                 => $validated['prompt'] ?? '',
-            'section'                => $sectionType,
-            'part_number'            => $partNumber,
-            'question_type'          => $validated['question_type'],
-            'difficulty'             => $detection['difficulty_level'],
-            'difficulty_score'       => $detection['difficulty_score'],
-            'difficulty_status'      => $detection['difficulty_status'],
-            'difficulty_source'      => 'auto',
-            'difficulty_factors'     => $detection['difficulty_factors'],
+            'prompt' => $validated['prompt'] ?? '',
+            'section' => $sectionType,
+            'part_number' => $partNumber,
+            'question_type' => $validated['question_type'],
+            'difficulty' => $detection['difficulty_level'],
+            'difficulty_score' => $detection['difficulty_score'],
+            'difficulty_status' => $detection['difficulty_status'],
+            'difficulty_source' => 'auto',
+            'difficulty_factors' => $detection['difficulty_factors'],
             'difficulty_detected_at' => $detection['difficulty_detected_at'],
-            'points'                 => $validated['points'] ?? 1,
-            'explanation'            => $validated['explanation'] ?? null,
-            'media_asset_id'         => $validated['media_asset_id'] ?? null,
-            'image_media_asset_id'   => ((int) $partNumber === 2) ? null : ($validated['image_media_asset_id'] ?? null),
-            'audio_media_asset_id'   => $validated['audio_media_asset_id'] ?? null,
-            'image_url'              => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? null),
-            'audio_url'              => $validated['audio_url'] ?? null,
-            'passage_id'             => $validated['passage_id'] ?? null,
-            'passage_text'           => $validated['passage_text'] ?? null,
-            'choices'                => $choices,
+            'points' => $validated['points'] ?? 1,
+            'explanation' => $validated['explanation'] ?? null,
+            'media_asset_id' => $validated['media_asset_id'] ?? null,
+            'image_media_asset_id' => ((int) $partNumber === 2) ? null : ($validated['image_media_asset_id'] ?? null),
+            'audio_media_asset_id' => $validated['audio_media_asset_id'] ?? null,
+            'image_url' => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? null),
+            'audio_url' => $validated['audio_url'] ?? null,
+            'passage_id' => $validated['passage_id'] ?? null,
+            'passage_text' => $validated['passage_text'] ?? null,
+            'choices' => $choices,
         ]);
 
         return redirect()->route('teacher.tests.show', $test->id)
@@ -742,33 +774,33 @@ class TestBuilderController extends Controller
 
         $validated = $request->validate([
             'test_section_id' => ['required', 'exists:test_sections,id'],
-            'title'           => ['nullable', 'string', 'max:255'],
-            'group_type'      => ['required', 'string', 'in:conversation,talk'],
-            'part_number'     => ['required', 'integer', 'in:3,4'],
-            'media_asset_id'  => ['nullable', 'exists:media_assets,id'],
-            'audio_url'       => ['nullable', 'string'],
-            'audio_script'    => ['nullable', 'string'],
-            'questions'       => ['required', 'array', 'size:3'],
-            'questions.*.prompt'         => ['nullable', 'string'],
-            'questions.*.difficulty'     => ['nullable', 'string'],
-            'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['nullable', 'array'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'group_type' => ['required', 'string', 'in:conversation,talk'],
+            'part_number' => ['required', 'integer', 'in:3,4'],
+            'media_asset_id' => ['nullable', 'exists:media_assets,id'],
+            'audio_url' => ['nullable', 'string'],
+            'audio_script' => ['nullable', 'string'],
+            'questions' => ['required', 'array', 'size:3'],
+            'questions.*.prompt' => ['nullable', 'string'],
+            'questions.*.difficulty' => ['nullable', 'string'],
+            'questions.*.explanation' => ['nullable', 'string'],
+            'questions.*.choices' => ['nullable', 'array'],
             'questions.*.correct_choice' => ['nullable'],
         ]);
 
         if ((int) $validated['part_number'] === 3 && $validated['group_type'] !== 'conversation') {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'group_type' => ['Part 3 audio group must have group_type set to conversation.'],
             ]);
         }
         if ((int) $validated['part_number'] === 4 && $validated['group_type'] !== 'talk') {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'group_type' => ['Part 4 audio group must have group_type set to talk.'],
             ]);
         }
 
         if (empty($validated['media_asset_id']) && empty($validated['audio_url'])) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'media_asset_id' => ['Please attach a shared audio file before saving this audio question group.'],
             ]);
         }
@@ -803,18 +835,18 @@ class TestBuilderController extends Controller
 
         $validated = $request->validate([
             'test_section_id' => ['nullable', 'exists:test_sections,id'],
-            'title'           => ['nullable', 'string', 'max:255'],
-            'group_type'      => ['nullable', 'string', 'in:conversation,talk'],
-            'part_number'     => ['nullable', 'integer', 'in:3,4'],
-            'media_asset_id'  => ['nullable', 'exists:media_assets,id'],
-            'audio_url'       => ['nullable', 'string'],
-            'audio_script'    => ['nullable', 'string'],
-            'questions'       => ['nullable', 'array', 'max:3'],
-            'questions.*.id'             => ['nullable', 'string'],
-            'questions.*.prompt'         => ['nullable', 'string'],
-            'questions.*.difficulty'     => ['nullable', 'string'],
-            'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['nullable', 'array'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'group_type' => ['nullable', 'string', 'in:conversation,talk'],
+            'part_number' => ['nullable', 'integer', 'in:3,4'],
+            'media_asset_id' => ['nullable', 'exists:media_assets,id'],
+            'audio_url' => ['nullable', 'string'],
+            'audio_script' => ['nullable', 'string'],
+            'questions' => ['nullable', 'array', 'max:3'],
+            'questions.*.id' => ['nullable', 'string'],
+            'questions.*.prompt' => ['nullable', 'string'],
+            'questions.*.difficulty' => ['nullable', 'string'],
+            'questions.*.explanation' => ['nullable', 'string'],
+            'questions.*.choices' => ['nullable', 'array'],
             'questions.*.correct_choice' => ['nullable'],
         ]);
 
@@ -867,13 +899,13 @@ class TestBuilderController extends Controller
 
         try {
             $this->builderService->deleteAudioGroup($test, $audioGroup);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return redirect()->route('teacher.tests.show', $test->id)
                 ->withErrors($e->validator);
         }
 
         $redirect = redirect()->route('teacher.tests.show', array_filter([
-            'test'    => $test->id,
+            'test' => $test->id,
             'section' => $originSectionId,
         ]))->with('status', "Part {$partNumber} {$groupType} Group removed successfully.");
 
@@ -900,35 +932,35 @@ class TestBuilderController extends Controller
         }
 
         $validated = $request->validate([
-            'test_section_id'  => ['required', 'exists:test_sections,id'],
-            'title'            => ['nullable', 'string', 'max:255'],
-            'part_number'      => ['required', 'integer', 'in:6,7'],
-            'passage_type'     => ['required', 'string', 'in:single,double,triple'],
+            'test_section_id' => ['required', 'exists:test_sections,id'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'part_number' => ['required', 'integer', 'in:6,7'],
+            'passage_type' => ['required', 'string', 'in:single,double,triple'],
             'context_metadata' => ['nullable', 'array'],
-            'passages'         => ['required', 'array', 'min:1', 'max:3'],
-            'passages.*.id'            => ['nullable', 'string'],
-            'passages.*.title'         => ['nullable', 'string', 'max:255'],
-            'passages.*.content'       => ['nullable', 'string'],
-            'passages.*.image_url'     => ['nullable', 'string'],
-            'passages.*.media_asset_id'=> ['nullable', 'string'],
-            'passages.*.content_mode'  => ['nullable', 'string'],
+            'passages' => ['required', 'array', 'min:1', 'max:3'],
+            'passages.*.id' => ['nullable', 'string'],
+            'passages.*.title' => ['nullable', 'string', 'max:255'],
+            'passages.*.content' => ['nullable', 'string'],
+            'passages.*.image_url' => ['nullable', 'string'],
+            'passages.*.media_asset_id' => ['nullable', 'string'],
+            'passages.*.content_mode' => ['nullable', 'string'],
             'passages.*.document_type' => ['nullable', 'string'],
-            'passages.*.order_in_group'=> ['nullable', 'integer'],
-            'questions'        => ['required', 'array', 'min:1', 'max:5'],
-            'questions.*.id'             => ['nullable', 'string'],
-            'questions.*.prompt'         => ['nullable', 'string'],
-            'questions.*.difficulty'     => ['nullable', 'string'],
-            'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['nullable', 'array'],
+            'passages.*.order_in_group' => ['nullable', 'integer'],
+            'questions' => ['required', 'array', 'min:1', 'max:5'],
+            'questions.*.id' => ['nullable', 'string'],
+            'questions.*.prompt' => ['nullable', 'string'],
+            'questions.*.difficulty' => ['nullable', 'string'],
+            'questions.*.explanation' => ['nullable', 'string'],
+            'questions.*.choices' => ['nullable', 'array'],
             'questions.*.correct_choice' => ['nullable'],
-            'questions.*.audio_url'      => ['nullable', 'string'],
+            'questions.*.audio_url' => ['nullable', 'string'],
             'questions.*.media_asset_id' => ['nullable', 'string'],
         ]);
 
         if ((int) $validated['part_number'] === 6) {
             $hasPassageText = !empty(trim((string) ($validated['passages'][0]['content'] ?? '')));
             if (!$hasPassageText) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'passages.0.content' => ['Passage text is required before saving a Part 6 Text Completion group.'],
                 ]);
             }
@@ -938,9 +970,9 @@ class TestBuilderController extends Controller
 
         try {
             $passageGroup = $this->builderService->createPassageGroup($section, $validated);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return redirect()->route('teacher.tests.show', array_filter([
-                'test'    => $test->id,
+                'test' => $test->id,
                 'section' => $section->id,
             ]))
                 ->withErrors($e->validator ?: $e->getMessageBag())
@@ -951,7 +983,7 @@ class TestBuilderController extends Controller
         $partNum = (int) $validated['part_number'];
         $isPart6 = $partNum === 6;
         $groupTypeName = $isPart6 ? 'Text Completion' : 'Passage';
-        $completeCount = $passageGroup->questions->filter(fn($q) => $q->isCompleteChild())->count();
+        $completeCount = $passageGroup->questions->filter(fn ($q) => $q->isCompleteChild())->count();
         $targetCount = $isPart6 ? 4 : $passageGroup->questions->count();
 
         $statusMsg = $passageGroup->isComplete()
@@ -979,28 +1011,28 @@ class TestBuilderController extends Controller
         }
 
         $validated = $request->validate([
-            'test_section_id'  => ['nullable', 'exists:test_sections,id'],
-            'title'            => ['nullable', 'string', 'max:255'],
-            'part_number'      => ['nullable', 'integer', 'in:6,7'],
-            'passage_type'     => ['nullable', 'string', 'in:single,double,triple'],
+            'test_section_id' => ['nullable', 'exists:test_sections,id'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'part_number' => ['nullable', 'integer', 'in:6,7'],
+            'passage_type' => ['nullable', 'string', 'in:single,double,triple'],
             'context_metadata' => ['nullable', 'array'],
-            'passages'         => ['required', 'array', 'min:1', 'max:3'],
-            'passages.*.id'            => ['nullable', 'string'],
-            'passages.*.title'         => ['nullable', 'string', 'max:255'],
-            'passages.*.content'       => ['nullable', 'string'],
-            'passages.*.image_url'     => ['nullable', 'string'],
-            'passages.*.media_asset_id'=> ['nullable', 'string'],
-            'passages.*.content_mode'  => ['nullable', 'string'],
+            'passages' => ['required', 'array', 'min:1', 'max:3'],
+            'passages.*.id' => ['nullable', 'string'],
+            'passages.*.title' => ['nullable', 'string', 'max:255'],
+            'passages.*.content' => ['nullable', 'string'],
+            'passages.*.image_url' => ['nullable', 'string'],
+            'passages.*.media_asset_id' => ['nullable', 'string'],
+            'passages.*.content_mode' => ['nullable', 'string'],
             'passages.*.document_type' => ['nullable', 'string'],
-            'passages.*.order_in_group'=> ['nullable', 'integer'],
-            'questions'        => ['required', 'array', 'min:1', 'max:5'],
-            'questions.*.id'             => ['nullable', 'string'],
-            'questions.*.prompt'         => ['nullable', 'string'],
-            'questions.*.difficulty'     => ['nullable', 'string'],
-            'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['nullable', 'array'],
+            'passages.*.order_in_group' => ['nullable', 'integer'],
+            'questions' => ['required', 'array', 'min:1', 'max:5'],
+            'questions.*.id' => ['nullable', 'string'],
+            'questions.*.prompt' => ['nullable', 'string'],
+            'questions.*.difficulty' => ['nullable', 'string'],
+            'questions.*.explanation' => ['nullable', 'string'],
+            'questions.*.choices' => ['nullable', 'array'],
             'questions.*.correct_choice' => ['nullable'],
-            'questions.*.audio_url'      => ['nullable', 'string'],
+            'questions.*.audio_url' => ['nullable', 'string'],
             'questions.*.media_asset_id' => ['nullable', 'string'],
         ]);
 
@@ -1011,9 +1043,9 @@ class TestBuilderController extends Controller
 
         try {
             $updatedGroup = $this->builderService->updatePassageGroup($passageGroup, $validated, $section);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $errRedirect = redirect()->route('teacher.tests.show', array_filter([
-                'test'    => $test->id,
+                'test' => $test->id,
                 'section' => $section?->id,
             ]))
                 ->withErrors($e->validator ?: $e->getMessageBag())
@@ -1029,7 +1061,7 @@ class TestBuilderController extends Controller
         $partNum = (int) $updatedGroup->part_number;
         $isPart6 = $partNum === 6;
         $groupTypeName = $isPart6 ? 'Text Completion' : 'Reading Passage';
-        $completeCount = $updatedGroup->questions->filter(fn($q) => $q->isCompleteChild())->count();
+        $completeCount = $updatedGroup->questions->filter(fn ($q) => $q->isCompleteChild())->count();
         $targetCount = $isPart6 ? 4 : $updatedGroup->questions->count();
 
         $statusMsg = $updatedGroup->isComplete()
@@ -1037,9 +1069,9 @@ class TestBuilderController extends Controller
             : "Part {$partNum} {$groupTypeName} Group draft updated ({$completeCount}/{$targetCount} Complete).";
 
         $redirect = redirect()->route('teacher.tests.show', array_filter([
-            'test'    => $test->id,
+            'test' => $test->id,
             'section' => $section?->id,
-            'focus'   => "passage-group-card-{$updatedGroup->id}",
+            'focus' => "passage-group-card-{$updatedGroup->id}",
         ]))->with('status', $statusMsg);
 
         if ($section) {
@@ -1078,13 +1110,13 @@ class TestBuilderController extends Controller
 
         try {
             $this->builderService->deletePassageGroup($test, $passageGroup);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return redirect()->route('teacher.tests.show', $test->id)
                 ->withErrors($e->validator);
         }
 
         $redirect = redirect()->route('teacher.tests.show', array_filter([
-            'test'    => $test->id,
+            'test' => $test->id,
             'section' => $originSectionId,
         ]))->with('status', "Part {$partNumber} {$groupType} Group removed successfully.");
 
@@ -1137,7 +1169,7 @@ class TestBuilderController extends Controller
         }
 
         $validated = $request->validate([
-            'title'        => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'section_type' => ['nullable', 'string', 'in:listening,reading,speaking,writing'],
             'instructions' => ['nullable', 'string'],
         ]);
@@ -1169,7 +1201,7 @@ class TestBuilderController extends Controller
         }
 
         $validated = $request->validate([
-            'title'        => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'section_type' => ['nullable', 'string', 'in:listening,reading,speaking,writing'],
             'instructions' => ['nullable', 'string'],
         ]);
@@ -1204,7 +1236,7 @@ class TestBuilderController extends Controller
 
         try {
             $this->builderService->deleteSection($test, $section);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return redirect()->route('teacher.tests.show', $test->id)
                 ->withErrors($e->validator);
         }
@@ -1234,8 +1266,8 @@ class TestBuilderController extends Controller
 
         $validated = $request->validate([
             'media_asset_id' => ['required', 'string', 'exists:media_assets,id'],
-            'caption'        => ['nullable', 'string', 'max:255'],
-            'order'          => ['nullable', 'integer', 'min:1'],
+            'caption' => ['nullable', 'string', 'max:255'],
+            'order' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $this->builderService->attachMediaToSection(
@@ -1279,7 +1311,7 @@ class TestBuilderController extends Controller
     /**
      * Lazy Load Single Question for Editing (TASK 4 - Progressive Disclosure).
      */
-    public function editQuestion(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question)
+    public function editQuestion(Request $request, Test $test, Question $question)
     {
         $user = $request->user();
 
@@ -1298,10 +1330,10 @@ class TestBuilderController extends Controller
         if ($question->question_bank_id !== null) {
             if ($request->wantsJson()) {
                 return response()->json([
-                    'success'   => false,
+                    'success' => false,
                     'is_master' => true,
-                    'message'   => 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.',
-                    'question'  => $question,
+                    'message' => 'Master Questions are governed content and cannot be edited directly from Test Builder. Request a Repository Revision through the governance workflow.',
+                    'question' => $question,
                 ], 403);
             }
 
@@ -1311,7 +1343,7 @@ class TestBuilderController extends Controller
 
         if ($request->wantsJson()) {
             return response()->json([
-                'success'  => true,
+                'success' => true,
                 'question' => $question,
             ]);
         }
@@ -1322,15 +1354,15 @@ class TestBuilderController extends Controller
             $originSectionId = null;
         }
         if (!$originSectionId) {
-            $originSectionId = \App\Modules\Assessment\Models\TestQuestion::where('question_id', (string) $question->id)
-                ->whereHas('section', fn($q) => $q->where('test_id', (string) $test->id))
+            $originSectionId = TestQuestion::where('question_id', (string) $question->id)
+                ->whereHas('section', fn ($q) => $q->where('test_id', (string) $test->id))
                 ->first()?->test_section_id;
         }
         if (!$originSectionId && $question->part_number) {
             $originSectionId = $test->sections()->where('title', 'LIKE', "%Part {$question->part_number}%")->orWhere('order', $question->part_number)->first()?->id;
         }
 
-        $returnFocus = $request->query('return_focus') ?? $request->query('focus') ?? ('question-card-' . $question->id);
+        $returnFocus = $request->query('return_focus') ?? $request->query('focus') ?? ('question-card-'.$question->id);
 
         $returnUrl = $originSectionId
             ? route('teacher.tests.show', ['test' => $test->id, 'section' => $originSectionId, 'focus' => $returnFocus])
@@ -1342,7 +1374,7 @@ class TestBuilderController extends Controller
     /**
      * Update an individual question linked to the assessment (TASK 3, TASK 9).
      */
-    public function updateQuestion(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse|JsonResponse
+    public function updateQuestion(Request $request, Test $test, Question $question): RedirectResponse|JsonResponse
     {
         $user = $request->user();
 
@@ -1373,21 +1405,21 @@ class TestBuilderController extends Controller
         $promptRule = ToeicQuestionValidator::requiresPrompt($rawPartNumber) ? ['required', 'string'] : ['nullable', 'string'];
 
         $validated = $request->validate([
-            'prompt'               => $promptRule,
-            'question_type'        => ['nullable', 'string'],
-            'difficulty'           => ['nullable', 'string'],
-            'explanation'          => ['nullable', 'string'],
-            'choices'              => ['nullable', 'array'],
-            'correct_choice'       => ['nullable'],
-            'media_asset_id'       => ['nullable', 'string'],
+            'prompt' => $promptRule,
+            'question_type' => ['nullable', 'string'],
+            'difficulty' => ['nullable', 'string'],
+            'explanation' => ['nullable', 'string'],
+            'choices' => ['nullable', 'array'],
+            'correct_choice' => ['nullable'],
+            'media_asset_id' => ['nullable', 'string'],
             'image_media_asset_id' => ['nullable', 'string'],
             'audio_media_asset_id' => ['nullable', 'string'],
-            'image_url'            => ['nullable', 'string'],
-            'audio_url'            => ['nullable', 'string'],
-            'passage_id'           => ['nullable', 'string'],
-            'passage_text'         => ['nullable', 'string'],
-            'part_number'          => ['nullable', 'integer', 'between:1,7'],
-            'section'              => ['nullable', 'string'],
+            'image_url' => ['nullable', 'string'],
+            'audio_url' => ['nullable', 'string'],
+            'passage_id' => ['nullable', 'string'],
+            'passage_text' => ['nullable', 'string'],
+            'part_number' => ['nullable', 'integer', 'between:1,7'],
+            'section' => ['nullable', 'string'],
         ]);
 
         $detection = QuestionDifficultyDetectionService::detect($request->all(), $question);
@@ -1420,16 +1452,24 @@ class TestBuilderController extends Controller
 
         // Reuse existing Question ID (TASK 3 & TASK 9)
         $question->prompt = $validated['prompt'] ?? '';
-        if (isset($validated['question_type'])) $question->question_type = $validated['question_type'];
+        if (isset($validated['question_type'])) {
+            $question->question_type = $validated['question_type'];
+        }
         $question->difficulty = $detection['difficulty_level'];
         $question->difficulty_score = $detection['difficulty_score'];
         $question->difficulty_status = $detection['difficulty_status'];
         $question->difficulty_source = 'auto';
         $question->difficulty_factors = $detection['difficulty_factors'];
         $question->difficulty_detected_at = $detection['difficulty_detected_at'];
-        if (isset($validated['explanation'])) $question->explanation = $validated['explanation'];
-        if (isset($validated['passage_id'])) $question->passage_id = $validated['passage_id'];
-        if (isset($validated['passage_text'])) $question->passage_text = $validated['passage_text'];
+        if (isset($validated['explanation'])) {
+            $question->explanation = $validated['explanation'];
+        }
+        if (isset($validated['passage_id'])) {
+            $question->passage_id = $validated['passage_id'];
+        }
+        if (isset($validated['passage_text'])) {
+            $question->passage_text = $validated['passage_text'];
+        }
 
         $effectivePart = $question->part_number ?? $request->input('part_number');
         if ((int) $effectivePart === 2) {
@@ -1467,7 +1507,7 @@ class TestBuilderController extends Controller
             $correctChoiceIndex = $request->input('correct_choice');
 
             if ($isMcq && (is_null($correctChoiceIndex) || $correctChoiceIndex === '')) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'correct_choice' => 'Please select the correct answer.',
                 ]);
             }
@@ -1481,9 +1521,15 @@ class TestBuilderController extends Controller
             $isPart2 = ((int) $effectivePart === 2);
 
             foreach ($choicesData as $idx => $choiceText) {
-                if ($isPart1 && $validIdx >= 4) break;
-                if ($isPart2 && $validIdx >= 3) break;
-                if (!$isAudioOnlyChoice && empty(trim((string)$choiceText))) continue;
+                if ($isPart1 && $validIdx >= 4) {
+                    break;
+                }
+                if ($isPart2 && $validIdx >= 3) {
+                    break;
+                }
+                if (!$isAudioOnlyChoice && empty(trim((string) $choiceText))) {
+                    continue;
+                }
 
                 $isCorrect = (!is_null($correctChoiceIndex) && $correctChoiceIndex !== '' && (string) $idx === (string) $correctChoiceIndex);
                 if ($isCorrect) {
@@ -1494,18 +1540,18 @@ class TestBuilderController extends Controller
 
                 if ($choice) {
                     $choice->update([
-                        'label'       => chr(65 + $validIdx),
-                        'content'     => $choiceText ?? '',
+                        'label' => chr(65 + $validIdx),
+                        'content' => $choiceText ?? '',
                         'choice_text' => $choiceText ?? '',
-                        'is_correct'  => $isCorrect,
+                        'is_correct' => $isCorrect,
                     ]);
                 } else {
                     $question->choices()->create([
-                        'label'       => chr(65 + $validIdx),
-                        'content'     => $choiceText ?? '',
+                        'label' => chr(65 + $validIdx),
+                        'content' => $choiceText ?? '',
                         'choice_text' => $choiceText ?? '',
-                        'is_correct'  => $isCorrect,
-                        'order'       => $validIdx + 1,
+                        'is_correct' => $isCorrect,
+                        'order' => $validIdx + 1,
                     ]);
                 }
                 $validIdx++;
@@ -1518,14 +1564,14 @@ class TestBuilderController extends Controller
             }
 
             if ($isMcq && !$hasCorrect && $validIdx > 0) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'correct_choice' => 'Please select the correct answer.',
                 ]);
             }
         }
 
         // Clear/resolve question review flag upon Teacher edit (TASK 6)
-        \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+        TestQuestionReview::where('test_id', (string) $test->id)
             ->where('question_id', (string) $question->id)
             ->delete();
 
@@ -1535,15 +1581,15 @@ class TestBuilderController extends Controller
             $returnSectionId = null;
         }
         if (!$returnSectionId) {
-            $returnSectionId = \App\Modules\Assessment\Models\TestQuestion::where('question_id', (string) $question->id)
-                ->whereHas('section', fn($q) => $q->where('test_id', (string) $test->id))
+            $returnSectionId = TestQuestion::where('question_id', (string) $question->id)
+                ->whereHas('section', fn ($q) => $q->where('test_id', (string) $test->id))
                 ->first()?->test_section_id;
         }
         if (!$returnSectionId && $question->part_number) {
             $returnSectionId = $test->sections()->where('title', 'LIKE', "%Part {$question->part_number}%")->orWhere('order', $question->part_number)->first()?->id;
         }
 
-        $returnFocus = $request->input('return_focus') ?? $request->input('focus') ?? ('question-card-' . $question->id);
+        $returnFocus = $request->input('return_focus') ?? $request->input('focus') ?? ('question-card-'.$question->id);
 
         $redirectParams = ['test' => $test->id];
         if ($returnSectionId) {
@@ -1576,35 +1622,35 @@ class TestBuilderController extends Controller
         $validationResult = $this->validateAssessment($test);
         if (!$validationResult['is_valid']) {
             return redirect()->route('teacher.tests.show', $test->id)
-                ->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
+                ->with('error', 'Cannot submit Assessment for review: '.implode(' | ', $validationResult['errors']));
         }
 
         $previousStatus = $test->status;
         $isFirstSubmission = ($previousStatus === 'draft');
 
         $test->update([
-            'status'       => 'pending_approval',
+            'status' => 'pending_approval',
             'is_published' => false,
         ]);
 
-        \App\Models\RepositoryActivityLog::create([
+        RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $user->id,
-            'action'        => 'assessment_resubmitted',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $user->id,
+            'action' => 'assessment_resubmitted',
             'approval_note' => 'Assessment resubmitted for review.',
         ]);
 
         $this->notifyRepositoryManagersOfSubmission($test, $user, $isFirstSubmission);
 
         return redirect()->route('teacher.tests.show', $test->id)
-            ->with('status', "Assessment resubmitted successfully.");
+            ->with('status', 'Assessment resubmitted successfully.');
     }
 
     /**
      * Dispatch in-app EnterpriseSystemNotification to Repository Managers on assessment submission/resubmission.
      */
-    private function notifyRepositoryManagersOfSubmission(Test $test, ?\App\Models\User $actor, bool $isFirstSubmission = true): void
+    private function notifyRepositoryManagersOfSubmission(Test $test, ?User $actor, bool $isFirstSubmission = true): void
     {
         $actorName = $actor?->name ?? 'Teacher';
         $title = $isFirstSubmission
@@ -1619,12 +1665,12 @@ class TestBuilderController extends Controller
 
         $targetUrl = route('admin.repository-manager.assessment-review', $test->id);
 
-        $repoManagers = \App\Models\User::role('repository-manager')->get();
+        $repoManagers = User::role('repository-manager')->get();
 
         foreach ($repoManagers as $manager) {
             if (method_exists($manager, 'notify')) {
                 try {
-                    $manager->notify(new \App\Notifications\EnterpriseSystemNotification(
+                    $manager->notify(new EnterpriseSystemNotification(
                         title: $title,
                         message: $message,
                         type: $notifType,
@@ -1634,7 +1680,7 @@ class TestBuilderController extends Controller
                         targetUrl: $targetUrl
                     ));
                 } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning("Failed to dispatch assessment submission notification to RM #{$manager->id} for Test #{$test->id}: " . $e->getMessage());
+                    Log::warning("Failed to dispatch assessment submission notification to RM #{$manager->id} for Test #{$test->id}: ".$e->getMessage());
                 }
             }
         }
@@ -1665,8 +1711,8 @@ class TestBuilderController extends Controller
             'candidate_id' => ['required', 'exists:users,id'],
         ]);
 
-        $candidate = \App\Models\User::findOrFail($validated['candidate_id']);
-        $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
+        $candidate = User::findOrFail($validated['candidate_id']);
+        $assignmentEngine = app(AssignmentEngine::class);
 
         try {
             $assignment = $assignmentEngine->assignToUser($test, $candidate, $request->user());
@@ -1674,19 +1720,49 @@ class TestBuilderController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        \App\Services\ActivityLogger::log('CANDIDATE_ASSIGNED', "Assigned candidate '{$candidate->name}' to test '{$test->title}'", $assignment);
+        ActivityLogger::log('CANDIDATE_ASSIGNED', "Assigned candidate '{$candidate->name}' to test '{$test->title}'", $assignment);
 
         return back()->with('status', "Candidate '{$candidate->name}' successfully assigned to '{$test->title}'.");
     }
 
     /**
-     * Unassign a candidate from an assessment test.
+     * Unassign a candidate assignment from an assessment test.
      */
-    public function unassignCandidate(Request $request, Test $test, \App\Models\User $user): RedirectResponse
+    public function unassignCandidate(Request $request, Test $test, CandidateTestAssignment|string $assignment): RedirectResponse
     {
-        $assignmentEngine = app(\App\Modules\Assessment\Engines\AssignmentEngine::class);
-        $assignmentEngine->unassign($test, $user);
+        $actor = $request->user();
+        if (!$actor || !$actor->hasRole(['admin', 'super-admin'])) {
+            abort(403, 'Unauthorized: Only administrators can unassign candidates.');
+        }
 
-        return back()->with('status', "Candidate '{$user->name}' unassigned from '{$test->title}'.");
+        // If string or numeric user_id passed, resolve CandidateTestAssignment
+        if (is_string($assignment) || is_numeric($assignment)) {
+            $resolved = CandidateTestAssignment::find((string) $assignment);
+            if (!$resolved) {
+                $resolved = CandidateTestAssignment::where('test_id', $test->id)
+                    ->where('user_id', $assignment)
+                    ->where('status', 'active')
+                    ->first();
+            }
+            if (!$resolved) {
+                abort(404, 'Assessment assignment not found.');
+            }
+            $assignment = $resolved;
+        }
+
+        if ((string) $assignment->test_id !== (string) $test->id) {
+            abort(404, 'Assignment does not belong to this assessment test.');
+        }
+
+        $candidateName = $assignment->user?->name ?? 'Candidate';
+
+        try {
+            $assignmentEngine = app(AssignmentEngine::class);
+            $assignmentEngine->unassignAssignment($assignment);
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', "Candidate '{$candidateName}' unassigned from '{$test->title}'.");
     }
 }

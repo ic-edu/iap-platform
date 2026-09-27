@@ -348,18 +348,44 @@
                                 {{ $assignment->assignedBy?->name ?? 'System Admin' }}
                             </td>
                             <td class="px-4 py-3.5">
-                                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                @php
+                                    $statusStr = strtolower((string) $assignment->status);
+                                    $badgeClass = match($statusStr) {
+                                        'active'     => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                                        'completed'  => 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+                                        'unassigned' => 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+                                        'expired'    => 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                                        default      => 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+                                    };
+                                @endphp
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider {{ $badgeClass }} border">
                                     {{ strtoupper($assignment->status) }}
                                 </span>
                             </td>
                             <td class="px-4 py-3.5 text-right">
-                                <form action="{{ route('admin.tests.unassign-candidate', [$test->id, $assignment->user_id]) }}" method="POST" class="inline-flex">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 hover:text-rose-500 text-xs font-semibold border border-rose-500/30 transition-colors">
-                                        ✕ Unassign
-                                    </button>
-                                </form>
+                                @if($assignment->canBeUnassigned())
+                                    <form action="{{ route('admin.tests.unassign-candidate', [$test->id, $assignment->id]) }}" method="POST" class="inline-flex">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 hover:text-rose-500 text-xs font-semibold border border-rose-500/30 transition-colors">
+                                            ✕ Unassign
+                                        </button>
+                                    </form>
+                                @elseif($assignment->status === 'active' && ($assignment->attempts_count > 0 || $assignment->attempts()->exists()))
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold text-amber-500 bg-amber-500/10 border border-amber-500/20">
+                                        In Progress (Locked)
+                                    </span>
+                                @elseif($assignment->status === 'completed')
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20">
+                                        Completed (Final)
+                                    </span>
+                                @elseif($assignment->status === 'unassigned')
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold text-slate-400 bg-slate-500/10 border border-slate-500/20">
+                                        Unassigned
+                                    </span>
+                                @else
+                                    <span class="text-[11px] text-slate-400">—</span>
+                                @endif
                             </td>
                         </tr>
                         @empty

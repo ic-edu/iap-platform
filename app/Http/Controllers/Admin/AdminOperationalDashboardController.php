@@ -106,7 +106,17 @@ class AdminOperationalDashboardController extends Controller
             'entitlement.orderItem.order',
         ])
             ->where('status', 'active')
-            ->whereDoesntHave('testAssignments', fn ($q) => $q->where('status', 'active'))
+            ->whereDoesntHave('testAssignments', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('status', 'active')
+                        ->orWhere('status', 'completed')
+                        ->orWhereNotNull('final_attempt_id')
+                        ->orWhereNotNull('completed_at')
+                        ->orWhereHas('attempts', function ($at) {
+                            $at->whereIn('status', ['submitted', 'completed', 'in_progress', 'expired']);
+                        });
+                });
+            })
             ->whereHas('entitlement', fn ($q) => $q->where('status', 'active'))
             ->whereHas('membership', fn ($q) => $q->where('status', 'active'))
             ->latest('allocated_at')

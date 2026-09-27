@@ -891,4 +891,236 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
         $filteredResponse->assertSee($this->publishedToeicTest->title);
         $filteredResponse->assertDontSee('No published Mock Tests currently have active candidate assignments.');
     }
+
+    /**
+     * TEST: Active assignment with zero attempts can be unassigned, returns seat to RA queue, and removes test from candidate portal.
+     */
+    public function test_active_assignment_zero_attempts_can_be_unassigned_and_reappears_in_ra_queue(): void
+    {
+        $engine = app(AssignmentEngine::class);
+        $assignment = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        // Verify Candidate sees the test
+        $canResponse = $this->actingAs($this->candidateA1)->get(route('candidate.available-tests'));
+        $canResponse->assertStatus(200);
+        $canResponse->assertSee($this->publishedToeicTest->title);
+
+        // Verify seat is NOT in RA awaiting queue
+        $dashBefore = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $this->assertFalse($dashBefore->viewData('institutionalSeatsAwaitingAssignment')->contains('id', $this->allocationA1->id));
+
+        // Unassign via controller route
+        $unassignResponse = $this->actingAs($this->adminUser)->delete(
+            route('admin.tests.unassign-candidate', [$this->publishedToeicTest->id, $assignment->id])
+        );
+        $unassignResponse->assertRedirect();
+        $unassignResponse->assertSessionHas('status');
+
+        $this->assertEquals('unassigned', $assignment->fresh()->status);
+
+        // Candidate no longer sees the test in Available Tests
+        $canAfterResponse = $this->actingAs($this->candidateA1)->get(route('candidate.available-tests'));
+        $canAfterResponse->assertStatus(200);
+        $canAfterResponse->assertDontSee($this->publishedToeicTest->title);
+
+        // Seat returns to RA awaiting queue
+        $dashAfter = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $this->assertTrue($dashAfter->viewData('institutionalSeatsAwaitingAssignment')->contains('id', $this->allocationA1->id));
+
+        // RA can re-assign from the same seat allocation
+        $reassigned = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+        $this->assertNotNull($reassigned);
+        $this->assertEquals('active', $reassigned->status);
+    }
+
+    /**
+     * TEST: Unassign is strictly rejected when an attempt has started.
+     */
+    public function test_unassign_is_rejected_when_attempt_has_started(): void
+    {
+        $engine = app(AssignmentEngine::class);
+        $assignment = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        // Create an attempt
+        Attempt::create([
+            'assignment_id' => $assignment->id,
+            'user_id' => $this->candidateA1->id,
+            'test_id' => $this->publishedToeicTest->id,
+            'status' => 'in_progress',
+            'started_at' => now(),
+        ]);
+
+        $this->assertFalse($assignment->fresh()->canBeUnassigned());
+
+        // Attempting to unassign via controller fails
+        $response = $this->actingAs($this->adminUser)->delete(
+            route('admin.tests.unassign-candidate', [$this->publishedToeicTest->id, $assignment->id])
+        );
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+
+        $this->assertEquals('active', $assignment->fresh()->status);
+
+        // AssignmentEngine method directly throws
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot unassign assessment: candidate has already started or completed assessment attempts.');
+        $engine->unassignAssignment($assignment->fresh());
+    }
+
+    /**
+     * TEST: Unassign is strictly rejected when assignment is completed.
+     */
+    public function test_unassign_is_rejected_when_assignment_is_completed(): void
+    {
+        $engine = app(AssignmentEngine::class);
+        $assignment = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        $assignment->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        $this->assertFalse($assignment->fresh()->canBeUnassigned());
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot unassign assessment. Assignment status is completed.');
+        $engine->unassignAssignment($assignment->fresh());
+    }
+
+    /**
+     * TEST: Completed assignment permanently consumes the seat allocation in RA queue and server-side guard.
+     */
+    public function test_completed_assignment_permanently_consumes_seat_allocation(): void
+    {
+        $engine = app(AssignmentEngine::class);
+        $assignment = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        // Mark assignment completed
+        $assignment->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        // Seat A must NOT return to RA awaiting queue
+        $dashResponse = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $this->assertFalse($dashResponse->viewData('institutionalSeatsAwaitingAssignment')->contains('id', $this->allocationA1->id));
+
+        // Re-assignment from consumed seat allocation is rejected by backend guard
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot assign assessment. This institutional seat has already been consumed by a completed assessment.');
+        $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+    }
+
+    /**
+     * TEST: Historical completed assignment does NOT block a new seat allocation from a new commercial cycle for the same candidate.
+     */
+    public function test_new_commercial_cycle_allows_reentry_for_same_candidate(): void
+    {
+        $engine = app(AssignmentEngine::class);
+        $assignmentA = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        // Complete Assignment A
+        $assignmentA->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        // Create New Commercial Order B, Invoice B, Payment B
+        $orderB = Order::create([
+            'order_number' => 'ORD-CYCLE-2',
+            'user_id' => $this->coordinatorA->id,
+            'organization_id' => $this->organizationA->id,
+            'status' => OrderStatus::Completed,
+            'subtotal' => 85000,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'grand_total' => 85000,
+            'currency' => 'IDR',
+        ]);
+
+        $orderItemB = OrderItem::create([
+            'order_id' => $orderB->id,
+            'product_id' => $this->productA->id,
+            'quantity' => 1,
+            'price' => 85000,
+            'total' => 85000,
+        ]);
+
+        $invoiceB = Invoice::create([
+            'invoice_number' => 'INV-CYCLE-2',
+            'order_id' => $orderB->id,
+            'user_id' => $this->coordinatorA->id,
+            'status' => InvoiceStatus::Paid,
+            'amount' => 85000,
+            'paid_at' => now(),
+        ]);
+
+        Payment::create([
+            'reference_number' => 'PAY-CYCLE-2',
+            'invoice_id' => $invoiceB->id,
+            'user_id' => $this->coordinatorA->id,
+            'amount' => 85000,
+            'status' => PaymentStatus::Success,
+            'payment_gateway' => 'manual_transfer',
+            'confirmed_at' => now(),
+        ]);
+
+        // Create Entitlement B and Seat Allocation B for the SAME candidate
+        $entitlementB = OrganizationEntitlement::create([
+            'organization_id' => $this->organizationA->id,
+            'product_id' => $this->productA->id,
+            'order_item_id' => $orderItemB->id,
+            'total_seats' => 1,
+            'allocated_seats' => 1,
+            'available_seats' => 0,
+            'status' => EntitlementStatus::Active,
+        ]);
+
+        $allocationB = OrganizationSeatAllocation::create([
+            'organization_entitlement_id' => $entitlementB->id,
+            'organization_membership_id' => $this->membershipA1->id,
+            'allocated_by' => $this->coordinatorA->id,
+            'status' => SeatAllocationStatus::Active,
+            'allocated_at' => now(),
+        ]);
+
+        // Seat Allocation B appears in RA awaiting queue
+        $dashResponse = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $this->assertTrue($dashResponse->viewData('institutionalSeatsAwaitingAssignment')->contains('id', $allocationB->id));
+
+        // RA assignment from Seat Allocation B succeeds
+        $assignmentB = $engine->assignFromOrganizationSeat($allocationB->fresh(), $this->publishedToeicTest, $this->adminUser);
+        $this->assertNotNull($assignmentB);
+        $this->assertEquals('active', $assignmentB->status);
+        $this->assertEquals($allocationB->id, $assignmentB->organization_seat_allocation_id);
+    }
+
+    /**
+     * TEST: Admin test show view displays Unassign CTA only for active zero-attempt assignments and preserves historical audit rows.
+     */
+    public function test_admin_test_show_unassign_cta_visibility(): void
+    {
+        $engine = app(AssignmentEngine::class);
+        $activeAssignment = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        // 1. With active zero-attempt assignment, Unassign CTA is rendered
+        $viewResp = $this->actingAs($this->adminUser)->get(route('admin.tests.show', $this->publishedToeicTest->id));
+        $viewResp->assertStatus(200);
+        $viewResp->assertSee('✕ Unassign');
+        $viewResp->assertSee(route('admin.tests.unassign-candidate', [$this->publishedToeicTest->id, $activeAssignment->id]));
+
+        // 2. When attempt is started, Unassign CTA is removed and locked status is shown
+        Attempt::create([
+            'assignment_id' => $activeAssignment->id,
+            'user_id' => $this->candidateA1->id,
+            'test_id' => $this->publishedToeicTest->id,
+            'status' => 'in_progress',
+            'started_at' => now(),
+        ]);
+
+        $viewLockedResp = $this->actingAs($this->adminUser)->get(route('admin.tests.show', $this->publishedToeicTest->id));
+        $viewLockedResp->assertStatus(200);
+        $viewLockedResp->assertDontSee('✕ Unassign');
+        $viewLockedResp->assertSee('In Progress (Locked)');
+    }
 }
