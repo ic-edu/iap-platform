@@ -9,6 +9,7 @@ use App\Modules\Assessment\Engines\AssignmentEngine;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Services\ResultReleaseService;
 use App\Modules\Certificate\Models\Certificate;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Modules\Commerce\Domain\Models\Order;
@@ -196,6 +197,46 @@ class AdminOperationalDashboardController extends Controller
         // Commercial & Voucher Operations Snapshot (Canonical Shared Read Model)
         $voucherSummary = VoucherOperationalSummary::get();
 
+        // RESULT RELEASE OPERATIONS (Sprint 3)
+        $mockRealCompletedQuery = Attempt::whereHas('test', fn ($q) => $q->whereIn('assessment_mode', ['real_test', 'mock_test']))
+            ->whereIn('status', ['submitted', 'expired']);
+
+        $processingResultsCount = (clone $mockRealCompletedQuery)
+            ->where('result_release_status', '!=', 'released')
+            ->where(function ($q) {
+                $q->whereNull('result_release_at')
+                    ->orWhere('result_release_at', '>', now())
+                    ->orWhere('evaluation_status', 'pending_evaluation');
+            })
+            ->count();
+
+        $readyResultsQuery = (clone $mockRealCompletedQuery)
+            ->where('result_release_status', '!=', 'released')
+            ->whereNotNull('result_release_at')
+            ->where('result_release_at', '<=', now())
+            ->where(function ($q) {
+                $q->whereNull('evaluation_status')
+                    ->orWhere('evaluation_status', '!=', 'pending_evaluation');
+            });
+
+        $readyResultsCount = (clone $readyResultsQuery)->count();
+
+        $releasedAwaitingDecisionCount = (clone $mockRealCompletedQuery)
+            ->where('result_release_status', 'released')
+            ->where('is_final', false)
+            ->where('decision_status', 'pending_decision')
+            ->where('attempt_number', 1)
+            ->count();
+
+        $pendingReleaseAttempts = Attempt::with(['user', 'test', 'assignment'])
+            ->whereHas('test', fn ($q) => $q->whereIn('assessment_mode', ['real_test', 'mock_test']))
+            ->whereIn('status', ['submitted', 'expired'])
+            ->where('result_release_status', '!=', 'released')
+            ->orderByRaw('CASE WHEN result_release_at <= ? THEN 0 ELSE 1 END', [now()->toDateTimeString()])
+            ->orderBy('result_release_at', 'asc')
+            ->take(15)
+            ->get();
+
         return view('admin.operational_dashboard', array_merge([
             'totalCandidates' => $totalCandidates,
             'paidEligibleCandidatesCount' => $paidEligibleCandidatesCount,
@@ -212,7 +253,31 @@ class AdminOperationalDashboardController extends Controller
             'recentAssignments' => $recentAssignments,
             'availableTests' => $availableTests,
             'unreadNotificationsCount' => $unreadNotificationsCount,
+            'processingResultsCount' => $processingResultsCount,
+            'readyResultsCount' => $readyResultsCount,
+            'releasedAwaitingDecisionCount' => $releasedAwaitingDecisionCount,
+            'pendingReleaseAttempts' => $pendingReleaseAttempts,
         ], $voucherSummary));
+    }
+
+    /**
+     * Release an assessment attempt result (RA Operation).
+     */
+    public function releaseResult(
+        Request $request,
+        Attempt $attempt,
+        ResultReleaseService $releaseService
+    ): RedirectResponse {
+        try {
+            $releaseService->release($attempt, $request->user());
+
+            $candidateName = $attempt->user?->name ?? 'Candidate';
+            $testTitle = $attempt->test?->title ?? 'Assessment';
+
+            return redirect()->back()->with('status', "Successfully released result for {$candidateName} ({$testTitle}).");
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 
     /**

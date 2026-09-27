@@ -1,20 +1,33 @@
 <?php
 
+use App\Http\Controllers\Admin\AcademicLibraryController;
+use App\Http\Controllers\Admin\AdminAcademicOperationsController;
+use App\Http\Controllers\Admin\AdminOperationalDashboardController;
 use App\Http\Controllers\Admin\ApprovalController;
+use App\Http\Controllers\Admin\ArchivedRepositoryController;
+use App\Http\Controllers\Admin\AssessmentRequestController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\ContentResetController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\MonitoringDashboardController;
 use App\Http\Controllers\Admin\PublicationOperationController;
+use App\Http\Controllers\Admin\RepositoryManagerController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuperAdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AppearanceController;
 use App\Http\Controllers\Finance\FinanceDashboardController;
 use App\Http\Controllers\Finance\FinancePaymentController;
 use App\Http\Controllers\HealthCheckController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\Teacher\TeacherDashboardController;
 use App\Http\Controllers\MediaPreviewController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Teacher\TeacherArchivedRepositoryController;
+use App\Http\Controllers\Teacher\TeacherDashboardController;
+use App\Http\Controllers\Teacher\TeacherRepositoryRevisionController;
 use App\Models\User;
+use App\Modules\Assessment\Controllers\TestBuilderController;
+use App\Modules\QuestionBank\Controllers\QuestionBankController;
+use App\Services\NavigationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -26,11 +39,11 @@ Route::get('/', function () {
         return redirect()->route('login');
     }
 
-    return redirect(\App\Services\NavigationService::getDashboardRouteForUser(Auth::user()));
+    return redirect(NavigationService::getDashboardRouteForUser(Auth::user()));
 });
 
 Route::get('/dashboard', function () {
-    return redirect(\App\Services\NavigationService::getDashboardRouteForUser(Auth::user()));
+    return redirect(NavigationService::getDashboardRouteForUser(Auth::user()));
 })->middleware(['web', 'auth'])->name('dashboard');
 
 // Observability Probes
@@ -52,53 +65,53 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.revision-center');
 
     // Teacher Workspace Authoring Aliases (HOTFIX)
-    Route::get('/teacher/archived-repositories', [\App\Http\Controllers\Teacher\TeacherArchivedRepositoryController::class, 'index'])
+    Route::get('/teacher/archived-repositories', [TeacherArchivedRepositoryController::class, 'index'])
         ->name('teacher.archived-repositories.index');
-    Route::get('/teacher/question-banks', [\App\Modules\QuestionBank\Controllers\QuestionBankController::class, 'index'])
+    Route::get('/teacher/question-banks', [QuestionBankController::class, 'index'])
         ->name('teacher.question-banks.index');
-    Route::get('/teacher/question-banks/{questionBank}', [\App\Modules\QuestionBank\Controllers\QuestionBankController::class, 'show'])
+    Route::get('/teacher/question-banks/{questionBank}', [QuestionBankController::class, 'show'])
         ->name('teacher.question-banks.show');
-    Route::get('/teacher/assessments', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'index'])
+    Route::get('/teacher/assessments', [TestBuilderController::class, 'index'])
         ->name('teacher.tests.index');
-    Route::get('/teacher/assessments/{test}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'show'])
+    Route::get('/teacher/assessments/{test}', [TestBuilderController::class, 'show'])
         ->name('teacher.tests.show');
-    Route::get('/teacher/assessments/{test}/preview', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'previewAsCandidate'])
+    Route::get('/teacher/assessments/{test}/preview', [TestBuilderController::class, 'previewAsCandidate'])
         ->name('teacher.tests.preview');
-    Route::put('/teacher/assessments/{test}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'update'])
+    Route::put('/teacher/assessments/{test}', [TestBuilderController::class, 'update'])
         ->name('teacher.tests.update');
-    Route::get('/teacher/assessments/{test}/questions/{question}/edit', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'editQuestion'])
+    Route::get('/teacher/assessments/{test}/questions/{question}/edit', [TestBuilderController::class, 'editQuestion'])
         ->name('teacher.tests.edit-question');
-    Route::put('/teacher/assessments/{test}/questions/{question}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'updateQuestion'])
+    Route::put('/teacher/assessments/{test}/questions/{question}', [TestBuilderController::class, 'updateQuestion'])
         ->name('teacher.tests.update-question');
-    Route::post('/teacher/assessments/{test}/attach-master-question', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'attachMasterQuestion'])
+    Route::post('/teacher/assessments/{test}/attach-master-question', [TestBuilderController::class, 'attachMasterQuestion'])
         ->name('teacher.tests.attach-master-question');
-    Route::post('/teacher/assessments/{test}/create-question', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'createAssessmentQuestion'])
+    Route::post('/teacher/assessments/{test}/create-question', [TestBuilderController::class, 'createAssessmentQuestion'])
         ->name('teacher.tests.create-question');
-    Route::post('/teacher/assessments/{test}/create-audio-group', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'createAudioGroup'])
+    Route::post('/teacher/assessments/{test}/create-audio-group', [TestBuilderController::class, 'createAudioGroup'])
         ->name('teacher.tests.create-audio-group');
-    Route::put('/teacher/assessments/{test}/audio-groups/{audioGroup}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'updateAudioGroup'])
+    Route::put('/teacher/assessments/{test}/audio-groups/{audioGroup}', [TestBuilderController::class, 'updateAudioGroup'])
         ->name('teacher.tests.update-audio-group');
-    Route::delete('/teacher/assessments/{test}/audio-groups/{audioGroup}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'destroyAudioGroup'])
+    Route::delete('/teacher/assessments/{test}/audio-groups/{audioGroup}', [TestBuilderController::class, 'destroyAudioGroup'])
         ->name('teacher.tests.destroy-audio-group');
-    Route::post('/teacher/assessments/{test}/create-passage-group', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'createPassageGroup'])
+    Route::post('/teacher/assessments/{test}/create-passage-group', [TestBuilderController::class, 'createPassageGroup'])
         ->name('teacher.tests.create-passage-group');
-    Route::put('/teacher/assessments/{test}/passage-groups/{passageGroup}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'updatePassageGroup'])
+    Route::put('/teacher/assessments/{test}/passage-groups/{passageGroup}', [TestBuilderController::class, 'updatePassageGroup'])
         ->name('teacher.tests.update-passage-group');
-    Route::delete('/teacher/assessments/{test}/passage-groups/{passageGroup}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'destroyPassageGroup'])
+    Route::delete('/teacher/assessments/{test}/passage-groups/{passageGroup}', [TestBuilderController::class, 'destroyPassageGroup'])
         ->name('teacher.tests.destroy-passage-group');
-    Route::delete('/teacher/assessments/{test}/questions/{question}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'destroyQuestion'])
+    Route::delete('/teacher/assessments/{test}/questions/{question}', [TestBuilderController::class, 'destroyQuestion'])
         ->name('teacher.tests.destroy-question');
-    Route::post('/teacher/assessments/{test}/sections', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'addSection'])
+    Route::post('/teacher/assessments/{test}/sections', [TestBuilderController::class, 'addSection'])
         ->name('teacher.tests.add-section');
-    Route::put('/teacher/assessments/{test}/sections/{section}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'updateSection'])
+    Route::put('/teacher/assessments/{test}/sections/{section}', [TestBuilderController::class, 'updateSection'])
         ->name('teacher.tests.update-section');
-    Route::delete('/teacher/assessments/{test}/sections/{section}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'destroySection'])
+    Route::delete('/teacher/assessments/{test}/sections/{section}', [TestBuilderController::class, 'destroySection'])
         ->name('teacher.tests.destroy-section');
-    Route::post('/teacher/assessments/{test}/sections/{section}/media', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'attachSectionMedia'])
+    Route::post('/teacher/assessments/{test}/sections/{section}/media', [TestBuilderController::class, 'attachSectionMedia'])
         ->name('teacher.tests.sections.media.attach');
-    Route::delete('/teacher/assessments/{test}/sections/{section}/media/{media}', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'detachSectionMedia'])
+    Route::delete('/teacher/assessments/{test}/sections/{section}/media/{media}', [TestBuilderController::class, 'detachSectionMedia'])
         ->name('teacher.tests.sections.media.detach');
-    Route::post('/teacher/assessments/{test}/resubmit', [\App\Modules\Assessment\Controllers\TestBuilderController::class, 'resubmit'])
+    Route::post('/teacher/assessments/{test}/resubmit', [TestBuilderController::class, 'resubmit'])
         ->name('teacher.tests.resubmit');
 
     // Teacher My Media Workspace
@@ -169,14 +182,14 @@ Route::middleware(['web', 'auth', 'role:super-admin'])->group(function () {
     });
 
     Route::prefix('admin/archived-repositories')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'archivedIndex'])->name('admin.archived-repositories.index');
-        Route::post('/{questionBank}/move-to-recycle-bin', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'moveToRecycleBin'])->name('admin.archived-repositories.move-to-recycle-bin');
+        Route::get('/', [ArchivedRepositoryController::class, 'archivedIndex'])->name('admin.archived-repositories.index');
+        Route::post('/{questionBank}/move-to-recycle-bin', [ArchivedRepositoryController::class, 'moveToRecycleBin'])->name('admin.archived-repositories.move-to-recycle-bin');
     });
 
     Route::prefix('admin/recycle-bin')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'recycleBinIndex'])->name('admin.recycle-bin.index');
-        Route::get('/{id}', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'recycleBinShow'])->name('admin.recycle-bin.show');
-        Route::post('/{id}/restore', [\App\Http\Controllers\Admin\ArchivedRepositoryController::class, 'restoreFromRecycleBin'])->name('admin.recycle-bin.restore');
+        Route::get('/', [ArchivedRepositoryController::class, 'recycleBinIndex'])->name('admin.recycle-bin.index');
+        Route::get('/{id}', [ArchivedRepositoryController::class, 'recycleBinShow'])->name('admin.recycle-bin.show');
+        Route::post('/{id}/restore', [ArchivedRepositoryController::class, 'restoreFromRecycleBin'])->name('admin.recycle-bin.restore');
     });
 });
 
@@ -186,9 +199,14 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
         ->name('admin.dashboard');
 
     // Institutional Assessment Assignments (O3 RA Operational Assignment)
-    Route::post('/admin/institutional-seat-allocations/{allocation}/assign-assessment', [\App\Http\Controllers\Admin\AdminOperationalDashboardController::class, 'assignInstitutionalSeat'])
+    Route::post('/admin/institutional-seat-allocations/{allocation}/assign-assessment', [AdminOperationalDashboardController::class, 'assignInstitutionalSeat'])
         ->middleware('role:admin|super-admin')
         ->name('admin.institutional-seats.assign');
+
+    // Result Release Operations (Sprint 3 RA Operational Result Release)
+    Route::post('/admin/assessment-attempts/{attempt}/release-result', [AdminOperationalDashboardController::class, 'releaseResult'])
+        ->middleware('role:admin|super-admin')
+        ->name('admin.assessment-attempts.release-result');
 
     // Candidate Management Workspace (Dedicated Candidate Operations)
     Route::prefix('admin/candidates')->middleware('role:admin|super-admin')->group(function () {
@@ -229,31 +247,31 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
 
     // Admin Academic Operations Foundation
     Route::prefix('admin/academic-operations')->group(function () {
-        Route::get('/applications', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'applications'])->name('admin.academic-operations.applications');
-        Route::patch('/applications/{application}/status', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'updateApplicationStatus'])->name('admin.academic-operations.applications.status');
-        Route::get('/courses', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'courses'])->name('admin.academic-operations.courses');
-        Route::post('/courses', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'storeMasterCourse'])->name('admin.academic-operations.courses.store');
-        Route::post('/courses/{course}/approve', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'approveCourse'])->name('admin.academic-operations.courses.approve');
-        Route::post('/courses/{course}/reject', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'rejectCourse'])->name('admin.academic-operations.courses.reject');
-        Route::get('/teacher-assignments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'teacherAssignments'])->name('admin.academic-operations.teacher-assignments');
-        Route::post('/teacher-assignments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'storeTeacherAssignment'])->name('admin.academic-operations.teacher-assignments.store');
-        Route::get('/enrollments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'enrollments'])->name('admin.academic-operations.enrollments');
-        Route::post('/enrollments', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'storeEnrollment'])->name('admin.academic-operations.enrollments.store');
-        Route::get('/libraries', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'libraries'])
+        Route::get('/applications', [AdminAcademicOperationsController::class, 'applications'])->name('admin.academic-operations.applications');
+        Route::patch('/applications/{application}/status', [AdminAcademicOperationsController::class, 'updateApplicationStatus'])->name('admin.academic-operations.applications.status');
+        Route::get('/courses', [AdminAcademicOperationsController::class, 'courses'])->name('admin.academic-operations.courses');
+        Route::post('/courses', [AdminAcademicOperationsController::class, 'storeMasterCourse'])->name('admin.academic-operations.courses.store');
+        Route::post('/courses/{course}/approve', [AdminAcademicOperationsController::class, 'approveCourse'])->name('admin.academic-operations.courses.approve');
+        Route::post('/courses/{course}/reject', [AdminAcademicOperationsController::class, 'rejectCourse'])->name('admin.academic-operations.courses.reject');
+        Route::get('/teacher-assignments', [AdminAcademicOperationsController::class, 'teacherAssignments'])->name('admin.academic-operations.teacher-assignments');
+        Route::post('/teacher-assignments', [AdminAcademicOperationsController::class, 'storeTeacherAssignment'])->name('admin.academic-operations.teacher-assignments.store');
+        Route::get('/enrollments', [AdminAcademicOperationsController::class, 'enrollments'])->name('admin.academic-operations.enrollments');
+        Route::post('/enrollments', [AdminAcademicOperationsController::class, 'storeEnrollment'])->name('admin.academic-operations.enrollments.store');
+        Route::get('/libraries', [AdminAcademicOperationsController::class, 'libraries'])
             ->middleware('role:repository-manager|super-admin')
             ->name('admin.academic-operations.libraries');
-        Route::get('/monitoring', [\App\Http\Controllers\Admin\AdminAcademicOperationsController::class, 'monitoring'])->name('admin.academic-operations.monitoring');
+        Route::get('/monitoring', [AdminAcademicOperationsController::class, 'monitoring'])->name('admin.academic-operations.monitoring');
     });
 
     // Content Refresh & Controlled Hard Reset Governance (Phase 5A)
     Route::prefix('admin/content-reset')->middleware('role:admin|super-admin|ceo')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\ContentResetController::class, 'index'])->name('admin.content-reset.index');
-        Route::get('/create', [\App\Http\Controllers\Admin\ContentResetController::class, 'create'])->name('admin.content-reset.create');
-        Route::post('/', [\App\Http\Controllers\Admin\ContentResetController::class, 'store'])->name('admin.content-reset.store');
-        Route::get('/{contentResetRequest}', [\App\Http\Controllers\Admin\ContentResetController::class, 'show'])->name('admin.content-reset.show');
-        Route::post('/{contentResetRequest}/approve-ceo', [\App\Http\Controllers\Admin\ContentResetController::class, 'approveCeo'])->name('admin.content-reset.approve-ceo');
-        Route::post('/{contentResetRequest}/approve-sa', [\App\Http\Controllers\Admin\ContentResetController::class, 'approveSa'])->name('admin.content-reset.approve-sa');
-        Route::post('/{contentResetRequest}/execute', [\App\Http\Controllers\Admin\ContentResetController::class, 'execute'])->name('admin.content-reset.execute');
+        Route::get('/', [ContentResetController::class, 'index'])->name('admin.content-reset.index');
+        Route::get('/create', [ContentResetController::class, 'create'])->name('admin.content-reset.create');
+        Route::post('/', [ContentResetController::class, 'store'])->name('admin.content-reset.store');
+        Route::get('/{contentResetRequest}', [ContentResetController::class, 'show'])->name('admin.content-reset.show');
+        Route::post('/{contentResetRequest}/approve-ceo', [ContentResetController::class, 'approveCeo'])->name('admin.content-reset.approve-ceo');
+        Route::post('/{contentResetRequest}/approve-sa', [ContentResetController::class, 'approveSa'])->name('admin.content-reset.approve-sa');
+        Route::post('/{contentResetRequest}/execute', [ContentResetController::class, 'execute'])->name('admin.content-reset.execute');
     });
 
 });
@@ -262,11 +280,11 @@ Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])-
 Route::middleware(['web', 'auth', 'role:super-admin|teacher|repository-manager'])->group(function () {
     // Academic Library Architecture (Sprint: Academic Library Architecture)
     Route::prefix('admin/academic-library')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'index'])->name('admin.academic-library.index');
-        Route::get('/quality', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'quality'])->name('admin.academic-library.quality');
-        Route::get('/explorer', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'explorer'])->name('admin.academic-library.explorer');
-        Route::get('/analytics', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'analytics'])->name('admin.academic-library.analytics');
-        Route::get('/{slug}', [\App\Http\Controllers\Admin\AcademicLibraryController::class, 'show'])->name('admin.academic-library.show');
+        Route::get('/', [AcademicLibraryController::class, 'index'])->name('admin.academic-library.index');
+        Route::get('/quality', [AcademicLibraryController::class, 'quality'])->name('admin.academic-library.quality');
+        Route::get('/explorer', [AcademicLibraryController::class, 'explorer'])->name('admin.academic-library.explorer');
+        Route::get('/analytics', [AcademicLibraryController::class, 'analytics'])->name('admin.academic-library.analytics');
+        Route::get('/{slug}', [AcademicLibraryController::class, 'show'])->name('admin.academic-library.show');
     });
 
     Route::prefix('admin/media')->group(function () {
@@ -305,46 +323,46 @@ Route::middleware(['web', 'auth', 'role:super-admin|repository-manager'])->group
 // PART B: Repository Manager Dedicated Workspace & Approval Center
 Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group(function () {
     Route::prefix('admin/repository-manager')->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'dashboard'])->name('admin.repository-manager.dashboard');
-        Route::get('/media', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'mediaApprovalCenter'])->name('admin.repository-manager.media-approval');
-        Route::get('/media/{reviewRequest}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'mediaReview'])->name('admin.repository-manager.media-review');
-        Route::post('/media/{reviewRequest}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveMedia'])->name('admin.repository-manager.media-approve');
-        Route::post('/media/{reviewRequest}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionMedia'])->name('admin.repository-manager.media-revision');
-        Route::post('/media/{reviewRequest}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectMedia'])->name('admin.repository-manager.media-reject');
-        Route::get('/questions', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'questionsApproval'])->name('admin.repository-manager.questions-approval');
-        Route::get('/questions/{questionBank}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'validateQuestionBank'])->name('admin.repository-manager.question-bank-validate');
-        Route::get('/questions/{questionBank}/review-complete', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'reviewComplete'])->name('admin.repository-manager.review-complete');
-        Route::post('/questions/{questionBank}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveQuestionBank'])->name('admin.repository-manager.question-bank-approve');
-        Route::post('/questions/{questionBank}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestQuestionBankRevision'])->name('admin.repository-manager.question-bank-revision');
-        Route::post('/questions/{questionBank}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectQuestionBank'])->name('admin.repository-manager.question-bank-reject');
-        Route::get('/duplicates', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'duplicates'])->name('admin.repository-manager.duplicates');
+        Route::get('/dashboard', [RepositoryManagerController::class, 'dashboard'])->name('admin.repository-manager.dashboard');
+        Route::get('/media', [RepositoryManagerController::class, 'mediaApprovalCenter'])->name('admin.repository-manager.media-approval');
+        Route::get('/media/{reviewRequest}', [RepositoryManagerController::class, 'mediaReview'])->name('admin.repository-manager.media-review');
+        Route::post('/media/{reviewRequest}/approve', [RepositoryManagerController::class, 'approveMedia'])->name('admin.repository-manager.media-approve');
+        Route::post('/media/{reviewRequest}/revision', [RepositoryManagerController::class, 'requestRevisionMedia'])->name('admin.repository-manager.media-revision');
+        Route::post('/media/{reviewRequest}/reject', [RepositoryManagerController::class, 'rejectMedia'])->name('admin.repository-manager.media-reject');
+        Route::get('/questions', [RepositoryManagerController::class, 'questionsApproval'])->name('admin.repository-manager.questions-approval');
+        Route::get('/questions/{questionBank}', [RepositoryManagerController::class, 'validateQuestionBank'])->name('admin.repository-manager.question-bank-validate');
+        Route::get('/questions/{questionBank}/review-complete', [RepositoryManagerController::class, 'reviewComplete'])->name('admin.repository-manager.review-complete');
+        Route::post('/questions/{questionBank}/approve', [RepositoryManagerController::class, 'approveQuestionBank'])->name('admin.repository-manager.question-bank-approve');
+        Route::post('/questions/{questionBank}/revision', [RepositoryManagerController::class, 'requestQuestionBankRevision'])->name('admin.repository-manager.question-bank-revision');
+        Route::post('/questions/{questionBank}/reject', [RepositoryManagerController::class, 'rejectQuestionBank'])->name('admin.repository-manager.question-bank-reject');
+        Route::get('/duplicates', [RepositoryManagerController::class, 'duplicates'])->name('admin.repository-manager.duplicates');
 
         // Dedicated Repository Revision Governance Routes
-        Route::get('/revisions', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'revisionsQueue'])->name('admin.repository-manager.revisions.index');
-        Route::get('/revisions/{revisionRequest}', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'reviewRevision'])->name('admin.repository-manager.revisions.review');
-        Route::post('/revisions/{revisionRequest}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveRevision'])->name('admin.repository-manager.revisions.approve');
-        Route::post('/revisions/{revisionRequest}/request-changes', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionChanges'])->name('admin.repository-manager.revisions.request-changes');
-        Route::post('/revisions/{revisionRequest}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectRevision'])->name('admin.repository-manager.revisions.reject');
+        Route::get('/revisions', [RepositoryManagerController::class, 'revisionsQueue'])->name('admin.repository-manager.revisions.index');
+        Route::get('/revisions/{revisionRequest}', [RepositoryManagerController::class, 'reviewRevision'])->name('admin.repository-manager.revisions.review');
+        Route::post('/revisions/{revisionRequest}/approve', [RepositoryManagerController::class, 'approveRevision'])->name('admin.repository-manager.revisions.approve');
+        Route::post('/revisions/{revisionRequest}/request-changes', [RepositoryManagerController::class, 'requestRevisionChanges'])->name('admin.repository-manager.revisions.request-changes');
+        Route::post('/revisions/{revisionRequest}/reject', [RepositoryManagerController::class, 'rejectRevision'])->name('admin.repository-manager.revisions.reject');
 
         // SPRINT 10.2 & Sprint 11.5 Continuous Improvement: Assessment Governance Workspace & Review Routes
-        Route::get('/assessment-governance', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentGovernance'])->name('admin.repository-manager.assessment-governance');
-        Route::get('/assessments', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentApprovalCenter'])->name('admin.repository-manager.assessment-approval');
-        Route::get('/assessments/{test}/review', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'assessmentReview'])
+        Route::get('/assessment-governance', [RepositoryManagerController::class, 'assessmentGovernance'])->name('admin.repository-manager.assessment-governance');
+        Route::get('/assessments', [RepositoryManagerController::class, 'assessmentApprovalCenter'])->name('admin.repository-manager.assessment-approval');
+        Route::get('/assessments/{test}/review', [RepositoryManagerController::class, 'assessmentReview'])
             ->name('admin.repository-manager.assessment-review');
-        Route::post('/assessments/{test}/questions/{question}/review-ok', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'markQuestionReviewed'])
+        Route::post('/assessments/{test}/questions/{question}/review-ok', [RepositoryManagerController::class, 'markQuestionReviewed'])
             ->name('admin.repository-manager.question-review-ok');
-        Route::post('/assessments/{test}/questions/{question}/request-revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestQuestionRevision'])
+        Route::post('/assessments/{test}/questions/{question}/request-revision', [RepositoryManagerController::class, 'requestQuestionRevision'])
             ->name('admin.repository-manager.question-request-revision');
-        Route::post('/assessments/{test}/approve', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'approveAssessment'])
+        Route::post('/assessments/{test}/approve', [RepositoryManagerController::class, 'approveAssessment'])
             ->name('admin.repository-manager.assessment-approve');
-        Route::post('/assessments/{test}/revision', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'requestRevisionAssessment'])->name('admin.repository-manager.assessment-revision');
-        Route::post('/assessments/{test}/archive', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'archiveAssessment'])->name('admin.repository-manager.assessment-archive');
-        Route::post('/assessments/{test}/reject', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'rejectAssessment'])->name('admin.repository-manager.assessment-reject');
+        Route::post('/assessments/{test}/revision', [RepositoryManagerController::class, 'requestRevisionAssessment'])->name('admin.repository-manager.assessment-revision');
+        Route::post('/assessments/{test}/archive', [RepositoryManagerController::class, 'archiveAssessment'])->name('admin.repository-manager.assessment-archive');
+        Route::post('/assessments/{test}/reject', [RepositoryManagerController::class, 'rejectAssessment'])->name('admin.repository-manager.assessment-reject');
 
         // Assessment Requests Intake Queue
-        Route::get('/assessment-requests', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'index'])->name('admin.repository-manager.assessment-requests.index');
-        Route::post('/assessment-requests/{assessmentRequest}/create-draft', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'createDraft'])->name('admin.repository-manager.assessment-requests.create-draft');
-        Route::get('/assessment-requests/{assessmentRequest}/assessment', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'showDraftAssessment'])->name('admin.repository-manager.assessment-requests.assessment-show');
+        Route::get('/assessment-requests', [AssessmentRequestController::class, 'index'])->name('admin.repository-manager.assessment-requests.index');
+        Route::post('/assessment-requests/{assessmentRequest}/create-draft', [AssessmentRequestController::class, 'createDraft'])->name('admin.repository-manager.assessment-requests.create-draft');
+        Route::get('/assessment-requests/{assessmentRequest}/assessment', [AssessmentRequestController::class, 'showDraftAssessment'])->name('admin.repository-manager.assessment-requests.assessment-show');
 
         // Backward compatibility redirect for legacy double-prefixed URI
         Route::get('/repository-manager/assessments/{test}', function ($test) {
@@ -355,24 +373,23 @@ Route::middleware(['web', 'auth', 'role:repository-manager|super-admin'])->group
 
 // Admin Assessment Requests
 Route::middleware(['web', 'auth', 'role:admin|super-admin|repository-manager'])->group(function () {
-    Route::get('/admin/assessment-requests', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'index'])->name('admin.assessment-requests.index');
-    Route::post('/admin/assessment-requests', [\App\Http\Controllers\Admin\AssessmentRequestController::class, 'store'])->name('admin.assessment-requests.store');
+    Route::get('/admin/assessment-requests', [AssessmentRequestController::class, 'index'])->name('admin.assessment-requests.index');
+    Route::post('/admin/assessment-requests', [AssessmentRequestController::class, 'store'])->name('admin.assessment-requests.store');
 });
 
 // RRWE v1.0 & RRUXO-ENTERPRISE: Teacher Repository Revision Center Routes
 Route::middleware(['web', 'auth', 'role:teacher|super-admin'])->prefix('teacher/repository-revisions')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'index'])->name('teacher.repository-revisions.index');
-    Route::post('/request', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'requestRevision'])->name('teacher.repository-revisions.request');
-    Route::get('/{revisionRequest}', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'show'])->name('teacher.repository-revisions.show');
-    Route::get('/{revisionRequest}/item/{item}/edit', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'editQuestion'])->name('teacher.repository-revisions.edit-question');
-    Route::post('/{revisionRequest}/item/{item}/update', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'updateQuestion'])->name('teacher.repository-revisions.update-question');
-    Route::post('/{revisionRequest}/resubmit', [\App\Http\Controllers\Teacher\TeacherRepositoryRevisionController::class, 'resubmit'])->name('teacher.repository-revisions.resubmit');
+    Route::get('/', [TeacherRepositoryRevisionController::class, 'index'])->name('teacher.repository-revisions.index');
+    Route::post('/request', [TeacherRepositoryRevisionController::class, 'requestRevision'])->name('teacher.repository-revisions.request');
+    Route::get('/{revisionRequest}', [TeacherRepositoryRevisionController::class, 'show'])->name('teacher.repository-revisions.show');
+    Route::get('/{revisionRequest}/item/{item}/edit', [TeacherRepositoryRevisionController::class, 'editQuestion'])->name('teacher.repository-revisions.edit-question');
+    Route::post('/{revisionRequest}/item/{item}/update', [TeacherRepositoryRevisionController::class, 'updateQuestion'])->name('teacher.repository-revisions.update-question');
+    Route::post('/{revisionRequest}/resubmit', [TeacherRepositoryRevisionController::class, 'resubmit'])->name('teacher.repository-revisions.resubmit');
 });
 
 Route::middleware(['web', 'auth', 'role:teacher|repository-manager|super-admin'])->group(function () {
-    Route::post('/admin/repository-manager/assessments/{test}/submit', [\App\Http\Controllers\Admin\RepositoryManagerController::class, 'submitAssessmentForReview'])->name('admin.tests.submit');
+    Route::post('/admin/repository-manager/assessments/{test}/submit', [RepositoryManagerController::class, 'submitAssessmentForReview'])->name('admin.tests.submit');
 });
-
 
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -381,6 +398,6 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
 
     // Platform-Wide User Appearance & Theme Settings
-    Route::get('/settings/appearance', [\App\Http\Controllers\AppearanceController::class, 'index'])->name('settings.appearance');
-    Route::post('/settings/appearance', [\App\Http\Controllers\AppearanceController::class, 'update'])->name('settings.appearance.update');
+    Route::get('/settings/appearance', [AppearanceController::class, 'index'])->name('settings.appearance');
+    Route::post('/settings/appearance', [AppearanceController::class, 'update'])->name('settings.appearance.update');
 });

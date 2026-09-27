@@ -527,6 +527,166 @@
         @endif
     </section>
 
+    {{-- Result Release Operations Workspace (Sprint 3) --}}
+    <section id="result-release-operations" class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
+            <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>🔓</span> Result Release Operations
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        Mock &amp; Real Tests
+                    </span>
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Control candidate result visibility for completed Mock Tests after scheduled review period</p>
+            </div>
+        </div>
+
+        {{-- Result Release Counters Grid --}}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {{-- 1. Processing --}}
+            <div class="p-5 rounded-xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-amber-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Processing</p>
+                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-1">{{ number_format($processingResultsCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xl">
+                        ⏳
+                    </div>
+                </div>
+                <div class="mt-3 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span>Awaiting release timestamp</span>
+                </div>
+            </div>
+
+            {{-- 2. Ready for Release --}}
+            <div class="p-5 rounded-xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Ready for Release</p>
+                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-1">{{ number_format($readyResultsCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xl">
+                        🚀
+                    </div>
+                </div>
+                <div class="mt-3 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span>Eligible for candidate release</span>
+                </div>
+            </div>
+
+            {{-- 3. Released / Awaiting Decision --}}
+            <div class="p-5 rounded-xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1 bg-indigo-500"></div>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Released (Awaiting Decision)</p>
+                        <p class="text-3xl font-black text-slate-900 dark:text-white mt-1">{{ number_format($releasedAwaitingDecisionCount) }}</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xl">
+                        ⚖️
+                    </div>
+                </div>
+                <div class="mt-3 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span>Attempt #1 candidate choice pending</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Actionable Result Release Queue --}}
+        <div class="rounded-xl bg-slate-950/80 border border-slate-800 shadow-lg p-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <span>📋</span> Release Operations Queue
+                </h3>
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                    {{ $pendingReleaseAttempts->count() }} attempt(s) pending release
+                </span>
+            </div>
+
+            @if($pendingReleaseAttempts->isEmpty())
+                <div class="py-8 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-900/40">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">No Mock/Real Test attempts currently awaiting result release.</p>
+                </div>
+            @else
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                                <th class="py-3 px-4">Candidate</th>
+                                <th class="py-3 px-4">Assessment</th>
+                                <th class="py-3 px-4">Attempt</th>
+                                <th class="py-3 px-4">Completed At</th>
+                                <th class="py-3 px-4">Earliest Release</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60">
+                            @foreach($pendingReleaseAttempts as $att)
+                                @php
+                                    $isReady = $att->canResultBeReleased();
+                                    $candidateName = $att->user?->name ?? 'Candidate';
+                                    $candidateEmail = $att->user?->email ?? '';
+                                @endphp
+                                <tr class="hover:bg-slate-900/40 transition-colors">
+                                    <td class="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
+                                        <div>{{ $candidateName }}</div>
+                                        <div class="text-[11px] text-slate-500 dark:text-slate-400 font-normal">{{ $candidateEmail }}</div>
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <div class="font-medium text-slate-800 dark:text-slate-200">{{ $att->test?->title ?? 'Test' }}</div>
+                                        <span class="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase {{ $att->test?->isRealTest() ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' }}">
+                                            {{ $att->test?->assessment_mode?->label() ?? 'Mock Test' }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-bold">
+                                        Attempt #{{ $att->attempt_number }}
+                                    </td>
+                                    <td class="py-3.5 px-4 text-slate-500 dark:text-slate-400">
+                                        {{ $att->getCanonicalCompletionTimestamp()?->format('d M Y, H:i') ?? 'N/A' }}
+                                    </td>
+                                    <td class="py-3.5 px-4 text-slate-500 dark:text-slate-400">
+                                        {{ $att->result_release_at?->format('d M Y, H:i') ?? 'N/A' }}
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        @if($isReady)
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                Ready for Release
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                Processing
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3.5 px-4 text-right">
+                                        @if($isReady)
+                                            <form action="{{ route('admin.assessment-attempts.release-result', $att->id) }}" method="POST" class="inline-block">
+                                                @csrf
+                                                <button type="submit" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer">
+                                                    <span>🔓 Release Result</span>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded text-[11px] font-semibold text-slate-500 bg-slate-900 border border-slate-800">
+                                                ⏳ Release Ineligible
+                                            </span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    </section>
+
     {{-- Two Column Layout: Recent Active Assignments & Assessment Inventory --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
