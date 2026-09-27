@@ -555,8 +555,18 @@
                         <span class="ra-status-badge {{ $assignment->test?->isRealTest() ? 'ra-status--rejected' : 'ra-status--placement-required' }} text-[9px] py-0.5 px-2">
                             {{ $assignment->test?->assessment_mode?->label() ?? 'Assessment' }}
                         </span>
-                        <span class="ra-status-badge ra-status--active text-[9px] py-0.5 px-2">
-                            ACTIVE
+                        @php
+                            $aStatus = is_object($assignment->status) ? $assignment->status->value : (string) $assignment->status;
+                            $aStatusUpper = strtoupper($aStatus);
+                            $badgeClass = match(strtolower($aStatus)) {
+                                'active' => 'ra-status--active',
+                                'expired' => 'ra-status--rejected',
+                                'completed' => 'ra-status--approved',
+                                default => 'ra-status--secondary',
+                            };
+                        @endphp
+                        <span class="ra-status-badge {{ $badgeClass }} text-[9px] py-0.5 px-2">
+                            {{ $aStatusUpper }}
                         </span>
                     </div>
                 </div>

@@ -11,7 +11,6 @@ use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Certificate\Models\Certificate;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
-use App\Modules\Commerce\Domain\Models\Coupon;
 use App\Modules\Commerce\Domain\Models\Order;
 use App\Modules\Commerce\Domain\Services\VoucherOperationalSummary;
 use App\Modules\Organization\Enums\OrganizationStatus;
@@ -30,7 +29,7 @@ class AdminOperationalDashboardController extends Controller
     public function index(Request $request): View|RedirectResponse
     {
         $user = $request->user();
-        if ($user && $user->hasRole('repository-manager') && ! $user->hasRole(['admin', 'super-admin'])) {
+        if ($user && $user->hasRole('repository-manager') && !$user->hasRole(['admin', 'super-admin'])) {
             return redirect()->route('admin.repository-manager.dashboard');
         }
 
@@ -40,7 +39,7 @@ class AdminOperationalDashboardController extends Controller
         // 2. Paid / Eligible Candidates (Candidates with confirmed paid transactions)
         $paidEligibleCandidatesCount = User::role('student')
             ->whereHas('orders', function ($q) {
-                $q->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]));
+                $q->whereHas('invoice.payments', fn ($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]));
             })
             ->count();
 
@@ -64,8 +63,8 @@ class AdminOperationalDashboardController extends Controller
 
         // ACTION PANEL: Candidates Requiring Action (Paid Real Test awaiting Admin Assignment)
         $paidOrders = Order::with(['user', 'items.product.test', 'invoice.payments'])
-            ->whereHas('invoice.payments', fn($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]))
-            ->whereHas('items.product.test', fn($t) => $t->where('assessment_mode', 'real_test'))
+            ->whereHas('invoice.payments', fn ($p) => $p->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]))
+            ->whereHas('items.product.test', fn ($t) => $t->where('assessment_mode', 'real_test'))
             ->latest()
             ->get();
 
@@ -86,12 +85,12 @@ class AdminOperationalDashboardController extends Controller
 
                     if (!$hasAssignment) {
                         $actionRequiredCandidates[] = [
-                            'user'       => $candidateUser,
-                            'test'       => $test,
-                            'order'      => $order,
-                            'paid_at'    => $order->invoice?->paid_at ?? $order->created_at,
-                            'type'       => 'PAID_REAL_TEST_UNASSIGNED',
-                            'priority'   => 'HIGH',
+                            'user' => $candidateUser,
+                            'test' => $test,
+                            'order' => $order,
+                            'paid_at' => $order->invoice?->paid_at ?? $order->created_at,
+                            'type' => 'PAID_REAL_TEST_UNASSIGNED',
+                            'priority' => 'HIGH',
                         ];
                     }
                 }
@@ -106,12 +105,12 @@ class AdminOperationalDashboardController extends Controller
             'entitlement.organization',
             'entitlement.orderItem.order',
         ])
-        ->where('status', 'active')
-        ->whereDoesntHave('testAssignments', fn($q) => $q->where('status', 'active'))
-        ->whereHas('entitlement', fn($q) => $q->where('status', 'active'))
-        ->whereHas('membership', fn($q) => $q->where('status', 'active'))
-        ->latest('allocated_at')
-        ->get();
+            ->where('status', 'active')
+            ->whereDoesntHave('testAssignments', fn ($q) => $q->where('status', 'active'))
+            ->whereHas('entitlement', fn ($q) => $q->where('status', 'active'))
+            ->whereHas('membership', fn ($q) => $q->where('status', 'active'))
+            ->latest('allocated_at')
+            ->get();
 
         $assignmentEngine = app(AssignmentEngine::class);
         $eligibleTestsByProduct = [];
@@ -133,7 +132,7 @@ class AdminOperationalDashboardController extends Controller
             ->whereIn('status', ['pending', 'draft_created'])
             ->whereIn('candidate_id', $candidateIds)
             ->get()
-            ->filter(fn($req) => $req->isActive());
+            ->filter(fn ($req) => $req->isActive());
 
         $activeRequestsByAllocationId = [];
         foreach ($institutionalSeatsAwaitingAssignment as $allocation) {
@@ -151,8 +150,8 @@ class AdminOperationalDashboardController extends Controller
 
             $org = $allocation->entitlement?->organization;
             $groups = $allocation->membership?->groups ?? collect();
-            $groupContext = $groups->isNotEmpty() ? ' — ' . $groups->pluck('name')->join(', ') : '';
-            $progContext = trim(($org?->name ?? 'Organization') . $groupContext);
+            $groupContext = $groups->isNotEmpty() ? ' — '.$groups->pluck('name')->join(', ') : '';
+            $progContext = trim(($org?->name ?? 'Organization').$groupContext);
 
             // Unified shared matcher across dashboard, prefilled forms, and server duplicate check
             $matched = AssessmentRequest::findMatchingInCollection(
@@ -169,6 +168,7 @@ class AdminOperationalDashboardController extends Controller
 
         // Recent Active Assignments (Live Database Records)
         $recentAssignments = CandidateTestAssignment::with(['user', 'test', 'assignedBy'])
+            ->where('status', 'active')
             ->latest('assigned_at')
             ->take(6)
             ->get();
@@ -187,21 +187,21 @@ class AdminOperationalDashboardController extends Controller
         $voucherSummary = VoucherOperationalSummary::get();
 
         return view('admin.operational_dashboard', array_merge([
-            'totalCandidates'                      => $totalCandidates,
-            'paidEligibleCandidatesCount'          => $paidEligibleCandidatesCount,
-            'activeAssignmentsCount'               => $activeAssignmentsCount,
-            'completedAttemptsCount'               => $completedAttemptsCount,
-            'inProgressAttemptsCount'              => $inProgressAttemptsCount,
-            'totalCertificatesIssued'              => $totalCertificatesIssued,
-            'pendingOrganizationsCount'            => $pendingOrganizationsCount,
-            'activeOrganizationsCount'             => $activeOrganizationsCount,
-            'actionRequiredCandidates'             => $actionRequiredCandidates,
+            'totalCandidates' => $totalCandidates,
+            'paidEligibleCandidatesCount' => $paidEligibleCandidatesCount,
+            'activeAssignmentsCount' => $activeAssignmentsCount,
+            'completedAttemptsCount' => $completedAttemptsCount,
+            'inProgressAttemptsCount' => $inProgressAttemptsCount,
+            'totalCertificatesIssued' => $totalCertificatesIssued,
+            'pendingOrganizationsCount' => $pendingOrganizationsCount,
+            'activeOrganizationsCount' => $activeOrganizationsCount,
+            'actionRequiredCandidates' => $actionRequiredCandidates,
             'institutionalSeatsAwaitingAssignment' => $institutionalSeatsAwaitingAssignment,
-            'eligibleTestsByProduct'               => $eligibleTestsByProduct,
-            'activeRequestsByAllocationId'         => $activeRequestsByAllocationId,
-            'recentAssignments'                    => $recentAssignments,
-            'availableTests'                       => $availableTests,
-            'unreadNotificationsCount'             => $unreadNotificationsCount,
+            'eligibleTestsByProduct' => $eligibleTestsByProduct,
+            'activeRequestsByAllocationId' => $activeRequestsByAllocationId,
+            'recentAssignments' => $recentAssignments,
+            'availableTests' => $availableTests,
+            'unreadNotificationsCount' => $unreadNotificationsCount,
         ], $voucherSummary));
     }
 

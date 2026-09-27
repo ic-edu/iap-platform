@@ -18,6 +18,7 @@ use App\Modules\Organization\Enums\MembershipStatus;
 use App\Modules\Organization\Enums\SeatAllocationStatus;
 use App\Modules\Organization\Models\OrganizationSeatAllocation;
 use App\Services\ActivityLogger;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -57,6 +58,7 @@ class AssignmentEngine
                     }
                 }
             }
+
             return false;
         }
 
@@ -66,7 +68,7 @@ class AssignmentEngine
             $hasConfirmedPayment = $order->invoice && $order->invoice->payments()
                 ->where(function ($q) {
                     $q->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
-                      ->orWhereIn('status', ['success', 'paid']);
+                        ->orWhereIn('status', ['success', 'paid']);
                 })
                 ->exists();
 
@@ -83,37 +85,38 @@ class AssignmentEngine
                     }
                 }
             }
+
             return false;
         }
 
         // 3. Fallback: Query database for confirmed payments matching specific test OR assessment family
         return Payment::where(function ($q) use ($user) {
             $q->where('user_id', $user->id)
-              ->orWhereHas('invoice', fn($inv) => $inv->where('user_id', $user->id));
+                ->orWhereHas('invoice', fn ($inv) => $inv->where('user_id', $user->id));
         })
-        ->where(function ($q) {
-            $q->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
-              ->orWhereIn('status', ['success', 'paid']);
-        })
-        ->whereHas('invoice.order.items.product', function ($p) use ($test, $testFamily) {
-            $p->where('is_active', true)
-              ->where(function ($match) use ($test, $testFamily) {
-                  $match->where('test_id', $test->id);
-                  if ($testFamily) {
-                      $match->orWhere(function ($pkg) use ($testFamily) {
-                          $pkg->where('assessment_family', $testFamily)
-                              ->orWhereHas('test', fn($t) => $t->where('test_type', $testFamily));
-                      });
-                  }
-              });
-        })
-        ->exists();
+            ->where(function ($q) {
+                $q->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
+                    ->orWhereIn('status', ['success', 'paid']);
+            })
+            ->whereHas('invoice.order.items.product', function ($p) use ($test, $testFamily) {
+                $p->where('is_active', true)
+                    ->where(function ($match) use ($test, $testFamily) {
+                        $match->where('test_id', $test->id);
+                        if ($testFamily) {
+                            $match->orWhere(function ($pkg) use ($testFamily) {
+                                $pkg->where('assessment_family', $testFamily)
+                                    ->orWhereHas('test', fn ($t) => $t->where('test_type', $testFamily));
+                            });
+                        }
+                    });
+            })
+            ->exists();
     }
 
     /**
      * Get all candidate users who have paid for this Real Test and are eligible for assignment.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, User>
+     * @return Collection<int, User>
      */
     public function getEligibleCandidates(Test $test)
     {
@@ -127,20 +130,20 @@ class AssignmentEngine
             ->whereHas('orders', function ($q) use ($test, $testFamily) {
                 $q->whereHas('invoice.payments', function ($pm) {
                     $pm->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
-                       ->orWhereIn('status', ['success', 'paid']);
+                        ->orWhereIn('status', ['success', 'paid']);
                 })
-                ->whereHas('items.product', function ($p) use ($test, $testFamily) {
-                    $p->where('is_active', true)
-                      ->where(function ($match) use ($test, $testFamily) {
-                          $match->where('test_id', $test->id);
-                          if ($testFamily) {
-                              $match->orWhere(function ($pkg) use ($testFamily) {
-                                  $pkg->where('assessment_family', $testFamily)
-                                      ->orWhereHas('test', fn($t) => $t->where('test_type', $testFamily));
-                              });
-                          }
-                      });
-                });
+                    ->whereHas('items.product', function ($p) use ($test, $testFamily) {
+                        $p->where('is_active', true)
+                            ->where(function ($match) use ($test, $testFamily) {
+                                $match->where('test_id', $test->id);
+                                if ($testFamily) {
+                                    $match->orWhere(function ($pkg) use ($testFamily) {
+                                        $pkg->where('assessment_family', $testFamily)
+                                            ->orWhereHas('test', fn ($t) => $t->where('test_type', $testFamily));
+                                    });
+                                }
+                            });
+                    });
             })
             ->get();
     }
@@ -183,22 +186,22 @@ class AssignmentEngine
 
         if ($assignment) {
             $assignment->update([
-                'assigned_by'  => $assignedBy?->id,
-                'payment_id'   => $payment?->id,
-                'order_id'     => $order?->id,
-                'assigned_at'  => now(),
+                'assigned_by' => $assignedBy?->id,
+                'payment_id' => $payment?->id,
+                'order_id' => $order?->id,
+                'assigned_at' => now(),
             ]);
         } else {
             $assignment = CandidateTestAssignment::create([
-                'user_id'        => $user->id,
-                'test_id'        => $test->id,
-                'assigned_by'    => $assignedBy?->id,
-                'payment_id'     => $payment?->id,
-                'order_id'       => $order?->id,
-                'status'         => 'active',
-                'max_attempts'   => 2,
+                'user_id' => $user->id,
+                'test_id' => $test->id,
+                'assigned_by' => $assignedBy?->id,
+                'payment_id' => $payment?->id,
+                'order_id' => $order?->id,
+                'status' => 'active',
+                'max_attempts' => 2,
                 'attempts_count' => 0,
-                'assigned_at'    => now(),
+                'assigned_at' => now(),
             ]);
         }
 
@@ -257,6 +260,7 @@ class AssignmentEngine
 
         if ($assignment) {
             $assignment->update(['status' => 'unassigned']);
+
             return true;
         }
 
@@ -291,13 +295,13 @@ class AssignmentEngine
     ): CandidateTestAssignment {
         // 1. Authorize actor: Routine institutional assignment must be performed by Operational Admin / RA
         if (!$assignedBy->hasRole(['admin', 'super-admin'])) {
-            throw new InvalidArgumentException("Unauthorized: Only Operational Admin / RA can assign institutional assessments.");
+            throw new InvalidArgumentException('Unauthorized: Only Operational Admin / RA can assign institutional assessments.');
         }
 
         // 2. Candidate resolution & role validation
         $candidate = $allocation->membership?->user;
         if (!$candidate) {
-            throw new InvalidArgumentException("Invalid candidate user for seat allocation.");
+            throw new InvalidArgumentException('Invalid candidate user for seat allocation.');
         }
 
         if (!$candidate->hasRole('student') || $candidate->hasRole(['teacher', 'repository-manager', 'super-admin', 'finance', 'organization-coordinator'])) {
@@ -322,7 +326,7 @@ class AssignmentEngine
 
         // 4. Tenant boundary validation
         if ((string) $allocation->membership?->organization_id !== (string) $allocation->entitlement?->organization_id) {
-            throw new InvalidArgumentException("Cross-organization violation: Candidate does not belong to the entitlement organization.");
+            throw new InvalidArgumentException('Cross-organization violation: Candidate does not belong to the entitlement organization.');
         }
 
         // 5. Test publication and mode gating
@@ -338,7 +342,7 @@ class AssignmentEngine
         // 6. Product & Family compatibility validation
         $product = $allocation->entitlement?->product;
         if (!$product) {
-            throw new InvalidArgumentException("No product linked to this entitlement.");
+            throw new InvalidArgumentException('No product linked to this entitlement.');
         }
 
         if ($product->test_id && (string) $product->test_id !== (string) $test->id) {
@@ -368,9 +372,14 @@ class AssignmentEngine
             $sourcePayment = $sourceOrder?->invoice?->payments()
                 ->where(function ($q) {
                     $q->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid])
-                      ->orWhereIn('status', ['success', 'paid']);
+                        ->orWhereIn('status', ['success', 'paid']);
                 })
+                ->latest()
                 ->first();
+
+            if (!$sourceOrder || !$sourcePayment) {
+                throw new InvalidArgumentException('Cannot assign assessment. Institutional seat is not backed by a Finance-confirmed paid order.');
+            }
 
             // Check if active assignment already exists for this seat allocation
             $existingSeatAssignment = CandidateTestAssignment::where('organization_seat_allocation_id', $lockedAlloc->id)
@@ -379,7 +388,7 @@ class AssignmentEngine
                 ->first();
 
             if ($existingSeatAssignment) {
-                throw new InvalidArgumentException("Active assessment assignment already exists for this institutional seat allocation.");
+                throw new InvalidArgumentException('Active assessment assignment already exists for this institutional seat allocation.');
             }
 
             $assignment = CandidateTestAssignment::where('user_id', $candidate->id)
@@ -390,24 +399,24 @@ class AssignmentEngine
 
             if ($assignment) {
                 $assignment->update([
-                    'assigned_by'                     => $assignedBy->id,
-                    'payment_id'                      => $sourcePayment?->id ?? $assignment->payment_id,
-                    'order_id'                        => $sourceOrder?->id ?? $assignment->order_id,
+                    'assigned_by' => $assignedBy->id,
+                    'payment_id' => $sourcePayment->id,
+                    'order_id' => $sourceOrder->id,
                     'organization_seat_allocation_id' => $lockedAlloc->id,
-                    'assigned_at'                     => now(),
+                    'assigned_at' => now(),
                 ]);
             } else {
                 $assignment = CandidateTestAssignment::create([
-                    'user_id'                         => $candidate->id,
-                    'test_id'                         => $test->id,
-                    'assigned_by'                     => $assignedBy->id,
-                    'payment_id'                      => $sourcePayment?->id,
-                    'order_id'                        => $sourceOrder?->id,
+                    'user_id' => $candidate->id,
+                    'test_id' => $test->id,
+                    'assigned_by' => $assignedBy->id,
+                    'payment_id' => $sourcePayment->id,
+                    'order_id' => $sourceOrder->id,
                     'organization_seat_allocation_id' => $lockedAlloc->id,
-                    'status'                          => 'active',
-                    'max_attempts'                    => 2,
-                    'attempts_count'                  => 0,
-                    'assigned_at'                     => now(),
+                    'status' => 'active',
+                    'max_attempts' => 2,
+                    'attempts_count' => 0,
+                    'assigned_at' => now(),
                 ]);
             }
 
@@ -418,12 +427,12 @@ class AssignmentEngine
                 description: "Assigned candidate '{$candidate->name}' to test '{$test->title}' from institutional seat",
                 subject: $assignment,
                 properties: [
-                    'organization_id'                 => $lockedAlloc->entitlement?->organization_id,
+                    'organization_id' => $lockedAlloc->entitlement?->organization_id,
                     'organization_seat_allocation_id' => $lockedAlloc->id,
-                    'order_id'                        => $sourceOrder?->id,
-                    'candidate_id'                    => $candidate->id,
-                    'test_id'                         => $test->id,
-                    'assigned_by'                     => $assignedBy->id,
+                    'order_id' => $sourceOrder?->id,
+                    'candidate_id' => $candidate->id,
+                    'test_id' => $test->id,
+                    'assigned_by' => $assignedBy->id,
                 ]
             );
 
@@ -434,7 +443,7 @@ class AssignmentEngine
     /**
      * Get all eligible published real tests matching a package's family or test_id.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, Test>
+     * @return Collection<int, Test>
      */
     public function getEligibleTestsForPackage(Product $product)
     {
@@ -443,7 +452,7 @@ class AssignmentEngine
                 ->where('id', $product->test_id)
                 ->where(function ($q) {
                     $q->where('assessment_mode', 'real_test')
-                      ->orWhere('assessment_mode', '!=', 'simulator');
+                        ->orWhere('assessment_mode', '!=', 'simulator');
                 })
                 ->get();
         }
@@ -456,11 +465,11 @@ class AssignmentEngine
         return Test::published()
             ->where(function ($q) use ($family) {
                 $q->where('test_type', $family)
-                  ->orWhere('test_type', strtoupper($family));
+                    ->orWhere('test_type', strtoupper($family));
             })
             ->where(function ($q) {
                 $q->where('assessment_mode', 'real_test')
-                  ->orWhere('assessment_mode', '!=', 'simulator');
+                    ->orWhere('assessment_mode', '!=', 'simulator');
             })
             ->get();
     }

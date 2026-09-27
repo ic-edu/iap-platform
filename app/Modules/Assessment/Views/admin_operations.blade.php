@@ -191,12 +191,26 @@
                         <td colspan="8" class="px-5 py-12 text-center text-slate-400">
                             <span class="text-3xl block mb-2">📭</span>
                             <p class="font-bold text-sm text-slate-300">
-                                {{ $currentTab === 'mock_tests' ? 'No Published Mock Tests in Catalog' : 'No Practice Simulators Found' }}
+                                @if(request('filter') === 'active-assignments' || request('filter') === 'active')
+                                    No published Mock Tests currently have active candidate assignments.
+                                @else
+                                    {{ $currentTab === 'mock_tests' ? 'No Published Mock Tests in Catalog' : 'No Practice Simulators Found' }}
+                                @endif
                             </p>
                             <p class="text-xs text-slate-500 mt-1">
-                                {{ $currentTab === 'mock_tests' ? 'If a specific institutional requirement is needed, you can submit an Assessment Request to the Repository Manager.' : 'No simulators matching the selected criteria.' }}
+                                @if(request('filter') === 'active-assignments' || request('filter') === 'active')
+                                    Assign candidates from the Operational Dashboard or clear filter to view all published Mock Tests.
+                                @else
+                                    {{ $currentTab === 'mock_tests' ? 'If a specific institutional requirement is needed, you can submit an Assessment Request to the Repository Manager.' : 'No simulators matching the selected criteria.' }}
+                                @endif
                             </p>
-                            @if($currentTab === 'mock_tests')
+                            @if(request('filter') === 'active-assignments' || request('filter') === 'active')
+                            <div class="mt-4 flex items-center justify-center gap-2">
+                                <a href="{{ route('admin.tests.index', ['tab' => $currentTab]) }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors">
+                                    <span>View All Published Tests</span>
+                                </a>
+                            </div>
+                            @elseif($currentTab === 'mock_tests')
                             <div class="mt-4">
                                 <a href="{{ route('admin.assessment-requests.index') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors">
                                     <span>+ Request New Mock Test</span>

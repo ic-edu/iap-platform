@@ -8,7 +8,6 @@ use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
-use App\Modules\Commerce\Domain\Enums\AssessmentFamily;
 use App\Modules\Commerce\Domain\Enums\InvoiceStatus;
 use App\Modules\Commerce\Domain\Enums\OrderStatus;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
@@ -38,19 +37,33 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
     use RefreshDatabase;
 
     protected Organization $organizationA;
+
     protected Organization $organizationB;
+
     protected User $coordinatorA;
+
     protected User $coordinatorB;
+
     protected User $candidateA1;
+
     protected User $adminUser;
+
     protected OrganizationMembership $membershipA1;
+
     protected OrganizationEntitlement $entitlementA;
+
     protected OrganizationSeatAllocation $allocationA1;
+
     protected Product $productA;
+
     protected Test $publishedToeicTest;
+
     protected Test $draftToeicTest;
+
     protected Test $publishedToeflTest;
+
     protected Test $simulatorToeicTest;
+
     protected Order $orderA;
 
     protected function setUp(): void
@@ -292,7 +305,7 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
         $this->expectExceptionMessage('Invalid candidate user for seat allocation.');
 
         // Pass a dummy allocation without ID / non-persisted
-        $dummyAllocation = new OrganizationSeatAllocation();
+        $dummyAllocation = new OrganizationSeatAllocation;
         $engine->assignFromOrganizationSeat($dummyAllocation, $this->publishedToeicTest, $this->adminUser);
     }
 
@@ -374,7 +387,7 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
         $engine = app(AssignmentEngine::class);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("does not have candidate/student role.");
+        $this->expectExceptionMessage('does not have candidate/student role.');
 
         $engine->assignFromOrganizationSeat($this->allocationA1, $this->publishedToeicTest, $this->adminUser);
     }
@@ -588,13 +601,13 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
     public function test_legacy_abstract_package_infers_family_and_permits_canonical_assignment(): void
     {
         $legacyProduct = Product::create([
-            'title'             => 'TOEIC Mock Test Package',
-            'slug'              => 'toeic-mock-test-package-legacy-01',
-            'product_type'      => 'assessment',
+            'title' => 'TOEIC Mock Test Package',
+            'slug' => 'toeic-mock-test-package-legacy-01',
+            'product_type' => 'assessment',
             'assessment_family' => null,
-            'test_id'           => null,
-            'price'             => 85000,
-            'is_active'         => true,
+            'test_id' => null,
+            'price' => 85000,
+            'is_active' => true,
         ]);
 
         $this->entitlementA->update(['product_id' => $legacyProduct->id]);
@@ -621,13 +634,13 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
     public function test_explicit_family_takes_precedence_over_legacy_inferred_slug_and_title(): void
     {
         $product = Product::create([
-            'title'             => 'TOEIC Prep with TOEFL Certificate',
-            'slug'              => 'toeic-prep-package',
-            'product_type'      => 'assessment',
+            'title' => 'TOEIC Prep with TOEFL Certificate',
+            'slug' => 'toeic-prep-package',
+            'product_type' => 'assessment',
             'assessment_family' => 'toefl', // Explicit family is TOEFL despite TOEIC in title/slug
-            'test_id'           => null,
-            'price'             => 85000,
-            'is_active'         => true,
+            'test_id' => null,
+            'price' => 85000,
+            'is_active' => true,
         ]);
 
         $this->assertEquals('toefl', $product->getEffectiveFamily());
@@ -639,13 +652,13 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
     public function test_unknown_legacy_package_without_family_fails_closed_on_institutional_assignment(): void
     {
         $unknownProduct = Product::create([
-            'title'             => 'Unknown Custom Assessment Bundle',
-            'slug'              => 'unknown-custom-assessment-bundle',
-            'product_type'      => 'assessment',
+            'title' => 'Unknown Custom Assessment Bundle',
+            'slug' => 'unknown-custom-assessment-bundle',
+            'product_type' => 'assessment',
             'assessment_family' => null,
-            'test_id'           => null,
-            'price'             => 85000,
-            'is_active'         => true,
+            'test_id' => null,
+            'price' => 85000,
+            'is_active' => true,
         ]);
 
         $this->assertNull($unknownProduct->getEffectiveFamily());
@@ -672,13 +685,13 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
     public function test_cross_family_assignment_is_strictly_rejected(): void
     {
         $toeicProduct = Product::create([
-            'title'             => 'TOEIC Mock Test Package',
-            'slug'              => 'toeic-mock-test-package-rejection-test',
-            'product_type'      => 'assessment',
+            'title' => 'TOEIC Mock Test Package',
+            'slug' => 'toeic-mock-test-package-rejection-test',
+            'product_type' => 'assessment',
             'assessment_family' => 'toeic',
-            'test_id'           => null,
-            'price'             => 85000,
-            'is_active'         => true,
+            'test_id' => null,
+            'price' => 85000,
+            'is_active' => true,
         ]);
 
         $this->entitlementA->update(['product_id' => $toeicProduct->id]);
@@ -710,5 +723,172 @@ class InstitutionalAssessmentAssignmentTest extends TestCase
             $this->draftToeicTest,
             $this->adminUser
         );
+    }
+
+    /**
+     * TEST: Institutional assignment fails closed when no source order or confirmed payment exists.
+     */
+    public function test_institutional_assignment_fails_closed_when_no_source_order_or_payment_exists(): void
+    {
+        // Create an unpaid order without invoice/payments
+        $unpaidOrder = Order::create([
+            'order_number' => 'ORD-UNPAID-TEST',
+            'user_id' => $this->coordinatorA->id,
+            'organization_id' => $this->organizationA->id,
+            'status' => OrderStatus::Pending,
+            'subtotal' => 85000,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'grand_total' => 85000,
+            'currency' => 'IDR',
+        ]);
+
+        $unpaidOrderItem = OrderItem::create([
+            'order_id' => $unpaidOrder->id,
+            'product_id' => $this->productA->id,
+            'quantity' => 1,
+            'price' => 85000,
+            'total' => 85000,
+        ]);
+
+        $unpaidEntitlement = OrganizationEntitlement::create([
+            'organization_id' => $this->organizationA->id,
+            'product_id' => $this->productA->id,
+            'order_item_id' => $unpaidOrderItem->id,
+            'total_seats' => 1,
+            'allocated_seats' => 1,
+            'available_seats' => 0,
+            'status' => EntitlementStatus::Active,
+        ]);
+
+        $unpaidAllocation = OrganizationSeatAllocation::create([
+            'organization_entitlement_id' => $unpaidEntitlement->id,
+            'organization_membership_id' => $this->membershipA1->id,
+            'allocated_by' => $this->coordinatorA->id,
+            'status' => SeatAllocationStatus::Active,
+            'allocated_at' => now(),
+        ]);
+
+        $engine = app(AssignmentEngine::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot assign assessment. Institutional seat is not backed by a Finance-confirmed paid order.');
+
+        $engine->assignFromOrganizationSeat($unpaidAllocation, $this->publishedToeicTest, $this->adminUser);
+    }
+
+    /**
+     * TEST: Institutional assignment fails closed when payment status is pending or failed.
+     */
+    public function test_institutional_assignment_fails_closed_when_payment_status_is_pending(): void
+    {
+        // Update payment to pending
+        Payment::where('invoice_id', $this->orderA->invoice->id)->update([
+            'status' => PaymentStatus::Pending,
+        ]);
+
+        $engine = app(AssignmentEngine::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot assign assessment. Institutional seat is not backed by a Finance-confirmed paid order.');
+
+        $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+    }
+
+    /**
+     * TEST: Institutional assignment fails closed when payment status is failed.
+     */
+    public function test_institutional_assignment_fails_closed_when_payment_status_is_failed(): void
+    {
+        // Update payment to failed
+        Payment::where('invoice_id', $this->orderA->invoice->id)->update([
+            'status' => PaymentStatus::Failed,
+        ]);
+
+        $engine = app(AssignmentEngine::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot assign assessment. Institutional seat is not backed by a Finance-confirmed paid order.');
+
+        $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+    }
+
+    /**
+     * TEST: Candidate does not need personal B2C payment for institutional CA assignment.
+     */
+    public function test_candidate_does_not_need_personal_b2c_payment_for_institutional_ca(): void
+    {
+        // Ensure candidate has 0 personal orders or payments
+        $this->assertEquals(0, Order::where('user_id', $this->candidateA1->id)->count());
+        $this->assertEquals(0, Payment::where('user_id', $this->candidateA1->id)->count());
+
+        $engine = app(AssignmentEngine::class);
+        $assignment = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        $this->assertNotNull($assignment);
+        $this->assertEquals($this->candidateA1->id, $assignment->user_id);
+        $this->assertEquals($this->publishedToeicTest->id, $assignment->test_id);
+        $this->assertEquals('active', $assignment->status);
+        $this->assertEquals($this->orderA->id, $assignment->order_id);
+        $this->assertNotNull($assignment->payment_id);
+    }
+
+    /**
+     * TEST: RA Dashboard Recent Active Assignments only queries status = 'active'.
+     */
+    public function test_ra_dashboard_recent_active_assignments_only_queries_active(): void
+    {
+        $engine = app(AssignmentEngine::class);
+        $activeAssignment = $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        // Create an expired assignment for another candidate
+        $candidate2 = User::factory()->create(['name' => 'Candidate Expired', 'status' => 'active']);
+        $candidate2->assignRole('student');
+        $expiredAssignment = CandidateTestAssignment::create([
+            'user_id' => $candidate2->id,
+            'test_id' => $this->publishedToeicTest->id,
+            'assigned_by' => $this->adminUser->id,
+            'status' => 'expired',
+            'max_attempts' => 2,
+            'attempts_count' => 2,
+            'assigned_at' => now()->subDays(5),
+        ]);
+
+        $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
+        $response->assertStatus(200);
+
+        // Active candidate should appear in Recent Active Assignments
+        $response->assertSee('Candidate CA01');
+
+        // Recent Active Assignments view variable must only contain active
+        $recentAssignments = $response->viewData('recentAssignments');
+        $this->assertTrue($recentAssignments->contains('id', $activeAssignment->id));
+        $this->assertFalse($recentAssignments->contains('id', $expiredAssignment->id));
+    }
+
+    /**
+     * TEST: /admin/tests?filter=active-assignments contextual empty state and active filtering.
+     */
+    public function test_admin_tests_active_assignments_filter_empty_state_and_filtering(): void
+    {
+        // 1. When no active assignments exist
+        $response = $this->actingAs($this->adminUser)->get(route('admin.tests.index', ['filter' => 'active-assignments']));
+        $response->assertStatus(200);
+        $response->assertSee('No published Mock Tests currently have active candidate assignments.');
+        $response->assertDontSee('No Published Mock Tests in Catalog');
+
+        // 2. Unfiltered catalog still shows published mock tests
+        $unfilteredResponse = $this->actingAs($this->adminUser)->get(route('admin.tests.index'));
+        $unfilteredResponse->assertStatus(200);
+        $unfilteredResponse->assertSee($this->publishedToeicTest->title);
+
+        // 3. When an active assignment exists, active-assignments filter lists that test
+        $engine = app(AssignmentEngine::class);
+        $engine->assignFromOrganizationSeat($this->allocationA1->fresh(), $this->publishedToeicTest, $this->adminUser);
+
+        $filteredResponse = $this->actingAs($this->adminUser)->get(route('admin.tests.index', ['filter' => 'active-assignments']));
+        $filteredResponse->assertStatus(200);
+        $filteredResponse->assertSee($this->publishedToeicTest->title);
+        $filteredResponse->assertDontSee('No published Mock Tests currently have active candidate assignments.');
     }
 }
