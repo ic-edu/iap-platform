@@ -662,4 +662,124 @@ class DelayedResultReleaseOperationsTest extends TestCase
 
         $this->assertTrue($attempt2->fresh()->isResultReleased());
     }
+
+    /**
+     * HARDENING TEST 1: Pending-evaluation attempt with past release_at has canResultBeReleased() == false.
+     */
+    public function test_pending_evaluation_attempt_with_past_release_at_cannot_be_released_predicate(): void
+    {
+        $attempt = $this->createCompletedMockAttempt([
+            'evaluation_status' => 'pending_evaluation',
+            'result_release_at' => now()->subHours(2),
+            'result_release_status' => ResultReleaseStatus::Processing,
+        ]);
+
+        $this->assertFalse($attempt->canResultBeReleased());
+    }
+
+    /**
+     * HARDENING TEST 2 & 4: Pending-evaluation attempt does NOT render Release Result CTA and remains Processing/ineligible.
+     */
+    public function test_pending_evaluation_attempt_does_not_render_release_cta_and_shows_ineligible(): void
+    {
+        $pendingAttempt = $this->createCompletedMockAttempt([
+            'evaluation_status' => 'pending_evaluation',
+            'result_release_at' => now()->subHours(2),
+            'result_release_status' => ResultReleaseStatus::Processing,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        // Must NOT render actionable form for this attempt
+        $response->assertDontSee(route('admin.assessment-attempts.release-result', $pendingAttempt->id));
+        $response->assertSee('Release Ineligible');
+        $response->assertSee('Processing');
+    }
+
+    /**
+     * HARDENING TEST 3: Pending-evaluation attempt does NOT count in Ready for Release counter.
+     */
+    public function test_pending_evaluation_attempt_does_not_count_in_ready_for_release(): void
+    {
+        $this->createCompletedMockAttempt([
+            'evaluation_status' => 'pending_evaluation',
+            'result_release_at' => now()->subHours(2),
+            'result_release_status' => ResultReleaseStatus::Processing,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
+        $response->assertOk();
+
+        $this->assertEquals(0, $response->viewData('readyResultsCount'));
+        $this->assertEquals(1, $response->viewData('processingResultsCount'));
+    }
+
+    /**
+     * HARDENING TEST 5: Completed not-required evaluation attempt with past release_at has canResultBeReleased() == true.
+     */
+    public function test_completed_not_required_attempt_with_past_release_at_is_release_eligible(): void
+    {
+        $attempt = $this->createCompletedMockAttempt([
+            'evaluation_status' => 'not_required',
+            'result_release_at' => now()->subHours(2),
+            'result_release_status' => ResultReleaseStatus::Processing,
+        ]);
+
+        $this->assertTrue($attempt->canResultBeReleased());
+    }
+
+    /**
+     * HARDENING TEST 6: Simulator with past release_at has canResultBeReleased() == false.
+     */
+    public function test_simulator_with_past_release_at_has_can_result_be_released_false(): void
+    {
+        $simAttempt = Attempt::create([
+            'user_id' => $this->student->id,
+            'test_id' => $this->simulatorTest->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Submitted,
+            'started_at' => now()->subHours(2),
+            'submitted_at' => now()->subHour(),
+            'result_release_at' => now()->subHour(),
+            'result_release_status' => ResultReleaseStatus::Released,
+        ]);
+
+        $this->assertFalse($simAttempt->canResultBeReleased());
+    }
+
+    /**
+     * HARDENING TEST 7: In-progress attempt with past release_at has canResultBeReleased() == false.
+     */
+    public function test_in_progress_attempt_with_past_release_at_has_can_result_be_released_false(): void
+    {
+        $inProgressAttempt = Attempt::create([
+            'user_id' => $this->student->id,
+            'test_id' => $this->mockTest->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::InProgress,
+            'started_at' => now()->subHours(2),
+            'result_release_at' => now()->subHour(),
+            'result_release_status' => ResultReleaseStatus::Processing,
+        ]);
+
+        $this->assertFalse($inProgressAttempt->canResultBeReleased());
+    }
+
+    /**
+     * HARDENING TEST 8: Service revalidates pending evaluation after lock and rejects.
+     */
+    public function test_service_revalidates_pending_evaluation_after_lock_and_rejects(): void
+    {
+        $attempt = $this->createCompletedMockAttempt([
+            'evaluation_status' => 'pending_evaluation',
+            'result_release_at' => now()->subMinutes(10),
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Attempt is still awaiting examiner evaluation and cannot be released.');
+
+        $this->releaseService->release($attempt, $this->admin);
+    }
 }

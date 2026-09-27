@@ -155,31 +155,43 @@ class DelayedResultReleaseFoundationTest extends TestCase
     {
         // 1. Not ready yet: release_at in future
         $futureAttempt = new Attempt([
+            'test_id' => $this->mockTest->id,
+            'status' => AttemptStatus::Submitted,
             'result_release_status' => ResultReleaseStatus::Processing,
             'result_release_at' => now()->addHours(12),
         ]);
+        $futureAttempt->setRelation('test', $this->mockTest);
         $this->assertFalse($futureAttempt->canResultBeReleased());
 
         // 2. Eligible: release_at in past and not yet released
         $pastAttempt = new Attempt([
+            'test_id' => $this->mockTest->id,
+            'status' => AttemptStatus::Submitted,
             'result_release_status' => ResultReleaseStatus::Ready,
             'result_release_at' => now()->subMinute(),
         ]);
+        $pastAttempt->setRelation('test', $this->mockTest);
         $this->assertTrue($pastAttempt->canResultBeReleased());
 
         // 3. Already released: returns false even if release_at is past
         $alreadyReleasedAttempt = new Attempt([
+            'test_id' => $this->mockTest->id,
+            'status' => AttemptStatus::Submitted,
             'result_release_status' => ResultReleaseStatus::Released,
             'result_release_at' => now()->subHour(),
             'result_released_at' => now()->subHour(),
         ]);
+        $alreadyReleasedAttempt->setRelation('test', $this->mockTest);
         $this->assertFalse($alreadyReleasedAttempt->canResultBeReleased());
 
         // 4. Null release_at: returns false
         $nullAttempt = new Attempt([
+            'test_id' => $this->mockTest->id,
+            'status' => AttemptStatus::Submitted,
             'result_release_status' => null,
             'result_release_at' => null,
         ]);
+        $nullAttempt->setRelation('test', $this->mockTest);
         $this->assertFalse($nullAttempt->canResultBeReleased());
     }
 

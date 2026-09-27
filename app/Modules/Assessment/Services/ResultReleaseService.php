@@ -43,13 +43,31 @@ class ResultReleaseService
             throw new RuntimeException('Result cannot be released before the configured release time.');
         }
 
-        // 2. Atomic release execution under row lock
-        return DB::transaction(function () use ($attempt, $actor, $test) {
-            $lockedAttempt = Attempt::where('id', $attempt->id)->lockForUpdate()->firstOrFail();
+        // 2. Atomic release execution under row lock with locked-row authoritative invariant revalidation
+        return DB::transaction(function () use ($attempt, $actor) {
+            $lockedAttempt = Attempt::with('test')->where('id', $attempt->id)->lockForUpdate()->firstOrFail();
 
             // Idempotent return if already released
             if ($lockedAttempt->isResultReleased()) {
                 return $lockedAttempt;
+            }
+
+            // Authoritative revalidation from locked row
+            if (!$lockedAttempt->isCompleted()) {
+                throw new InvalidArgumentException('Only completed attempts (submitted or expired) can be released.');
+            }
+
+            $lockedTest = $lockedAttempt->test;
+            if (!$lockedTest || $lockedTest->isSimulator()) {
+                throw new InvalidArgumentException('Simulator assessments do not require manual result release.');
+            }
+
+            if ($lockedAttempt->isPendingEvaluation()) {
+                throw new InvalidArgumentException('Attempt is still awaiting examiner evaluation and cannot be released.');
+            }
+
+            if ($lockedAttempt->result_release_at === null) {
+                throw new InvalidArgumentException('Attempt does not have a configured result release time.');
             }
 
             // Re-verify early release block under lock
@@ -68,9 +86,13 @@ class ResultReleaseService
 
             // 3. Audit Logging (RESULT_RELEASED)
             try {
+                $releaseMode = $lockedTest->result_release_mode instanceof ResultReleaseMode
+                    ? $lockedTest->result_release_mode->value
+                    : ($lockedTest->result_release_mode ?? 'manual');
+
                 ActivityLogger::log(
                     action: 'RESULT_RELEASED',
-                    description: "Result released for attempt #{$lockedAttempt->id} ({$test->title}) by user #{$releasedBy}",
+                    description: "Result released for attempt #{$lockedAttempt->id} ({$lockedTest->title}) by user #{$releasedBy}",
                     subject: $lockedAttempt,
                     properties: [
                         'attempt_id' => $lockedAttempt->id,
@@ -79,7 +101,7 @@ class ResultReleaseService
                         'released_by' => $releasedBy,
                         'result_release_at' => $lockedAttempt->result_release_at?->toIso8601String(),
                         'result_released_at' => $releasedAt->toIso8601String(),
-                        'release_mode' => $test->result_release_mode?->value ?? 'manual',
+                        'release_mode' => $releaseMode,
                     ],
                     userId: $releasedBy
                 );

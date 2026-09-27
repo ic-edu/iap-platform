@@ -305,11 +305,24 @@ class Attempt extends Model
     }
 
     /**
-     * Check if attempt result can be released (delay elapsed and not already released).
+     * Check if attempt result can be released (all invariants satisfied: completed, non-simulator, evaluated, elapsed, and unreleased).
      */
     public function canResultBeReleased(): bool
     {
         if ($this->isResultReleased()) {
+            return false;
+        }
+
+        if (!$this->isCompleted()) {
+            return false;
+        }
+
+        if ($this->isPendingEvaluation()) {
+            return false;
+        }
+
+        $test = $this->relationLoaded('test') && $this->test ? $this->test : $this->test()->first();
+        if (!$test || $test->isSimulator()) {
             return false;
         }
 
