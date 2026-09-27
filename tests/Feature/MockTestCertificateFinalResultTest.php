@@ -207,6 +207,16 @@ class MockTestCertificateFinalResultTest extends TestCase
         }
     }
 
+    protected function releaseAttempt(Attempt $attempt): Attempt
+    {
+        $attempt->update([
+            'result_release_status' => 'released',
+            'result_released_at' => now(),
+        ]);
+
+        return $attempt->fresh();
+    }
+
     /**
      * TEST 1: Attempt 1 finalized -> final_attempt_id = Attempt 1 -> certificate generated from Attempt 1.
      */
@@ -216,6 +226,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 2);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         // Before finalize: No certificates exist
         $this->assertCount(0, Certificate::all());
@@ -246,6 +257,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 2);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         // First finalize
         $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $attempt1));
@@ -270,6 +282,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
 
@@ -303,6 +316,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 2);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
 
@@ -336,6 +350,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 2);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
         $attempt1->update(['submitted_at' => now()->subMinutes(30), 'total_score' => 720.0]);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
@@ -362,6 +377,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
 
@@ -394,6 +410,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 2);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
         $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $attempt1));
 
         $certEngine = app(CertificateEngine::class);
@@ -417,6 +434,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 2);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
         $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $attempt1));
 
         $cert = Certificate::where('attempt_id', $attempt1->id)->first();
@@ -441,6 +459,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 2);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
         $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $attempt1));
 
         $cert = Certificate::where('attempt_id', $attempt1->id)->first();
@@ -477,6 +496,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
 

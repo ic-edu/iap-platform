@@ -7,6 +7,7 @@ use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Engines\ReviewEngine;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
+use App\Modules\Assessment\Enums\ResultReleaseStatus;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
@@ -148,6 +149,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'pending_decision',
             'is_final' => false,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(2),
             'submitted_at' => now()->subMinutes(10),
         ]);
@@ -187,6 +190,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'pending_decision',
             'is_final' => false,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(2),
             'submitted_at' => now()->subMinutes(10),
         ]);
@@ -217,6 +222,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'retried',
             'is_final' => false,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(3),
             'submitted_at' => now()->subHours(2),
         ]);
@@ -242,6 +249,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'finalized',
             'is_final' => true,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(2),
             'submitted_at' => now()->subMinutes(30),
         ]);
@@ -270,6 +279,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'finalized',
             'is_final' => true,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(1),
             'submitted_at' => now()->subMinutes(10),
         ]);
@@ -295,6 +306,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'retried',
             'is_final' => false,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(4),
             'submitted_at' => now()->subHours(3),
         ]);
@@ -378,6 +391,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'pending_decision',
             'is_final' => false,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(2),
             'submitted_at' => now()->subMinutes(10),
         ]);
@@ -406,6 +421,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'pending_decision',
             'is_final' => false,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(2),
             'submitted_at' => now()->subMinutes(10),
         ]);
@@ -660,6 +677,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'evaluation_status' => EvaluationStatus::Evaluated,
             'decision_status' => 'pending_decision',
             'is_final' => false,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'submitted_at' => now(),
         ]);
 
@@ -811,6 +830,8 @@ class InstitutionalResultConfidentialityTest extends TestCase
             'total_score' => 0,
             'decision_status' => 'pending_decision',
             'is_final' => false,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
             'started_at' => now()->subHours(2),
             'submitted_at' => now(),
         ]);

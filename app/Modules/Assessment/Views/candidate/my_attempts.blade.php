@@ -22,7 +22,8 @@
             <tbody class="divide-y divide-slate-200 dark:divide-slate-800/60">
                 @forelse ($attempts as $att)
                     @php
-                        $res = $att->result_summary;
+                        $isProcessing = $att->test?->isRealTest() && !$att->isResultReleased();
+                        $res = $isProcessing ? [] : $att->result_summary;
                         $isPassed = $res['is_passed'] ?? false;
                         $isSim = $att->test?->isSimulator() ?? false;
                         $isInProgress = $att->status->value === 'in_progress';
@@ -71,6 +72,11 @@
                                 <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">Active Session</span>
                             @elseif ($att->status->value === 'cancelled')
                                 <span class="text-xs text-slate-500 dark:text-slate-400">Cancelled</span>
+                            @elseif ($isProcessing)
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Processing
+                                </span>
                             @else
                                 <div class="flex items-center gap-2 flex-wrap">
                                     @if ($isSim)
@@ -104,13 +110,13 @@
                                 </a>
                             @else
                                 <a href="{{ route('candidate.review', $att) }}" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-bold hover:underline focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-1.5 py-0.5">
-                                    <span>View Result</span>
+                                    <span>{{ $isProcessing ? 'View Status' : 'View Result' }}</span>
                                     <span>&rarr;</span>
                                 </a>
-                                @if ($isPassed && $att->certificate && !$isSim)
+                                @if (!$isProcessing && $isPassed && $att->certificate && !$isSim)
                                     <a href="{{ route('candidate.certificates.download', $att->certificate->id) }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-semibold hover:underline ml-2">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" />
                                         </svg>
                                         <span>Certificate</span>
                                     </a>

@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Modules\Assessment\Engines\ResultEngine;
-use App\Modules\Assessment\Engines\TOEICScoringEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
+use App\Modules\Assessment\Enums\ResultReleaseStatus;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
@@ -19,6 +19,7 @@ use App\Modules\QuestionBank\Enums\TestType;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class SimulatorScoringThresholdTest extends TestCase
@@ -26,14 +27,15 @@ class SimulatorScoringThresholdTest extends TestCase
     use RefreshDatabase;
 
     protected User $candidate;
+
     protected User $teacher;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
 
         $this->candidate = User::factory()->create();
         $this->candidate->assignRole('student');
@@ -48,71 +50,71 @@ class SimulatorScoringThresholdTest extends TestCase
     protected function createSimulatorAttempt(int $totalQuestions, int $correctCount, string $testType = 'toeic', int $passScore = 700): Attempt
     {
         $test = Test::create([
-            'title'            => 'Simulator Test Fixture',
-            'slug'             => 'simulator-test-' . uniqid(),
-            'test_type'        => $testType,
-            'assessment_mode'  => AssessmentMode::Simulator,
+            'title' => 'Simulator Test Fixture',
+            'slug' => 'simulator-test-'.uniqid(),
+            'test_type' => $testType,
+            'assessment_mode' => AssessmentMode::Simulator,
             'duration_minutes' => 60,
-            'pass_score'       => $passScore,
-            'scoring_method'   => 'automatic',
-            'status'           => 'published',
-            'is_published'     => true,
-            'created_by'       => $this->teacher->id,
+            'pass_score' => $passScore,
+            'scoring_method' => 'automatic',
+            'status' => 'published',
+            'is_published' => true,
+            'created_by' => $this->teacher->id,
         ]);
 
         $section = TestSection::create([
-            'test_id'      => $test->id,
-            'title'        => 'Practice Section',
+            'test_id' => $test->id,
+            'title' => 'Practice Section',
             'section_type' => SectionType::Listening,
-            'order'        => 1,
+            'order' => 1,
         ]);
 
         $attempt = Attempt::create([
-            'test_id'           => $test->id,
-            'user_id'           => $this->candidate->id,
-            'attempt_token'     => 'sim-tok-' . uniqid(),
-            'status'            => AttemptStatus::Submitted,
+            'test_id' => $test->id,
+            'user_id' => $this->candidate->id,
+            'attempt_token' => 'sim-tok-'.uniqid(),
+            'status' => AttemptStatus::Submitted,
             'evaluation_status' => EvaluationStatus::NotRequired,
-            'started_at'        => now()->subMinutes(30),
-            'submitted_at'      => now(),
+            'started_at' => now()->subMinutes(30),
+            'submitted_at' => now(),
         ]);
 
         for ($i = 1; $i <= $totalQuestions; $i++) {
             $q = Question::create([
-                'prompt'        => "Question {$i}",
+                'prompt' => "Question {$i}",
                 'question_type' => QuestionType::MultipleChoice,
-                'points'        => 1,
-                'section'       => SectionType::Listening,
+                'points' => 1,
+                'section' => SectionType::Listening,
             ]);
 
             TestQuestion::create([
                 'test_section_id' => $section->id,
-                'question_id'     => $q->id,
-                'order'           => $i,
-                'points'          => 1,
+                'question_id' => $q->id,
+                'order' => $i,
+                'points' => 1,
             ]);
 
             $cCorrect = QuestionChoice::create([
                 'question_id' => $q->id,
-                'label'       => 'A',
-                'content'     => 'Correct Choice',
-                'is_correct'  => true,
+                'label' => 'A',
+                'content' => 'Correct Choice',
+                'is_correct' => true,
             ]);
 
             $cWrong = QuestionChoice::create([
                 'question_id' => $q->id,
-                'label'       => 'B',
-                'content'     => 'Wrong Choice',
-                'is_correct'  => false,
+                'label' => 'B',
+                'content' => 'Wrong Choice',
+                'is_correct' => false,
             ]);
 
             $isCorrect = ($i <= $correctCount);
             Answer::create([
-                'attempt_id'         => $attempt->id,
-                'question_id'        => $q->id,
+                'attempt_id' => $attempt->id,
+                'question_id' => $q->id,
                 'selected_choice_id' => $isCorrect ? $cCorrect->id : $cWrong->id,
-                'is_correct'         => $isCorrect,
-                'score_earned'       => $isCorrect ? 1 : 0,
+                'is_correct' => $isCorrect,
+                'score_earned' => $isCorrect ? 1 : 0,
             ]);
         }
 
@@ -234,73 +236,75 @@ class SimulatorScoringThresholdTest extends TestCase
     {
         // Create full TOEIC Mock Test (RealTest mode) with 100 Listening + 100 Reading questions
         $mockTest = Test::create([
-            'title'            => 'Full TOEIC Institutional Mock Test',
-            'slug'             => 'mock-toeic-' . uniqid(),
-            'test_type'        => TestType::Toeic,
-            'assessment_mode'  => AssessmentMode::RealTest,
+            'title' => 'Full TOEIC Institutional Mock Test',
+            'slug' => 'mock-toeic-'.uniqid(),
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
-            'pass_score'       => 700,
-            'scoring_method'   => 'automatic',
-            'status'           => 'published',
-            'is_published'     => true,
-            'created_by'       => $this->teacher->id,
+            'pass_score' => 700,
+            'scoring_method' => 'automatic',
+            'status' => 'published',
+            'is_published' => true,
+            'created_by' => $this->teacher->id,
         ]);
 
         $secL = TestSection::create([
-            'test_id'      => $mockTest->id,
-            'title'        => 'Listening Section',
+            'test_id' => $mockTest->id,
+            'title' => 'Listening Section',
             'section_type' => SectionType::Listening,
-            'order'        => 1,
+            'order' => 1,
         ]);
 
         $secR = TestSection::create([
-            'test_id'      => $mockTest->id,
-            'title'        => 'Reading Section',
+            'test_id' => $mockTest->id,
+            'title' => 'Reading Section',
             'section_type' => SectionType::Reading,
-            'order'        => 2,
+            'order' => 2,
         ]);
 
         $attempt = Attempt::create([
-            'test_id'           => $mockTest->id,
-            'user_id'           => $this->candidate->id,
-            'attempt_token'     => 'mock-tok-' . uniqid(),
-            'status'            => AttemptStatus::Submitted,
+            'test_id' => $mockTest->id,
+            'user_id' => $this->candidate->id,
+            'attempt_token' => 'mock-tok-'.uniqid(),
+            'status' => AttemptStatus::Submitted,
             'evaluation_status' => EvaluationStatus::NotRequired,
-            'started_at'        => now()->subMinutes(120),
-            'submitted_at'      => now(),
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
+            'started_at' => now()->subMinutes(120),
+            'submitted_at' => now(),
         ]);
 
         // 100 Listening questions: 70 correct
         for ($i = 1; $i <= 100; $i++) {
             $q = Question::create([
-                'prompt'        => "L{$i}",
+                'prompt' => "L{$i}",
                 'question_type' => QuestionType::MultipleChoice,
-                'points'        => 1,
-                'section'       => SectionType::Listening,
+                'points' => 1,
+                'section' => SectionType::Listening,
             ]);
             TestQuestion::create(['test_section_id' => $secL->id, 'question_id' => $q->id, 'order' => $i]);
             $isCorrect = ($i <= 70);
             Answer::create([
-                'attempt_id'  => $attempt->id,
+                'attempt_id' => $attempt->id,
                 'question_id' => $q->id,
-                'is_correct'  => $isCorrect,
+                'is_correct' => $isCorrect,
             ]);
         }
 
         // 100 Reading questions: 60 correct
         for ($i = 1; $i <= 100; $i++) {
             $q = Question::create([
-                'prompt'        => "R{$i}",
+                'prompt' => "R{$i}",
                 'question_type' => QuestionType::MultipleChoice,
-                'points'        => 1,
-                'section'       => SectionType::Reading,
+                'points' => 1,
+                'section' => SectionType::Reading,
             ]);
             TestQuestion::create(['test_section_id' => $secR->id, 'question_id' => $q->id, 'order' => $i]);
             $isCorrect = ($i <= 60);
             Answer::create([
-                'attempt_id'  => $attempt->id,
+                'attempt_id' => $attempt->id,
                 'question_id' => $q->id,
-                'is_correct'  => $isCorrect,
+                'is_correct' => $isCorrect,
             ]);
         }
 

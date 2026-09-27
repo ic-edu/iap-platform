@@ -738,6 +738,16 @@ class CandidatePortalController extends Controller
                 ->with('error', 'Assessment is still in progress. Please submit before viewing results.');
         }
 
+        $attempt->loadMissing(['test', 'assignment']);
+        $test = $attempt->test;
+
+        if ($test && $test->isRealTest() && !$attempt->isResultReleased()) {
+            /** @var view-string $viewName */
+            $viewName = 'assessment::candidate.review_processing';
+
+            return view($viewName, compact('attempt'));
+        }
+
         $summary = $this->engine->reviewAttempt($attempt);
 
         /** @var view-string $viewName */
@@ -820,6 +830,11 @@ class CandidatePortalController extends Controller
                         ->with('error', 'Only completed assessments can be finalized.');
                 }
 
+                if ($attempt->test?->isRealTest() && !$attempt->isResultReleased()) {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'Your result is still processing. Retry/finalization becomes available after the result is released.');
+                }
+
                 // Idempotency: if already finalized, return success
                 if ($attempt->is_final && $attempt->decision_status === 'finalized') {
                     return redirect()->route('candidate.review', $attempt)
@@ -895,6 +910,11 @@ class CandidatePortalController extends Controller
                 if (!$attempt->isCompleted()) {
                     return redirect()->route('candidate.review', $attempt)
                         ->with('error', 'Please complete your first attempt before starting a retry.');
+                }
+
+                if ($attempt->test?->isRealTest() && !$attempt->isResultReleased()) {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'Your result is still processing. Retry/finalization becomes available after the result is released.');
                 }
 
                 // Verify Attempt 1 is not finalized

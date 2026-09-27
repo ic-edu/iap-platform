@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Modules\Assessment\Engines\AttemptEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
+use App\Modules\Assessment\Enums\ResultReleaseStatus;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\AttemptAudioPlay;
@@ -20,11 +20,13 @@ use App\Modules\QuestionBank\Enums\TestType;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionChoice;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CandidateCbtAttemptConcurrencyTest extends TestCase
@@ -32,10 +34,15 @@ class CandidateCbtAttemptConcurrencyTest extends TestCase
     use RefreshDatabase;
 
     protected User $candidate;
+
     protected Test $realTest;
+
     protected Question $question1;
+
     protected QuestionChoice $choice1A;
+
     protected QuestionChoice $choice1B;
+
     protected CandidateTestAssignment $assignment;
 
     protected function setUp(): void
@@ -113,19 +120,19 @@ class CandidateCbtAttemptConcurrencyTest extends TestCase
      */
     protected function prepareMultiprocessEnvironment(): array
     {
-        $tempDb = sys_get_temp_dir() . '/cbt_concurrency_' . uniqid() . '.sqlite';
+        $tempDb = sys_get_temp_dir().'/cbt_concurrency_'.uniqid().'.sqlite';
         touch($tempDb);
 
         config(['database.connections.temp_sqlite' => [
-            'driver'                  => 'sqlite',
-            'database'                => $tempDb,
-            'prefix'                  => '',
+            'driver' => 'sqlite',
+            'database' => $tempDb,
+            'prefix' => '',
             'foreign_key_constraints' => true,
         ]]);
 
         Artisan::call('migrate', [
             '--database' => 'temp_sqlite',
-            '--force'    => true,
+            '--force' => true,
         ]);
 
         $db = DB::connection('temp_sqlite');
@@ -133,7 +140,7 @@ class CandidateCbtAttemptConcurrencyTest extends TestCase
 
         // Seed roles into temp DB (auto-increment integer id)
         $studentRoleId = $db->table('roles')->insertGetId([
-            'name'       => 'student',
+            'name' => 'student',
             'guard_name' => 'web',
             'created_at' => $now,
             'updated_at' => $now,
@@ -141,104 +148,104 @@ class CandidateCbtAttemptConcurrencyTest extends TestCase
 
         // Seed candidate user (auto-increment integer id)
         $candidateId = $db->table('users')->insertGetId([
-            'name'       => 'Isolated Candidate',
-            'email'      => 'isolated_' . uniqid() . '@iap.test',
-            'password'   => bcrypt('password'),
-            'status'     => 'active',
+            'name' => 'Isolated Candidate',
+            'email' => 'isolated_'.uniqid().'@iap.test',
+            'password' => bcrypt('password'),
+            'status' => 'active',
             'created_at' => $now,
             'updated_at' => $now,
         ]);
 
         $db->table('model_has_roles')->insert([
-            'role_id'    => $studentRoleId,
+            'role_id' => $studentRoleId,
             'model_type' => User::class,
-            'model_id'   => $candidateId,
+            'model_id' => $candidateId,
         ]);
 
         // Seed Real Test (ULID id)
-        $testId = (string) \Illuminate\Support\Str::ulid();
+        $testId = (string) Str::ulid();
         $db->table('tests')->insert([
-            'id'               => $testId,
-            'title'            => 'Isolated TOEIC Test',
-            'slug'             => 'isolated-toeic-' . uniqid(),
-            'test_type'        => 'toeic',
-            'assessment_mode'  => 'real_test',
+            'id' => $testId,
+            'title' => 'Isolated TOEIC Test',
+            'slug' => 'isolated-toeic-'.uniqid(),
+            'test_type' => 'toeic',
+            'assessment_mode' => 'real_test',
             'duration_minutes' => 60,
-            'pass_score'       => 75,
-            'is_published'     => 1,
-            'status'           => 'published',
-            'created_by'       => $candidateId,
-            'created_at'       => $now,
-            'updated_at'       => $now,
+            'pass_score' => 75,
+            'is_published' => 1,
+            'status' => 'published',
+            'created_by' => $candidateId,
+            'created_at' => $now,
+            'updated_at' => $now,
         ]);
 
-        $sectionId = (string) \Illuminate\Support\Str::ulid();
+        $sectionId = (string) Str::ulid();
         $db->table('test_sections')->insert([
-            'id'               => $sectionId,
-            'test_id'          => $testId,
-            'title'            => 'Listening Section',
-            'section_type'     => 'listening',
+            'id' => $sectionId,
+            'test_id' => $testId,
+            'title' => 'Listening Section',
+            'section_type' => 'listening',
             'duration_minutes' => 30,
-            'order'            => 1,
-            'created_at'       => $now,
-            'updated_at'       => $now,
+            'order' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
         ]);
 
-        $questionId = (string) \Illuminate\Support\Str::ulid();
+        $questionId = (string) Str::ulid();
         $db->table('questions')->insert([
-            'id'            => $questionId,
-            'prompt'        => 'Isolated Question 1',
-            'section'       => 'listening',
+            'id' => $questionId,
+            'prompt' => 'Isolated Question 1',
+            'section' => 'listening',
             'question_type' => 'multiple_choice',
-            'points'        => 10,
-            'created_at'    => $now,
-            'updated_at'    => $now,
+            'points' => 10,
+            'created_at' => $now,
+            'updated_at' => $now,
         ]);
 
-        $choiceAId = (string) \Illuminate\Support\Str::ulid();
+        $choiceAId = (string) Str::ulid();
         $db->table('question_choices')->insert([
-            'id'          => $choiceAId,
+            'id' => $choiceAId,
             'question_id' => $questionId,
-            'label'       => 'A',
-            'content'     => 'Option A',
-            'is_correct'  => 1,
-            'created_at'  => $now,
-            'updated_at'  => $now,
+            'label' => 'A',
+            'content' => 'Option A',
+            'is_correct' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
         ]);
 
-        $choiceBId = (string) \Illuminate\Support\Str::ulid();
+        $choiceBId = (string) Str::ulid();
         $db->table('question_choices')->insert([
-            'id'          => $choiceBId,
+            'id' => $choiceBId,
             'question_id' => $questionId,
-            'label'       => 'B',
-            'content'     => 'Option B',
-            'is_correct'  => 0,
-            'created_at'  => $now,
-            'updated_at'  => $now,
+            'label' => 'B',
+            'content' => 'Option B',
+            'is_correct' => 0,
+            'created_at' => $now,
+            'updated_at' => $now,
         ]);
 
-        $testQuestionId = (string) \Illuminate\Support\Str::ulid();
+        $testQuestionId = (string) Str::ulid();
         $db->table('test_questions')->insert([
-            'id'              => $testQuestionId,
+            'id' => $testQuestionId,
             'test_section_id' => $sectionId,
-            'question_id'     => $questionId,
-            'order'           => 1,
-            'points'          => 10,
-            'created_at'      => $now,
-            'updated_at'      => $now,
+            'question_id' => $questionId,
+            'order' => 1,
+            'points' => 10,
+            'created_at' => $now,
+            'updated_at' => $now,
         ]);
 
-        $assignmentId = (string) \Illuminate\Support\Str::ulid();
+        $assignmentId = (string) Str::ulid();
         $db->table('candidate_test_assignments')->insert([
-            'id'             => $assignmentId,
-            'user_id'        => $candidateId,
-            'test_id'        => $testId,
-            'status'         => 'active',
-            'max_attempts'   => 2,
+            'id' => $assignmentId,
+            'user_id' => $candidateId,
+            'test_id' => $testId,
+            'status' => 'active',
+            'max_attempts' => 2,
             'attempts_count' => 0,
-            'assigned_at'    => $now,
-            'created_at'     => $now,
-            'updated_at'     => $now,
+            'assigned_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
         ]);
 
         $runnerScript = base_path('cbt_multiprocess_worker.php');
@@ -332,15 +339,15 @@ PHP;
         file_put_contents($runnerScript, $runnerCode);
 
         return [
-            'tempDb'        => $tempDb,
-            'db'            => $db,
-            'runnerScript'  => $runnerScript,
-            'candidateId'   => $candidateId,
-            'testId'        => $testId,
-            'questionId'    => $questionId,
-            'choiceAId'     => $choiceAId,
-            'choiceBId'     => $choiceBId,
-            'assignmentId'  => $assignmentId,
+            'tempDb' => $tempDb,
+            'db' => $db,
+            'runnerScript' => $runnerScript,
+            'candidateId' => $candidateId,
+            'testId' => $testId,
+            'questionId' => $questionId,
+            'choiceAId' => $choiceAId,
+            'choiceBId' => $choiceBId,
+            'assignmentId' => $assignmentId,
         ];
     }
 
@@ -376,9 +383,9 @@ PHP;
             $parsed = json_decode(trim($stdout), true);
             $outputs[$i] = [
                 'exitCode' => $exitCode,
-                'raw'      => $stdout,
-                'stderr'   => $stderr,
-                'parsed'   => $parsed,
+                'raw' => $stdout,
+                'stderr' => $stderr,
+                'parsed' => $parsed,
             ];
         }
 
@@ -418,34 +425,34 @@ PHP;
         $env = $this->prepareMultiprocessEnvironment();
 
         try {
-            $attemptId = (string) \Illuminate\Support\Str::ulid();
+            $attemptId = (string) Str::ulid();
             $now = now()->toDateTimeString();
             $env['db']->table('attempts')->insert([
-                'id'                => $attemptId,
-                'test_id'           => $env['testId'],
-                'user_id'           => $env['candidateId'],
-                'assignment_id'     => $env['assignmentId'],
-                'attempt_number'    => 1,
-                'status'            => 'in_progress',
+                'id' => $attemptId,
+                'test_id' => $env['testId'],
+                'user_id' => $env['candidateId'],
+                'assignment_id' => $env['assignmentId'],
+                'attempt_number' => 1,
+                'status' => 'in_progress',
                 'evaluation_status' => 'pending_evaluation',
-                'started_at'        => $now,
-                'seed'              => 'seed123',
-                'created_at'        => $now,
-                'updated_at'        => $now,
+                'started_at' => $now,
+                'seed' => 'seed123',
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
             $env['db']->table('candidate_test_assignments')->where('id', $env['assignmentId'])->update(['attempts_count' => 1]);
 
             // Initial answer Choice A so attempt has answers before submit
-            $answerId = (string) \Illuminate\Support\Str::ulid();
+            $answerId = (string) Str::ulid();
             $env['db']->table('answers')->insert([
-                'id'                 => $answerId,
-                'attempt_id'         => $attemptId,
-                'question_id'        => $env['questionId'],
+                'id' => $answerId,
+                'attempt_id' => $attemptId,
+                'question_id' => $env['questionId'],
                 'selected_choice_id' => $env['choiceAId'],
-                'is_correct'         => 1,
-                'score_earned'       => 10,
-                'created_at'         => $now,
-                'updated_at'         => $now,
+                'is_correct' => 1,
+                'score_earned' => 10,
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
 
             // Process 1: Submit, Process 2: Autosave Choice B
@@ -477,34 +484,34 @@ PHP;
         $env = $this->prepareMultiprocessEnvironment();
 
         try {
-            $attemptId = (string) \Illuminate\Support\Str::ulid();
+            $attemptId = (string) Str::ulid();
             $now = now()->toDateTimeString();
             $env['db']->table('attempts')->insert([
-                'id'                => $attemptId,
-                'test_id'           => $env['testId'],
-                'user_id'           => $env['candidateId'],
-                'assignment_id'     => $env['assignmentId'],
-                'attempt_number'    => 1,
-                'status'            => 'in_progress',
+                'id' => $attemptId,
+                'test_id' => $env['testId'],
+                'user_id' => $env['candidateId'],
+                'assignment_id' => $env['assignmentId'],
+                'attempt_number' => 1,
+                'status' => 'in_progress',
                 'evaluation_status' => 'pending_evaluation',
-                'started_at'        => $now,
-                'seed'              => 'seed123',
-                'created_at'        => $now,
-                'updated_at'        => $now,
+                'started_at' => $now,
+                'seed' => 'seed123',
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
             $env['db']->table('candidate_test_assignments')->where('id', $env['assignmentId'])->update(['attempts_count' => 1]);
 
             // Save answer Choice A
-            $answerId = (string) \Illuminate\Support\Str::ulid();
+            $answerId = (string) Str::ulid();
             $env['db']->table('answers')->insert([
-                'id'                 => $answerId,
-                'attempt_id'         => $attemptId,
-                'question_id'        => $env['questionId'],
+                'id' => $answerId,
+                'attempt_id' => $attemptId,
+                'question_id' => $env['questionId'],
                 'selected_choice_id' => $env['choiceAId'],
-                'is_correct'         => 1,
-                'score_earned'       => 10,
-                'created_at'         => $now,
-                'updated_at'         => $now,
+                'is_correct' => 1,
+                'score_earned' => 10,
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
 
             $cmd1 = sprintf('php %s %s submit %s %s', escapeshellarg($env['runnerScript']), escapeshellarg($env['tempDb']), escapeshellarg((string) $env['candidateId']), escapeshellarg($attemptId));
@@ -530,34 +537,34 @@ PHP;
         $env = $this->prepareMultiprocessEnvironment();
 
         try {
-            $attemptId = (string) \Illuminate\Support\Str::ulid();
+            $attemptId = (string) Str::ulid();
             $now = now()->toDateTimeString();
             $env['db']->table('attempts')->insert([
-                'id'                => $attemptId,
-                'test_id'           => $env['testId'],
-                'user_id'           => $env['candidateId'],
-                'assignment_id'     => $env['assignmentId'],
-                'attempt_number'    => 1,
-                'status'            => 'in_progress',
+                'id' => $attemptId,
+                'test_id' => $env['testId'],
+                'user_id' => $env['candidateId'],
+                'assignment_id' => $env['assignmentId'],
+                'attempt_number' => 1,
+                'status' => 'in_progress',
                 'evaluation_status' => 'pending_evaluation',
-                'started_at'        => $now,
-                'seed'              => 'seed123',
-                'created_at'        => $now,
-                'updated_at'        => $now,
+                'started_at' => $now,
+                'seed' => 'seed123',
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
             $env['db']->table('candidate_test_assignments')->where('id', $env['assignmentId'])->update(['attempts_count' => 1]);
 
             // Save answer so submit can succeed
-            $answerId = (string) \Illuminate\Support\Str::ulid();
+            $answerId = (string) Str::ulid();
             $env['db']->table('answers')->insert([
-                'id'                 => $answerId,
-                'attempt_id'         => $attemptId,
-                'question_id'        => $env['questionId'],
+                'id' => $answerId,
+                'attempt_id' => $attemptId,
+                'question_id' => $env['questionId'],
                 'selected_choice_id' => $env['choiceAId'],
-                'is_correct'         => 1,
-                'score_earned'       => 10,
-                'created_at'         => $now,
-                'updated_at'         => $now,
+                'is_correct' => 1,
+                'score_earned' => 10,
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
 
             $cmdSubmit = sprintf('php %s %s submit %s %s', escapeshellarg($env['runnerScript']), escapeshellarg($env['tempDb']), escapeshellarg((string) $env['candidateId']), escapeshellarg($attemptId));
@@ -581,23 +588,25 @@ PHP;
         $env = $this->prepareMultiprocessEnvironment();
 
         try {
-            $attemptId = (string) \Illuminate\Support\Str::ulid();
+            $attemptId = (string) Str::ulid();
             $now = now()->toDateTimeString();
             $env['db']->table('attempts')->insert([
-                'id'                => $attemptId,
-                'test_id'           => $env['testId'],
-                'user_id'           => $env['candidateId'],
-                'assignment_id'     => $env['assignmentId'],
-                'attempt_number'    => 1,
-                'status'            => 'submitted',
+                'id' => $attemptId,
+                'test_id' => $env['testId'],
+                'user_id' => $env['candidateId'],
+                'assignment_id' => $env['assignmentId'],
+                'attempt_number' => 1,
+                'status' => 'submitted',
                 'evaluation_status' => 'evaluated',
-                'decision_status'   => 'pending_decision',
-                'started_at'        => $now,
-                'submitted_at'      => $now,
-                'total_score'       => 80,
-                'seed'              => 'seed123',
-                'created_at'        => $now,
-                'updated_at'        => $now,
+                'decision_status' => 'pending_decision',
+                'result_release_status' => 'released',
+                'result_released_at' => $now,
+                'started_at' => $now,
+                'submitted_at' => $now,
+                'total_score' => 80,
+                'seed' => 'seed123',
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
             $env['db']->table('candidate_test_assignments')->where('id', $env['assignmentId'])->update(['attempts_count' => 1]);
 
@@ -633,17 +642,19 @@ PHP;
     {
         // Real Test Attempt #1 submitted, pending_decision
         $attempt1 = Attempt::create([
-            'test_id'           => $this->realTest->id,
-            'user_id'           => $this->candidate->id,
-            'assignment_id'     => $this->assignment->id,
-            'attempt_number'    => 1,
-            'status'            => AttemptStatus::Submitted,
+            'test_id' => $this->realTest->id,
+            'user_id' => $this->candidate->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::Submitted,
             'evaluation_status' => EvaluationStatus::Evaluated,
-            'decision_status'   => 'pending_decision',
-            'started_at'        => now()->subMinutes(30),
-            'submitted_at'      => now()->subMinutes(10),
-            'score'             => 450,
-            'seed'              => 'seed1',
+            'decision_status' => 'pending_decision',
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
+            'started_at' => now()->subMinutes(30),
+            'submitted_at' => now()->subMinutes(10),
+            'score' => 450,
+            'seed' => 'seed1',
         ]);
         $this->assignment->update(['attempts_count' => 1]);
 
@@ -688,17 +699,17 @@ PHP;
     public function test_submit_lock_timeout_handles_gracefully(): void
     {
         $attempt = Attempt::create([
-            'test_id'           => $this->realTest->id,
-            'user_id'           => $this->candidate->id,
-            'assignment_id'     => $this->assignment->id,
-            'attempt_number'    => 1,
-            'status'            => AttemptStatus::InProgress,
+            'test_id' => $this->realTest->id,
+            'user_id' => $this->candidate->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::InProgress,
             'evaluation_status' => EvaluationStatus::PendingEvaluation,
-            'started_at'        => now(),
-            'seed'              => 'seed123',
+            'started_at' => now(),
+            'seed' => 'seed123',
         ]);
 
-        $mockLock = \Mockery::mock(\Illuminate\Contracts\Cache\Lock::class);
+        $mockLock = \Mockery::mock(Lock::class);
         $mockLock->shouldReceive('block')->andThrow(new LockTimeoutException('Lock acquisition timed out.'));
 
         Cache::shouldReceive('lock')
@@ -712,17 +723,17 @@ PHP;
     public function test_autosave_lock_timeout_returns_409(): void
     {
         $attempt = Attempt::create([
-            'test_id'           => $this->realTest->id,
-            'user_id'           => $this->candidate->id,
-            'assignment_id'     => $this->assignment->id,
-            'attempt_number'    => 1,
-            'status'            => AttemptStatus::InProgress,
+            'test_id' => $this->realTest->id,
+            'user_id' => $this->candidate->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::InProgress,
             'evaluation_status' => EvaluationStatus::PendingEvaluation,
-            'started_at'        => now(),
-            'seed'              => 'seed123',
+            'started_at' => now(),
+            'seed' => 'seed123',
         ]);
 
-        $mockLock = \Mockery::mock(\Illuminate\Contracts\Cache\Lock::class);
+        $mockLock = \Mockery::mock(Lock::class);
         $mockLock->shouldReceive('block')->andThrow(new LockTimeoutException('Lock acquisition timed out.'));
 
         Cache::shouldReceive('lock')
@@ -730,7 +741,7 @@ PHP;
             ->andReturn($mockLock);
 
         $response = $this->actingAs($this->candidate)->postJson(route('candidate.exam.autosave', $attempt), [
-            'question_id'     => $this->question1->id,
+            'question_id' => $this->question1->id,
             'selected_choice' => $this->choice1A->id,
         ]);
         $response->assertStatus(409);
@@ -739,27 +750,27 @@ PHP;
     public function test_audio_stream_single_play_is_strictly_enforced_in_real_test(): void
     {
         $attempt = Attempt::create([
-            'test_id'           => $this->realTest->id,
-            'user_id'           => $this->candidate->id,
-            'assignment_id'     => $this->assignment->id,
-            'attempt_number'    => 1,
-            'status'            => AttemptStatus::InProgress,
+            'test_id' => $this->realTest->id,
+            'user_id' => $this->candidate->id,
+            'assignment_id' => $this->assignment->id,
+            'attempt_number' => 1,
+            'status' => AttemptStatus::InProgress,
             'evaluation_status' => EvaluationStatus::PendingEvaluation,
-            'started_at'        => now(),
-            'seed'              => 'seed123',
+            'started_at' => now(),
+            'seed' => 'seed123',
         ]);
 
         // First stream call records single-play reservation
         AttemptAudioPlay::create([
-            'attempt_id'  => $attempt->id,
+            'attempt_id' => $attempt->id,
             'question_id' => $this->question1->id,
-            'play_count'  => 1,
-            'started_at'  => now(),
+            'play_count' => 1,
+            'started_at' => now(),
         ]);
 
         // Second stream call must return 403
         $response = $this->actingAs($this->candidate)->get(route('candidate.exam.audio-stream', [
-            'attempt'  => $attempt,
+            'attempt' => $attempt,
             'question' => $this->question1,
         ]));
 

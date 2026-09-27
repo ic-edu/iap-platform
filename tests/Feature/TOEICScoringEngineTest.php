@@ -8,6 +8,7 @@ use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Engines\ReviewEngine;
 use App\Modules\Assessment\Engines\TOEICScoringEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
+use App\Modules\Assessment\Enums\ResultReleaseStatus;
 use App\Modules\Assessment\Enums\ScoringMethod;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
@@ -1181,6 +1182,12 @@ class TOEICScoringEngineTest extends TestCase
         // Simulate timeout expiration
         app(AttemptEngine::class)->expireAttempt($attempt);
         $attempt->refresh();
+
+        // Release result to allow full review rendering
+        $attempt->update([
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
+        ]);
 
         $response = $this->actingAs($this->candidate)->get(route('candidate.review', $attempt));
         $response->assertStatus(200);

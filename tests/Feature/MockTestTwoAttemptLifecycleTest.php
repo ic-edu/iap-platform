@@ -191,6 +191,16 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         }
     }
 
+    protected function releaseAttempt(Attempt $attempt): Attempt
+    {
+        $attempt->update([
+            'result_release_status' => 'released',
+            'result_released_at' => now(),
+        ]);
+
+        return $attempt->fresh();
+    }
+
     /**
      * TEST 1: Attempt 1 completes and enters pending decision.
      */
@@ -204,6 +214,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
 
         $this->answerQuestionsForAttempt($attempt, 2);
         $attemptEngine->submitAttempt($attempt);
+        $this->releaseAttempt($attempt);
 
         $attempt->refresh();
         $this->assertSame(AttemptStatus::Submitted, $attempt->status);
@@ -229,6 +240,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt, 2);
         $attemptEngine->submitAttempt($attempt);
+        $this->releaseAttempt($attempt);
 
         $response = $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $attempt));
         $response->assertRedirect(route('candidate.review', $attempt));
@@ -256,6 +268,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         $response = $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
 
@@ -284,6 +297,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1); // 100 pts
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         // Candidate retries
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
@@ -322,6 +336,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 2); // 200 pts
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
 
@@ -359,6 +374,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
         $attempt1->update(['submitted_at' => now()->subMinutes(30), 'total_score' => 720.0]);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
@@ -392,6 +408,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
 
@@ -417,6 +434,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt, 2);
         $attemptEngine->submitAttempt($attempt);
+        $this->releaseAttempt($attempt);
 
         // First finalize
         $res1 = $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $attempt));
@@ -442,6 +460,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1);
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         // First retry request
         $res1 = $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
@@ -466,6 +485,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt, 2);
         $attemptEngine->submitAttempt($attempt);
+        $this->releaseAttempt($attempt);
 
         // Other candidate attempts to finalize Jane's attempt
         $res1 = $this->actingAs($this->otherCandidate)->post(route('candidate.exam.finalize', $attempt));
@@ -510,6 +530,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt, 2);
         $attemptEngine->submitAttempt($attempt);
+        $this->releaseAttempt($attempt);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $attempt));
 
@@ -528,6 +549,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt1 = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($attempt1, 1); // 100 pts
         $attemptEngine->submitAttempt($attempt1);
+        $this->releaseAttempt($attempt1);
 
         $this->actingAs($this->candidate)->post(route('candidate.exam.retry', $attempt1));
 
@@ -557,6 +579,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $cycle1Attempt = $attemptEngine->startAttempt($this->mockTest, $this->candidate);
         $this->answerQuestionsForAttempt($cycle1Attempt, 2);
         $attemptEngine->submitAttempt($cycle1Attempt);
+        $this->releaseAttempt($cycle1Attempt);
         $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $cycle1Attempt));
 
         $this->assertSame('completed', $this->assignment->fresh()->status);

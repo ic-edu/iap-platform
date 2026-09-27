@@ -12,6 +12,7 @@ use App\Modules\Assessment\Events\AttemptSubmitted;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Services\ResultReleasePolicyService;
 use App\Modules\Certificate\Engines\CertificateEngine;
 use App\Services\BestResultResolver;
 use Illuminate\Support\Facades\Cache;
@@ -140,12 +141,22 @@ class AttemptEngine
             ? EvaluationStatus::PendingEvaluation
             : EvaluationStatus::NotRequired;
 
-        $attempt->update([
+        $updateData = [
             'status' => AttemptStatus::Submitted,
             'evaluation_status' => $evaluationStatus,
             'submitted_at' => now(),
             'decision_status' => ($test && $test->isRealTest()) ? 'pending_decision' : null,
-        ]);
+        ];
+
+        if ($attempt->result_release_status === null && $test) {
+            $releaseState = app(ResultReleasePolicyService::class)->deriveInitialReleaseState($test, $updateData['submitted_at']);
+            $updateData['result_release_status'] = $releaseState['result_release_status'];
+            $updateData['result_release_at'] = $releaseState['result_release_at'];
+            $updateData['result_released_at'] = $releaseState['result_released_at'];
+            $updateData['result_released_by'] = $releaseState['result_released_by'];
+        }
+
+        $attempt->update($updateData);
 
         $attempt->refresh();
         $result = $this->resultEngine->generateResult($attempt);
@@ -190,12 +201,22 @@ class AttemptEngine
             ? EvaluationStatus::PendingEvaluation
             : EvaluationStatus::NotRequired;
 
-        $attempt->update([
+        $updateData = [
             'status' => AttemptStatus::Expired,
             'evaluation_status' => $evaluationStatus,
             'submitted_at' => now(),
             'decision_status' => ($test && $test->isRealTest()) ? 'pending_decision' : null,
-        ]);
+        ];
+
+        if ($attempt->result_release_status === null && $test) {
+            $releaseState = app(ResultReleasePolicyService::class)->deriveInitialReleaseState($test, $updateData['submitted_at']);
+            $updateData['result_release_status'] = $releaseState['result_release_status'];
+            $updateData['result_release_at'] = $releaseState['result_release_at'];
+            $updateData['result_released_at'] = $releaseState['result_released_at'];
+            $updateData['result_released_by'] = $releaseState['result_released_by'];
+        }
+
+        $attempt->update($updateData);
 
         $attempt->refresh();
         $this->resultEngine->generateResult($attempt);

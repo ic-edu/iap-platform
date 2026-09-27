@@ -4,24 +4,17 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Modules\Assessment\Engines\AttemptEngine;
-use App\Modules\Assessment\Engines\ResultEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
+use App\Modules\Assessment\Enums\ResultReleaseStatus;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
-use App\Modules\Certificate\Engines\CertificateEngine;
+use App\Modules\Certificate\Enums\CertificateStatus;
 use App\Modules\Certificate\Models\Certificate;
-use App\Modules\Certificate\Services\CertificateEligibilityService;
-use App\Modules\Commerce\Domain\Enums\OrderStatus;
-use App\Modules\Commerce\Domain\Enums\PaymentStatus;
-use App\Modules\Commerce\Domain\Models\Invoice;
-use App\Modules\Commerce\Domain\Models\Order;
-use App\Modules\Commerce\Domain\Models\Payment;
-use App\Modules\Commerce\Domain\Models\Product;
 use App\Modules\QuestionBank\Enums\QuestionType;
 use App\Modules\QuestionBank\Enums\TestType;
 use App\Modules\QuestionBank\Models\Question;
@@ -37,10 +30,15 @@ class SimulatorCertificateEligibilityTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $candidate;
+
     protected Test $simulatorTest;
+
     protected Test $realTest;
+
     protected Question $q1;
+
     protected Question $q2;
 
     protected function setUp(): void
@@ -248,7 +246,7 @@ class SimulatorCertificateEligibilityTest extends TestCase
             'verification_code' => 'VRF-TEST-0001',
             'attempt_id' => $attempt->id,
             'user_id' => $this->candidate->id,
-            'status' => \App\Modules\Certificate\Enums\CertificateStatus::Valid,
+            'status' => CertificateStatus::Valid,
             'template' => 'internal',
             'issued_at' => now(),
             'expires_at' => now()->addYears(2),
@@ -292,6 +290,12 @@ class SimulatorCertificateEligibilityTest extends TestCase
         // While pending decision (non-final), no certificate yet
         $this->assertCount(0, Certificate::all());
 
+        // Release result to allow candidate finalization
+        $attempt->update([
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now(),
+        ]);
+
         // Finalize Attempt 1
         $finalizeResponse = $this->actingAs($this->candidate)->post(route('candidate.exam.finalize', $attempt));
         $finalizeResponse->assertRedirect(route('candidate.review', $attempt));
@@ -330,7 +334,7 @@ class SimulatorCertificateEligibilityTest extends TestCase
             'verification_code' => 'VRF-LEGACY-001',
             'attempt_id' => $attempt->id,
             'user_id' => $this->candidate->id,
-            'status' => \App\Modules\Certificate\Enums\CertificateStatus::Valid,
+            'status' => CertificateStatus::Valid,
             'template' => 'internal',
             'issued_at' => now(),
             'expires_at' => now()->addYears(2),

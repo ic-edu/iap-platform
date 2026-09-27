@@ -22,7 +22,8 @@
             <tbody class="divide-y divide-slate-200 dark:divide-slate-800/60">
                 @forelse ($results as $att)
                     @php
-                        $res = $att->result_summary;
+                        $isProcessing = $att->test?->isRealTest() && !$att->isResultReleased();
+                        $res = $isProcessing ? [] : $att->result_summary;
                         $isPassed = $res['is_passed'] ?? false;
                         $isSim = $att->test?->isSimulator() ?? false;
                         $isFullToeic = $res['is_full_toeic'] ?? ($att->test?->isToeic() && in_array($att->test?->assessment_mode?->value ?? '', ['real_test', 'mock_test'], true));
@@ -51,7 +52,12 @@
                             {{ $att->getCanonicalCompletionTimestamp()?->format('d M Y, H:i') ?? 'N/A' }}
                         </td>
                         <td class="p-4">
-                            @if ($isSim)
+                            @if ($isProcessing)
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                    Processing
+                                </span>
+                            @elseif ($isSim)
                                 <div class="flex items-baseline gap-1.5">
                                     <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ $correctCount }} / {{ $totalQ }}</span>
                                     <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">({{ number_format($accuracy, 1) }}%)</span>
@@ -68,7 +74,11 @@
                             @endif
                         </td>
                         <td class="p-4">
-                            @if ($isPassed)
+                            @if ($isProcessing)
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                    PROCESSING
+                                </span>
+                            @elseif ($isPassed)
                                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                                     PASSED
@@ -82,13 +92,13 @@
                         </td>
                         <td class="p-4 text-right space-x-2">
                             <a href="{{ route('candidate.review', $att) }}" class="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-1.5 py-0.5">
-                                <span>View Result</span>
+                                <span>{{ $isProcessing ? 'View Status' : 'View Result' }}</span>
                                 <span>&rarr;</span>
                             </a>
-                            @if ($isPassed && $att->certificate && !$isSim)
+                            @if (!$isProcessing && $isPassed && $att->certificate && !$isSim)
                                 <a href="{{ route('candidate.certificates.download', $att->certificate->id) }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-bold hover:underline ml-2">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" />
                                     </svg>
                                     <span>Certificate</span>
                                 </a>

@@ -105,6 +105,14 @@ class Test extends Model
     }
 
     /**
+     * Check if test is a TOEIC assessment.
+     */
+    public function isToeic(): bool
+    {
+        return $this->test_type === TestType::Toeic || (is_object($this->test_type) && $this->test_type->value === 'toeic') || $this->test_type === 'toeic';
+    }
+
+    /**
      * Check whether this assessment test uses delayed result release policy.
      * Practice simulators are always instant (never delayed).
      */

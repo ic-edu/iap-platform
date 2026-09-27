@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
+use App\Modules\Assessment\Enums\ResultReleaseStatus;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
@@ -242,6 +243,8 @@ class CandidatePostUatUxSemanticsTest extends TestCase
             'status' => AttemptStatus::Expired,
             'total_score' => 755,
             'is_final' => true,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now()->parse('2026-09-26 16:20:00'),
             'started_at' => now()->parse('2026-09-26 13:45:09'),
             'submitted_at' => now()->parse('2026-09-26 16:20:00'),
         ]);

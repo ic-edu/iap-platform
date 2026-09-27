@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Enums\AttemptStatus;
 use App\Modules\Assessment\Enums\EvaluationStatus;
+use App\Modules\Assessment\Enums\ResultReleaseStatus;
 use App\Modules\Assessment\Models\Answer;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\Test;
@@ -142,6 +143,8 @@ class CandidateKpiRouteSeparationTest extends TestCase
             'user_id' => $this->candidateA->id,
             'test_id' => $this->realTest->id,
             'status' => AttemptStatus::Expired,
+            'result_release_status' => ResultReleaseStatus::Released,
+            'result_released_at' => now()->subDays(1)->addHours(2),
             'started_at' => now()->subDays(1),
             'submitted_at' => now()->subDays(1)->addHours(2),
             'total_score' => 0,
