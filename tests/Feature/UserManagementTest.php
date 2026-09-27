@@ -65,6 +65,89 @@ class UserManagementTest extends TestCase
         ]);
     }
 
+    public function test_super_admin_can_create_repository_manager_directly_active(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('super-admin');
+
+        $response = $this
+            ->actingAs($admin)
+            ->post(route('admin.users.store'), [
+                'name' => 'Repository Manager UAT Reviewer',
+                'email' => 'repomanager-reviewer@icedu.org',
+                'password' => 'password123',
+                'role' => 'repository-manager',
+                'phone_number' => '+1234567890',
+            ]);
+
+        $response->assertRedirect(route('admin.users.index'));
+        $this->assertDatabaseHas('users', [
+            'email' => 'repomanager-reviewer@icedu.org',
+            'status' => 'active',
+        ]);
+
+        $user = User::where('email', 'repomanager-reviewer@icedu.org')->first();
+        $this->assertTrue($user->hasRole('repository-manager'));
+        $this->assertEquals(['repository-manager'], $user->roles->pluck('name')->all());
+
+        // Super Admin creating RM does not generate pending approval request
+        $this->assertDatabaseMissing('user_creation_requests', [
+            'user_id' => $user->id,
+        ]);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'USER_CREATED',
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'ACCOUNT_ACTIVATED',
+        ]);
+    }
+
+    public function test_regular_admin_cannot_assign_super_admin_role_on_create(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $response = $this
+            ->actingAs($admin)
+            ->post(route('admin.users.store'), [
+                'name' => 'Forged Super Admin',
+                'email' => 'forged-sa@icedu.org',
+                'password' => 'password123',
+                'role' => 'super-admin',
+            ]);
+
+        $response->assertStatus(403);
+        $this->assertDatabaseMissing('users', ['email' => 'forged-sa@icedu.org']);
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'FORBIDDEN_USER_MANAGEMENT',
+        ]);
+    }
+
+    public function test_super_admin_can_update_user_to_repository_manager(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('super-admin');
+
+        $target = User::factory()->create(['name' => 'Candidate User', 'email' => 'candidate-to-rm@icedu.org']);
+        $target->assignRole('student');
+
+        $response = $this
+            ->actingAs($admin)
+            ->put(route('admin.users.update', $target), [
+                'name' => 'Candidate Promoted',
+                'email' => 'candidate-to-rm@icedu.org',
+                'role' => 'repository-manager',
+                'status' => 'active',
+            ]);
+
+        $response->assertRedirect(route('admin.users.index'));
+        $target->refresh();
+        $this->assertTrue($target->hasRole('repository-manager'));
+        $this->assertEquals(['repository-manager'], $target->roles->pluck('name')->all());
+        $this->assertEquals('active', $target->status);
+    }
+
     public function test_admin_can_update_user_details_and_role_with_audit_logs(): void
     {
         $admin = User::factory()->create();

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
+use App\Modules\Commerce\Domain\Enums\PaymentStatus;
 use App\Notifications\SystemAlertNotification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
@@ -55,6 +56,7 @@ class UserController extends Controller
      * Role Population Classifications (IA Separation).
      */
     public const STAFF_ROLES = ['super-admin', 'admin', 'teacher', 'repository-manager', 'finance'];
+
     public const CANDIDATE_ROLES = ['student'];
 
     /**
@@ -75,12 +77,12 @@ class UserController extends Controller
 
         if ($category = $request->input('category')) {
             if ($category === 'internal_staff') {
-                $query->whereHas('roles', fn($q) => $q->whereIn('name', self::STAFF_ROLES));
+                $query->whereHas('roles', fn ($q) => $q->whereIn('name', self::STAFF_ROLES));
             } elseif ($category === 'candidate') {
-                $query->whereHas('roles', fn($q) => $q->where('name', 'student'));
+                $query->whereHas('roles', fn ($q) => $q->where('name', 'student'));
             } elseif ($category === 'organization_user') {
                 $query->where(function ($q) {
-                    $q->whereHas('roles', fn($sub) => $sub->where('name', 'organization-coordinator'))
+                    $q->whereHas('roles', fn ($sub) => $sub->where('name', 'organization-coordinator'))
                         ->orWhereHas('organizationMemberships');
                 });
             } elseif ($category === 'unassigned') {
@@ -129,7 +131,7 @@ class UserController extends Controller
         if ($filter = $request->input('filter')) {
             if ($filter === 'paid-eligible' || $filter === 'eligible') {
                 $query->whereHas('orders', function ($oq) {
-                    $oq->whereHas('invoice.payments', fn($pq) => $pq->whereIn('status', [\App\Modules\Commerce\Domain\Enums\PaymentStatus::Success, \App\Modules\Commerce\Domain\Enums\PaymentStatus::Paid]));
+                    $oq->whereHas('invoice.payments', fn ($pq) => $pq->whereIn('status', [PaymentStatus::Success, PaymentStatus::Paid]));
                 });
             }
         }
@@ -176,7 +178,7 @@ class UserController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = User::whereHas('roles', fn($q) => $q->whereIn('name', self::STAFF_ROLES))
+        $query = User::whereHas('roles', fn ($q) => $q->whereIn('name', self::STAFF_ROLES))
             ->with(['roles', 'deletionRequests', 'creationRequests']);
 
         if ($search = $request->input('search')) {
@@ -214,7 +216,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'string', 'in:super-admin,admin,teacher,student,finance'],
+            'role' => ['required', 'string', Rule::in([...self::STAFF_ROLES, ...self::CANDIDATE_ROLES])],
             'phone_number' => ['nullable', 'string', 'max:50'],
         ]);
 
@@ -321,7 +323,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => ['required', 'string', 'in:super-admin,admin,teacher,student,finance'],
+            'role' => ['required', 'string', Rule::in([...self::STAFF_ROLES, ...self::CANDIDATE_ROLES])],
             'status' => ['required', 'string', 'in:active,inactive,pending_approval,pending_delete_approval,archived'],
             'phone_number' => ['nullable', 'string', 'max:50'],
         ]);
