@@ -1506,6 +1506,9 @@
             if (card) {
                 card.classList.remove('hidden');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                requestAnimationFrame(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
             }
 
             const ctaBtn = document.getElementById('btn-begin-transition-passage');
@@ -1544,6 +1547,9 @@
                 currentUnitIdx = -1;
                 window.location.hash = 'section=' + sectionId;
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                requestAnimationFrame(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
                 const ctaBtn = document.getElementById('btn-begin-section-' + sectionId);
                 if (ctaBtn) {
                     setTimeout(() => ctaBtn.focus(), 50);
@@ -1555,13 +1561,26 @@
         // Render Delivery Unit to DOM (Ungated rendering logic)
         function renderDeliveryUnit(unitIdx, targetQIndex = null) {
             if (unitIdx < 0 || unitIdx >= totalUnits) return;
+
+            const prevUnitIdx = currentUnitIdx;
+            const fromPart = (prevUnitIdx >= 0 && deliveryUnitsMeta[prevUnitIdx]) ? deliveryUnitsMeta[prevUnitIdx].part_number : null;
+            const toPart = (deliveryUnitsMeta[unitIdx]) ? deliveryUnitsMeta[unitIdx].part_number : null;
+            const isPartTransition = (fromPart !== null && toPart !== null && fromPart !== toPart) || (prevUnitIdx < 0);
+
             document.querySelectorAll('.delivery-unit-card, .section-intro-card, .passage-type-transition-card').forEach(card => card.classList.add('hidden'));
             pendingTransitionTargetUnitIdx = null;
 
             const targetCard = document.getElementById(`delivery-unit-card-${unitIdx}`);
             if (targetCard) {
                 targetCard.classList.remove('hidden');
-                if (targetQIndex !== null) {
+
+                // Reset internal passage scroll container if present
+                const passageScrollContainer = document.getElementById(`passage-scroll-unit-${unitIdx}`);
+                if (passageScrollContainer) {
+                    passageScrollContainer.scrollTop = 0;
+                }
+
+                if (targetQIndex !== null && !isPartTransition) {
                     const targetEl = document.getElementById(`unit-question-block-${targetQIndex}`);
                     if (targetEl) {
                         targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1570,6 +1589,9 @@
                     }
                 } else {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                    requestAnimationFrame(() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
                 }
             }
 
