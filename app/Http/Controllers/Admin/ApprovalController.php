@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserCreationRequest;
 use App\Models\UserDeletionRequest;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Services\TestBuilderService;
 use App\Modules\Commerce\Domain\Models\PriceChangeRequest;
 use App\Modules\Organization\Enums\OrganizationStatus;
 use App\Modules\Organization\Models\Organization;
@@ -177,7 +178,7 @@ class ApprovalController extends Controller
     public function approveQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -236,7 +237,7 @@ class ApprovalController extends Controller
     public function rejectQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -279,7 +280,7 @@ class ApprovalController extends Controller
     public function approveQuestionBankArchive(Request $request, QuestionBankArchiveRequest $archiveRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -347,7 +348,7 @@ class ApprovalController extends Controller
     public function rejectQuestionBankArchive(Request $request, QuestionBankArchiveRequest $archiveRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -396,14 +397,14 @@ class ApprovalController extends Controller
     public function approve(Request $request, Test $test): RedirectResponse
     {
         $user = $request->user();
-        if (! $user || ! $user->hasRole('super-admin')) {
+        if (!$user || !$user->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
-        $validationResult = app(\App\Modules\Assessment\Services\TestBuilderService::class)->validateAssessment($test);
+        $validationResult = app(TestBuilderService::class)->validateAssessment($test);
         if (!$validationResult['is_valid']) {
             return redirect()->route('admin.approvals.index')
-                ->with('error', "Cannot approve empty or invalid assessment: " . implode(' | ', $validationResult['errors']));
+                ->with('error', 'Cannot approve empty or invalid assessment: '.implode(' | ', $validationResult['errors']));
         }
 
         $test->update([
@@ -423,7 +424,7 @@ class ApprovalController extends Controller
                     priority: 'HIGH',
                     entityType: 'assessment',
                     entityId: (string) $test->id,
-                    targetUrl: route('admin.tests.show', $test->id)
+                    targetUrl: route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id])
                 ));
             } catch (\Throwable $e) {
                 // Silently handle in dev
@@ -457,7 +458,7 @@ class ApprovalController extends Controller
     public function reject(Request $request, Test $test): RedirectResponse
     {
         $user = $request->user();
-        if (! $user || ! $user->hasRole('super-admin')) {
+        if (!$user || !$user->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -495,7 +496,7 @@ class ApprovalController extends Controller
     public function approveUserCreation(Request $request, UserCreationRequest $creationRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -539,7 +540,7 @@ class ApprovalController extends Controller
     public function rejectUserCreation(Request $request, UserCreationRequest $creationRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -582,7 +583,7 @@ class ApprovalController extends Controller
     public function approveUserDeletion(Request $request, UserDeletionRequest $deletionRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -626,7 +627,7 @@ class ApprovalController extends Controller
     public function rejectUserDeletion(Request $request, UserDeletionRequest $deletionRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -669,7 +670,7 @@ class ApprovalController extends Controller
     public function approvePriceChange(Request $request, PriceChangeRequest $priceChangeRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -682,12 +683,12 @@ class ApprovalController extends Controller
         }
 
         $product = $priceChangeRequest->product;
-        if (! $product) {
+        if (!$product) {
             return back()->withErrors(['error' => 'Associated product no longer exists.']);
         }
 
         if ((float) $product->price !== (float) $priceChangeRequest->current_price_snapshot) {
-            return back()->withErrors(['error' => "Current product price (IDR " . number_format($product->price) . ") does not match proposal snapshot (IDR " . number_format($priceChangeRequest->current_price_snapshot) . "). Approval blocked for safety."]);
+            return back()->withErrors(['error' => 'Current product price (IDR '.number_format($product->price).') does not match proposal snapshot (IDR '.number_format($priceChangeRequest->current_price_snapshot).'). Approval blocked for safety.']);
         }
 
         DB::transaction(function () use ($product, $priceChangeRequest, $actor) {
@@ -697,22 +698,22 @@ class ApprovalController extends Controller
             ]);
 
             $priceChangeRequest->update([
-                'status'      => 'approved',
+                'status' => 'approved',
                 'reviewed_by' => $actor->id,
                 'reviewed_at' => now(),
             ]);
 
             ActivityLogger::log(
                 'PRICE_CHANGE_APPROVED',
-                "Super Admin approved price change for '{$product->title}' from IDR " . number_format($oldPrice) . " to IDR " . number_format($priceChangeRequest->proposed_price),
+                "Super Admin approved price change for '{$product->title}' from IDR ".number_format($oldPrice).' to IDR '.number_format($priceChangeRequest->proposed_price),
                 $product,
                 [
-                    'request_id'     => $priceChangeRequest->id,
-                    'product_id'     => $product->id,
-                    'old_price'      => $oldPrice,
-                    'new_price'      => $priceChangeRequest->proposed_price,
-                    'approved_by'    => $actor->id,
-                    'reason'         => $priceChangeRequest->reason,
+                    'request_id' => $priceChangeRequest->id,
+                    'product_id' => $product->id,
+                    'old_price' => $oldPrice,
+                    'new_price' => $priceChangeRequest->proposed_price,
+                    'approved_by' => $actor->id,
+                    'reason' => $priceChangeRequest->reason,
                 ]
             );
 
@@ -721,7 +722,7 @@ class ApprovalController extends Controller
                 try {
                     $priceChangeRequest->requester->notify(new EnterpriseSystemNotification(
                         title: 'Price Change Proposal Approved',
-                        message: "Your price change proposal for '{$product->title}' (IDR " . number_format($priceChangeRequest->proposed_price) . ") was approved by Super Admin {$actor->name}.",
+                        message: "Your price change proposal for '{$product->title}' (IDR ".number_format($priceChangeRequest->proposed_price).") was approved by Super Admin {$actor->name}.",
                         type: 'PRICE_CHANGE_APPROVED',
                         priority: 'NORMAL',
                         entityType: 'product',
@@ -735,7 +736,7 @@ class ApprovalController extends Controller
         });
 
         return redirect()->route('admin.approvals.index')
-            ->with('status', "Price change for '{$product->title}' approved. New price: IDR " . number_format($priceChangeRequest->proposed_price));
+            ->with('status', "Price change for '{$product->title}' approved. New price: IDR ".number_format($priceChangeRequest->proposed_price));
     }
 
     /**
@@ -744,7 +745,7 @@ class ApprovalController extends Controller
     public function rejectPriceChange(Request $request, PriceChangeRequest $priceChangeRequest): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('super-admin')) {
+        if (!$actor || !$actor->hasRole('super-admin')) {
             abort(403, 'Approval Center operations are strictly reserved for Super Admin.');
         }
 
@@ -759,10 +760,10 @@ class ApprovalController extends Controller
         $product = $priceChangeRequest->product;
 
         $priceChangeRequest->update([
-            'status'           => 'rejected',
+            'status' => 'rejected',
             'rejection_reason' => $validated['rejection_reason'],
-            'reviewed_by'      => $actor->id,
-            'reviewed_at'      => now(),
+            'reviewed_by' => $actor->id,
+            'reviewed_at' => now(),
         ]);
 
         ActivityLogger::log(
@@ -770,9 +771,9 @@ class ApprovalController extends Controller
             "Super Admin rejected price change for '{$product?->title}'. Reason: {$validated['rejection_reason']}",
             $product ?? $priceChangeRequest,
             [
-                'request_id'       => $priceChangeRequest->id,
-                'product_id'       => $product?->id,
-                'rejected_by'      => $actor->id,
+                'request_id' => $priceChangeRequest->id,
+                'product_id' => $product?->id,
+                'rejected_by' => $actor->id,
                 'rejection_reason' => $validated['rejection_reason'],
             ]
         );

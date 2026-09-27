@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\QuestionBankArchiveRequest;
 use App\Models\RepositoryActivityLog;
-use App\Models\User;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Notifications\EnterpriseSystemNotification;
 use App\Services\ActivityLogger;
+use App\Services\AssessmentWorkflowService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PublicationOperationController extends Controller
@@ -22,7 +23,7 @@ class PublicationOperationController extends Controller
     public function questionBanksQueue(Request $request): View
     {
         $actor = $request->user();
-        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+        if (!$actor || (!$actor->hasRole('repository-manager') && !$actor->hasRole('super-admin'))) {
             abort(403, 'Question Bank publication queue is strictly reserved for Repository Managers.');
         }
 
@@ -53,7 +54,7 @@ class PublicationOperationController extends Controller
     public function assessmentsQueue(Request $request): View
     {
         $actor = $request->user();
-        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+        if (!$actor || (!$actor->hasRole('repository-manager') && !$actor->hasRole('super-admin'))) {
             abort(403, 'Assessment publication queue is strictly reserved for Repository Managers.');
         }
 
@@ -61,9 +62,9 @@ class PublicationOperationController extends Controller
             $request->merge(['tab' => 'ready-to-publish']);
         }
 
-        return app(\App\Http\Controllers\Admin\RepositoryManagerController::class)->assessmentGovernance(
+        return app(RepositoryManagerController::class)->assessmentGovernance(
             $request,
-            app(\App\Services\AssessmentWorkflowService::class)
+            app(AssessmentWorkflowService::class)
         );
     }
 
@@ -107,7 +108,7 @@ class PublicationOperationController extends Controller
     public function publishAssessment(Request $request, Test $test): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+        if (!$actor || (!$actor->hasRole('repository-manager') && !$actor->hasRole('super-admin'))) {
             abort(403, 'Publishing Assessment Tests is strictly reserved for Repository Managers.');
         }
 
@@ -115,7 +116,7 @@ class PublicationOperationController extends Controller
             abort(403, 'Cannot publish: Assessment Test must be approved before publication and not already published.');
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($test, $actor) {
+        DB::transaction(function () use ($test, $actor) {
             $test->update([
                 'status' => 'published',
                 'is_published' => true,
@@ -164,10 +165,10 @@ class PublicationOperationController extends Controller
 
         RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $actor->id,
-            'reviewer_id'   => $actor->id,
-            'action'        => 'published',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $actor->id,
+            'reviewer_id' => $actor->id,
+            'action' => 'published',
             'approval_note' => "Assessment published live by {$actor->name}.",
         ]);
 
@@ -181,7 +182,7 @@ class PublicationOperationController extends Controller
                     priority: 'HIGH',
                     entityType: 'assessment',
                     entityId: (string) $test->id,
-                    targetUrl: route('admin.tests.show', $test->id)
+                    targetUrl: route('admin.publications.assessments', ['status' => 'published', 'highlight' => $test->id])
                 ));
             } catch (\Throwable $e) {
                 // Silently handle in dev
@@ -197,7 +198,7 @@ class PublicationOperationController extends Controller
     public function unpublishAssessment(Request $request, Test $test): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+        if (!$actor || (!$actor->hasRole('repository-manager') && !$actor->hasRole('super-admin'))) {
             abort(403, 'Unpublishing Assessment Tests is strictly reserved for Repository Managers.');
         }
 
@@ -218,10 +219,10 @@ class PublicationOperationController extends Controller
 
         RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $actor->id,
-            'reviewer_id'   => $actor->id,
-            'action'        => 'unpublished',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $actor->id,
+            'reviewer_id' => $actor->id,
+            'action' => 'unpublished',
             'approval_note' => "Assessment unpublished by {$actor->name}. Reverted to approved status.",
         ]);
 
@@ -234,7 +235,7 @@ class PublicationOperationController extends Controller
     public function publishQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('repository-manager')) {
+        if (!$actor || !$actor->hasRole('repository-manager')) {
             abort(403, 'Publishing Question Banks is strictly reserved for Repository Managers.');
         }
 
@@ -279,7 +280,7 @@ class PublicationOperationController extends Controller
     public function unpublishQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $actor = $request->user();
-        if (! $actor || ! $actor->hasRole('repository-manager')) {
+        if (!$actor || !$actor->hasRole('repository-manager')) {
             abort(403, 'Unpublishing Question Banks is strictly reserved for Repository Managers.');
         }
 

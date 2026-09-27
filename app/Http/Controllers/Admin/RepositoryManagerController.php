@@ -3,26 +3,39 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AclAuditTrail;
+use App\Models\AclVersion;
+use App\Models\AssessmentRequest;
+use App\Models\GovernanceApprovalTask;
 use App\Models\MediaAsset;
 use App\Models\RepositoryActivityLog;
 use App\Models\RepositoryApproval;
+use App\Models\RepositoryFinding;
 use App\Models\RepositoryReviewRequest;
+use App\Models\RepositoryRevisionItem;
+use App\Models\RepositoryRevisionRequest;
 use App\Models\RepositoryVersion;
+use App\Models\TestQuestionReview;
+use App\Models\User;
 use App\Modules\Assessment\Models\Test;
+use App\Modules\Assessment\Models\TestQuestion;
+use App\Modules\Assessment\Models\TestSection;
+use App\Modules\Assessment\Services\TestBuilderService;
+use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
+use App\Modules\QuestionBank\Models\QuestionChoice;
+use App\Notifications\EnterpriseSystemNotification;
+use App\Services\AssessmentRequestEligibilityService;
+use App\Services\AssessmentWorkflowService;
+use App\Services\RepositoryQualityService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
-use App\Models\RepositoryRevisionRequest;
-use App\Models\RepositoryRevisionItem;
-use App\Models\AssessmentRequest;
-use App\Models\User;
-use App\Modules\QuestionBank\Models\Question;
-use App\Modules\QuestionBank\Models\QuestionChoice;
-use App\Notifications\EnterpriseSystemNotification;
-use App\Services\AssessmentWorkflowService;
+use Spatie\Permission\Models\Role;
 
 class RepositoryManagerController extends Controller
 {
@@ -32,18 +45,18 @@ class RepositoryManagerController extends Controller
         if (Schema::hasTable('question_banks') && Schema::hasTable('governance_approval_tasks')) {
             $pendingBanks = QuestionBank::whereIn('status', ['pending', 'pending_approval'])->get();
             foreach ($pendingBanks as $bank) {
-                \App\Models\GovernanceApprovalTask::firstOrCreate([
+                GovernanceApprovalTask::firstOrCreate([
                     'question_bank_id' => $bank->id,
-                    'status'           => 'OPEN',
+                    'status' => 'OPEN',
                 ], [
-                    'teacher_id'   => $bank->created_by,
-                    'workflow'     => 'APPROVAL',
+                    'teacher_id' => $bank->created_by,
+                    'workflow' => 'APPROVAL',
                     'submitted_at' => $bank->updated_at ?? now(),
                 ]);
             }
 
             // Close any orphan OPEN tasks for non-pending banks (archived, rejected, approved, etc.)
-            \App\Models\GovernanceApprovalTask::where('status', 'OPEN')
+            GovernanceApprovalTask::where('status', 'OPEN')
                 ->whereHas('questionBank', function ($q) {
                     $q->whereNotIn('status', ['pending', 'pending_approval']);
                 })
@@ -51,7 +64,7 @@ class RepositoryManagerController extends Controller
         }
 
         $pendingGovernanceTaskCount = Schema::hasTable('governance_approval_tasks')
-            ? \App\Models\GovernanceApprovalTask::where('status', 'OPEN')
+            ? GovernanceApprovalTask::where('status', 'OPEN')
                 ->whereHas('questionBank', function ($q) {
                     $q->whereIn('status', ['pending', 'pending_approval']);
                 })
@@ -70,19 +83,19 @@ class RepositoryManagerController extends Controller
             : 0;
 
         // PART A & PART E: Shared AssessmentWorkflowService Metrics (Single Source of Truth)
-        $assessmentMetrics        = $workflowService->getRepositoryManagerMetrics();
-        $pendingAssessmentsCount  = $assessmentMetrics['pendingAssessmentsCount'];
+        $assessmentMetrics = $workflowService->getRepositoryManagerMetrics();
+        $pendingAssessmentsCount = $assessmentMetrics['pendingAssessmentsCount'];
         $approvedAssessmentsToday = $assessmentMetrics['approvedAssessmentsToday'];
-        $needsRevisionCount       = $assessmentMetrics['needsRevisionCount'];
+        $needsRevisionCount = $assessmentMetrics['needsRevisionCount'];
         $readyForPublicationCount = $assessmentMetrics['readyForPublicationCount'] ?? Test::where('status', 'approved')->where('is_published', false)->count();
 
         // TASK 5: Real Duplicate Count & Dynamic Health Metrics from RepositoryQualityService
-        $qualityService  = app(\App\Services\RepositoryQualityService::class);
-        $globalSummary   = $qualityService->getGlobalQualitySummary();
-        $duplicatesData  = $globalSummary['duplicates'] ?? [];
+        $qualityService = app(RepositoryQualityService::class);
+        $globalSummary = $qualityService->getGlobalQualitySummary();
+        $duplicatesData = $globalSummary['duplicates'] ?? [];
         $duplicatesCount = count($duplicatesData['duplicate_titles'] ?? []) + count($duplicatesData['duplicate_prompts'] ?? []);
         $repositoryHealthScore = $globalSummary['avg_health_score'] ?? 100;
-        $metadataCompleteness  = $qualityService->getAnalyticsData()['metadata_completion'] ?? 100;
+        $metadataCompleteness = $qualityService->getAnalyticsData()['metadata_completion'] ?? 100;
 
         $recentActivityLogs = RepositoryActivityLog::with(['actor', 'reviewer'])
             ->latest()
@@ -91,7 +104,7 @@ class RepositoryManagerController extends Controller
 
         // PART 4: Refactored Urgent Academic Alerts (Excludes normal pending approvals)
         $irqaFailedCount = Schema::hasTable('repository_findings')
-            ? \App\Models\RepositoryFinding::where('severity', 'high')->where('status', 'OPEN')->count()
+            ? RepositoryFinding::where('severity', 'high')->where('status', 'OPEN')->count()
             : 0;
 
         $urgentAlerts = [];
@@ -99,29 +112,29 @@ class RepositoryManagerController extends Controller
             $urgentAlerts[] = [
                 'title' => 'Critical IRQA Findings Requiring Review',
                 'count' => $irqaFailedCount,
-                'type'  => 'urgent',
-                'link'  => route('admin.academic-library.quality'),
+                'type' => 'urgent',
+                'link' => route('admin.academic-library.quality'),
             ];
         }
         if ($pendingMediaCount > 0) {
             $urgentAlerts[] = [
                 'title' => 'Pending Media Review Requests',
                 'count' => $pendingMediaCount,
-                'type'  => 'warning',
-                'link'  => route('admin.repository-manager.media-approval'),
+                'type' => 'warning',
+                'link' => route('admin.repository-manager.media-approval'),
             ];
         }
         if ($duplicatesCount > 0) {
             $urgentAlerts[] = [
                 'title' => 'Duplicate Content Detected',
                 'count' => $duplicatesCount,
-                'type'  => 'warning',
-                'link'  => route('admin.repository-manager.duplicates'),
+                'type' => 'warning',
+                'link' => route('admin.repository-manager.duplicates'),
             ];
         }
 
         $teacherSubmissionsQueue = Schema::hasTable('repository_revision_requests')
-            ? \App\Models\RepositoryRevisionRequest::with(['teacher', 'questionBank', 'items.question'])
+            ? RepositoryRevisionRequest::with(['teacher', 'questionBank', 'items.question'])
                 ->whereIn('status', ['OPEN', 'RESUBMITTED'])
                 ->latest()
                 ->take(6)
@@ -139,7 +152,7 @@ class RepositoryManagerController extends Controller
             : collect([]);
 
         $openApprovalTasks = Schema::hasTable('governance_approval_tasks')
-            ? \App\Models\GovernanceApprovalTask::with(['questionBank', 'teacher'])
+            ? GovernanceApprovalTask::with(['questionBank', 'teacher'])
                 ->where('status', 'OPEN')
                 ->whereHas('questionBank', function ($q) {
                     $q->whereIn('status', ['pending', 'pending_approval']);
@@ -206,17 +219,29 @@ class RepositoryManagerController extends Controller
 
         // Apply changes
         $changes = $reviewRequest->changes_data ?? [];
-        if (!empty($changes['new_title'])) $media->title = $changes['new_title'];
-        if (!empty($changes['new_description'])) $media->description = $changes['new_description'];
-        if (!empty($changes['new_category'])) $media->category = $changes['new_category'];
-        if (!empty($changes['new_exam_type'])) $media->exam_type = $changes['new_exam_type'];
-        if (!empty($changes['new_content_text'])) $media->content_text = $changes['new_content_text'];
-        if (!empty($changes['new_tags'])) $media->tags = $changes['new_tags'];
+        if (!empty($changes['new_title'])) {
+            $media->title = $changes['new_title'];
+        }
+        if (!empty($changes['new_description'])) {
+            $media->description = $changes['new_description'];
+        }
+        if (!empty($changes['new_category'])) {
+            $media->category = $changes['new_category'];
+        }
+        if (!empty($changes['new_exam_type'])) {
+            $media->exam_type = $changes['new_exam_type'];
+        }
+        if (!empty($changes['new_content_text'])) {
+            $media->content_text = $changes['new_content_text'];
+        }
+        if (!empty($changes['new_tags'])) {
+            $media->tags = $changes['new_tags'];
+        }
 
         // Versioning (PART E)
         $currentVersion = $media->version ?? 'v1.0';
         $parts = explode('.', str_replace('v', '', $currentVersion));
-        $newVersionNumber = 'v' . ($parts[0] ?? '1') . '.' . (((int)($parts[1] ?? 0)) + 1);
+        $newVersionNumber = 'v'.($parts[0] ?? '1').'.'.(((int) ($parts[1] ?? 0)) + 1);
 
         $media->version = $newVersionNumber;
         $media->approval_status = 'approved';
@@ -229,74 +254,74 @@ class RepositoryManagerController extends Controller
             ->update(['is_current' => false]);
 
         RepositoryVersion::create([
-            'resource_type'  => 'MediaAsset',
-            'resource_id'    => $media->id,
+            'resource_type' => 'MediaAsset',
+            'resource_id' => $media->id,
             'version_number' => $newVersionNumber,
-            'title'          => $media->title ?? $media->original_name,
-            'snapshot_data'  => $media->toArray(),
-            'created_by'     => $user->id,
-            'change_reason'  => $note,
-            'is_current'     => true,
+            'title' => $media->title ?? $media->original_name,
+            'snapshot_data' => $media->toArray(),
+            'created_by' => $user->id,
+            'change_reason' => $note,
+            'is_current' => true,
         ]);
 
         // Update Review Request
         $reviewRequest->update([
-            'status'       => 'approved',
-            'reviewer_id'  => $user->id,
+            'status' => 'approved',
+            'reviewer_id' => $user->id,
             'review_notes' => $note,
-            'approved_at'  => now(),
+            'approved_at' => now(),
         ]);
 
         // Create Approval Record
         RepositoryApproval::create([
             'review_request_id' => $reviewRequest->id,
-            'approved_by'       => $user->id,
-            'decision'          => 'approved',
-            'notes'             => $note,
+            'approved_by' => $user->id,
+            'decision' => 'approved',
+            'notes' => $note,
         ]);
 
         // Create Activity Log (PART I)
         RepositoryActivityLog::create([
             'resource_type' => 'MediaAsset',
-            'resource_id'   => $media->id,
-            'actor_id'      => $reviewRequest->submitted_by,
-            'reviewer_id'   => $user->id,
-            'action'        => 'approved',
-            'old_values'    => $changes['old_data'] ?? null,
-            'new_values'    => $changes,
+            'resource_id' => $media->id,
+            'actor_id' => $reviewRequest->submitted_by,
+            'reviewer_id' => $user->id,
+            'action' => 'approved',
+            'old_values' => $changes['old_data'] ?? null,
+            'new_values' => $changes,
             'approval_note' => $note,
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'MediaAsset',
-                'resource_id'   => $media->id,
-                'action'        => 'approved',
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'approver_id'   => $user->id,
-                'created_by'    => $reviewRequest->submitted_by,
-                'version'       => $newVersionNumber,
-                'reason'        => $note,
-                'metadata'      => [
-                    'decision'    => 'approved',
-                    'reviewer'    => $user->name,
+                'resource_id' => $media->id,
+                'action' => 'approved',
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'approver_id' => $user->id,
+                'created_by' => $reviewRequest->submitted_by,
+                'version' => $newVersionNumber,
+                'reason' => $note,
+                'metadata' => [
+                    'decision' => 'approved',
+                    'reviewer' => $user->name,
                     'new_version' => $newVersionNumber,
                 ],
             ]);
         }
 
         if (Schema::hasTable('acl_versions')) {
-            \App\Models\AclVersion::where('resource_id', $media->id)->update(['is_current' => false]);
-            \App\Models\AclVersion::create([
-                'resource_type'  => 'MediaAsset',
-                'resource_id'    => $media->id,
+            AclVersion::where('resource_id', $media->id)->update(['is_current' => false]);
+            AclVersion::create([
+                'resource_type' => 'MediaAsset',
+                'resource_id' => $media->id,
                 'version_number' => $newVersionNumber,
-                'title'          => $media->title ?? $media->original_name,
-                'snapshot_data'  => $media->toArray(),
-                'created_by'     => $user->id,
-                'change_reason'  => $note,
-                'is_current'     => true,
+                'title' => $media->title ?? $media->original_name,
+                'snapshot_data' => $media->toArray(),
+                'created_by' => $user->id,
+                'change_reason' => $note,
+                'is_current' => true,
             ]);
         }
 
@@ -316,38 +341,38 @@ class RepositoryManagerController extends Controller
         }
 
         $reviewRequest->update([
-            'status'       => 'revision_requested',
-            'reviewer_id'  => $user->id,
+            'status' => 'revision_requested',
+            'reviewer_id' => $user->id,
             'review_notes' => $note,
         ]);
 
         RepositoryApproval::create([
             'review_request_id' => $reviewRequest->id,
-            'approved_by'       => $user->id,
-            'decision'          => 'revision_requested',
-            'notes'             => $note,
+            'approved_by' => $user->id,
+            'decision' => 'revision_requested',
+            'notes' => $note,
         ]);
 
         RepositoryActivityLog::create([
             'resource_type' => 'MediaAsset',
-            'resource_id'   => $reviewRequest->resource_id,
-            'actor_id'      => $reviewRequest->submitted_by,
-            'reviewer_id'   => $user->id,
-            'action'        => 'revision_requested',
+            'resource_id' => $reviewRequest->resource_id,
+            'actor_id' => $reviewRequest->submitted_by,
+            'reviewer_id' => $user->id,
+            'action' => 'revision_requested',
             'approval_note' => $note,
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'MediaAsset',
-                'resource_id'   => $reviewRequest->resource_id,
-                'action'        => 'revision_requested',
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'created_by'    => $reviewRequest->submitted_by,
-                'version'       => $media?->version ?? '1.0',
-                'reason'        => $note,
-                'metadata'      => [
+                'resource_id' => $reviewRequest->resource_id,
+                'action' => 'revision_requested',
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'created_by' => $reviewRequest->submitted_by,
+                'version' => $media?->version ?? '1.0',
+                'reason' => $note,
+                'metadata' => [
                     'decision' => 'revision_requested',
                     'reviewer' => $user->name,
                 ],
@@ -370,38 +395,38 @@ class RepositoryManagerController extends Controller
         }
 
         $reviewRequest->update([
-            'status'       => 'rejected',
-            'reviewer_id'  => $user->id,
+            'status' => 'rejected',
+            'reviewer_id' => $user->id,
             'review_notes' => $note,
         ]);
 
         RepositoryApproval::create([
             'review_request_id' => $reviewRequest->id,
-            'approved_by'       => $user->id,
-            'decision'          => 'rejected',
-            'notes'             => $note,
+            'approved_by' => $user->id,
+            'decision' => 'rejected',
+            'notes' => $note,
         ]);
 
         RepositoryActivityLog::create([
             'resource_type' => 'MediaAsset',
-            'resource_id'   => $reviewRequest->resource_id,
-            'actor_id'      => $reviewRequest->submitted_by,
-            'reviewer_id'   => $user->id,
-            'action'        => 'rejected',
+            'resource_id' => $reviewRequest->resource_id,
+            'actor_id' => $reviewRequest->submitted_by,
+            'reviewer_id' => $user->id,
+            'action' => 'rejected',
             'approval_note' => $note,
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'MediaAsset',
-                'resource_id'   => $reviewRequest->resource_id,
-                'action'        => 'rejected',
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'created_by'    => $reviewRequest->submitted_by,
-                'version'       => $media?->version ?? '1.0',
-                'reason'        => $note,
-                'metadata'      => [
+                'resource_id' => $reviewRequest->resource_id,
+                'action' => 'rejected',
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'created_by' => $reviewRequest->submitted_by,
+                'version' => $media?->version ?? '1.0',
+                'reason' => $note,
+                'metadata' => [
                     'decision' => 'rejected',
                     'reviewer' => $user->name,
                 ],
@@ -438,7 +463,7 @@ class RepositoryManagerController extends Controller
             ->get();
 
         $activeRevisionRequest = Schema::hasTable('repository_revision_requests')
-            ? \App\Models\RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
+            ? RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
                 ->whereIn('status', ['OPEN', 'RESUBMITTED'])
                 ->with(['teacher', 'requestedBy', 'items.question'])
                 ->latest()
@@ -464,7 +489,7 @@ class RepositoryManagerController extends Controller
     public function approveQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $governanceStates = ['pending', 'pending_approval', 'submitted', 'approved'];
-        if (! in_array($questionBank->status, $governanceStates, true)) {
+        if (!in_array($questionBank->status, $governanceStates, true)) {
             return redirect()->back()->with(
                 'danger',
                 'Governance decisions can only be made for repositories awaiting approval or publication.'
@@ -484,45 +509,45 @@ class RepositoryManagerController extends Controller
 
         RepositoryActivityLog::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'actor_id'      => $questionBank->created_by,
-            'reviewer_id'   => $user->id,
-            'action'        => 'approved',
+            'resource_id' => $questionBank->id,
+            'actor_id' => $questionBank->created_by,
+            'reviewer_id' => $user->id,
+            'action' => 'approved',
             'approval_note' => $note,
         ]);
 
         RepositoryActivityLog::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'actor_id'      => $questionBank->created_by,
-            'reviewer_id'   => $user->id,
-            'action'        => 'repository_manager_approved_repository',
+            'resource_id' => $questionBank->id,
+            'actor_id' => $questionBank->created_by,
+            'reviewer_id' => $user->id,
+            'action' => 'repository_manager_approved_repository',
             'approval_note' => $note,
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'QuestionBank',
-                'resource_id'   => (string) $questionBank->id,
-                'action'        => 'published',
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'approver_id'   => $user->id,
-                'published_by'  => $user->id,
-                'created_by'    => $questionBank->created_by,
-                'version'       => $questionBank->current_version ?? '1.0',
-                'reason'        => $note,
-                'ip_address'    => $request->ip(),
-                'metadata'      => [
-                    'decision'   => 'published',
-                    'reviewer'   => $user->name,
+                'resource_id' => (string) $questionBank->id,
+                'action' => 'published',
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'approver_id' => $user->id,
+                'published_by' => $user->id,
+                'created_by' => $questionBank->created_by,
+                'version' => $questionBank->current_version ?? '1.0',
+                'reason' => $note,
+                'ip_address' => $request->ip(),
+                'metadata' => [
+                    'decision' => 'published',
+                    'reviewer' => $user->name,
                     'is_restore' => $isRestored,
                 ],
             ]);
         }
 
         if (Schema::hasTable('governance_approval_tasks')) {
-            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+            GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
                 ->where('status', 'OPEN')
                 ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
         }
@@ -530,20 +555,20 @@ class RepositoryManagerController extends Controller
         // Notify Teacher Author
         if ($questionBank->creator && Schema::hasTable('notifications')) {
             try {
-                \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                    'id'              => (string) \Illuminate\Support\Str::uuid(),
-                    'type'            => 'question_bank_published',
+                DB::table('notifications')->insert([
+                    'id' => (string) Str::uuid(),
+                    'type' => 'question_bank_published',
                     'notifiable_type' => 'App\Models\User',
-                    'notifiable_id'   => $questionBank->created_by,
-                    'data'            => json_encode([
-                        'title'            => 'Question Bank Published',
-                        'message'          => "Your Question Bank '{$questionBank->title}' has been published live by Repository Manager {$user->name}.",
+                    'notifiable_id' => $questionBank->created_by,
+                    'data' => json_encode([
+                        'title' => 'Question Bank Published',
+                        'message' => "Your Question Bank '{$questionBank->title}' has been published live by Repository Manager {$user->name}.",
                         'question_bank_id' => $questionBank->id,
-                        'link'             => route('admin.question-banks.show', $questionBank->id),
-                        'priority'         => 'HIGH',
+                        'link' => route('admin.question-banks.show', $questionBank->id),
+                        'priority' => 'HIGH',
                     ]),
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             } catch (\Throwable $e) {
                 // Silent in dev
@@ -561,7 +586,7 @@ class RepositoryManagerController extends Controller
     public function requestQuestionBankRevision(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $governanceStates = ['pending', 'pending_approval', 'submitted', 'needs_revision', 'approved'];
-        if (! in_array($questionBank->status, $governanceStates, true)) {
+        if (!in_array($questionBank->status, $governanceStates, true)) {
             return redirect()->back()->with(
                 'danger',
                 'Governance decisions can only be made for repositories awaiting approval or active governance review.'
@@ -576,7 +601,7 @@ class RepositoryManagerController extends Controller
         $questionBank->save();
 
         if (Schema::hasTable('governance_approval_tasks')) {
-            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+            GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
                 ->where('status', 'OPEN')
                 ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
         }
@@ -584,114 +609,114 @@ class RepositoryManagerController extends Controller
         $teacherId = $questionBank->created_by ?: ($questionBank->creator?->id ?? $user->id);
 
         // HOTFIX GOVERNANCE WORKFLOW: Reuse existing active RepositoryRevisionRequest if present (prevent duplicate active tasks)
-        $revisionRequest = \App\Models\RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
+        $revisionRequest = RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
             ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
             ->latest()
             ->first();
 
         if ($revisionRequest) {
             $revisionRequest->update([
-                'teacher_id'       => $teacherId,
-                'requested_by_id'  => $user->id,
-                'status'           => 'OPEN',
-                'notes'            => $note,
+                'teacher_id' => $teacherId,
+                'requested_by_id' => $user->id,
+                'status' => 'OPEN',
+                'notes' => $note,
             ]);
         } else {
-            $revisionRequest = \App\Models\RepositoryRevisionRequest::create([
+            $revisionRequest = RepositoryRevisionRequest::create([
                 'question_bank_id' => $questionBank->id,
-                'teacher_id'       => $teacherId,
-                'requested_by_id'  => $user->id,
-                'status'           => 'OPEN',
-                'notes'            => $note,
+                'teacher_id' => $teacherId,
+                'requested_by_id' => $user->id,
+                'status' => 'OPEN',
+                'notes' => $note,
             ]);
         }
 
-        $qualityService = app(\App\Services\RepositoryQualityService::class);
+        $qualityService = app(RepositoryQualityService::class);
         $audit = $qualityService->syncRepositoryFindings($questionBank);
 
         if (!empty($audit['warnings'])) {
             foreach ($audit['warnings'] as $warning) {
-                \App\Models\RepositoryRevisionItem::firstOrCreate([
+                RepositoryRevisionItem::firstOrCreate([
                     'repository_revision_request_id' => $revisionRequest->id,
-                    'question_bank_id'               => $questionBank->id,
-                    'feedback'                       => $warning,
+                    'question_bank_id' => $questionBank->id,
+                    'feedback' => $warning,
                 ], [
-                    'finding_type'  => 'quality_warning',
-                    'severity'      => 'high',
+                    'finding_type' => 'quality_warning',
+                    'severity' => 'high',
                     'suggested_fix' => 'Please review and update this repository item.',
-                    'status'        => 'OPEN',
+                    'status' => 'OPEN',
                 ]);
             }
         } else {
-            \App\Models\RepositoryRevisionItem::firstOrCreate([
+            RepositoryRevisionItem::firstOrCreate([
                 'repository_revision_request_id' => $revisionRequest->id,
-                'question_bank_id'               => $questionBank->id,
-                'feedback'                       => $note,
+                'question_bank_id' => $questionBank->id,
+                'feedback' => $note,
             ], [
-                'finding_type'  => 'reviewer_feedback',
-                'severity'      => 'medium',
+                'finding_type' => 'reviewer_feedback',
+                'severity' => 'medium',
                 'suggested_fix' => 'Address reviewer notes in repository.',
-                'status'        => 'OPEN',
+                'status' => 'OPEN',
             ]);
         }
 
         if (Schema::hasTable('notifications')) {
-            \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                'id'              => (string) \Illuminate\Support\Str::uuid(),
-                'type'            => 'repository_revision_requested',
+            DB::table('notifications')->insert([
+                'id' => (string) Str::uuid(),
+                'type' => 'repository_revision_requested',
                 'notifiable_type' => 'App\Models\User',
-                'notifiable_id'   => $questionBank->created_by,
-                'data'            => json_encode([
-                    'title'   => 'Repository Revision Requested',
+                'notifiable_id' => $questionBank->created_by,
+                'data' => json_encode([
+                    'title' => 'Repository Revision Requested',
                     'message' => "Repository Manager requested revision for '{$questionBank->title}'. Notes: {$note}",
-                    'link'    => route('teacher.repository-revisions.show', $revisionRequest->id),
+                    'link' => route('teacher.repository-revisions.show', $revisionRequest->id),
                 ]),
-                'created_at'      => now(),
-                'updated_at'      => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
 
         RepositoryActivityLog::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'actor_id'      => $questionBank->created_by,
-            'reviewer_id'   => $user->id,
-            'action'        => 'revision_requested',
+            'resource_id' => $questionBank->id,
+            'actor_id' => $questionBank->created_by,
+            'reviewer_id' => $user->id,
+            'action' => 'revision_requested',
             'approval_note' => $note,
         ]);
 
         RepositoryActivityLog::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'actor_id'      => $questionBank->created_by,
-            'reviewer_id'   => $user->id,
-            'action'        => 'repository_manager_requested_revision',
+            'resource_id' => $questionBank->id,
+            'actor_id' => $questionBank->created_by,
+            'reviewer_id' => $user->id,
+            'action' => 'repository_manager_requested_revision',
             'approval_note' => $note,
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'QuestionBank',
-                'resource_id'   => (string) $questionBank->id,
-                'action'        => 'question_bank_revision_requested',
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'created_by'    => $questionBank->created_by,
-                'version'       => '1.0',
-                'reason'        => $note,
-                'ip_address'    => $request->ip(),
-                'metadata'      => [
+                'resource_id' => (string) $questionBank->id,
+                'action' => 'question_bank_revision_requested',
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'created_by' => $questionBank->created_by,
+                'version' => '1.0',
+                'reason' => $note,
+                'ip_address' => $request->ip(),
+                'metadata' => [
                     'previous_status' => $previousBankStatus,
-                    'new_status'      => 'needs_revision',
-                    'reviewer'        => $user->name,
+                    'new_status' => 'needs_revision',
+                    'reviewer' => $user->name,
                 ],
             ]);
         }
 
         // BUG #2 FIX: Synchronize all linked Assessments containing questions from this QuestionBank
-        $questionIds = \App\Modules\QuestionBank\Models\Question::where('question_bank_id', $questionBank->id)->pluck('id');
-        $sectionIds  = \App\Modules\Assessment\Models\TestQuestion::whereIn('question_id', $questionIds)->pluck('test_section_id');
-        $testIds     = \App\Modules\Assessment\Models\TestSection::whereIn('id', $sectionIds)->pluck('test_id')->unique();
+        $questionIds = Question::where('question_bank_id', $questionBank->id)->pluck('id');
+        $sectionIds = TestQuestion::whereIn('question_id', $questionIds)->pluck('test_section_id');
+        $testIds = TestSection::whereIn('id', $sectionIds)->pluck('test_id')->unique();
 
         $linkedTests = Test::whereIn('id', $testIds)->get();
         foreach ($linkedTests as $test) {
@@ -702,28 +727,28 @@ class RepositoryManagerController extends Controller
 
             RepositoryActivityLog::create([
                 'resource_type' => 'Test',
-                'resource_id'   => (string) $test->id,
-                'actor_id'      => $test->created_by,
-                'reviewer_id'   => $user->id,
-                'action'        => 'revision_requested',
+                'resource_id' => (string) $test->id,
+                'actor_id' => $test->created_by,
+                'reviewer_id' => $user->id,
+                'action' => 'revision_requested',
                 'approval_note' => "Cascade revision request due to linked Question Bank '{$questionBank->title}' returning for revision.",
             ]);
 
             if (Schema::hasTable('acl_audit_trails')) {
-                \App\Models\AclAuditTrail::create([
+                AclAuditTrail::create([
                     'resource_type' => 'Test',
-                    'resource_id'   => (string) $test->id,
-                    'action'        => 'assessment_revision_requested',
-                    'actor_id'      => $user->id,
-                    'reviewer_id'   => $user->id,
-                    'created_by'    => $test->created_by,
-                    'version'       => '1.0',
-                    'reason'        => "Cascade revision request from Question Bank '{$questionBank->title}'",
-                    'ip_address'    => $request->ip(),
-                    'metadata'      => [
-                        'previous_status'   => $previousTestStatus,
-                        'new_status'        => 'needs_revision',
-                        'parent_bank_id'    => $questionBank->id,
+                    'resource_id' => (string) $test->id,
+                    'action' => 'assessment_revision_requested',
+                    'actor_id' => $user->id,
+                    'reviewer_id' => $user->id,
+                    'created_by' => $test->created_by,
+                    'version' => '1.0',
+                    'reason' => "Cascade revision request from Question Bank '{$questionBank->title}'",
+                    'ip_address' => $request->ip(),
+                    'metadata' => [
+                        'previous_status' => $previousTestStatus,
+                        'new_status' => 'needs_revision',
+                        'parent_bank_id' => $questionBank->id,
                         'parent_bank_title' => $questionBank->title,
                     ],
                 ]);
@@ -737,7 +762,7 @@ class RepositoryManagerController extends Controller
     public function rejectQuestionBank(Request $request, QuestionBank $questionBank): RedirectResponse
     {
         $governanceStates = ['pending', 'pending_approval', 'submitted'];
-        if (! in_array($questionBank->status, $governanceStates, true)) {
+        if (!in_array($questionBank->status, $governanceStates, true)) {
             return redirect()->back()->with(
                 'danger',
                 'Governance decisions can only be made for repositories awaiting approval.'
@@ -752,37 +777,37 @@ class RepositoryManagerController extends Controller
         $questionBank->save();
 
         if (Schema::hasTable('governance_approval_tasks')) {
-            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+            GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
                 ->where('status', 'OPEN')
                 ->update(['status' => 'COMPLETED', 'completed_at' => now()]);
         }
 
         RepositoryActivityLog::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'actor_id'      => $questionBank->created_by,
-            'reviewer_id'   => $user->id,
-            'action'        => 'rejected',
+            'resource_id' => $questionBank->id,
+            'actor_id' => $questionBank->created_by,
+            'reviewer_id' => $user->id,
+            'action' => 'rejected',
             'approval_note' => $note,
         ]);
 
         $authorId = $questionBank->created_by ?: ($questionBank->creator?->id ?? null);
         if ($authorId && Schema::hasTable('notifications')) {
-            \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                'id'              => (string) \Illuminate\Support\Str::uuid(),
-                'type'            => 'repository_rejected',
+            DB::table('notifications')->insert([
+                'id' => (string) Str::uuid(),
+                'type' => 'repository_rejected',
                 'notifiable_type' => 'App\Models\User',
-                'notifiable_id'   => $authorId,
-                'data'            => json_encode([
-                    'title'            => 'Repository Rejected & Archived',
-                    'message'          => "Repository Manager rejected '{$questionBank->title}'. Reason: {$note}",
+                'notifiable_id' => $authorId,
+                'data' => json_encode([
+                    'title' => 'Repository Rejected & Archived',
+                    'message' => "Repository Manager rejected '{$questionBank->title}'. Reason: {$note}",
                     'rejection_reason' => $note,
                     'question_bank_id' => $questionBank->id,
-                    'link'             => route('teacher.question-banks.show', $questionBank->id),
-                    'priority'         => 'HIGH',
+                    'link' => route('teacher.question-banks.show', $questionBank->id),
+                    'priority' => 'HIGH',
                 ]),
-                'created_at'      => now(),
-                'updated_at'      => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
 
@@ -802,7 +827,7 @@ class RepositoryManagerController extends Controller
     public function assessmentGovernance(Request $request, AssessmentWorkflowService $workflowService): View
     {
         $actor = $request->user();
-        if (! $actor || (! $actor->hasRole('repository-manager') && ! $actor->hasRole('super-admin'))) {
+        if (!$actor || (!$actor->hasRole('repository-manager') && !$actor->hasRole('super-admin'))) {
             abort(403, 'Assessment governance workspace is strictly reserved for Repository Managers.');
         }
 
@@ -846,13 +871,13 @@ class RepositoryManagerController extends Controller
             });
         }
         $assessmentRequests = $requestsQuery->latest()->paginate(15, ['*'], 'requests_page')->withQueryString();
-        $teachers = ($activeTab === 'request-intake' && \Spatie\Permission\Models\Role::where('name', 'teacher')->exists())
+        $teachers = ($activeTab === 'request-intake' && Role::where('name', 'teacher')->exists())
             ? User::role('teacher')->where('status', 'active')->get()
             : collect();
 
         // Eligible candidates for draft/mock test context
-        $eligibleCandidates = ($activeTab === 'request-intake' && \Spatie\Permission\Models\Role::where('name', 'student')->exists())
-            ? app(\App\Services\AssessmentRequestEligibilityService::class)
+        $eligibleCandidates = ($activeTab === 'request-intake' && Role::where('name', 'student')->exists())
+            ? app(AssessmentRequestEligibilityService::class)
                 ->getEligibleCandidatesQuery()
                 ->orderBy('name')
                 ->get()
@@ -894,8 +919,8 @@ class RepositoryManagerController extends Controller
         // Legacy compatibility variables for tests asserting on approval queue
         $assessments = match ($activeTab) {
             'ready-to-publish' => $readyToPublishAssessments,
-            'published'        => $publishedAssessments,
-            default            => $pendingReviewAssessments,
+            'published' => $publishedAssessments,
+            default => $pendingReviewAssessments,
         };
         $status = $activeTab;
         $pendingCount = $pendingReviewCount;
@@ -955,7 +980,7 @@ class RepositoryManagerController extends Controller
             'sections.testQuestions.question.passage',
         ]);
 
-        $questionReviews = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+        $questionReviews = TestQuestionReview::where('test_id', (string) $test->id)
             ->get()
             ->keyBy('question_id');
 
@@ -974,11 +999,11 @@ class RepositoryManagerController extends Controller
         $isRevisionAllowed = ($flaggedQuestionsCount > 0);
 
         $reviewProgress = [
-            'total'               => $totalQuestionsCount,
-            'default_ok'          => $defaultOkCount,
-            'flagged'             => $flaggedQuestionsCount,
-            'critical'            => $criticalCount,
-            'is_allowed'          => $isApprovalAllowed,
+            'total' => $totalQuestionsCount,
+            'default_ok' => $defaultOkCount,
+            'flagged' => $flaggedQuestionsCount,
+            'critical' => $criticalCount,
+            'is_allowed' => $isApprovalAllowed,
             'is_revision_allowed' => $isRevisionAllowed,
         ];
 
@@ -994,7 +1019,7 @@ class RepositoryManagerController extends Controller
     /**
      * Clear flag / Mark question as Default OK (BUSINESS RULE 1 & UX).
      */
-    public function markQuestionReviewed(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse|\Illuminate\Http\JsonResponse
+    public function markQuestionReviewed(Request $request, Test $test, Question $question): RedirectResponse|JsonResponse
     {
         if ($test->status === 'approved' || $test->is_published || $test->status === 'published') {
             if ($request->ajax() || $request->wantsJson()) {
@@ -1003,19 +1028,20 @@ class RepositoryManagerController extends Controller
                     'message' => 'Review mutation blocked: Assessment is already approved or published.',
                 ], 403);
             }
+
             return redirect()->back()->with('error', 'Review mutation blocked: Assessment is already approved or published.');
         }
 
         $user = $request->user();
 
-        \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+        TestQuestionReview::where('test_id', (string) $test->id)
             ->where('question_id', (string) $question->id)
             ->delete();
 
         // Calculate updated counts
-        $allReviews = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)->get();
+        $allReviews = TestQuestionReview::where('test_id', (string) $test->id)->get();
         $flaggedCount = $allReviews->whereIn('status', ['needs_revision', 'critical_issue'])->count();
-        
+
         $totalQuestionsCount = 0;
         foreach ($test->sections as $sec) {
             $totalQuestionsCount += $sec->testQuestions->count();
@@ -1023,13 +1049,13 @@ class RepositoryManagerController extends Controller
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'success'             => true,
-                'message'             => 'Flag cleared — Question marked OK.',
-                'question_id'         => (string) $question->id,
-                'status'              => 'default_ok',
-                'flagged_count'       => $flaggedCount,
-                'default_ok_count'    => max(0, $totalQuestionsCount - $flaggedCount),
-                'is_allowed'          => ($totalQuestionsCount > 0 && $flaggedCount === 0),
+                'success' => true,
+                'message' => 'Flag cleared — Question marked OK.',
+                'question_id' => (string) $question->id,
+                'status' => 'default_ok',
+                'flagged_count' => $flaggedCount,
+                'default_ok_count' => max(0, $totalQuestionsCount - $flaggedCount),
+                'is_allowed' => ($totalQuestionsCount > 0 && $flaggedCount === 0),
                 'is_revision_allowed' => ($flaggedCount > 0),
             ]);
         }
@@ -1040,7 +1066,7 @@ class RepositoryManagerController extends Controller
     /**
      * Request revision or mark critical issue for a specific question (BUSINESS RULE 2 & 3).
      */
-    public function requestQuestionRevision(Request $request, Test $test, \App\Modules\QuestionBank\Models\Question $question): RedirectResponse|\Illuminate\Http\JsonResponse
+    public function requestQuestionRevision(Request $request, Test $test, Question $question): RedirectResponse|JsonResponse
     {
         if ($test->status === 'approved' || $test->is_published || $test->status === 'published') {
             if ($request->ajax() || $request->wantsJson()) {
@@ -1049,50 +1075,51 @@ class RepositoryManagerController extends Controller
                     'message' => 'Review mutation blocked: Assessment is already approved or published.',
                 ], 403);
             }
+
             return redirect()->back()->with('error', 'Review mutation blocked: Assessment is already approved or published.');
         }
 
         $user = $request->user();
 
         $validated = $request->validate([
-            'status'   => ['nullable', 'string'],
-            'field'    => ['required', 'string'],
-            'comment'  => ['required', 'string'],
+            'status' => ['nullable', 'string'],
+            'field' => ['required', 'string'],
+            'comment' => ['required', 'string'],
             'severity' => ['nullable', 'string'],
         ]);
 
         $status = $validated['status'] ?? ($validated['severity'] === 'critical' ? 'critical_issue' : 'needs_revision');
 
-        $review = \App\Models\TestQuestionReview::updateOrCreate(
+        $review = TestQuestionReview::updateOrCreate(
             ['test_id' => (string) $test->id, 'question_id' => (string) $question->id],
             [
-                'status'      => $status,
-                'field'       => $validated['field'],
-                'comment'     => $validated['comment'],
-                'severity'    => $validated['severity'] ?? 'warning',
+                'status' => $status,
+                'field' => $validated['field'],
+                'comment' => $validated['comment'],
+                'severity' => $validated['severity'] ?? 'warning',
                 'reviewer_id' => $user->id,
             ]
         );
 
         // Derive Assessment Status -> needs_revision
         $test->update([
-            'status'       => 'needs_revision',
+            'status' => 'needs_revision',
             'is_published' => false,
         ]);
 
         RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $test->created_by ?? $user->id,
-            'reviewer_id'   => $user->id,
-            'action'        => 'revision_requested',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $test->created_by ?? $user->id,
+            'reviewer_id' => $user->id,
+            'action' => 'revision_requested',
             'approval_note' => "Question flagged for revision on field '{$validated['field']}': {$validated['comment']}",
         ]);
 
         // Calculate updated counts
-        $allReviews = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)->get();
+        $allReviews = TestQuestionReview::where('test_id', (string) $test->id)->get();
         $flaggedCount = $allReviews->whereIn('status', ['needs_revision', 'critical_issue'])->count();
-        
+
         $totalQuestionsCount = 0;
         foreach ($test->sections as $sec) {
             $totalQuestionsCount += $sec->testQuestions->count();
@@ -1100,16 +1127,16 @@ class RepositoryManagerController extends Controller
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'success'             => true,
-                'message'             => 'Review saved.',
-                'question_id'         => (string) $question->id,
-                'status'              => $status,
-                'field'               => $validated['field'],
-                'comment'             => $validated['comment'],
-                'severity'            => $validated['severity'] ?? 'warning',
-                'flagged_count'       => $flaggedCount,
-                'default_ok_count'    => max(0, $totalQuestionsCount - $flaggedCount),
-                'is_allowed'          => ($totalQuestionsCount > 0 && $flaggedCount === 0),
+                'success' => true,
+                'message' => 'Review saved.',
+                'question_id' => (string) $question->id,
+                'status' => $status,
+                'field' => $validated['field'],
+                'comment' => $validated['comment'],
+                'severity' => $validated['severity'] ?? 'warning',
+                'flagged_count' => $flaggedCount,
+                'default_ok_count' => max(0, $totalQuestionsCount - $flaggedCount),
+                'is_allowed' => ($totalQuestionsCount > 0 && $flaggedCount === 0),
                 'is_revision_allowed' => ($flaggedCount > 0),
             ]);
         }
@@ -1125,20 +1152,20 @@ class RepositoryManagerController extends Controller
         if ($test->status === 'approved' || $test->is_published || $test->status === 'published') {
             return redirect()->route('admin.publications.assessments', [
                 'status' => $test->is_published ? 'published' : 'approved',
-                'highlight' => $test->id
+                'highlight' => $test->id,
             ])->with('error', 'Assessment is already approved or published.');
         }
 
         $user = $request->user();
 
         $test->load(['sections.testQuestions']);
-        $totalQuestionsCount = $test->sections->sum(fn($sec) => $sec->testQuestions->count());
+        $totalQuestionsCount = $test->sections->sum(fn ($sec) => $sec->testQuestions->count());
         if ($totalQuestionsCount === 0) {
             return redirect()->back()->with('error', 'Cannot approve empty assessment with 0 questions.');
         }
 
         // BUSINESS RULE 5: Approve Guard (Flagged Questions === 0)
-        $flaggedCount = \App\Models\TestQuestionReview::where('test_id', (string) $test->id)
+        $flaggedCount = TestQuestionReview::where('test_id', (string) $test->id)
             ->whereIn('status', ['needs_revision', 'critical_issue'])
             ->count();
 
@@ -1155,42 +1182,42 @@ class RepositoryManagerController extends Controller
 
         RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $test->created_by ?? $user->id,
-            'reviewer_id'   => $user->id,
-            'action'        => 'approved',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $test->created_by ?? $user->id,
+            'reviewer_id' => $user->id,
+            'action' => 'approved',
             'approval_note' => $note,
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'Test',
-                'resource_id'   => (string) $test->id,
-                'action'        => 'assessment_approved',
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'created_by'    => $test->created_by ?? $user->id,
-                'version'       => '1.0',
-                'reason'        => $note,
-                'ip_address'    => $request->ip(),
-                'metadata'      => [
+                'resource_id' => (string) $test->id,
+                'action' => 'assessment_approved',
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'created_by' => $test->created_by ?? $user->id,
+                'version' => '1.0',
+                'reason' => $note,
+                'ip_address' => $request->ip(),
+                'metadata' => [
                     'previous_status' => $previousStatus,
-                    'new_status'      => 'approved',
-                    'reviewer'        => $user->name,
+                    'new_status' => 'approved',
+                    'reviewer' => $user->name,
                 ],
             ]);
         }
 
         if ($test->creator) {
             try {
-                $test->creator->notify(new \App\Notifications\EnterpriseSystemNotification(
+                $test->creator->notify(new EnterpriseSystemNotification(
                     title: 'Assessment Approved',
                     message: "Your Assessment Test '{$test->title}' was approved by Repository Manager {$user->name} and is ready for publication.",
                     type: 'ASSESSMENT_APPROVED',
                     priority: 'HIGH',
                     entityType: 'test',
                     entityId: (string) $test->id,
-                    targetUrl: route('admin.tests.show', $test->id)
+                    targetUrl: route('admin.publications.assessments', ['status' => 'approved', 'highlight' => $test->id])
                 ));
             } catch (\Throwable $e) {
                 // Silently skip
@@ -1220,35 +1247,35 @@ class RepositoryManagerController extends Controller
 
         RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $test->created_by ?? $user->id,
-            'reviewer_id'   => $user->id,
-            'action'        => 'revision_requested',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $test->created_by ?? $user->id,
+            'reviewer_id' => $user->id,
+            'action' => 'revision_requested',
             'approval_note' => $note,
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'Test',
-                'resource_id'   => (string) $test->id,
-                'action'        => 'assessment_revision_requested',
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'created_by'    => $test->created_by ?? $user->id,
-                'version'       => '1.0',
-                'reason'        => $note,
-                'ip_address'    => $request->ip(),
-                'metadata'      => [
+                'resource_id' => (string) $test->id,
+                'action' => 'assessment_revision_requested',
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'created_by' => $test->created_by ?? $user->id,
+                'version' => '1.0',
+                'reason' => $note,
+                'ip_address' => $request->ip(),
+                'metadata' => [
                     'previous_status' => $previousStatus,
-                    'new_status'      => 'needs_revision',
-                    'reviewer'        => $user->name,
+                    'new_status' => 'needs_revision',
+                    'reviewer' => $user->name,
                 ],
             ]);
         }
 
         if ($test->creator) {
             try {
-                $test->creator->notify(new \App\Notifications\EnterpriseSystemNotification(
+                $test->creator->notify(new EnterpriseSystemNotification(
                     title: 'Assessment Revision Requested',
                     message: "Your Assessment Test '{$test->title}' requires revision. Reviewer notes: {$note}",
                     type: 'ASSESSMENT_REVISION_REQUESTED',
@@ -1285,28 +1312,28 @@ class RepositoryManagerController extends Controller
 
         RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $test->created_by ?? $user->id,
-            'reviewer_id'   => $user->id,
-            'action'        => 'assessment_archived',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $test->created_by ?? $user->id,
+            'reviewer_id' => $user->id,
+            'action' => 'assessment_archived',
             'approval_note' => $note,
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'Test',
-                'resource_id'   => (string) $test->id,
-                'action'        => 'assessment_archived',
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'created_by'    => $test->created_by ?? $user->id,
-                'version'       => '1.0',
-                'reason'        => $note,
-                'ip_address'    => $request->ip(),
-                'metadata'      => [
+                'resource_id' => (string) $test->id,
+                'action' => 'assessment_archived',
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'created_by' => $test->created_by ?? $user->id,
+                'version' => '1.0',
+                'reason' => $note,
+                'ip_address' => $request->ip(),
+                'metadata' => [
                     'previous_status' => $previousStatus,
-                    'new_status'      => 'archived',
-                    'reviewer'        => $user->name,
+                    'new_status' => 'archived',
+                    'reviewer' => $user->name,
                 ],
             ]);
         }
@@ -1314,7 +1341,7 @@ class RepositoryManagerController extends Controller
         $author = $test->assignedTeacher ?? $test->creator;
         if ($author) {
             try {
-                $author->notify(new \App\Notifications\EnterpriseSystemNotification(
+                $author->notify(new EnterpriseSystemNotification(
                     title: 'Assessment Submission Rejected and Archived',
                     message: "Assessment submission '{$test->title}' was rejected and moved to Archived. Reason: {$note}",
                     type: 'ASSESSMENT_REJECTED_AND_ARCHIVED',
@@ -1347,9 +1374,9 @@ class RepositoryManagerController extends Controller
     {
         $user = $request->user();
 
-        $validationResult = app(\App\Modules\Assessment\Services\TestBuilderService::class)->validateAssessment($test);
+        $validationResult = app(TestBuilderService::class)->validateAssessment($test);
         if (!$validationResult['is_valid']) {
-            return back()->with('error', "Cannot submit Assessment for review: " . implode(' | ', $validationResult['errors']));
+            return back()->with('error', 'Cannot submit Assessment for review: '.implode(' | ', $validationResult['errors']));
         }
 
         $previousStatus = $test->status;
@@ -1359,26 +1386,26 @@ class RepositoryManagerController extends Controller
 
         RepositoryActivityLog::create([
             'resource_type' => 'Test',
-            'resource_id'   => (string) $test->id,
-            'actor_id'      => $user->id,
-            'action'        => 'submitted',
+            'resource_id' => (string) $test->id,
+            'actor_id' => $user->id,
+            'action' => 'submitted',
             'approval_note' => 'Assessment submitted for Repository Manager review.',
         ]);
 
         if (Schema::hasTable('acl_audit_trails')) {
-            \App\Models\AclAuditTrail::create([
+            AclAuditTrail::create([
                 'resource_type' => 'Test',
-                'resource_id'   => (string) $test->id,
-                'action'        => 'assessment_submitted',
-                'actor_id'      => $user->id,
-                'created_by'    => $user->id,
-                'version'       => '1.0',
-                'reason'        => 'Teacher submitted assessment for Repository Manager review',
-                'ip_address'    => $request->ip(),
-                'metadata'      => [
+                'resource_id' => (string) $test->id,
+                'action' => 'assessment_submitted',
+                'actor_id' => $user->id,
+                'created_by' => $user->id,
+                'version' => '1.0',
+                'reason' => 'Teacher submitted assessment for Repository Manager review',
+                'ip_address' => $request->ip(),
+                'metadata' => [
                     'previous_status' => $previousStatus,
-                    'new_status'      => 'pending',
-                    'submitter'       => $user->name,
+                    'new_status' => 'pending',
+                    'submitter' => $user->name,
                 ],
             ]);
         }
@@ -1412,10 +1439,10 @@ class RepositoryManagerController extends Controller
         $revisions = $query->latest()->paginate(15)->withQueryString();
 
         $metrics = [
-            'open_count'        => RepositoryRevisionRequest::where('status', 'OPEN')->count(),
+            'open_count' => RepositoryRevisionRequest::where('status', 'OPEN')->count(),
             'resubmitted_count' => RepositoryRevisionRequest::where('status', 'RESUBMITTED')->count(),
-            'needs_rev_count'   => RepositoryRevisionRequest::where('status', 'IN_PROGRESS')->count(),
-            'approved_count'    => RepositoryRevisionRequest::where('status', 'COMPLETED')->count(),
+            'needs_rev_count' => RepositoryRevisionRequest::where('status', 'IN_PROGRESS')->count(),
+            'approved_count' => RepositoryRevisionRequest::where('status', 'COMPLETED')->count(),
         ];
 
         return view('admin.repository_manager.revisions_queue', compact('revisions', 'statusFilter', 'metrics'));
@@ -1473,11 +1500,11 @@ class RepositoryManagerController extends Controller
                         $p = $item->proposed_data;
 
                         // Apply proposed core fields to Master Question
-                        $question->prompt        = $p['prompt'] ?? $question->prompt;
+                        $question->prompt = $p['prompt'] ?? $question->prompt;
                         $question->question_type = $p['question_type'] ?? $question->question_type;
-                        $question->explanation   = $p['explanation'] ?? $question->explanation;
-                        $question->difficulty    = $p['difficulty'] ?? $question->difficulty;
-                        $question->points        = $p['points'] ?? $question->points;
+                        $question->explanation = $p['explanation'] ?? $question->explanation;
+                        $question->difficulty = $p['difficulty'] ?? $question->difficulty;
+                        $question->points = $p['points'] ?? $question->points;
                         if (isset($p['part_number'])) {
                             $question->part_number = $p['part_number'];
                         }
@@ -1515,17 +1542,17 @@ class RepositoryManagerController extends Controller
                             foreach ($p['choices'] as $key => $c) {
                                 $choiceId = is_numeric($key) && $existingChoices->has($key) ? $key : ($c['id'] ?? null);
                                 if ($choiceId && $existingChoice = $existingChoices->get($choiceId)) {
-                                    $existingChoice->label      = $c['label'] ?? 'A';
-                                    $existingChoice->content    = $c['content'] ?? '';
+                                    $existingChoice->label = $c['label'] ?? 'A';
+                                    $existingChoice->content = $c['content'] ?? '';
                                     $existingChoice->is_correct = !empty($c['is_correct']);
                                     $existingChoice->save();
                                     $updatedIds[] = $existingChoice->id;
                                 } else {
                                     $newChoice = QuestionChoice::create([
                                         'question_id' => $question->id,
-                                        'label'       => $c['label'] ?? 'A',
-                                        'content'     => $c['content'] ?? '',
-                                        'is_correct'  => !empty($c['is_correct']),
+                                        'label' => $c['label'] ?? 'A',
+                                        'content' => $c['content'] ?? '',
+                                        'is_correct' => !empty($c['is_correct']),
                                     ]);
                                     $updatedIds[] = $newChoice->id;
                                 }
@@ -1552,10 +1579,10 @@ class RepositoryManagerController extends Controller
             // Activity Log
             RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
-                'resource_id'   => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'action'        => 'rm_revision_approved',
+                'resource_id' => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'action' => 'rm_revision_approved',
                 'approval_note' => $notes,
             ]);
 
@@ -1599,10 +1626,10 @@ class RepositoryManagerController extends Controller
 
             RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
-                'resource_id'   => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'action'        => 'rm_revision_changes_requested',
+                'resource_id' => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'action' => 'rm_revision_changes_requested',
                 'approval_note' => $notes,
             ]);
 
@@ -1645,10 +1672,10 @@ class RepositoryManagerController extends Controller
 
             RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
-                'resource_id'   => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
-                'actor_id'      => $user->id,
-                'reviewer_id'   => $user->id,
-                'action'        => 'rm_revision_rejected',
+                'resource_id' => (string) ($bank?->id ?? $revisionRequest->question_bank_id),
+                'actor_id' => $user->id,
+                'reviewer_id' => $user->id,
+                'action' => 'rm_revision_rejected',
                 'approval_note' => $notes,
             ]);
 
