@@ -11,6 +11,7 @@ use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\Assessment\Models\TestSection;
+use App\Modules\Assessment\Services\ResultReleaseService;
 use App\Modules\QuestionBank\Enums\QuestionType;
 use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\QuestionBank\Enums\TestType;
@@ -215,6 +216,9 @@ class CandidateCbtServerAuthoritativeTimeoutTest extends TestCase
 
     public function test_expired_attempt_two_resolves_best_result_and_completes_assignment(): void
     {
+        $admin = User::factory()->create(['status' => 'active']);
+        $admin->assignRole('admin');
+
         // Attempt 1 expired with 0 answers
         $attempt1 = Attempt::create([
             'test_id' => $this->test->id,
@@ -225,6 +229,8 @@ class CandidateCbtServerAuthoritativeTimeoutTest extends TestCase
             'started_at' => now()->subHours(5),
             'submitted_at' => now()->subHours(3),
             'decision_status' => 'retried',
+            'result_release_status' => 'released',
+            'result_released_at' => now()->subHours(3),
         ]);
 
         // Attempt 2 in progress but expired server-side with 1 answer
@@ -254,6 +260,16 @@ class CandidateCbtServerAuthoritativeTimeoutTest extends TestCase
 
         $attempt2->refresh();
         $this->assertEquals(AttemptStatus::Expired, $attempt2->status);
+
+        // In Sprint 4: Assignment remains active until Attempt 2 result is released
+        $this->assignment->refresh();
+        $this->assertEquals('active', $this->assignment->status);
+        $this->assertNull($this->assignment->final_attempt_id);
+
+        // Release Attempt 2 result
+        $attempt2->update(['result_release_at' => now()->subMinute()]);
+        $releaseService = app(ResultReleaseService::class);
+        $releaseService->release($attempt2, $admin);
 
         $this->assignment->refresh();
         $this->assertEquals('completed', $this->assignment->status);

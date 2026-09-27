@@ -15,7 +15,7 @@ use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\AttemptAudioPlay;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Services\DeliveryUnitBuilder;
-use App\Modules\Certificate\Engines\CertificateEngine;
+use App\Modules\Assessment\Services\ResultDecisionService;
 use App\Modules\Certificate\Models\Certificate;
 use App\Modules\Commerce\Domain\Enums\OrderStatus;
 use App\Modules\Commerce\Domain\Enums\PaymentStatus;
@@ -859,30 +859,15 @@ class CandidatePortalController extends Controller
                         ->with('error', 'A second attempt has already been initiated for this assessment.');
                 }
 
-                DB::transaction(function () use ($attempt, $assignment) {
-                    $attempt->update([
-                        'is_final' => true,
-                        'decision_status' => 'finalized',
-                    ]);
+                try {
+                    app(ResultDecisionService::class)->finalizeFirstAttempt($assignment, $attempt, 'candidate');
 
-                    $assignment->update([
-                        'status' => 'completed',
-                        'completed_at' => now(),
-                        'final_attempt_id' => $attempt->id,
-                    ]);
-
-                    ActivityLogger::log(
-                        'CANDIDATE_ATTEMPT_FINALIZED',
-                        "Candidate finalized Attempt #{$attempt->attempt_number} for '{$attempt->test?->title}'",
-                        $attempt
-                    );
-                });
-
-                // Issue digital certificate for authoritative final result if eligible
-                app(CertificateEngine::class)->issueCertificateForFinalResult($assignment->fresh());
-
-                return redirect()->route('candidate.review', $attempt)
-                    ->with('status', 'Result finalized. Your score has been released as your final Mock Test result.');
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('status', 'Result finalized. Your score has been released as your final Mock Test result.');
+                } catch (\Throwable $e) {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', $e->getMessage());
+                }
             });
         } catch (LockTimeoutException $e) {
             return redirect()->route('candidate.review', $attempt);
@@ -915,6 +900,12 @@ class CandidatePortalController extends Controller
                 if ($attempt->test?->isRealTest() && !$attempt->isResultReleased()) {
                     return redirect()->route('candidate.review', $attempt)
                         ->with('error', 'Your result is still processing. Retry/finalization becomes available after the result is released.');
+                }
+
+                // 72-Hour Decision Window Check
+                if ($attempt->isDecisionWindowExpired()) {
+                    return redirect()->route('candidate.review', $attempt)
+                        ->with('error', 'The retry decision window has expired. Your first result is being finalized.');
                 }
 
                 // Verify Attempt 1 is not finalized
@@ -972,7 +963,7 @@ class CandidatePortalController extends Controller
                     ]);
 
                     ActivityLogger::log(
-                        'CANDIDATE_ATTEMPT_RETRIED',
+                        'CANDIDATE_RETRY_STARTED',
                         "Candidate started Attempt #2 for '{$attempt->test?->title}'",
                         $newAttempt
                     );

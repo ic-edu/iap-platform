@@ -127,6 +127,17 @@ class ResultReleaseService
                 // Silently preserve transaction on notification delivery failures
             }
 
+            // 5. Authoritative Best-Result Resolution Hook (Attempt #2 Release)
+            if ($lockedTest && $lockedTest->isRealTest() && $lockedAttempt->assignment_id && $lockedAttempt->attempt_number >= 2) {
+                $assignment = $lockedAttempt->assignment ?? CandidateTestAssignment::find($lockedAttempt->assignment_id);
+                if ($assignment) {
+                    $attempt1 = $assignment->attempts()->where('attempt_number', 1)->first();
+                    if ($attempt1 && $attempt1->isCompleted() && $attempt1->isResultReleased()) {
+                        app(ResultDecisionService::class)->resolveAfterSecondAttempt($assignment);
+                    }
+                }
+            }
+
             return $lockedAttempt;
         });
     }

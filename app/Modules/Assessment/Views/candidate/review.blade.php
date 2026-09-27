@@ -53,20 +53,39 @@
             $isRealTest = $attempt->test?->isRealTest() ?? false;
             $isPendingDecision = ($attempt->decision_status ?? 'pending_decision') === 'pending_decision';
             $isAssignmentActive = ($attempt->assignment?->status ?? '') === 'active';
-            $showDecisionCard = $isRealTest && ($attempt->attempt_number == 1) && $isPendingDecision && $isAssignmentActive;
+            $isResultReleased = $attempt->isResultReleased();
+            $isExpired = $attempt->isDecisionWindowExpired();
+            $showDecisionCard = $isRealTest && ($attempt->attempt_number == 1) && $isPendingDecision && $isAssignmentActive && $isResultReleased;
+            $deadline = $attempt->getDecisionDeadline();
         @endphp
 
         <!-- Candidate Decision Section (Attempt 1 of Mock Test) -->
         @if($showDecisionCard)
         <div class="mb-8 p-6 rounded-2xl bg-gradient-to-r from-indigo-50/80 via-white to-indigo-50/80 dark:from-slate-900 dark:via-indigo-950/60 dark:to-slate-900 border-2 border-indigo-200 dark:border-indigo-500/40 shadow-lg dark:shadow-2xl">
-            <div class="flex items-center gap-3 mb-3">
-                <span class="text-3xl">⚖️</span>
-                <div>
-                    <h2 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">Mock Test Result Decision</h2>
-                    <p class="text-xs text-indigo-700 dark:text-indigo-300">You have completed Attempt #1. Choose whether to lock in this result or use your 2nd attempt.</p>
+            <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">⚖️</span>
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">Mock Test Result Decision</h2>
+                        <p class="text-xs text-indigo-700 dark:text-indigo-300">You have completed Attempt #1. Choose whether to lock in this result or use your 2nd attempt.</p>
+                    </div>
                 </div>
+                @if($deadline)
+                <div class="px-3 py-1.5 rounded-xl {{ $isExpired ? 'bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-400' : 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300' }} text-xs font-semibold">
+                    @if($isExpired)
+                        <span>⏳ Decision period ended — finalization pending.</span>
+                    @else
+                        <span>⏱️ Please make your decision by: <strong>{{ $deadline->format('d M Y, H:i') }}</strong></span>
+                    @endif
+                </div>
+                @endif
             </div>
 
+            @if($isExpired)
+            <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800 dark:text-amber-300 font-medium mt-3">
+                The 72-hour retry decision window has ended. Your first attempt result is being finalized by the system.
+            </div>
+            @else
             <div class="grid sm:grid-cols-2 gap-4 mt-5">
                 <!-- Option A: Finalize -->
                 <div class="p-5 rounded-xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
@@ -106,6 +125,7 @@
                     </form>
                 </div>
             </div>
+            @endif
         </div>
         @elseif($attempt->is_final)
         <div class="mb-8 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between flex-wrap gap-2">

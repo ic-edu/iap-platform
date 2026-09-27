@@ -289,6 +289,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 2);
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
 
         $attempt1->update(['total_score' => 650.0]);
         $attempt2->update(['total_score' => 850.0]);
@@ -323,6 +324,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 1);
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
 
         $attempt1->update(['total_score' => 750.0]);
         $attempt2->update(['total_score' => 680.0]);
@@ -358,6 +360,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 2);
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
         $attempt2->update(['submitted_at' => now(), 'total_score' => 720.0]);
 
         $winner = app(BestResultResolver::class)->resolve($this->assignment);
@@ -384,6 +387,7 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 2);
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
 
         $attempt1->update(['total_score' => 600.0]);
         $attempt2->update(['total_score' => 800.0]);
@@ -503,6 +507,8 @@ class MockTestCertificateFinalResultTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 2);
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
+        app(BestResultResolver::class)->resolve($this->assignment);
 
         $this->assertSame(1, Certificate::where('user_id', $this->candidate->id)->count());
         $this->assertSame($this->assignment->fresh()->final_attempt_id, Certificate::first()->attempt_id);

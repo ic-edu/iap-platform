@@ -305,6 +305,8 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 2); // 200 pts
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
+        app(BestResultResolver::class)->resolve($this->assignment);
 
         $attempt1->refresh();
         $attempt2->refresh();
@@ -343,6 +345,8 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 1); // 100 pts
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
+        app(BestResultResolver::class)->resolve($this->assignment);
 
         $attempt1->refresh();
         $attempt2->refresh();
@@ -382,6 +386,7 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 1);
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
         $attempt2->update(['submitted_at' => now(), 'total_score' => 720.0]);
 
         // Re-resolve to test equal 720.0 score tie-breaker
@@ -556,6 +561,8 @@ class MockTestTwoAttemptLifecycleTest extends TestCase
         $attempt2 = Attempt::where('assignment_id', $this->assignment->id)->where('attempt_number', 2)->first();
         $this->answerQuestionsForAttempt($attempt2, 2); // 200 pts
         $attemptEngine->submitAttempt($attempt2);
+        $this->releaseAttempt($attempt2);
+        app(BestResultResolver::class)->resolve($this->assignment);
 
         $allAttempts = Attempt::where('assignment_id', $this->assignment->id)->orderBy('attempt_number')->get();
         $this->assertCount(2, $allAttempts);

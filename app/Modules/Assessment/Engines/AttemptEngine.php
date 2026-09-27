@@ -14,7 +14,6 @@ use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Assessment\Models\Test;
 use App\Modules\Assessment\Services\ResultReleasePolicyService;
 use App\Modules\Certificate\Engines\CertificateEngine;
-use App\Services\BestResultResolver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -167,15 +166,6 @@ class AttemptEngine
             $this->certificateEngine->issueCertificate($attempt);
         }
 
-        // Best Result Resolution: If Mock Test Attempt 2+ submitted, determine the winning attempt and complete assignment
-        if ($test && $test->isRealTest() && $attempt->assignment) {
-            $assignment = $attempt->assignment;
-            $completedCount = $assignment->attempts()->whereIn('status', [AttemptStatus::Submitted, AttemptStatus::Expired])->count();
-            if ($attempt->attempt_number >= $assignment->max_attempts || $completedCount >= $assignment->max_attempts) {
-                app(BestResultResolver::class)->resolve($assignment);
-            }
-        }
-
         event(new AttemptSubmitted($attempt));
 
         return $attempt;
@@ -220,14 +210,6 @@ class AttemptEngine
 
         $attempt->refresh();
         $this->resultEngine->generateResult($attempt);
-
-        if ($test && $test->isRealTest() && $attempt->assignment) {
-            $assignment = $attempt->assignment;
-            $submittedCount = $assignment->attempts()->whereIn('status', [AttemptStatus::Submitted, AttemptStatus::Expired])->count();
-            if ($attempt->attempt_number >= $assignment->max_attempts || $submittedCount >= $assignment->max_attempts) {
-                app(BestResultResolver::class)->resolve($assignment);
-            }
-        }
 
         event(new AttemptExpired($attempt));
 

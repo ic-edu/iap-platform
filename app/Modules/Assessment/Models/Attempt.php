@@ -334,6 +334,57 @@ class Attempt extends Model
     }
 
     /**
+     * Get the candidate retry/finalization decision deadline (72 hours from result_released_at).
+     */
+    public function getDecisionDeadline(): ?Carbon
+    {
+        if ($this->result_released_at === null) {
+            return null;
+        }
+
+        return $this->result_released_at->copy()->addHours(72);
+    }
+
+    /**
+     * Check if the 72-hour candidate decision window has expired.
+     */
+    public function isDecisionWindowExpired(): bool
+    {
+        $deadline = $this->getDecisionDeadline();
+
+        return $deadline ? now()->greaterThan($deadline) : false;
+    }
+
+    /**
+     * Check if the candidate can currently make a decision on Attempt #1 (finalize or retry).
+     */
+    public function canCandidateDecide(): bool
+    {
+        if ($this->attempt_number !== 1) {
+            return false;
+        }
+
+        if (!$this->isCompleted() || !$this->isResultReleased()) {
+            return false;
+        }
+
+        if ($this->is_final || $this->decision_status === 'finalized' || $this->decision_status === 'retried') {
+            return false;
+        }
+
+        $assignment = $this->relationLoaded('assignment') && $this->assignment ? $this->assignment : $this->assignment()->first();
+        if (!$assignment || $assignment->status !== 'active') {
+            return false;
+        }
+
+        if ($assignment->attempts()->where('attempt_number', 2)->exists()) {
+            return false;
+        }
+
+        return !$this->isDecisionWindowExpired();
+    }
+
+    /**
      * Get the completion label for display ("Submitted at" vs "Time expired at" vs "Cancelled at").
      */
     public function getCompletionLabel(): string
