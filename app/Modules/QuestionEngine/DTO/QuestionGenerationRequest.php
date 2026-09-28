@@ -45,11 +45,16 @@ class QuestionGenerationRequest
      */
     public static function fromArray(array $data): self
     {
-        if (!isset($data['part_number']) && !isset($data['part'])) {
+        if (!array_key_exists('part_number', $data) && !array_key_exists('part', $data)) {
             throw new InvalidArgumentException('Missing part_number.');
         }
 
-        $partNumber = (int) ($data['part_number'] ?? $data['part']);
+        $rawPart = $data['part_number'] ?? $data['part'];
+        if (!is_int($rawPart) && !(is_string($rawPart) && preg_match('/^-?\d+$/', trim($rawPart)))) {
+            throw new InvalidArgumentException('The part_number must be an integer between 1 and 7 for TOEIC.');
+        }
+
+        $partNumber = (int) $rawPart;
         if ($partNumber < 1 || $partNumber > 7) {
             throw new InvalidArgumentException('The part_number must be an integer between 1 and 7 for TOEIC.');
         }
@@ -157,10 +162,15 @@ class QuestionGenerationRequest
         }
 
         if (array_key_exists('item_count', $data) && $data['item_count'] !== null) {
-            if (!is_numeric($data['item_count']) || (int) $data['item_count'] < 1) {
+            $rawItemCount = $data['item_count'];
+            if (!is_int($rawItemCount) && !(is_string($rawItemCount) && preg_match('/^-?\d+$/', trim($rawItemCount)))) {
                 throw new InvalidArgumentException('The item_count must be a positive integer greater than or equal to 1.');
             }
-            $itemCount = (int) $data['item_count'];
+
+            $itemCount = (int) $rawItemCount;
+            if ($itemCount < 1) {
+                throw new InvalidArgumentException('The item_count must be a positive integer greater than or equal to 1.');
+            }
         } else {
             $itemCount = 1;
         }

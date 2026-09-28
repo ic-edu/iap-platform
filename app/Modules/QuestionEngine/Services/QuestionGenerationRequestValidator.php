@@ -29,13 +29,19 @@ class QuestionGenerationRequestValidator
         $data = $input instanceof QuestionGenerationRequest ? $input->toArray() : $input;
 
         // 1. Part Number Validation
-        if (!isset($data['part_number']) && !isset($data['part'])) {
+        if (!array_key_exists('part_number', $data) && !array_key_exists('part', $data)) {
             $errors['part_number'] = 'The part_number is required for TOEIC question generation.';
             $partNumber = 0;
         } else {
-            $partNumber = (int) ($data['part_number'] ?? $data['part']);
-            if ($partNumber < 1 || $partNumber > 7) {
+            $rawPart = $data['part_number'] ?? $data['part'];
+            if (!is_int($rawPart) && !(is_string($rawPart) && preg_match('/^-?\d+$/', trim($rawPart)))) {
                 $errors['part_number'] = 'The part_number must be an integer between 1 and 7 for TOEIC.';
+                $partNumber = 0;
+            } else {
+                $partNumber = (int) $rawPart;
+                if ($partNumber < 1 || $partNumber > 7) {
+                    $errors['part_number'] = 'The part_number must be an integer between 1 and 7 for TOEIC.';
+                }
             }
         }
 
@@ -116,11 +122,15 @@ class QuestionGenerationRequestValidator
 
         // 8. Item Count Validation
         if (array_key_exists('item_count', $data) && $data['item_count'] !== null) {
-            if (!is_numeric($data['item_count']) || (int) $data['item_count'] < 1) {
+            $rawItemCount = $data['item_count'];
+            if (!is_int($rawItemCount) && !(is_string($rawItemCount) && preg_match('/^-?\d+$/', trim($rawItemCount)))) {
                 $errors['item_count'] = 'The item_count must be a positive integer greater than or equal to 1.';
                 $itemCount = 1;
             } else {
-                $itemCount = (int) $data['item_count'];
+                $itemCount = (int) $rawItemCount;
+                if ($itemCount < 1) {
+                    $errors['item_count'] = 'The item_count must be a positive integer greater than or equal to 1.';
+                }
             }
         } else {
             $itemCount = 1;

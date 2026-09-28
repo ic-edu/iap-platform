@@ -268,7 +268,155 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
     }
 
     /**
-     * TEST 8: Raw item_count = 0 -> rejected.
+     * TEST 1 & 2: Integer part_number 5 & string integer "5" valid.
+     */
+    public function test_integer_part_number_valid(): void
+    {
+        $reqInt = QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+        ]);
+        $this->assertEquals(5, $reqInt->partNumber);
+        $this->assertTrue($this->validator->isValid($reqInt));
+
+        $reqStr = QuestionGenerationRequest::fromArray([
+            'part_number' => '5',
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+        ]);
+        $this->assertEquals(5, $reqStr->partNumber);
+        $this->assertTrue($this->validator->isValid($reqStr));
+    }
+
+    /**
+     * TEST 3 & 4: Decimal part_number 5.5 & "5.5" rejected.
+     */
+    public function test_decimal_part_number_rejected(): void
+    {
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
+            'part_number' => 5.5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+        ]);
+    }
+
+    public function test_decimal_part_number_dto_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => 5.5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+        ]);
+    }
+
+    public function test_decimal_string_part_number_rejected(): void
+    {
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
+            'part_number' => '5.5',
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+        ]);
+    }
+
+    public function test_decimal_string_part_number_dto_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => '5.5',
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+        ]);
+    }
+
+    /**
+     * TEST 5 & 6: Integer item_count 10 & string integer "10" valid.
+     */
+    public function test_integer_item_count_valid(): void
+    {
+        $reqInt = QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => 10,
+        ]);
+        $this->assertEquals(10, $reqInt->itemCount);
+        $this->assertTrue($this->validator->isValid($reqInt));
+
+        $reqStr = QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => '10',
+        ]);
+        $this->assertEquals(10, $reqStr->itemCount);
+        $this->assertTrue($this->validator->isValid($reqStr));
+    }
+
+    /**
+     * TEST 7 & 8: Decimal item_count 1.2 & "1.2" rejected.
+     */
+    public function test_decimal_item_count_rejected(): void
+    {
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => 1.2,
+        ]);
+    }
+
+    public function test_decimal_item_count_dto_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => 1.2,
+        ]);
+    }
+
+    public function test_decimal_string_item_count_rejected(): void
+    {
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => '1.2',
+        ]);
+    }
+
+    public function test_decimal_string_item_count_dto_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => '1.2',
+        ]);
+    }
+
+    /**
+     * TEST 9: Raw item_count = 0 -> rejected.
      */
     public function test_8_raw_item_count_zero_is_rejected(): void
     {
@@ -283,7 +431,7 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
     }
 
     /**
-     * TEST 9: DTO fromArray item_count = 0 -> rejected.
+     * TEST 9b: DTO fromArray item_count = 0 -> rejected.
      */
     public function test_9_dto_from_array_item_count_zero_is_rejected(): void
     {
@@ -304,6 +452,18 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => -5,
+        ]);
+    }
+
+    public function test_10b_raw_negative_item_count_is_rejected(): void
+    {
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
             'part_number' => 5,
             'proficiency_target' => 'b1_standard',
             'difficulty' => 'medium',
