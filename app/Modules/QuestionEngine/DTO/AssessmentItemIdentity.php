@@ -3,6 +3,7 @@
 namespace App\Modules\QuestionEngine\DTO;
 
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
+use InvalidArgumentException;
 
 class AssessmentItemIdentity
 {
@@ -32,7 +33,21 @@ class AssessmentItemIdentity
             : (is_string($familyRaw) ? AssessmentFamily::tryFrom($familyRaw) : null);
 
         if ($family === null) {
-            throw new \InvalidArgumentException('A valid assessment_family is required for AssessmentItemIdentity.');
+            throw new InvalidArgumentException('A valid assessment_family is required for AssessmentItemIdentity.');
+        }
+
+        $partNumber = null;
+        if (array_key_exists('part_number', $data) || array_key_exists('part', $data)) {
+            $rawPart = $data['part_number'] ?? $data['part'];
+            if ($rawPart !== null) {
+                if (is_int($rawPart)) {
+                    $partNumber = $rawPart;
+                } elseif (is_string($rawPart) && preg_match('/^-?\d+$/', trim($rawPart))) {
+                    $partNumber = (int) trim($rawPart);
+                } else {
+                    throw new InvalidArgumentException("Part number must be a valid integer, given '".(is_scalar($rawPart) ? (string) $rawPart : gettype($rawPart))."'.");
+                }
+            }
         }
 
         return new self(
@@ -40,7 +55,7 @@ class AssessmentItemIdentity
             assessmentStandardId: isset($data['assessment_standard_id']) ? (string) $data['assessment_standard_id'] : null,
             standardVersion: isset($data['standard_version']) ? (string) $data['standard_version'] : null,
             section: isset($data['section']) ? (string) $data['section'] : null,
-            partNumber: isset($data['part_number']) && is_numeric($data['part_number']) ? (int) $data['part_number'] : null,
+            partNumber: $partNumber,
             taskType: isset($data['task_type']) ? (string) $data['task_type'] : null,
             claim: isset($data['claim']) ? (string) $data['claim'] : null,
             skill: isset($data['skill']) ? (string) $data['skill'] : null,

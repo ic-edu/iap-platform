@@ -13,7 +13,11 @@ return new class extends Migration
                 $table->string('assessment_family', 40)->nullable()->after('question_type');
             }
             if (!Schema::hasColumn('questions', 'assessment_standard_id')) {
-                $table->string('assessment_standard_id', 50)->nullable()->index()->after('assessment_family');
+                $table->foreignUlid('assessment_standard_id')
+                    ->nullable()
+                    ->after('assessment_family')
+                    ->constrained('assessment_standards')
+                    ->restrictOnDelete();
             }
             if (!Schema::hasColumn('questions', 'standard_version')) {
                 $table->string('standard_version', 30)->nullable()->after('assessment_standard_id');
@@ -24,6 +28,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('questions', function (Blueprint $table) {
+            if (Schema::hasColumn('questions', 'assessment_standard_id')) {
+                $table->dropForeign(['assessment_standard_id']);
+            }
+
             $columns = array_filter([
                 'assessment_family',
                 'assessment_standard_id',

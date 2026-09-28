@@ -6,6 +6,7 @@ use App\Modules\QuestionEngine\Enums\AssessmentFamily;
 use App\Modules\QuestionEngine\Enums\StandardStatus;
 use App\Modules\QuestionEngine\Models\AssessmentStandard;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -117,8 +118,21 @@ class AssessmentStandardRegistry
             throw new InvalidArgumentException('Version is required to register an AssessmentStandard.');
         }
 
-        $statusRaw = $data['status'] ?? StandardStatus::Draft->value;
-        $status = $statusRaw instanceof StandardStatus ? $statusRaw : (StandardStatus::tryFrom((string) $statusRaw) ?? StandardStatus::Draft);
+        $status = StandardStatus::Draft;
+        if (array_key_exists('status', $data) && $data['status'] !== null) {
+            $statusRaw = $data['status'];
+            if ($statusRaw instanceof StandardStatus) {
+                $status = $statusRaw;
+            } elseif (is_string($statusRaw) && $statusRaw !== '') {
+                $resolvedStatus = StandardStatus::tryFrom($statusRaw);
+                if ($resolvedStatus === null) {
+                    throw new InvalidArgumentException("Invalid status '{$statusRaw}' for AssessmentStandard.");
+                }
+                $status = $resolvedStatus;
+            } else {
+                throw new InvalidArgumentException("Invalid status '".(is_scalar($statusRaw) ? (string) $statusRaw : gettype($statusRaw))."' for AssessmentStandard.");
+            }
+        }
 
         return AssessmentStandard::create([
             'assessment_family' => $family,
@@ -142,26 +156,58 @@ class AssessmentStandardRegistry
 
     /**
      * Formally activate a standard, superseding any previously active version for that family.
+     * Enforces single-active invariant, activation idempotency, and lifecycle guards.
      */
     public function activateStandard(AssessmentStandard|string $standard): AssessmentStandard
     {
-        return DB::transaction(function () use ($standard) {
-            $target = $standard instanceof AssessmentStandard
-                ? AssessmentStandard::where('id', $standard->id)->lockForUpdate()->firstOrFail()
-                : AssessmentStandard::where('id', $standard)->lockForUpdate()->firstOrFail();
+        $targetId = $standard instanceof AssessmentStandard ? $standard->id : (string) $standard;
 
-            // Supersede any existing active standard for this family
-            AssessmentStandard::where('assessment_family', $target->assessment_family)
-                ->where('status', StandardStatus::Active)
-                ->where('id', '!=', $target->id)
-                ->update(['status' => StandardStatus::Superseded]);
+        $initial = AssessmentStandard::where('id', $targetId)->firstOrFail();
 
-            $target->update([
-                'status' => StandardStatus::Active,
-                'effective_from' => $target->effective_from ?? now(),
-            ]);
+        // Idempotent return if already active
+        if ($initial->isActive()) {
+            return $initial;
+        }
 
-            return $target->fresh();
-        });
+        if (!$initial->status->canBeActivated()) {
+            throw new InvalidArgumentException("AssessmentStandard in status '{$initial->status->value}' cannot be activated. Only draft, detected, or pending_review standards may be activated.");
+        }
+
+        $family = $initial->assessment_family;
+        $lockKey = "assessment_standard_activation:{$family->value}";
+
+        $activationLogic = function () use ($targetId, $family) {
+            return DB::transaction(function () use ($targetId, $family) {
+                $lockedTarget = AssessmentStandard::where('id', $targetId)->lockForUpdate()->firstOrFail();
+
+                if ($lockedTarget->isActive()) {
+                    return $lockedTarget;
+                }
+
+                if (!$lockedTarget->status->canBeActivated()) {
+                    throw new InvalidArgumentException("AssessmentStandard in status '{$lockedTarget->status->value}' cannot be activated. Only draft, detected, or pending_review standards may be activated.");
+                }
+
+                // Supersede any active standards for this family (excluding lockedTarget)
+                AssessmentStandard::where('assessment_family', $family)
+                    ->where('status', StandardStatus::Active)
+                    ->where('id', '!=', $lockedTarget->id)
+                    ->lockForUpdate()
+                    ->update(['status' => StandardStatus::Superseded]);
+
+                $lockedTarget->update([
+                    'status' => StandardStatus::Active,
+                    'effective_from' => $lockedTarget->effective_from ?? now(),
+                ]);
+
+                return $lockedTarget->fresh();
+            });
+        };
+
+        try {
+            return Cache::lock($lockKey, 10)->block(5, $activationLogic);
+        } catch (\BadMethodCallException|\Exception $e) {
+            return $activationLogic();
+        }
     }
 }
