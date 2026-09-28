@@ -2,9 +2,17 @@
 
 namespace App\Modules\QuestionBank\Models;
 
+use App\Models\MediaAsset;
+use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\QuestionBank\Enums\DifficultyLevel;
 use App\Modules\QuestionBank\Enums\QuestionType;
 use App\Modules\QuestionBank\Enums\SectionType;
+use App\Modules\QuestionEngine\Enums\ConstructTaxonomy;
+use App\Modules\QuestionEngine\Enums\ContentMode;
+use App\Modules\QuestionEngine\Enums\ContentOrigin;
+use App\Modules\QuestionEngine\Enums\ContextTaxonomy;
+use App\Modules\QuestionEngine\Enums\DomainTaxonomy;
+use App\Modules\QuestionEngine\Enums\ProficiencyTarget;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * @property string $id
@@ -27,6 +36,14 @@ use Illuminate\Support\Carbon;
  * @property int|null $part_number
  * @property QuestionType $question_type
  * @property DifficultyLevel $difficulty
+ * @property ProficiencyTarget|null $proficiency_target
+ * @property ContentMode|null $content_mode
+ * @property DomainTaxonomy|null $domain
+ * @property ConstructTaxonomy|null $construct
+ * @property ContextTaxonomy|null $context
+ * @property ContentOrigin|null $content_origin
+ * @property string|null $generation_batch_id
+ * @property array|null $generation_metadata
  * @property int $points
  * @property string|null $explanation
  * @property Carbon|null $created_at
@@ -59,6 +76,14 @@ class Question extends Model
         'difficulty_source',
         'difficulty_factors',
         'difficulty_detected_at',
+        'proficiency_target',
+        'content_mode',
+        'domain',
+        'construct',
+        'context',
+        'content_origin',
+        'generation_batch_id',
+        'generation_metadata',
         'points',
         'explanation',
     ];
@@ -72,6 +97,13 @@ class Question extends Model
             'difficulty_score' => 'integer',
             'difficulty_factors' => 'array',
             'difficulty_detected_at' => 'datetime',
+            'proficiency_target' => ProficiencyTarget::class,
+            'content_mode' => ContentMode::class,
+            'domain' => DomainTaxonomy::class,
+            'construct' => ConstructTaxonomy::class,
+            'context' => ContextTaxonomy::class,
+            'content_origin' => ContentOrigin::class,
+            'generation_metadata' => 'array',
             'points' => 'integer',
             'part_number' => 'integer',
         ];
@@ -110,9 +142,9 @@ class Question extends Model
     /**
      * Get all effective passages associated with this question (from group or direct passage).
      *
-     * @return \Illuminate\Support\Collection<int, Passage>
+     * @return Collection<int, Passage>
      */
-    public function getEffectivePassages(): \Illuminate\Support\Collection
+    public function getEffectivePassages(): Collection
     {
         if ($this->passageGroup) {
             $passages = $this->passageGroup->passages;
@@ -127,10 +159,11 @@ class Question extends Model
 
         if (!empty($this->passage_text)) {
             $virtualPassage = new Passage([
-                'title'         => 'Reading Passage',
-                'content'       => $this->passage_text,
+                'title' => 'Reading Passage',
+                'content' => $this->passage_text,
                 'document_type' => 'article',
             ]);
+
             return collect([$virtualPassage]);
         }
 
@@ -150,28 +183,28 @@ class Question extends Model
     /**
      * Get associated dedicated image media asset (e.g. Part 1 Photograph).
      *
-     * @return BelongsTo<\App\Models\MediaAsset, $this>
+     * @return BelongsTo<MediaAsset, $this>
      */
     public function imageMediaAsset(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MediaAsset::class, 'image_media_asset_id');
+        return $this->belongsTo(MediaAsset::class, 'image_media_asset_id');
     }
 
     /**
      * Get associated dedicated audio media asset (e.g. Part 1/2 Audio Prompt).
      *
-     * @return BelongsTo<\App\Models\MediaAsset, $this>
+     * @return BelongsTo<MediaAsset, $this>
      */
     public function audioMediaAsset(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MediaAsset::class, 'audio_media_asset_id');
+        return $this->belongsTo(MediaAsset::class, 'audio_media_asset_id');
     }
 
     /**
      * Get effective image MediaAsset, checking dedicated image_media_asset_id first,
      * then URL extraction, then legacy media_asset_id if type=image.
      */
-    public function getEffectiveImageMedia(): ?\App\Models\MediaAsset
+    public function getEffectiveImageMedia(): ?MediaAsset
     {
         if ($this->imageMediaAsset) {
             $type = $this->imageMediaAsset->type ?? '';
@@ -182,7 +215,7 @@ class Question extends Model
         }
 
         if (!empty($this->image_url) && preg_match('#/media/([0-9a-z]+)#i', $this->image_url, $m)) {
-            $asset = \App\Models\MediaAsset::find($m[1]);
+            $asset = MediaAsset::find($m[1]);
             if ($asset && ($asset->type === 'image' || str_starts_with($asset->mime_type ?? '', 'image/'))) {
                 return $asset;
             }
@@ -203,7 +236,7 @@ class Question extends Model
      * Get effective audio MediaAsset, checking AudioGroup first,
      * then dedicated audio_media_asset_id, then URL extraction, then legacy media_asset_id if type=audio.
      */
-    public function getEffectiveAudioMedia(): ?\App\Models\MediaAsset
+    public function getEffectiveAudioMedia(): ?MediaAsset
     {
         if ($this->audioGroup && $this->audioGroup->mediaAsset) {
             $type = $this->audioGroup->mediaAsset->type ?? '';
@@ -222,7 +255,7 @@ class Question extends Model
         }
 
         if (!empty($this->audio_url) && preg_match('#/media/([0-9a-z]+)#i', $this->audio_url, $m)) {
-            $asset = \App\Models\MediaAsset::find($m[1]);
+            $asset = MediaAsset::find($m[1]);
             if ($asset && ($asset->type === 'audio' || str_starts_with($asset->mime_type ?? '', 'audio/'))) {
                 return $asset;
             }
@@ -283,11 +316,11 @@ class Question extends Model
     /**
      * Get associated institutional media asset (legacy compatibility).
      *
-     * @return BelongsTo<\App\Models\MediaAsset, $this>
+     * @return BelongsTo<MediaAsset, $this>
      */
     public function mediaAsset(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MediaAsset::class, 'media_asset_id');
+        return $this->belongsTo(MediaAsset::class, 'media_asset_id');
     }
 
     /**
@@ -303,11 +336,11 @@ class Question extends Model
     /**
      * Get test question bindings across sections.
      *
-     * @return HasMany<\App\Modules\Assessment\Models\TestQuestion, $this>
+     * @return HasMany<TestQuestion, $this>
      */
     public function testQuestions(): HasMany
     {
-        return $this->hasMany(\App\Modules\Assessment\Models\TestQuestion::class, 'question_id');
+        return $this->hasMany(TestQuestion::class, 'question_id');
     }
 
     /**
@@ -336,12 +369,56 @@ class Question extends Model
         }
 
         if (!in_array($partNumber, [1, 2], true)) {
-            $nonEmpty = $choices->filter(fn($c) => !empty(trim((string) ($c->content ?? $c->choice_text ?? ''))));
+            $nonEmpty = $choices->filter(fn ($c) => !empty(trim((string) ($c->content ?? $c->choice_text ?? ''))));
             if ($nonEmpty->count() !== 4) {
                 return false;
             }
         }
 
-        return $choices->contains(fn($c) => (bool) $c->is_correct);
+        return $choices->contains(fn ($c) => (bool) $c->is_correct);
+    }
+
+    /**
+     * Check if the question was generated via AI / Question Engine.
+     */
+    public function isGenerated(): bool
+    {
+        if ($this->content_origin instanceof ContentOrigin) {
+            return $this->content_origin->isGenerated();
+        }
+
+        if (is_string($this->content_origin)) {
+            return in_array($this->content_origin, ['generated', 'generated_then_edited'], true);
+        }
+
+        return !empty($this->generation_batch_id);
+    }
+
+    /**
+     * Check if the question has a domain-specific context/vocabulary mode.
+     */
+    public function isDomainSpecific(): bool
+    {
+        if ($this->content_mode instanceof ContentMode) {
+            return $this->content_mode->isDomainSpecific();
+        }
+
+        return $this->content_mode === 'domain_specific';
+    }
+
+    /**
+     * Get the human-readable proficiency label for display if set.
+     */
+    public function getProficiencyLabel(): ?string
+    {
+        if ($this->proficiency_target instanceof ProficiencyTarget) {
+            return $this->proficiency_target->label();
+        }
+
+        if (is_string($this->proficiency_target)) {
+            return ProficiencyTarget::tryFrom($this->proficiency_target)?->label();
+        }
+
+        return null;
     }
 }
