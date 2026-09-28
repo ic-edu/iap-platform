@@ -7,12 +7,14 @@ use App\Modules\Assessment\Models\TestQuestion;
 use App\Modules\QuestionBank\Enums\DifficultyLevel;
 use App\Modules\QuestionBank\Enums\QuestionType;
 use App\Modules\QuestionBank\Enums\SectionType;
+use App\Modules\QuestionEngine\Enums\AssessmentFamily;
 use App\Modules\QuestionEngine\Enums\ConstructTaxonomy;
 use App\Modules\QuestionEngine\Enums\ContentMode;
 use App\Modules\QuestionEngine\Enums\ContentOrigin;
 use App\Modules\QuestionEngine\Enums\ContextTaxonomy;
 use App\Modules\QuestionEngine\Enums\DomainTaxonomy;
 use App\Modules\QuestionEngine\Enums\ProficiencyTarget;
+use App\Modules\QuestionEngine\Models\AssessmentStandard;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +38,9 @@ use Illuminate\Support\Collection;
  * @property int|null $part_number
  * @property QuestionType $question_type
  * @property DifficultyLevel $difficulty
+ * @property AssessmentFamily|null $assessment_family
+ * @property string|null $assessment_standard_id
+ * @property string|null $standard_version
  * @property ProficiencyTarget|null $proficiency_target
  * @property ContentMode|null $content_mode
  * @property DomainTaxonomy|null $domain
@@ -76,6 +81,9 @@ class Question extends Model
         'difficulty_source',
         'difficulty_factors',
         'difficulty_detected_at',
+        'assessment_family',
+        'assessment_standard_id',
+        'standard_version',
         'proficiency_target',
         'content_mode',
         'domain',
@@ -97,6 +105,7 @@ class Question extends Model
             'difficulty_score' => 'integer',
             'difficulty_factors' => 'array',
             'difficulty_detected_at' => 'datetime',
+            'assessment_family' => AssessmentFamily::class,
             'proficiency_target' => ProficiencyTarget::class,
             'content_mode' => ContentMode::class,
             'domain' => DomainTaxonomy::class,
@@ -117,6 +126,16 @@ class Question extends Model
     public function questionBank(): BelongsTo
     {
         return $this->belongsTo(QuestionBank::class, 'question_bank_id');
+    }
+
+    /**
+     * Get associated assessment standard.
+     *
+     * @return BelongsTo<AssessmentStandard, $this>
+     */
+    public function assessmentStandard(): BelongsTo
+    {
+        return $this->belongsTo(AssessmentStandard::class, 'assessment_standard_id');
     }
 
     /**
