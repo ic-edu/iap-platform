@@ -54,22 +54,28 @@ final class PromptComposition
             'structural_constraints' => $this->sortArrayRecursively($this->structuralConstraints),
             'target_metadata' => $this->sortArrayRecursively($this->targetMetadata),
             'schema_definition' => $this->sortArrayRecursively($this->schemaDefinition),
+            'examples' => $this->sortArrayRecursively($this->examples),
         ];
 
         return hash('sha256', (string) json_encode($canonicalData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 
     /**
+     * Recursively sort associative arrays by key while preserving sequential list ordering and scalar types.
+     *
      * @param  array<mixed>  $array
      * @return array<mixed>
      */
     private function sortArrayRecursively(array $array): array
     {
-        // If sequential array (list), sort elements recursively
-        $isAssoc = array_keys($array) !== range(0, count($array) - 1);
+        if (empty($array)) {
+            return [];
+        }
+
+        $isAssoc = !array_is_list($array);
 
         if ($isAssoc) {
-            ksort($array);
+            ksort($array, SORT_STRING);
         }
 
         foreach ($array as $k => $v) {

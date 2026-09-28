@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionEngine\Contracts\QuestionGenerationProvider;
+use App\Modules\QuestionEngine\DTO\GenerationProviderRequest;
+use App\Modules\QuestionEngine\DTO\PromptComposition;
 use App\Modules\QuestionEngine\DTO\ToeflBlueprintRequest;
 use App\Modules\QuestionEngine\DTO\ToeicBlueprintRequest;
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
@@ -563,5 +565,322 @@ class QuestionEngineOpenAIProviderIntegrationTest extends TestCase
         $this->assertSame(GenerationItemStatus::ValidationFailed, $processedItem->status);
         $this->assertNull($processedItem->question_id);
         $this->assertFalse(Question::where('prompt', 'like', '%placeholder%')->exists());
+    }
+
+    /**
+     * Test Prompt Hash Canonicalization Invariants (A through F)
+     */
+    public function test_prompt_hash_canonicalization_rules(): void
+    {
+        // A. Associative key ordering does not change hash
+        $compA1 = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'System prompt instructions',
+            userPrompt: 'User prompt instructions',
+            structuralConstraints: ['z_key' => 'last', 'a_key' => 'first', 'nested' => ['beta' => 2, 'alpha' => 1]],
+            targetMetadata: ['part' => 5, 'family' => 'toeic'],
+            schemaDefinition: ['type' => 'object', 'properties' => ['b' => ['type' => 'string'], 'a' => ['type' => 'number']]],
+            examples: []
+        );
+
+        $compA2 = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'System prompt instructions',
+            userPrompt: 'User prompt instructions',
+            structuralConstraints: ['a_key' => 'first', 'nested' => ['alpha' => 1, 'beta' => 2], 'z_key' => 'last'],
+            targetMetadata: ['family' => 'toeic', 'part' => 5],
+            schemaDefinition: ['properties' => ['a' => ['type' => 'number'], 'b' => ['type' => 'string']], 'type' => 'object'],
+            examples: []
+        );
+
+        $this->assertSame($compA1->computePromptHash(), $compA2->computePromptHash(), 'Associative key ordering must NOT change prompt hash.');
+
+        // B. List ordering DOES change hash
+        $compB1 = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'System prompt',
+            userPrompt: 'User prompt',
+            examples: ['example_1', 'example_2']
+        );
+
+        $compB2 = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'System prompt',
+            userPrompt: 'User prompt',
+            examples: ['example_2', 'example_1']
+        );
+
+        $this->assertNotSame($compB1->computePromptHash(), $compB2->computePromptHash(), 'List / sequential array ordering MUST change prompt hash.');
+
+        // C. Same PromptComposition produces same hash
+        $this->assertSame($compA1->computePromptHash(), $compA1->computePromptHash(), 'Same PromptComposition must deterministically yield identical hash.');
+
+        // D. Changing system prompt changes hash
+        $compD = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'Different system prompt',
+            userPrompt: 'User prompt instructions',
+            structuralConstraints: ['a_key' => 'first']
+        );
+        $this->assertNotSame($compA1->computePromptHash(), $compD->computePromptHash(), 'Changing system prompt must change prompt hash.');
+
+        // E. Changing user prompt changes hash
+        $compE = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'System prompt instructions',
+            userPrompt: 'Different user prompt instructions',
+            structuralConstraints: ['a_key' => 'first']
+        );
+        $this->assertNotSame($compA1->computePromptHash(), $compE->computePromptHash(), 'Changing user prompt must change prompt hash.');
+
+        // F. Changing schema changes hash
+        $compF = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'System prompt instructions',
+            userPrompt: 'User prompt instructions',
+            schemaDefinition: ['type' => 'object', 'properties' => ['extra' => ['type' => 'boolean']]]
+        );
+        $this->assertNotSame($compA1->computePromptHash(), $compF->computePromptHash(), 'Changing schema definition must change prompt hash.');
+    }
+
+    /**
+     * Test Secret Leakage Prevention across all lifecycle structures
+     */
+    public function test_secret_leakage_prevention_across_all_structures(): void
+    {
+        $sentinelSecret = 'sk-proj-SUPER-SECRET-SENTINEL-KEY-9876543210-NEVER-LEAK';
+
+        Http::fake([
+            'https://api.openai.com/v1/*' => Http::sequence()
+                // 1. Success response
+                ->push([
+                    'choices' => [
+                        [
+                            'message' => [
+                                'role' => 'assistant',
+                                'content' => json_encode([
+                                    'schema_version' => 'generated_question_candidate_v1',
+                                    'prompt' => 'All visitors must _____ their identification badges at the reception desk.',
+                                    'passage_text' => null,
+                                    'audio_script' => null,
+                                    'choices' => [
+                                        ['label' => 'A', 'content' => 'show', 'is_correct' => true, 'explanation' => 'Base verb.'],
+                                        ['label' => 'B', 'content' => 'shows', 'is_correct' => false, 'explanation' => 'Inflected verb.'],
+                                        ['label' => 'C', 'content' => 'showing', 'is_correct' => false, 'explanation' => 'Participle.'],
+                                        ['label' => 'D', 'content' => 'showed', 'is_correct' => false, 'explanation' => 'Past tense.'],
+                                    ],
+                                    'correct_answer' => 'A',
+                                    'explanation' => 'Modal verb must require base form.',
+                                ]),
+                            ],
+                        ],
+                    ],
+                ], 200)
+                // 2. HTTP 401 error response
+                ->push(['error' => ['message' => 'Unauthorized invalid key: '.$sentinelSecret]], 401),
+        ]);
+
+        $provider = new OpenAIQuestionGenerationProvider(apiKey: $sentinelSecret);
+
+        $req = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 2]);
+        $plan = $this->toeicPlanner->plan($req);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $items = $batch->items;
+
+        $orchestrator = new QuestionGenerationOrchestrator(
+            $this->batchFactory,
+            $this->composerResolver,
+            $this->normalizer,
+            $this->qualityGate,
+            $this->materializer,
+            $provider
+        );
+
+        // Success Item
+        $item1 = $orchestrator->processItem($items[0]);
+        $this->assertSame(GenerationItemStatus::Materialized, $item1->status);
+
+        // Error Item
+        $item2 = $orchestrator->processItem($items[1]);
+        $this->assertSame(GenerationItemStatus::Failed, $item2->status);
+
+        // Assert secret is NEVER stored in database columns or metadata
+        foreach ([$item1, $item2] as $processed) {
+            $itemDump = json_encode($processed->fresh()->toArray());
+            $this->assertStringNotContainsString($sentinelSecret, (string) $itemDump, 'Item database columns must not contain secrets.');
+            $this->assertStringNotContainsString('SUPER-SECRET-SENTINEL', (string) $itemDump);
+
+            if ($processed->prompt_payload) {
+                $this->assertStringNotContainsString($sentinelSecret, json_encode($processed->prompt_payload));
+            }
+            if ($processed->provider_request_metadata) {
+                $this->assertStringNotContainsString($sentinelSecret, json_encode($processed->provider_request_metadata));
+            }
+            if ($processed->raw_output) {
+                $this->assertStringNotContainsString($sentinelSecret, json_encode($processed->raw_output));
+            }
+            if ($processed->normalized_output) {
+                $this->assertStringNotContainsString($sentinelSecret, json_encode($processed->normalized_output));
+            }
+            if ($processed->validation_result) {
+                $this->assertStringNotContainsString($sentinelSecret, json_encode($processed->validation_result));
+            }
+            if ($processed->last_error_message) {
+                $this->assertStringNotContainsString($sentinelSecret, $processed->last_error_message);
+            }
+        }
+
+        // Check materialized Question record
+        $question = Question::find($item1->question_id);
+        $this->assertNotNull($question);
+        $questionDump = json_encode($question->toArray());
+        $this->assertStringNotContainsString($sentinelSecret, (string) $questionDump, 'Question entity must not contain secrets.');
+        $this->assertStringNotContainsString($sentinelSecret, json_encode($question->generation_metadata));
+    }
+
+    /**
+     * Test Retry Classification Matrix for all failure conditions
+     */
+    public function test_retryability_classification_matrix_precision(): void
+    {
+        $provider = new OpenAIQuestionGenerationProvider(apiKey: 'sk-test-key');
+
+        $composer = new ToeicPromptComposer;
+        $req = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($req);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $item = $batch->items->first();
+        $promptComp = $composer->compose($item);
+
+        $genRequest = new GenerationProviderRequest(
+            batchId: $batch->id,
+            itemId: $item->id,
+            slotSequence: 1,
+            promptComposition: $promptComp
+        );
+
+        // 1. Missing API key -> non-retryable
+        $noKeyProvider = new OpenAIQuestionGenerationProvider(apiKey: '');
+        $resNoKey = $noKeyProvider->generate($genRequest);
+        $this->assertFalse($resNoKey->isSuccess);
+        $this->assertSame(GenerationErrorCode::ProviderUnavailable, $resNoKey->errorCode);
+        $this->assertFalse($resNoKey->metadata['retryable'] ?? true, 'Missing API key must not be retryable.');
+
+        // 2. Unsupported scope -> non-retryable
+        $unsupportedComp = new PromptComposition(
+            promptContractVersion: 'v1',
+            systemPrompt: 'sys',
+            userPrompt: 'usr',
+            targetMetadata: ['assessment_family' => 'toefl', 'section' => 'reading', 'part_number' => 1]
+        );
+        $resScope = $provider->generate(new GenerationProviderRequest(
+            batchId: $batch->id,
+            itemId: $item->id,
+            slotSequence: 1,
+            promptComposition: $unsupportedComp
+        ));
+        $this->assertFalse($resScope->isSuccess);
+        $this->assertSame(GenerationErrorCode::StandardMismatch, $resScope->errorCode);
+        $this->assertFalse($resScope->metadata['retryable'] ?? true, 'Unsupported scope must not be retryable.');
+
+        // 3. HTTP status matrix
+        $statuses = [
+            400 => ['retryable' => false, 'code' => GenerationErrorCode::ProviderError],
+            401 => ['retryable' => false, 'code' => GenerationErrorCode::ProviderUnavailable],
+            403 => ['retryable' => false, 'code' => GenerationErrorCode::ProviderUnavailable],
+            404 => ['retryable' => false, 'code' => GenerationErrorCode::ProviderError],
+            408 => ['retryable' => true, 'code' => GenerationErrorCode::ProviderTimeout],
+            429 => ['retryable' => true, 'code' => GenerationErrorCode::ProviderError],
+            500 => ['retryable' => true, 'code' => GenerationErrorCode::ProviderError],
+            502 => ['retryable' => true, 'code' => GenerationErrorCode::ProviderError],
+            503 => ['retryable' => true, 'code' => GenerationErrorCode::ProviderError],
+            504 => ['retryable' => true, 'code' => GenerationErrorCode::ProviderTimeout],
+        ];
+
+        $sequence = Http::fakeSequence('https://api.openai.com/v1/*');
+        foreach ($statuses as $statusCode => $expected) {
+            $sequence->push(['error' => ['message' => "Error status {$statusCode}"]], $statusCode);
+        }
+        $sequence->push(['choices' => [['message' => ['role' => 'assistant', 'refusal' => 'Content violated safety policy']]]], 200);
+        $sequence->push(['choices' => [['message' => ['role' => 'assistant', 'content' => '{broken json invalid syntax']]]], 200);
+
+        foreach ($statuses as $statusCode => $expected) {
+            $resp = $provider->generate($genRequest);
+            $this->assertFalse($resp->isSuccess);
+            $this->assertSame($expected['code'], $resp->errorCode, "HTTP {$statusCode} expected code {$expected['code']->value}");
+            $this->assertSame($expected['retryable'], $resp->metadata['retryable'] ?? null, "HTTP {$statusCode} retryable should be ".($expected['retryable'] ? 'true' : 'false'));
+        }
+
+        // 4. Provider Refusal -> non-retryable
+        $resRefusal = $provider->generate($genRequest);
+        $this->assertFalse($resRefusal->isSuccess);
+        $this->assertSame(GenerationErrorCode::ProviderError, $resRefusal->errorCode);
+        $this->assertFalse($resRefusal->metadata['retryable'] ?? true, 'Provider refusal must not be retryable.');
+
+        // 5. Malformed JSON output -> non-retryable
+        $resMalformed = $provider->generate($genRequest);
+        $this->assertFalse($resMalformed->isSuccess);
+        $this->assertSame(GenerationErrorCode::InvalidProviderResponse, $resMalformed->errorCode);
+        $this->assertFalse($resMalformed->metadata['retryable'] ?? true, 'Malformed JSON output must not be retryable.');
+    }
+
+    /**
+     * Test Dynamic Model Configuration
+     */
+    public function test_dynamic_model_configuration_passes_to_provider_request(): void
+    {
+        Http::fake([
+            'https://api.openai.com/v1/*' => Http::response([
+                'model' => 'gpt-4o-2024-08-06',
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => json_encode([
+                                'schema_version' => 'generated_question_candidate_v1',
+                                'prompt' => 'The software update will _____ system performance significantly.',
+                                'passage_text' => null,
+                                'audio_script' => null,
+                                'choices' => [
+                                    ['label' => 'A', 'content' => 'enhance', 'is_correct' => true, 'explanation' => 'Base verb.'],
+                                    ['label' => 'B', 'content' => 'enhances', 'is_correct' => false, 'explanation' => 'Inflected.'],
+                                    ['label' => 'C', 'content' => 'enhancing', 'is_correct' => false, 'explanation' => 'Participle.'],
+                                    ['label' => 'D', 'content' => 'enhancement', 'is_correct' => false, 'explanation' => 'Noun.'],
+                                ],
+                                'correct_answer' => 'A',
+                                'explanation' => 'Base verb follows modal will.',
+                            ]),
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $customModelProvider = new OpenAIQuestionGenerationProvider(
+            apiKey: 'sk-test-custom-model',
+            model: 'gpt-4o-2024-08-06'
+        );
+
+        $req = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($req);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $item = $batch->items->first();
+
+        $orchestrator = new QuestionGenerationOrchestrator(
+            $this->batchFactory,
+            $this->composerResolver,
+            $this->normalizer,
+            $this->qualityGate,
+            $this->materializer,
+            $customModelProvider
+        );
+
+        $processed = $orchestrator->processItem($item);
+        $this->assertSame(GenerationItemStatus::Materialized, $processed->status);
+        $this->assertSame('gpt-4o-2024-08-06', $processed->raw_output['model_name']);
+
+        Http::assertSent(function (Request $request) {
+            return ($request->data()['model'] ?? '') === 'gpt-4o-2024-08-06';
+        });
     }
 }

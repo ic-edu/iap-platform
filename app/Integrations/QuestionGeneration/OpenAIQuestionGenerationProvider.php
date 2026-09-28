@@ -60,6 +60,7 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
                     'family' => is_object($family) ? $family->value : $family,
                     'section' => $section,
                     'part_number' => $partNumber,
+                    'retryable' => false,
                     'prompt_hash' => $request->promptComposition->computePromptHash(),
                 ]
             );
@@ -76,6 +77,7 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
                 latencyMs: $latencyMs,
                 metadata: [
                     'model' => $this->model,
+                    'retryable' => false,
                     'prompt_hash' => $request->promptComposition->computePromptHash(),
                 ]
             );
@@ -155,6 +157,11 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
                     default => GenerationErrorCode::ProviderError,
                 };
 
+                $isRetryable = match (true) {
+                    $status === 408 || $status === 429 || in_array($status, [500, 502, 503, 504], true) => true,
+                    default => false,
+                };
+
                 $errorData = $response->json('error');
                 $errorMsg = is_array($errorData) && !empty($errorData['message'])
                     ? (string) $errorData['message']
@@ -162,12 +169,13 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
 
                 return GenerationProviderResponse::failure(
                     errorCode: $errorCode,
-                    errorMessage: "Provider HTTP {$status}: {$errorMsg}",
+                    errorMessage: $this->sanitizeErrorMessage("Provider HTTP {$status}: {$errorMsg}"),
                     providerName: $this->getProviderName(),
                     latencyMs: $latencyMs,
                     metadata: [
                         'status_code' => $status,
                         'model' => $this->model,
+                        'retryable' => $isRetryable,
                         'prompt_hash' => $request->promptComposition->computePromptHash(),
                     ]
                 );
@@ -183,6 +191,7 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
                     latencyMs: $latencyMs,
                     metadata: [
                         'model' => $this->model,
+                        'retryable' => false,
                         'prompt_hash' => $request->promptComposition->computePromptHash(),
                     ]
                 );
@@ -194,12 +203,13 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
             if (!empty($message['refusal'])) {
                 return GenerationProviderResponse::failure(
                     errorCode: GenerationErrorCode::ProviderError,
-                    errorMessage: "OpenAI model refused generation: {$message['refusal']}",
+                    errorMessage: $this->sanitizeErrorMessage("OpenAI model refused generation: {$message['refusal']}"),
                     providerName: $this->getProviderName(),
                     latencyMs: $latencyMs,
                     metadata: [
-                        'refusal' => $message['refusal'],
+                        'refusal' => $this->sanitizeErrorMessage((string) $message['refusal']),
                         'model' => $this->model,
+                        'retryable' => false,
                         'prompt_hash' => $request->promptComposition->computePromptHash(),
                     ]
                 );
@@ -214,6 +224,7 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
                     latencyMs: $latencyMs,
                     metadata: [
                         'model' => $this->model,
+                        'retryable' => false,
                         'prompt_hash' => $request->promptComposition->computePromptHash(),
                     ]
                 );
@@ -229,6 +240,7 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
                     latencyMs: $latencyMs,
                     metadata: [
                         'model' => $this->model,
+                        'retryable' => false,
                         'prompt_hash' => $request->promptComposition->computePromptHash(),
                     ]
                 );
@@ -259,24 +271,30 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
 
             return GenerationProviderResponse::failure(
                 errorCode: GenerationErrorCode::ProviderTimeout,
-                errorMessage: 'OpenAI connection/timeout failure: '.$e->getMessage(),
+                errorMessage: $this->sanitizeErrorMessage('OpenAI connection/timeout failure: '.$e->getMessage()),
                 providerName: $this->getProviderName(),
                 latencyMs: $latencyMs,
                 metadata: [
                     'model' => $this->model,
+                    'retryable' => true,
                     'prompt_hash' => $request->promptComposition->computePromptHash(),
                 ]
             );
         } catch (RequestException $e) {
             $latencyMs = (int) round((microtime(true) - $startTime) * 1000);
+            $reqStatus = $e->response?->status();
+            $isRetryable = $reqStatus !== null
+                ? ($reqStatus === 408 || $reqStatus === 429 || in_array($reqStatus, [500, 502, 503, 504], true))
+                : false;
 
             return GenerationProviderResponse::failure(
                 errorCode: GenerationErrorCode::ProviderError,
-                errorMessage: 'OpenAI request failure: '.$e->getMessage(),
+                errorMessage: $this->sanitizeErrorMessage('OpenAI request failure: '.$e->getMessage()),
                 providerName: $this->getProviderName(),
                 latencyMs: $latencyMs,
                 metadata: [
                     'model' => $this->model,
+                    'retryable' => $isRetryable,
                     'prompt_hash' => $request->promptComposition->computePromptHash(),
                 ]
             );
@@ -285,14 +303,27 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
 
             return GenerationProviderResponse::failure(
                 errorCode: GenerationErrorCode::ProviderError,
-                errorMessage: 'OpenAI unhandled error: '.$e->getMessage(),
+                errorMessage: $this->sanitizeErrorMessage('OpenAI unhandled error: '.$e->getMessage()),
                 providerName: $this->getProviderName(),
                 latencyMs: $latencyMs,
                 metadata: [
                     'model' => $this->model,
+                    'retryable' => false,
                     'prompt_hash' => $request->promptComposition->computePromptHash(),
                 ]
             );
         }
+    }
+
+    /**
+     * Sanitize sensitive values (like API keys) from error messages and logs.
+     */
+    protected function sanitizeErrorMessage(string $message): string
+    {
+        if (!empty($this->apiKey)) {
+            return str_replace($this->apiKey, '[REDACTED]', $message);
+        }
+
+        return $message;
     }
 }
