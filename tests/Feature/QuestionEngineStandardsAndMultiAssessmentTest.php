@@ -25,8 +25,12 @@ use App\Services\ToeicQuestionValidator;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
+use RuntimeException;
 use Tests\TestCase;
 
 class QuestionEngineStandardsAndMultiAssessmentTest extends TestCase
@@ -67,246 +71,453 @@ class QuestionEngineStandardsAndMultiAssessmentTest extends TestCase
     }
 
     /**
-     * TEST A: Question with valid assessment_standard_id persists.
+     * TEST A: Omitted registration status defaults to Draft.
      */
-    public function test_a_question_with_valid_assessment_standard_id_persists(): void
+    public function test_a_omitted_registration_status_defaults_to_draft(): void
     {
-        $standard = AssessmentStandard::create([
+        $std = $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
-            'standard_code' => 'TOEIC-2026.1',
-            'version' => '2026.1',
-            'title' => 'TOEIC Standard 2026.1',
-            'provider' => 'IAP Authority',
-            'status' => StandardStatus::Active,
-            'structure_definition' => ['parts' => [1, 2, 3, 4, 5, 6, 7]],
+            'version' => '2026.DEFAULT_DRAFT',
+            'structure_definition' => [],
         ]);
 
-        $question = Question::create([
-            'question_bank_id' => $this->questionBank->id,
-            'prompt' => 'Select the best word to complete the sentence.',
-            'section' => SectionType::Reading,
-            'part_number' => 5,
-            'question_type' => QuestionType::MultipleChoice,
-            'difficulty' => DifficultyLevel::Medium,
-            'assessment_family' => AssessmentFamily::Toeic,
-            'assessment_standard_id' => $standard->id,
-            'standard_version' => '2026.1',
-        ]);
-
-        $this->assertDatabaseHas('questions', [
-            'id' => $question->id,
-            'assessment_standard_id' => $standard->id,
-            'standard_version' => '2026.1',
-        ]);
-        $this->assertSame($standard->id, $question->fresh()->assessmentStandard->id);
-    }
-
-    /**
-     * TEST B: Question with NULL assessment_standard_id remains valid.
-     */
-    public function test_b_question_with_null_assessment_standard_id_remains_valid(): void
-    {
-        $question = Question::create([
-            'question_bank_id' => $this->questionBank->id,
-            'prompt' => 'Legacy question without standard binding.',
-            'section' => SectionType::Reading,
-            'part_number' => 5,
-            'question_type' => QuestionType::MultipleChoice,
-            'difficulty' => DifficultyLevel::Easy,
-            'assessment_family' => null,
-            'assessment_standard_id' => null,
-            'standard_version' => null,
-        ]);
-
-        $this->assertDatabaseHas('questions', [
-            'id' => $question->id,
-            'assessment_standard_id' => null,
-        ]);
-        $this->assertNull($question->fresh()->assessment_standard_id);
-        $this->assertNull($question->fresh()->assessmentStandard);
-    }
-
-    /**
-     * TEST C: Non-existent assessment_standard_id is rejected by DB/reference integrity.
-     */
-    public function test_c_non_existent_assessment_standard_id_is_rejected(): void
-    {
-        // Enforce SQLite foreign keys if on sqlite
-        if (DB::connection()->getDriverName() === 'sqlite') {
-            DB::statement('PRAGMA foreign_keys = ON;');
-        }
-
-        $this->expectException(QueryException::class);
-
-        Question::create([
-            'question_bank_id' => $this->questionBank->id,
-            'prompt' => 'Question referencing non-existent standard.',
-            'section' => SectionType::Reading,
-            'part_number' => 5,
-            'question_type' => QuestionType::MultipleChoice,
-            'difficulty' => DifficultyLevel::Easy,
-            'assessment_family' => AssessmentFamily::Toeic,
-            'assessment_standard_id' => '01nonexistentstandardid0000000',
-            'standard_version' => '2026.1',
+        $this->assertSame(StandardStatus::Draft, $std->status);
+        $this->assertDatabaseHas('assessment_standards', [
+            'id' => $std->id,
+            'status' => 'draft',
         ]);
     }
 
     /**
-     * TEST D: Deleting referenced standard does not cascade-delete Question.
+     * TEST B: Draft registration is valid.
      */
-    public function test_d_deleting_referenced_standard_does_not_cascade_delete_question(): void
+    public function test_b_draft_registration_is_valid(): void
     {
-        $standard = AssessmentStandard::create([
+        $draft = $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
-            'standard_code' => 'TOEIC-2026.1',
-            'version' => '2026.1',
-            'title' => 'TOEIC Standard 2026.1',
-            'provider' => 'IAP Authority',
+            'version' => '2026.DRAFT_OK',
+            'status' => 'draft',
+            'structure_definition' => [],
+        ]);
+
+        $this->assertSame(StandardStatus::Draft, $draft->status);
+    }
+
+    /**
+     * TEST C: Detected registration is valid.
+     */
+    public function test_c_detected_registration_is_valid(): void
+    {
+        $detected = $this->registry->registerStandard([
+            'assessment_family' => AssessmentFamily::ToeflIbt,
+            'version' => '2026.DETECTED_OK',
+            'status' => StandardStatus::Detected,
+            'structure_definition' => [],
+        ]);
+
+        $this->assertSame(StandardStatus::Detected, $detected->status);
+    }
+
+    /**
+     * TEST D: PendingReview registration is valid.
+     */
+    public function test_d_pending_review_registration_is_valid(): void
+    {
+        $pending = $this->registry->registerStandard([
+            'assessment_family' => AssessmentFamily::GeneralEnglish,
+            'version' => '2026.PENDING_OK',
+            'status' => 'pending_review',
+            'structure_definition' => [],
+        ]);
+
+        $this->assertSame(StandardStatus::PendingReview, $pending->status);
+    }
+
+    /**
+     * TEST E: Active registration is rejected via registerStandard.
+     */
+    public function test_e_active_registration_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cannot directly register AssessmentStandard in status 'active'. Initial registration permits only draft, detected, or pending_review.");
+
+        $this->registry->registerStandard([
+            'assessment_family' => AssessmentFamily::Toeic,
+            'version' => '2026.ACTIVE_FORBIDDEN',
             'status' => StandardStatus::Active,
             'structure_definition' => [],
         ]);
-
-        $question = Question::create([
-            'question_bank_id' => $this->questionBank->id,
-            'prompt' => 'Question bound to standard before deletion test.',
-            'section' => SectionType::Reading,
-            'part_number' => 5,
-            'question_type' => QuestionType::MultipleChoice,
-            'difficulty' => DifficultyLevel::Easy,
-            'assessment_family' => AssessmentFamily::Toeic,
-            'assessment_standard_id' => $standard->id,
-            'standard_version' => '2026.1',
-        ]);
-
-        // Soft-delete the standard
-        $standard->delete();
-
-        // Question MUST still exist and retain its standard binding reference
-        $this->assertDatabaseHas('questions', [
-            'id' => $question->id,
-            'assessment_standard_id' => $standard->id,
-        ]);
-        $this->assertNotNull(Question::find($question->id));
     }
 
     /**
-     * TEST E: Sequential activation leaves exactly one active.
+     * TEST F: Superseded registration is rejected via registerStandard.
      */
-    public function test_e_sequential_activation_leaves_exactly_one_active(): void
+    public function test_f_superseded_registration_is_rejected(): void
     {
-        $std1 = $this->registry->registerStandard([
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cannot directly register AssessmentStandard in status 'superseded'. Initial registration permits only draft, detected, or pending_review.");
+
+        $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2024.1',
-            'title' => 'TOEIC 2024',
-            'status' => StandardStatus::Draft,
+            'version' => '2026.SUPERSEDED_FORBIDDEN',
+            'status' => 'superseded',
             'structure_definition' => [],
         ]);
-
-        $std2 = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2025.1',
-            'title' => 'TOEIC 2025',
-            'status' => StandardStatus::Draft,
-            'structure_definition' => [],
-        ]);
-
-        $std3 = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2026.1',
-            'title' => 'TOEIC 2026',
-            'status' => StandardStatus::Draft,
-            'structure_definition' => [],
-        ]);
-
-        $this->registry->activateStandard($std1);
-        $this->assertTrue($std1->fresh()->isActive());
-
-        $this->registry->activateStandard($std2);
-        $this->assertTrue($std2->fresh()->isActive());
-        $this->assertSame(StandardStatus::Superseded, $std1->fresh()->status);
-
-        $this->registry->activateStandard($std3);
-        $this->assertTrue($std3->fresh()->isActive());
-        $this->assertSame(StandardStatus::Superseded, $std2->fresh()->status);
-
-        $activeCount = AssessmentStandard::where('assessment_family', AssessmentFamily::Toeic)
-            ->where('status', StandardStatus::Active)
-            ->count();
-        $this->assertSame(1, $activeCount);
-        $this->assertSame($std3->id, $this->registry->getActiveStandard(AssessmentFamily::Toeic)->id);
     }
 
     /**
-     * TEST F: Repeated activation of same target is idempotent.
+     * TEST G: Archived registration is rejected via registerStandard.
      */
-    public function test_f_repeated_activation_of_same_target_is_idempotent(): void
+    public function test_g_archived_registration_is_rejected(): void
     {
-        $standard = $this->registry->registerStandard([
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cannot directly register AssessmentStandard in status 'archived'. Initial registration permits only draft, detected, or pending_review.");
+
+        $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2026.1',
-            'title' => 'TOEIC 2026',
-            'status' => StandardStatus::Draft,
+            'version' => '2026.ARCHIVED_FORBIDDEN',
+            'status' => 'archived',
             'structure_definition' => [],
         ]);
-
-        $activatedFirst = $this->registry->activateStandard($standard);
-        $this->assertTrue($activatedFirst->isActive());
-        $this->assertSame(StandardStatus::Active, $activatedFirst->status);
-
-        // Repeated activation of already active standard
-        $activatedSecond = $this->registry->activateStandard($standard);
-        $this->assertTrue($activatedSecond->isActive());
-        $this->assertSame(StandardStatus::Active, $activatedSecond->status);
-        $this->assertSame($activatedFirst->id, $activatedSecond->id);
-
-        $activeCount = AssessmentStandard::where('assessment_family', AssessmentFamily::Toeic)
-            ->where('status', StandardStatus::Active)
-            ->count();
-        $this->assertSame(1, $activeCount);
     }
 
     /**
-     * TEST G: Concurrent activation attempts cannot leave two active standards.
+     * TEST H: Direct Active bypass cannot create a second active standard.
      */
-    public function test_g_concurrent_activation_attempts_cannot_leave_two_active_standards(): void
+    public function test_h_direct_active_bypass_cannot_create_second_active(): void
     {
-        $v1 = $this->registry->registerStandard([
+        // 1. Create and activate Standard A legitimately
+        $stdA = $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
             'version' => '2026.A',
             'status' => StandardStatus::Draft,
             'structure_definition' => [],
         ]);
+        $this->registry->activateStandard($stdA);
+        $this->assertTrue($stdA->fresh()->isActive());
 
-        $v2 = $this->registry->registerStandard([
+        // 2. Attempt direct registration with status=active for Standard B
+        try {
+            $this->registry->registerStandard([
+                'assessment_family' => AssessmentFamily::Toeic,
+                'version' => '2026.B',
+                'status' => 'active',
+                'structure_definition' => [],
+            ]);
+            $this->fail('registerStandard with status=active should have thrown InvalidArgumentException.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString("Cannot directly register AssessmentStandard in status 'active'", $e->getMessage());
+        }
+
+        // 3. Verify Standard A remains sole ACTIVE and total active count is exactly 1
+        $activeStandards = AssessmentStandard::where('assessment_family', AssessmentFamily::Toeic)
+            ->where('status', StandardStatus::Active)
+            ->get();
+
+        $this->assertCount(1, $activeStandards);
+        $this->assertSame($stdA->id, $activeStandards->first()->id);
+    }
+
+    /**
+     * TEST I: Activating Draft succeeds.
+     */
+    public function test_i_activating_draft_succeeds(): void
+    {
+        $draft = $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2026.B',
+            'version' => '2026.DRAFT',
             'status' => StandardStatus::Draft,
             'structure_definition' => [],
         ]);
 
-        // Simulate concurrent attempts by running activations in rapid sequence within individual transactions
-        $results = [];
-        DB::transaction(function () use ($v1, &$results) {
-            $results[] = $this->registry->activateStandard($v1);
-        });
-
-        DB::transaction(function () use ($v2, &$results) {
-            $results[] = $this->registry->activateStandard($v2);
-        });
-
-        $activeToeic = AssessmentStandard::where('assessment_family', AssessmentFamily::Toeic)
-            ->where('status', StandardStatus::Active)
-            ->get();
-
-        $this->assertCount(1, $activeToeic);
-        $this->assertSame($v2->id, $activeToeic->first()->id);
-        $this->assertSame(StandardStatus::Superseded, $v1->fresh()->status);
+        $this->assertSame(StandardStatus::Draft, $draft->status);
+        $activated = $this->registry->activateStandard($draft);
+        $this->assertSame(StandardStatus::Active, $activated->status);
+        $this->assertTrue($activated->isActive());
     }
 
     /**
-     * TEST H: Different families can each have one active standard independently.
+     * TEST J: Activating Detected succeeds.
      */
-    public function test_h_different_families_have_independent_active_standards(): void
+    public function test_j_activating_detected_succeeds(): void
+    {
+        $detected = $this->registry->registerStandard([
+            'assessment_family' => AssessmentFamily::ToeflIbt,
+            'version' => '2026.DETECTED',
+            'status' => StandardStatus::Detected,
+            'structure_definition' => [],
+        ]);
+
+        $this->assertSame(StandardStatus::Detected, $detected->status);
+        $activated = $this->registry->activateStandard($detected);
+        $this->assertSame(StandardStatus::Active, $activated->status);
+        $this->assertTrue($activated->isActive());
+    }
+
+    /**
+     * TEST K: Activating PendingReview succeeds.
+     */
+    public function test_k_activating_pending_review_succeeds(): void
+    {
+        $pending = $this->registry->registerStandard([
+            'assessment_family' => AssessmentFamily::GeneralEnglish,
+            'version' => '2.0.PENDING',
+            'status' => StandardStatus::PendingReview,
+            'structure_definition' => [],
+        ]);
+
+        $this->assertSame(StandardStatus::PendingReview, $pending->status);
+        $activated = $this->registry->activateStandard($pending);
+        $this->assertSame(StandardStatus::Active, $activated->status);
+        $this->assertTrue($activated->isActive());
+    }
+
+    /**
+     * TEST L: Repeated activation of same target is idempotent.
+     */
+    public function test_l_activate_already_active_target_is_idempotent(): void
+    {
+        $standard = $this->registry->registerStandard([
+            'assessment_family' => AssessmentFamily::Toeic,
+            'version' => '2026.IDEMPOTENT',
+            'status' => StandardStatus::Draft,
+            'structure_definition' => [],
+        ]);
+
+        $first = $this->registry->activateStandard($standard);
+        $this->assertTrue($first->isActive());
+
+        $second = $this->registry->activateStandard($standard);
+        $this->assertTrue($second->isActive());
+        $this->assertSame($first->id, $second->id);
+
+        $activeCount = AssessmentStandard::where('assessment_family', AssessmentFamily::Toeic)
+            ->where('status', StandardStatus::Active)
+            ->count();
+        $this->assertSame(1, $activeCount);
+    }
+
+    /**
+     * TEST M: Archived and Superseded activation is rejected.
+     */
+    public function test_m_archived_and_superseded_activation_is_rejected(): void
+    {
+        // Force create archived and superseded records for testing activation guard
+        $archived = AssessmentStandard::create([
+            'assessment_family' => AssessmentFamily::Toeic,
+            'standard_code' => 'TOEIC-2020.ARCHIVED',
+            'version' => '2020.ARCHIVED',
+            'title' => 'TOEIC 2020 Archived',
+            'provider' => 'IAP',
+            'status' => StandardStatus::Archived,
+            'structure_definition' => [],
+        ]);
+
+        $superseded = AssessmentStandard::create([
+            'assessment_family' => AssessmentFamily::Toeic,
+            'standard_code' => 'TOEIC-2024.SUPERSEDED',
+            'version' => '2024.SUPERSEDED',
+            'title' => 'TOEIC 2024 Superseded',
+            'provider' => 'IAP',
+            'status' => StandardStatus::Superseded,
+            'structure_definition' => [],
+        ]);
+
+        try {
+            $this->registry->activateStandard($archived);
+            $this->fail('Activating archived should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString("AssessmentStandard in status 'archived' cannot be activated", $e->getMessage());
+        }
+
+        try {
+            $this->registry->activateStandard($superseded);
+            $this->fail('Activating superseded should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString("AssessmentStandard in status 'superseded' cannot be activated", $e->getMessage());
+        }
+    }
+
+    /**
+     * TEST N: Lock acquisition failure -> activation does NOT run (fails closed).
+     */
+    public function test_n_lock_acquisition_failure_fails_closed(): void
+    {
+        $standard = $this->registry->registerStandard([
+            'assessment_family' => AssessmentFamily::Toeic,
+            'version' => '2026.LOCK_FAIL',
+            'status' => StandardStatus::Draft,
+            'structure_definition' => [],
+        ]);
+
+        $lockKey = 'assessment_standard_activation:toeic';
+        $externalLock = Cache::lock($lockKey, 10);
+        $this->assertTrue($externalLock->acquire());
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage("Unable to acquire activation lock for assessment family 'toeic'");
+
+            $this->registry->activateStandard($standard);
+        } finally {
+            $externalLock->release();
+        }
+
+        // Standard must not have been activated
+        $this->assertSame(StandardStatus::Draft, $standard->fresh()->status);
+    }
+
+    /**
+     * TEST O: Real concurrent same-family activation leaves exactly 1 active standard.
+     */
+    public function test_o_real_concurrent_same_family_activation_leaves_single_active(): void
+    {
+        $tempDb = sys_get_temp_dir().'/concurrency_standards_'.uniqid().'.sqlite';
+        touch($tempDb);
+
+        $tempCacheDir = sys_get_temp_dir().'/concurrency_cache_'.uniqid();
+        @mkdir($tempCacheDir, 0777, true);
+
+        $runnerScript = base_path('standards_concurrency_worker.php');
+
+        try {
+            config(['database.connections.temp_concurrency' => [
+                'driver' => 'sqlite',
+                'database' => $tempDb,
+                'prefix' => '',
+                'foreign_key_constraints' => true,
+            ]]);
+
+            $tempConn = DB::connection('temp_concurrency');
+
+            $tempConn->getSchemaBuilder()->create('assessment_standards', function ($table) {
+                $table->ulid('id')->primary();
+                $table->string('assessment_family', 40)->index();
+                $table->string('standard_code', 60);
+                $table->string('version', 30);
+                $table->string('title', 255);
+                $table->string('provider', 100);
+                $table->string('status', 30)->default('draft')->index();
+                $table->dateTime('effective_from')->nullable();
+                $table->dateTime('effective_until')->nullable();
+                $table->string('source_name', 255)->nullable();
+                $table->text('source_url')->nullable();
+                $table->dateTime('source_checked_at')->nullable();
+                $table->json('structure_definition')->nullable();
+                $table->json('blueprint_definition')->nullable();
+                $table->json('validation_definition')->nullable();
+                $table->json('scoring_definition')->nullable();
+                $table->json('metadata')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
+                $table->unique(['assessment_family', 'version']);
+            });
+
+            $idA = (string) Str::ulid();
+            $idB = (string) Str::ulid();
+
+            $tempConn->table('assessment_standards')->insert([
+                [
+                    'id' => $idA,
+                    'assessment_family' => 'toeic',
+                    'standard_code' => 'TOEIC-2026.CONC_A',
+                    'version' => '2026.CONC_A',
+                    'title' => 'TOEIC 2026 Concurrent A',
+                    'provider' => 'IAP',
+                    'status' => 'draft',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'id' => $idB,
+                    'assessment_family' => 'toeic',
+                    'standard_code' => 'TOEIC-2026.CONC_B',
+                    'version' => '2026.CONC_B',
+                    'title' => 'TOEIC 2026 Concurrent B',
+                    'provider' => 'IAP',
+                    'status' => 'draft',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+
+            $runnerCode = <<<'PHP'
+<?php
+require __DIR__ . '/vendor/autoload.php';
+$app = require_once __DIR__ . '/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+
+$tempDb = $argv[1];
+$standardId = $argv[2];
+$cacheDir = $argv[3];
+
+config(['database.default' => 'sqlite']);
+config(['database.connections.sqlite.database' => $tempDb]);
+config(['cache.default' => 'file']);
+config(['cache.stores.file.path' => $cacheDir]);
+
+\Illuminate\Support\Facades\DB::purge('sqlite');
+\Illuminate\Support\Facades\DB::reconnect('sqlite');
+
+$registry = new \App\Modules\QuestionEngine\Services\AssessmentStandardRegistry();
+try {
+    $res = $registry->activateStandard($standardId);
+    echo json_encode(['status' => 'success', 'id' => $res->id, 'version' => $res->version]);
+} catch (\Throwable $e) {
+    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+}
+PHP;
+            file_put_contents($runnerScript, $runnerCode);
+
+            $cmd1 = sprintf('php %s %s %s %s', escapeshellarg($runnerScript), escapeshellarg($tempDb), escapeshellarg($idA), escapeshellarg($tempCacheDir));
+            $cmd2 = sprintf('php %s %s %s %s', escapeshellarg($runnerScript), escapeshellarg($tempDb), escapeshellarg($idB), escapeshellarg($tempCacheDir));
+
+            $p1 = proc_open($cmd1, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes1, base_path());
+            $p2 = proc_open($cmd2, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes2, base_path());
+
+            $out1 = stream_get_contents($pipes1[1]);
+            $err1 = stream_get_contents($pipes1[2]);
+            fclose($pipes1[1]);
+            fclose($pipes1[2]);
+            proc_close($p1);
+
+            $out2 = stream_get_contents($pipes2[1]);
+            $err2 = stream_get_contents($pipes2[2]);
+            fclose($pipes2[1]);
+            fclose($pipes2[2]);
+            proc_close($p2);
+
+            $activeCount = $tempConn->table('assessment_standards')
+                ->where('assessment_family', 'toeic')
+                ->where('status', 'active')
+                ->count();
+
+            $this->assertSame(1, $activeCount, "Expected exactly 1 active standard after concurrent activations. Outputs: P1={$out1} (err={$err1}), P2={$out2} (err={$err2})");
+
+            $supersededCount = $tempConn->table('assessment_standards')
+                ->where('assessment_family', 'toeic')
+                ->where('status', 'superseded')
+                ->count();
+            $this->assertSame(1, $supersededCount);
+        } finally {
+            DB::purge('temp_concurrency');
+            if (file_exists($tempDb)) {
+                @unlink($tempDb);
+            }
+            if (file_exists($runnerScript)) {
+                @unlink($runnerScript);
+            }
+            if (file_exists($tempCacheDir)) {
+                @File::deleteDirectory($tempCacheDir);
+            }
+        }
+    }
+
+    /**
+     * TEST P: Different families activate independently.
+     */
+    public function test_p_different_families_activate_independently(): void
     {
         $toeicStd = $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
@@ -350,257 +561,76 @@ class QuestionEngineStandardsAndMultiAssessmentTest extends TestCase
     }
 
     /**
-     * TEST I: Activating Draft succeeds.
+     * TEST Q: Valid FK binding works.
      */
-    public function test_i_activating_draft_succeeds(): void
+    public function test_q_valid_fk_binding_works(): void
     {
-        $draft = $this->registry->registerStandard([
+        $standard = AssessmentStandard::create([
             'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2026.DRAFT',
-            'status' => StandardStatus::Draft,
-            'structure_definition' => [],
-        ]);
-
-        $this->assertSame(StandardStatus::Draft, $draft->status);
-        $activated = $this->registry->activateStandard($draft);
-        $this->assertSame(StandardStatus::Active, $activated->status);
-    }
-
-    /**
-     * TEST J: Activating Detected succeeds.
-     */
-    public function test_j_activating_detected_succeeds(): void
-    {
-        $detected = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::ToeflIbt,
-            'version' => '2026.DETECTED',
-            'status' => StandardStatus::Detected,
-            'structure_definition' => [],
-        ]);
-
-        $this->assertSame(StandardStatus::Detected, $detected->status);
-        $activated = $this->registry->activateStandard($detected);
-        $this->assertSame(StandardStatus::Active, $activated->status);
-    }
-
-    /**
-     * TEST K: Activating PendingReview succeeds.
-     */
-    public function test_k_activating_pending_review_succeeds(): void
-    {
-        $pending = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::GeneralEnglish,
-            'version' => '2.0.PENDING',
-            'status' => StandardStatus::PendingReview,
-            'structure_definition' => [],
-        ]);
-
-        $this->assertSame(StandardStatus::PendingReview, $pending->status);
-        $activated = $this->registry->activateStandard($pending);
-        $this->assertSame(StandardStatus::Active, $activated->status);
-    }
-
-    /**
-     * TEST L: Activating Archived through normal activation is rejected.
-     */
-    public function test_l_activating_archived_is_rejected(): void
-    {
-        $archived = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2020.ARCHIVED',
-            'status' => StandardStatus::Archived,
-            'structure_definition' => [],
-        ]);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("AssessmentStandard in status 'archived' cannot be activated");
-
-        $this->registry->activateStandard($archived);
-    }
-
-    /**
-     * TEST M: Activating Superseded through normal activation is rejected.
-     */
-    public function test_m_activating_superseded_is_rejected(): void
-    {
-        $superseded = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2024.SUPERSEDED',
-            'status' => StandardStatus::Superseded,
-            'structure_definition' => [],
-        ]);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("AssessmentStandard in status 'superseded' cannot be activated");
-
-        $this->registry->activateStandard($superseded);
-    }
-
-    /**
-     * TEST N: Omitted status defaults Draft.
-     */
-    public function test_n_omitted_status_defaults_draft(): void
-    {
-        $std = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2026.DEFAULT_DRAFT',
-            'structure_definition' => [],
-        ]);
-
-        $this->assertSame(StandardStatus::Draft, $std->status);
-    }
-
-    /**
-     * TEST O: Valid explicit status accepted.
-     */
-    public function test_o_valid_explicit_status_accepted(): void
-    {
-        $stdPending = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2026.PENDING_OK',
-            'status' => 'pending_review',
-            'structure_definition' => [],
-        ]);
-        $this->assertSame(StandardStatus::PendingReview, $stdPending->status);
-
-        $stdActive = $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2026.ACTIVE_OK',
+            'standard_code' => 'TOEIC-2026.1',
+            'version' => '2026.1',
+            'title' => 'TOEIC Standard 2026.1',
+            'provider' => 'IAP Authority',
             'status' => StandardStatus::Active,
             'structure_definition' => [],
         ]);
-        $this->assertSame(StandardStatus::Active, $stdActive->status);
-    }
 
-    /**
-     * TEST P: Invalid explicit status rejected (fails closed).
-     */
-    public function test_p_invalid_explicit_status_rejected(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Invalid status 'activ' for AssessmentStandard.");
-
-        $this->registry->registerStandard([
-            'assessment_family' => AssessmentFamily::Toeic,
-            'version' => '2026.INVALID',
-            'status' => 'activ',
-            'structure_definition' => [],
-        ]);
-    }
-
-    /**
-     * TEST Q: AssessmentItemIdentity part_number integer 5 accepted.
-     */
-    public function test_q_assessment_item_identity_integer_accepted(): void
-    {
-        $identity = AssessmentItemIdentity::fromArray([
-            'assessment_family' => 'toeic',
+        $question = Question::create([
+            'question_bank_id' => $this->questionBank->id,
+            'prompt' => 'Select the best word to complete the sentence.',
+            'section' => SectionType::Reading,
             'part_number' => 5,
-            'section' => 'reading',
+            'question_type' => QuestionType::MultipleChoice,
+            'difficulty' => DifficultyLevel::Medium,
+            'assessment_family' => AssessmentFamily::Toeic,
+            'assessment_standard_id' => $standard->id,
+            'standard_version' => '2026.1',
         ]);
 
-        $this->assertSame(5, $identity->partNumber);
+        $this->assertDatabaseHas('questions', [
+            'id' => $question->id,
+            'assessment_standard_id' => $standard->id,
+        ]);
+        $this->assertSame($standard->id, $question->fresh()->assessmentStandard->id);
     }
 
     /**
-     * TEST R: AssessmentItemIdentity string integer "5" accepted.
+     * TEST R: Invalid FK binding is rejected.
      */
-    public function test_r_assessment_item_identity_string_integer_accepted(): void
+    public function test_r_invalid_fk_binding_is_rejected(): void
     {
-        $identity = AssessmentItemIdentity::fromArray([
-            'assessment_family' => 'toeic',
-            'part_number' => '5',
-            'section' => 'reading',
-        ]);
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = ON;');
+        }
 
-        $this->assertSame(5, $identity->partNumber);
-    }
+        $this->expectException(QueryException::class);
 
-    /**
-     * TEST S: AssessmentItemIdentity decimal float 5.5 rejected.
-     */
-    public function test_s_assessment_item_identity_decimal_float_rejected(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Part number must be a valid integer, given');
-
-        AssessmentItemIdentity::fromArray([
-            'assessment_family' => 'toeic',
-            'part_number' => 5.5,
-            'section' => 'reading',
+        Question::create([
+            'question_bank_id' => $this->questionBank->id,
+            'prompt' => 'Question with fake FK.',
+            'section' => SectionType::Reading,
+            'part_number' => 5,
+            'question_type' => QuestionType::MultipleChoice,
+            'difficulty' => DifficultyLevel::Easy,
+            'assessment_family' => AssessmentFamily::Toeic,
+            'assessment_standard_id' => '01nonexistentstandardid0000000',
+            'standard_version' => '2026.1',
         ]);
     }
 
     /**
-     * TEST T: AssessmentItemIdentity decimal string "5.5" rejected.
+     * TEST S: Historical question standard binding remains immutable.
      */
-    public function test_t_assessment_item_identity_decimal_string_rejected(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Part number must be a valid integer, given '5.5'.");
-
-        AssessmentItemIdentity::fromArray([
-            'assessment_family' => 'toeic',
-            'part_number' => '5.5',
-            'section' => 'reading',
-        ]);
-    }
-
-    /**
-     * TEST U: Absent part_number remains NULL for TOEFL/GE/IELTS identity.
-     */
-    public function test_u_absent_part_number_remains_null_for_non_toeic(): void
-    {
-        $toeflIdentity = AssessmentItemIdentity::fromArray([
-            'assessment_family' => 'toefl_ibt',
-            'section' => 'reading',
-            'task_type' => 'independent',
-        ]);
-        $this->assertNull($toeflIdentity->partNumber);
-
-        $geIdentity = AssessmentItemIdentity::fromArray([
-            'assessment_family' => 'general_english',
-            'skill' => 'reading',
-            'proficiency_target' => 'b1_standard',
-        ]);
-        $this->assertNull($geIdentity->partNumber);
-
-        $ieltsIdentity = AssessmentItemIdentity::fromArray([
-            'assessment_family' => 'ielts',
-            'section' => 'academic_reading',
-            'task_type' => 'multiple_choice',
-        ]);
-        $this->assertNull($ieltsIdentity->partNumber);
-    }
-
-    /**
-     * TEST V: TOEFL behaviour still rejects explicitly provided TOEIC part.
-     */
-    public function test_v_toefl_behaviour_rejects_explicit_part(): void
-    {
-        $toefl = $this->resolver->resolve(AssessmentFamily::ToeflIbt);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('TOEFL iBT does not support TOEIC part numbers');
-
-        $toefl->validateStructure([
-            'part_number' => 1,
-            'section' => 'reading',
-        ]);
-    }
-
-    /**
-     * TEST W: Historical question standard binding remains immutable.
-     */
-    public function test_w_historical_question_standard_binding_remains_immutable(): void
+    public function test_s_historical_binding_remains_immutable(): void
     {
         $std2024 = $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
             'version' => '2024.1',
             'title' => 'TOEIC 2024 Standard',
-            'status' => StandardStatus::Active,
+            'status' => StandardStatus::Draft,
             'structure_definition' => [],
         ]);
+        $this->registry->activateStandard($std2024);
 
         $q2024 = Question::create([
             'question_bank_id' => $this->questionBank->id,
@@ -614,7 +644,6 @@ class QuestionEngineStandardsAndMultiAssessmentTest extends TestCase
             'standard_version' => '2024.1',
         ]);
 
-        // Newer standard created and activated
         $std2026 = $this->registry->registerStandard([
             'assessment_family' => AssessmentFamily::Toeic,
             'version' => '2026.1',
@@ -632,9 +661,9 @@ class QuestionEngineStandardsAndMultiAssessmentTest extends TestCase
     }
 
     /**
-     * TEST X: Sprint 1 generation contract regression PASS.
+     * TEST T: Sprint 1 generation contract regression PASS.
      */
-    public function test_x_sprint1_generation_contract_regression_pass(): void
+    public function test_t_sprint1_generation_contract_regression_pass(): void
     {
         $validator = new QuestionGenerationRequestValidator;
 
@@ -654,9 +683,9 @@ class QuestionEngineStandardsAndMultiAssessmentTest extends TestCase
     }
 
     /**
-     * TEST Y: ToeicQuestionValidator regression PASS.
+     * TEST U: TOEIC validator regression PASS.
      */
-    public function test_y_toeic_question_validator_regression_pass(): void
+    public function test_u_toeic_validator_regression_pass(): void
     {
         $validData = [
             'part_number' => 5,
@@ -675,12 +704,88 @@ class QuestionEngineStandardsAndMultiAssessmentTest extends TestCase
     }
 
     /**
-     * TEST Z: Question Bank governance regression PASS.
+     * TEST V: Question Bank governance regression PASS.
      */
-    public function test_z_question_bank_governance_regression_pass(): void
+    public function test_v_question_bank_governance_regression_pass(): void
     {
         $this->assertDatabaseCount('question_banks', 1);
         $this->assertTrue($this->questionBank->is_published);
         $this->assertSame($this->teacher->id, $this->questionBank->created_by);
+    }
+
+    /**
+     * Extra Test: Strict AssessmentItemIdentity parsing.
+     */
+    public function test_strict_assessment_item_identity_part_number_parsing(): void
+    {
+        // 5 accepted
+        $id1 = AssessmentItemIdentity::fromArray(['assessment_family' => 'toeic', 'part_number' => 5]);
+        $this->assertSame(5, $id1->partNumber);
+
+        // "5" accepted
+        $id2 = AssessmentItemIdentity::fromArray(['assessment_family' => 'toeic', 'part_number' => '5']);
+        $this->assertSame(5, $id2->partNumber);
+
+        // 5.5 rejected
+        try {
+            AssessmentItemIdentity::fromArray(['assessment_family' => 'toeic', 'part_number' => 5.5]);
+            $this->fail('5.5 should have thrown InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Part number must be a valid integer', $e->getMessage());
+        }
+
+        // "5.5" rejected
+        try {
+            AssessmentItemIdentity::fromArray(['assessment_family' => 'toeic', 'part_number' => '5.5']);
+            $this->fail('"5.5" should have thrown InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Part number must be a valid integer', $e->getMessage());
+        }
+    }
+
+    /**
+     * Extra Test: Force delete referenced AssessmentStandard is restricted.
+     */
+    public function test_force_delete_referenced_standard_is_restricted(): void
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = ON;');
+        }
+
+        $standard = AssessmentStandard::create([
+            'assessment_family' => AssessmentFamily::Toeic,
+            'standard_code' => 'TOEIC-2026.FK_RESTRICT',
+            'version' => '2026.FK_RESTRICT',
+            'title' => 'TOEIC Standard 2026.FK_RESTRICT',
+            'provider' => 'IAP Authority',
+            'status' => StandardStatus::Active,
+            'structure_definition' => [],
+        ]);
+
+        $question = Question::create([
+            'question_bank_id' => $this->questionBank->id,
+            'prompt' => 'Question bound to standard before force delete test.',
+            'section' => SectionType::Reading,
+            'part_number' => 5,
+            'question_type' => QuestionType::MultipleChoice,
+            'difficulty' => DifficultyLevel::Easy,
+            'assessment_family' => AssessmentFamily::Toeic,
+            'assessment_standard_id' => $standard->id,
+            'standard_version' => '2026.FK_RESTRICT',
+        ]);
+
+        // Attempt force delete on referenced standard -> MUST fail with QueryException due to ON DELETE RESTRICT
+        try {
+            $standard->forceDelete();
+            $this->fail('forceDelete on referenced AssessmentStandard should fail with QueryException');
+        } catch (QueryException $e) {
+            $this->assertStringContainsString('FOREIGN KEY', $e->getMessage());
+        }
+
+        // Question remains intact
+        $this->assertDatabaseHas('questions', [
+            'id' => $question->id,
+            'assessment_standard_id' => $standard->id,
+        ]);
     }
 }

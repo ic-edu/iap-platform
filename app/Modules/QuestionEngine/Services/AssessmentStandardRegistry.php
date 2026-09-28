@@ -5,6 +5,7 @@ namespace App\Modules\QuestionEngine\Services;
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
 use App\Modules\QuestionEngine\Enums\StandardStatus;
 use App\Modules\QuestionEngine\Models\AssessmentStandard;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,9 @@ class AssessmentStandardRegistry
     /**
      * Register a new versioned standard definition.
      *
+     * Initial registration only permits draft, detected, or pending_review.
+     * Direct registration of active, superseded, or archived is strictly rejected.
+     *
      * @param  array<string, mixed>  $data
      */
     public function registerStandard(array $data): AssessmentStandard
@@ -134,6 +138,10 @@ class AssessmentStandardRegistry
             }
         }
 
+        if (!in_array($status, [StandardStatus::Draft, StandardStatus::Detected, StandardStatus::PendingReview], true)) {
+            throw new InvalidArgumentException("Cannot directly register AssessmentStandard in status '{$status->value}'. Initial registration permits only draft, detected, or pending_review.");
+        }
+
         return AssessmentStandard::create([
             'assessment_family' => $family,
             'standard_code' => (string) ($data['standard_code'] ?? strtoupper($family->value).'-'.$version),
@@ -157,6 +165,7 @@ class AssessmentStandardRegistry
     /**
      * Formally activate a standard, superseding any previously active version for that family.
      * Enforces single-active invariant, activation idempotency, and lifecycle guards.
+     * Fails closed if the family activation lock cannot be acquired.
      */
     public function activateStandard(AssessmentStandard|string $standard): AssessmentStandard
     {
@@ -206,8 +215,13 @@ class AssessmentStandardRegistry
 
         try {
             return Cache::lock($lockKey, 10)->block(5, $activationLogic);
-        } catch (\BadMethodCallException|\Exception $e) {
-            return $activationLogic();
+        } catch (LockTimeoutException $e) {
+            throw new RuntimeException("Unable to acquire activation lock for assessment family '{$family->value}': lock timed out.", 0, $e);
+        } catch (\Throwable $e) {
+            if ($e instanceof InvalidArgumentException) {
+                throw $e;
+            }
+            throw new RuntimeException("Unable to acquire activation lock for assessment family '{$family->value}': ".$e->getMessage(), 0, $e);
         }
     }
 }
