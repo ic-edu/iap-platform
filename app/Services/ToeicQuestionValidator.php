@@ -175,6 +175,18 @@ class ToeicQuestionValidator
     }
 
     /**
+     * Get canonical AudioGroup count for Part 3 (13) or Part 4 (10).
+     */
+    public static function getAudioGroupCountForPart(int $part): ?int
+    {
+        return match ($part) {
+            3 => 13,
+            4 => 10,
+            default => null,
+        };
+    }
+
+    /**
      * Get canonical Part 6 PassageGroup question count (4).
      */
     public static function getPart6PassageGroupQuestionCount(): int

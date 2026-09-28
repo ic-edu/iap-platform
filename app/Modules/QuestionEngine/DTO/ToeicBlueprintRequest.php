@@ -230,7 +230,18 @@ final class ToeicBlueprintRequest
             }
         }
 
-        $seed = isset($data['seed']) && is_numeric($data['seed']) ? (int) $data['seed'] : null;
+        // Normalize Seed (Strict Integer Parsing)
+        $seed = null;
+        if (isset($data['seed']) && $data['seed'] !== null && $data['seed'] !== '') {
+            if (is_int($data['seed'])) {
+                $seed = $data['seed'];
+            } elseif (is_string($data['seed']) && preg_match('/^-?\d+$/', trim($data['seed']))) {
+                $seed = (int) trim($data['seed']);
+            } else {
+                throw new InvalidArgumentException("Seed must be a valid integer, got [{$data['seed']}].");
+            }
+        }
+
         $standardId = isset($data['standard_id']) ? (string) $data['standard_id'] : (isset($data['assessment_standard_id']) ? (string) $data['assessment_standard_id'] : null);
         $standardVersion = isset($data['standard_version']) ? (string) $data['standard_version'] : null;
         $customParts = isset($data['custom_parts']) && is_array($data['custom_parts']) ? $data['custom_parts'] : [];
@@ -281,6 +292,22 @@ final class ToeicBlueprintRequest
                 }
                 if ($this->itemCount > $canonicalPartMax) {
                     throw new InvalidArgumentException("item_count [{$this->itemCount}] exceeds canonical Part {$this->partNumber} limit of {$canonicalPartMax} questions.");
+                }
+
+                // Group-safe check for Part 3 & 4
+                if (in_array($this->partNumber, [3, 4], true)) {
+                    $audioGroupQCount = ToeicQuestionValidator::getAudioGroupQuestionCount();
+                    if ($this->itemCount % $audioGroupQCount !== 0) {
+                        throw new InvalidArgumentException("Part {$this->partNumber} item_count [{$this->itemCount}] must be a multiple of {$audioGroupQCount} (complete audio groups).");
+                    }
+                }
+
+                // Group-safe check for Part 6
+                if ($this->partNumber === 6) {
+                    $p6GroupQCount = ToeicQuestionValidator::getPart6PassageGroupQuestionCount();
+                    if ($this->itemCount % $p6GroupQCount !== 0) {
+                        throw new InvalidArgumentException("Part 6 item_count [{$this->itemCount}] must be a multiple of {$p6GroupQCount} (complete passage groups).");
+                    }
                 }
             }
         }

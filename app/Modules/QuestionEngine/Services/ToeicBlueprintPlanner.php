@@ -56,7 +56,7 @@ class ToeicBlueprintPlanner
         6 => [
             'grammar' => 35,
             'vocabulary' => 35,
-            'text_cohesion => 20',
+            'text_cohesion' => 20,
             'detail' => 10,
         ],
         7 => [
@@ -76,14 +76,6 @@ class ToeicBlueprintPlanner
     ) {
         $this->allocator ??= new WeightedSlotAllocator;
         $this->validator ??= new ToeicGenerationPlanValidator;
-
-        // Fix clean keys for default construct distributions
-        $this->defaultConstructDistributions[6] = [
-            'grammar' => 35,
-            'vocabulary' => 35,
-            'text_cohesion' => 20,
-            'detail' => 10,
-        ];
     }
 
     /**
@@ -93,19 +85,24 @@ class ToeicBlueprintPlanner
      */
     public function plan(ToeicBlueprintRequest $request): ToeicGenerationPlan
     {
-        // 1. Resolve Active TOEIC AssessmentStandard
+        // 1. Resolve Active TOEIC AssessmentStandard (Atomically bound once)
         $activeStandard = $this->registry->findActiveStandard(AssessmentFamily::Toeic);
 
         if ($activeStandard === null) {
             throw new RuntimeException('No active assessment standard found for TOEIC family. An active standard is required to generate a blueprint plan.');
         }
 
-        $standardId = $request->standardId ?? $activeStandard->id;
-        $standardVersion = $request->standardVersion ?? $activeStandard->version;
-
+        // Validate explicit assertions against active standard
         if ($request->standardId !== null && $request->standardId !== $activeStandard->id) {
             throw new InvalidArgumentException("Requested standard_id [{$request->standardId}] does not match active TOEIC standard [{$activeStandard->id}].");
         }
+
+        if ($request->standardVersion !== null && $request->standardVersion !== $activeStandard->version) {
+            throw new InvalidArgumentException("Requested standard_version [{$request->standardVersion}] does not match active TOEIC standard version [{$activeStandard->version}].");
+        }
+
+        $standardId = $activeStandard->id;
+        $standardVersion = $activeStandard->version;
 
         // 2. Generate Plan according to Mode
         return match ($request->mode) {
@@ -121,9 +118,9 @@ class ToeicBlueprintPlanner
      */
     protected function planFullTest(ToeicBlueprintRequest $request, string $standardId, string $standardVersion): ToeicGenerationPlan
     {
-        $totalSlots = 200;
+        $totalSlots = ToeicQuestionValidator::getTotalCanonicalTargetCount();
 
-        // 1. Allocate Global Distributions
+        // Global Sequences
         $diffSequence = $this->allocator->allocateSequence($totalSlots, $request->difficultyDistribution, $request->seed !== null ? $request->seed + 100 : null);
         $profSequence = $this->allocator->allocateSequence($totalSlots, $request->proficiencyDistribution, $request->seed !== null ? $request->seed + 200 : null);
         $ctxSequence = $request->contextDistribution !== null
@@ -134,361 +131,44 @@ class ToeicBlueprintPlanner
         $groups = [];
         $globalSeq = 1;
 
-        // Per-part construct distributions
         $partBlueprints = ToeicQuestionValidator::getAllPartBlueprints();
+        $partCounts = [];
+        $constructCounts = [];
+        $sectionCounts = [
+            'listening' => ToeicQuestionValidator::getSectionTargetCount('listening'),
+            'reading' => ToeicQuestionValidator::getSectionTargetCount('reading'),
+        ];
 
         foreach ($partBlueprints as $partNum => $bp) {
             $partTargetCount = $bp['target_count'];
-            $partStartNum = $bp['start_number'];
-            $section = SectionType::from($bp['section']);
+            $partCounts[$partNum] = $partTargetCount;
 
-            // Resolve constructs for this part
             $constructDist = $request->constructDistribution[$partNum] ?? $this->defaultConstructDistributions[$partNum];
-            $partConstructSeq = $this->allocator->allocateSequence($partTargetCount, $constructDist, $request->seed !== null ? $request->seed + ($partNum * 17) : null);
+            $constructCounts[$partNum] = $this->allocator->allocate($partTargetCount, $constructDist, $request->seed !== null ? $request->seed + ($partNum * 17) : null);
 
-            if ($partNum === 1 || $partNum === 2 || $partNum === 5) {
-                // Standalone Questions
-                for ($pIdx = 0; $pIdx < $partTargetCount; $pIdx++) {
-                    $qNum = $partStartNum + $pIdx;
-                    $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
+            $partResult = $this->planPartSlotsAndGroups(
+                partNum: $partNum,
+                itemCount: $partTargetCount,
+                globalSeq: $globalSeq,
+                diffSequence: $diffSequence,
+                profSequence: $profSequence,
+                ctxSequence: $ctxSequence,
+                constructDist: $constructDist,
+                standardId: $standardId,
+                standardVersion: $standardVersion,
+                request: $request,
+            );
 
-                    $slots[] = new ToeicGenerationSlot(
-                        sequence: $globalSeq,
-                        canonicalQuestionNumber: $qNum,
-                        assessmentFamily: AssessmentFamily::Toeic,
-                        assessmentStandardId: $standardId,
-                        standardVersion: $standardVersion,
-                        section: $section,
-                        partNumber: $partNum,
-                        proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
-                        difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
-                        construct: ConstructTaxonomy::from($partConstructSeq[$pIdx]),
-                        contentMode: $request->contentMode,
-                        domain: $request->domain,
-                        context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
-                        groupType: 'standalone',
-                        groupIndex: null,
-                        positionInGroup: null,
-                        seed: $slotSeed,
-                    );
-                    $globalSeq++;
-                }
-            } elseif ($partNum === 3) {
-                // Part 3: 13 AudioGroups × 3 questions
-                $numGroups = 13;
-                $qPerGroup = ToeicQuestionValidator::getAudioGroupQuestionCount();
-                $partLocalQIdx = 0;
-
-                for ($g = 1; $g <= $numGroups; $g++) {
-                    $groupQNumbers = [];
-                    $groupSlotSeqs = [];
-
-                    for ($pos = 1; $pos <= $qPerGroup; $pos++) {
-                        $qNum = $partStartNum + $partLocalQIdx;
-                        $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                        $slots[] = new ToeicGenerationSlot(
-                            sequence: $globalSeq,
-                            canonicalQuestionNumber: $qNum,
-                            assessmentFamily: AssessmentFamily::Toeic,
-                            assessmentStandardId: $standardId,
-                            standardVersion: $standardVersion,
-                            section: $section,
-                            partNumber: $partNum,
-                            proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
-                            difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
-                            construct: ConstructTaxonomy::from($partConstructSeq[$partLocalQIdx]),
-                            contentMode: $request->contentMode,
-                            domain: $request->domain,
-                            context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
-                            groupType: 'conversation',
-                            groupIndex: $g,
-                            positionInGroup: $pos,
-                            seed: $slotSeed,
-                        );
-
-                        $groupQNumbers[] = $qNum;
-                        $groupSlotSeqs[] = $globalSeq;
-                        $globalSeq++;
-                        $partLocalQIdx++;
-                    }
-
-                    $groups[] = new ToeicGenerationGroup(
-                        groupType: 'conversation',
-                        partNumber: $partNum,
-                        groupIndex: $g,
-                        documentCount: null,
-                        questionCount: $qPerGroup,
-                        questionNumbers: $groupQNumbers,
-                        slotSequences: $groupSlotSeqs,
-                    );
-                }
-            } elseif ($partNum === 4) {
-                // Part 4: 10 AudioGroups × 3 questions
-                $numGroups = 10;
-                $qPerGroup = ToeicQuestionValidator::getAudioGroupQuestionCount();
-                $partLocalQIdx = 0;
-
-                for ($g = 1; $g <= $numGroups; $g++) {
-                    $groupQNumbers = [];
-                    $groupSlotSeqs = [];
-
-                    for ($pos = 1; $pos <= $qPerGroup; $pos++) {
-                        $qNum = $partStartNum + $partLocalQIdx;
-                        $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                        $slots[] = new ToeicGenerationSlot(
-                            sequence: $globalSeq,
-                            canonicalQuestionNumber: $qNum,
-                            assessmentFamily: AssessmentFamily::Toeic,
-                            assessmentStandardId: $standardId,
-                            standardVersion: $standardVersion,
-                            section: $section,
-                            partNumber: $partNum,
-                            proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
-                            difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
-                            construct: ConstructTaxonomy::from($partConstructSeq[$partLocalQIdx]),
-                            contentMode: $request->contentMode,
-                            domain: $request->domain,
-                            context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
-                            groupType: 'talk',
-                            groupIndex: $g,
-                            positionInGroup: $pos,
-                            seed: $slotSeed,
-                        );
-
-                        $groupQNumbers[] = $qNum;
-                        $groupSlotSeqs[] = $globalSeq;
-                        $globalSeq++;
-                        $partLocalQIdx++;
-                    }
-
-                    $groups[] = new ToeicGenerationGroup(
-                        groupType: 'talk',
-                        partNumber: $partNum,
-                        groupIndex: $g,
-                        documentCount: null,
-                        questionCount: $qPerGroup,
-                        questionNumbers: $groupQNumbers,
-                        slotSequences: $groupSlotSeqs,
-                    );
-                }
-            } elseif ($partNum === 6) {
-                // Part 6: 4 PassageGroups × 4 questions
-                $numGroups = ToeicQuestionValidator::getPart6PassageGroupCount();
-                $qPerGroup = ToeicQuestionValidator::getPart6PassageGroupQuestionCount();
-                $partLocalQIdx = 0;
-
-                for ($g = 1; $g <= $numGroups; $g++) {
-                    $groupQNumbers = [];
-                    $groupSlotSeqs = [];
-
-                    for ($pos = 1; $pos <= $qPerGroup; $pos++) {
-                        $qNum = $partStartNum + $partLocalQIdx;
-                        $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                        $slots[] = new ToeicGenerationSlot(
-                            sequence: $globalSeq,
-                            canonicalQuestionNumber: $qNum,
-                            assessmentFamily: AssessmentFamily::Toeic,
-                            assessmentStandardId: $standardId,
-                            standardVersion: $standardVersion,
-                            section: $section,
-                            partNumber: $partNum,
-                            proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
-                            difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
-                            construct: ConstructTaxonomy::from($partConstructSeq[$partLocalQIdx]),
-                            contentMode: $request->contentMode,
-                            domain: $request->domain,
-                            context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
-                            groupType: 'passage',
-                            groupIndex: $g,
-                            positionInGroup: $pos,
-                            seed: $slotSeed,
-                        );
-
-                        $groupQNumbers[] = $qNum;
-                        $groupSlotSeqs[] = $globalSeq;
-                        $globalSeq++;
-                        $partLocalQIdx++;
-                    }
-
-                    $groups[] = new ToeicGenerationGroup(
-                        groupType: 'passage',
-                        partNumber: $partNum,
-                        groupIndex: $g,
-                        documentCount: 1,
-                        questionCount: $qPerGroup,
-                        questionNumbers: $groupQNumbers,
-                        slotSequences: $groupSlotSeqs,
-                    );
-                }
-            } elseif ($partNum === 7) {
-                // Part 7: 15 PassageGroups (Single: 10 groups / 29 Q, Double: 2 groups / 10 Q, Triple: 3 groups / 15 Q)
-                // Single: 4 groups of 2, 3 groups of 3, 3 groups of 4 = 8 + 9 + 12 = 29
-                $singleGroupQCounts = [2, 2, 2, 2, 3, 3, 3, 4, 4, 4];
-                $doubleGroupQCounts = [5, 5];
-                $tripleGroupQCounts = [5, 5, 5];
-
-                $partLocalQIdx = 0;
-                $gIndex = 1;
-
-                // 1. Single Passages
-                foreach ($singleGroupQCounts as $qCount) {
-                    $groupQNumbers = [];
-                    $groupSlotSeqs = [];
-
-                    for ($pos = 1; $pos <= $qCount; $pos++) {
-                        $qNum = $partStartNum + $partLocalQIdx;
-                        $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                        $slots[] = new ToeicGenerationSlot(
-                            sequence: $globalSeq,
-                            canonicalQuestionNumber: $qNum,
-                            assessmentFamily: AssessmentFamily::Toeic,
-                            assessmentStandardId: $standardId,
-                            standardVersion: $standardVersion,
-                            section: $section,
-                            partNumber: $partNum,
-                            proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
-                            difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
-                            construct: ConstructTaxonomy::from($partConstructSeq[$partLocalQIdx]),
-                            contentMode: $request->contentMode,
-                            domain: $request->domain,
-                            context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
-                            groupType: 'single',
-                            groupIndex: $gIndex,
-                            positionInGroup: $pos,
-                            seed: $slotSeed,
-                        );
-
-                        $groupQNumbers[] = $qNum;
-                        $groupSlotSeqs[] = $globalSeq;
-                        $globalSeq++;
-                        $partLocalQIdx++;
-                    }
-
-                    $groups[] = new ToeicGenerationGroup(
-                        groupType: 'single',
-                        partNumber: $partNum,
-                        groupIndex: $gIndex,
-                        documentCount: 1,
-                        questionCount: $qCount,
-                        questionNumbers: $groupQNumbers,
-                        slotSequences: $groupSlotSeqs,
-                    );
-                    $gIndex++;
-                }
-
-                // 2. Double Passages
-                foreach ($doubleGroupQCounts as $qCount) {
-                    $groupQNumbers = [];
-                    $groupSlotSeqs = [];
-
-                    for ($pos = 1; $pos <= $qCount; $pos++) {
-                        $qNum = $partStartNum + $partLocalQIdx;
-                        $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                        $slots[] = new ToeicGenerationSlot(
-                            sequence: $globalSeq,
-                            canonicalQuestionNumber: $qNum,
-                            assessmentFamily: AssessmentFamily::Toeic,
-                            assessmentStandardId: $standardId,
-                            standardVersion: $standardVersion,
-                            section: $section,
-                            partNumber: $partNum,
-                            proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
-                            difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
-                            construct: ConstructTaxonomy::from($partConstructSeq[$partLocalQIdx]),
-                            contentMode: $request->contentMode,
-                            domain: $request->domain,
-                            context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
-                            groupType: 'double',
-                            groupIndex: $gIndex,
-                            positionInGroup: $pos,
-                            seed: $slotSeed,
-                        );
-
-                        $groupQNumbers[] = $qNum;
-                        $groupSlotSeqs[] = $globalSeq;
-                        $globalSeq++;
-                        $partLocalQIdx++;
-                    }
-
-                    $groups[] = new ToeicGenerationGroup(
-                        groupType: 'double',
-                        partNumber: $partNum,
-                        groupIndex: $gIndex,
-                        documentCount: 2,
-                        questionCount: $qCount,
-                        questionNumbers: $groupQNumbers,
-                        slotSequences: $groupSlotSeqs,
-                    );
-                    $gIndex++;
-                }
-
-                // 3. Triple Passages
-                foreach ($tripleGroupQCounts as $qCount) {
-                    $groupQNumbers = [];
-                    $groupSlotSeqs = [];
-
-                    for ($pos = 1; $pos <= $qCount; $pos++) {
-                        $qNum = $partStartNum + $partLocalQIdx;
-                        $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                        $slots[] = new ToeicGenerationSlot(
-                            sequence: $globalSeq,
-                            canonicalQuestionNumber: $qNum,
-                            assessmentFamily: AssessmentFamily::Toeic,
-                            assessmentStandardId: $standardId,
-                            standardVersion: $standardVersion,
-                            section: $section,
-                            partNumber: $partNum,
-                            proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
-                            difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
-                            construct: ConstructTaxonomy::from($partConstructSeq[$partLocalQIdx]),
-                            contentMode: $request->contentMode,
-                            domain: $request->domain,
-                            context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
-                            groupType: 'triple',
-                            groupIndex: $gIndex,
-                            positionInGroup: $pos,
-                            seed: $slotSeed,
-                        );
-
-                        $groupQNumbers[] = $qNum;
-                        $groupSlotSeqs[] = $globalSeq;
-                        $globalSeq++;
-                        $partLocalQIdx++;
-                    }
-
-                    $groups[] = new ToeicGenerationGroup(
-                        groupType: 'triple',
-                        partNumber: $partNum,
-                        groupIndex: $gIndex,
-                        documentCount: 3,
-                        questionCount: $qCount,
-                        questionNumbers: $groupQNumbers,
-                        slotSequences: $groupSlotSeqs,
-                    );
-                    $gIndex++;
-                }
+            foreach ($partResult['slots'] as $slot) {
+                $slots[] = $slot;
+            }
+            foreach ($partResult['groups'] as $group) {
+                $groups[] = $group;
             }
         }
 
-        // Compute Counts and Fingerprint
-        $sectionCounts = ['listening' => 100, 'reading' => 100];
-        $partCounts = [1 => 6, 2 => 25, 3 => 39, 4 => 30, 5 => 30, 6 => 16, 7 => 54];
-
         $difficultyCounts = $this->allocator->allocate($totalSlots, $request->difficultyDistribution, $request->seed !== null ? $request->seed + 100 : null);
         $proficiencyCounts = $this->allocator->allocate($totalSlots, $request->proficiencyDistribution, $request->seed !== null ? $request->seed + 200 : null);
-
-        $constructCounts = [];
-        foreach ($partBlueprints as $pNum => $bp) {
-            $dist = $request->constructDistribution[$pNum] ?? $this->defaultConstructDistributions[$pNum];
-            $constructCounts[$pNum] = $this->allocator->allocate($bp['target_count'], $dist, $request->seed !== null ? $request->seed + ($pNum * 17) : null);
-        }
-
         $fingerprint = $this->generateFingerprint($request, $standardId, $standardVersion);
 
         $plan = new ToeicGenerationPlan(
@@ -528,7 +208,6 @@ class ToeicBlueprintPlanner
 
         $blueprint = ToeicQuestionValidator::getPartBlueprint($partNum);
         $section = SectionType::from($blueprint['section']);
-        $startNum = $blueprint['start_number'];
 
         // Distributions
         $diffSequence = $this->allocator->allocateSequence($itemCount, $request->difficultyDistribution, $request->seed !== null ? $request->seed + 100 : null);
@@ -538,212 +217,20 @@ class ToeicBlueprintPlanner
             : null;
 
         $constructDist = $request->constructDistribution[$partNum] ?? ($request->constructDistribution ?? $this->defaultConstructDistributions[$partNum]);
-        $constructSeq = $this->allocator->allocateSequence($itemCount, $constructDist, $request->seed !== null ? $request->seed + ($partNum * 17) : null);
-
-        $slots = [];
-        $groups = [];
         $globalSeq = 1;
 
-        if ($partNum === 1 || $partNum === 2 || $partNum === 5) {
-            for ($i = 0; $i < $itemCount; $i++) {
-                $qNum = $startNum + $i;
-                $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                $slots[] = new ToeicGenerationSlot(
-                    sequence: $globalSeq,
-                    canonicalQuestionNumber: $qNum,
-                    assessmentFamily: AssessmentFamily::Toeic,
-                    assessmentStandardId: $standardId,
-                    standardVersion: $standardVersion,
-                    section: $section,
-                    partNumber: $partNum,
-                    proficiencyTarget: ProficiencyTarget::from($profSequence[$i]),
-                    difficulty: DifficultyLevel::from($diffSequence[$i]),
-                    construct: ConstructTaxonomy::from($constructSeq[$i]),
-                    contentMode: $request->contentMode,
-                    domain: $request->domain,
-                    context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$i]) : null,
-                    groupType: 'standalone',
-                    groupIndex: null,
-                    positionInGroup: null,
-                    seed: $slotSeed,
-                );
-                $globalSeq++;
-            }
-        } elseif ($partNum === 3 || $partNum === 4) {
-            $qPerGroup = ToeicQuestionValidator::getAudioGroupQuestionCount();
-            $groupType = $partNum === 3 ? 'conversation' : 'talk';
-            $numGroups = (int) ceil($itemCount / $qPerGroup);
-            $idx = 0;
-
-            for ($g = 1; $g <= $numGroups; $g++) {
-                $groupQNumbers = [];
-                $groupSlotSeqs = [];
-                $qInThisGroup = min($qPerGroup, $itemCount - $idx);
-
-                for ($pos = 1; $pos <= $qInThisGroup; $pos++) {
-                    $qNum = $startNum + $idx;
-                    $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                    $slots[] = new ToeicGenerationSlot(
-                        sequence: $globalSeq,
-                        canonicalQuestionNumber: $qNum,
-                        assessmentFamily: AssessmentFamily::Toeic,
-                        assessmentStandardId: $standardId,
-                        standardVersion: $standardVersion,
-                        section: $section,
-                        partNumber: $partNum,
-                        proficiencyTarget: ProficiencyTarget::from($profSequence[$idx]),
-                        difficulty: DifficultyLevel::from($diffSequence[$idx]),
-                        construct: ConstructTaxonomy::from($constructSeq[$idx]),
-                        contentMode: $request->contentMode,
-                        domain: $request->domain,
-                        context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$idx]) : null,
-                        groupType: $groupType,
-                        groupIndex: $g,
-                        positionInGroup: $pos,
-                        seed: $slotSeed,
-                    );
-
-                    $groupQNumbers[] = $qNum;
-                    $groupSlotSeqs[] = $globalSeq;
-                    $globalSeq++;
-                    $idx++;
-                }
-
-                $groups[] = new ToeicGenerationGroup(
-                    groupType: $groupType,
-                    partNumber: $partNum,
-                    groupIndex: $g,
-                    documentCount: null,
-                    questionCount: $qInThisGroup,
-                    questionNumbers: $groupQNumbers,
-                    slotSequences: $groupSlotSeqs,
-                );
-            }
-        } elseif ($partNum === 6) {
-            $qPerGroup = ToeicQuestionValidator::getPart6PassageGroupQuestionCount();
-            $numGroups = (int) ceil($itemCount / $qPerGroup);
-            $idx = 0;
-
-            for ($g = 1; $g <= $numGroups; $g++) {
-                $groupQNumbers = [];
-                $groupSlotSeqs = [];
-                $qInThisGroup = min($qPerGroup, $itemCount - $idx);
-
-                for ($pos = 1; $pos <= $qInThisGroup; $pos++) {
-                    $qNum = $startNum + $idx;
-                    $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                    $slots[] = new ToeicGenerationSlot(
-                        sequence: $globalSeq,
-                        canonicalQuestionNumber: $qNum,
-                        assessmentFamily: AssessmentFamily::Toeic,
-                        assessmentStandardId: $standardId,
-                        standardVersion: $standardVersion,
-                        section: $section,
-                        partNumber: $partNum,
-                        proficiencyTarget: ProficiencyTarget::from($profSequence[$idx]),
-                        difficulty: DifficultyLevel::from($diffSequence[$idx]),
-                        construct: ConstructTaxonomy::from($constructSeq[$idx]),
-                        contentMode: $request->contentMode,
-                        domain: $request->domain,
-                        context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$idx]) : null,
-                        groupType: 'passage',
-                        groupIndex: $g,
-                        positionInGroup: $pos,
-                        seed: $slotSeed,
-                    );
-
-                    $groupQNumbers[] = $qNum;
-                    $groupSlotSeqs[] = $globalSeq;
-                    $globalSeq++;
-                    $idx++;
-                }
-
-                $groups[] = new ToeicGenerationGroup(
-                    groupType: 'passage',
-                    partNumber: $partNum,
-                    groupIndex: $g,
-                    documentCount: 1,
-                    questionCount: $qInThisGroup,
-                    questionNumbers: $groupQNumbers,
-                    slotSequences: $groupSlotSeqs,
-                );
-            }
-        } elseif ($partNum === 7) {
-            // Part 7 single/double/triple group definitions
-            $groupDefs = [
-                ['type' => 'single', 'docs' => 1, 'count' => 2],
-                ['type' => 'single', 'docs' => 1, 'count' => 2],
-                ['type' => 'single', 'docs' => 1, 'count' => 2],
-                ['type' => 'single', 'docs' => 1, 'count' => 2],
-                ['type' => 'single', 'docs' => 1, 'count' => 3],
-                ['type' => 'single', 'docs' => 1, 'count' => 3],
-                ['type' => 'single', 'docs' => 1, 'count' => 3],
-                ['type' => 'single', 'docs' => 1, 'count' => 4],
-                ['type' => 'single', 'docs' => 1, 'count' => 4],
-                ['type' => 'single', 'docs' => 1, 'count' => 4],
-                ['type' => 'double', 'docs' => 2, 'count' => 5],
-                ['type' => 'double', 'docs' => 2, 'count' => 5],
-                ['type' => 'triple', 'docs' => 3, 'count' => 5],
-                ['type' => 'triple', 'docs' => 3, 'count' => 5],
-                ['type' => 'triple', 'docs' => 3, 'count' => 5],
-            ];
-
-            $idx = 0;
-            $gIndex = 1;
-
-            foreach ($groupDefs as $gDef) {
-                if ($idx >= $itemCount) {
-                    break;
-                }
-                $qInThisGroup = min($gDef['count'], $itemCount - $idx);
-                $groupQNumbers = [];
-                $groupSlotSeqs = [];
-
-                for ($pos = 1; $pos <= $qInThisGroup; $pos++) {
-                    $qNum = $startNum + $idx;
-                    $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-
-                    $slots[] = new ToeicGenerationSlot(
-                        sequence: $globalSeq,
-                        canonicalQuestionNumber: $qNum,
-                        assessmentFamily: AssessmentFamily::Toeic,
-                        assessmentStandardId: $standardId,
-                        standardVersion: $standardVersion,
-                        section: $section,
-                        partNumber: $partNum,
-                        proficiencyTarget: ProficiencyTarget::from($profSequence[$idx]),
-                        difficulty: DifficultyLevel::from($diffSequence[$idx]),
-                        construct: ConstructTaxonomy::from($constructSeq[$idx]),
-                        contentMode: $request->contentMode,
-                        domain: $request->domain,
-                        context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$idx]) : null,
-                        groupType: $gDef['type'],
-                        groupIndex: $gIndex,
-                        positionInGroup: $pos,
-                        seed: $slotSeed,
-                    );
-
-                    $groupQNumbers[] = $qNum;
-                    $groupSlotSeqs[] = $globalSeq;
-                    $globalSeq++;
-                    $idx++;
-                }
-
-                $groups[] = new ToeicGenerationGroup(
-                    groupType: $gDef['type'],
-                    partNumber: $partNum,
-                    groupIndex: $gIndex,
-                    documentCount: $gDef['docs'],
-                    questionCount: $qInThisGroup,
-                    questionNumbers: $groupQNumbers,
-                    slotSequences: $groupSlotSeqs,
-                );
-                $gIndex++;
-            }
-        }
+        $partResult = $this->planPartSlotsAndGroups(
+            partNum: $partNum,
+            itemCount: $itemCount,
+            globalSeq: $globalSeq,
+            diffSequence: $diffSequence,
+            profSequence: $profSequence,
+            ctxSequence: $ctxSequence,
+            constructDist: $constructDist,
+            standardId: $standardId,
+            standardVersion: $standardVersion,
+            request: $request,
+        );
 
         $sectionCounts = [$section->value => $itemCount];
         $partCounts = [$partNum => $itemCount];
@@ -765,8 +252,8 @@ class ToeicBlueprintPlanner
             difficultyCounts: $difficultyCounts,
             proficiencyCounts: $proficiencyCounts,
             constructCounts: $constructCounts,
-            slots: $slots,
-            groups: $groups,
+            slots: $partResult['slots'],
+            groups: $partResult['groups'],
             request: $request,
         );
 
@@ -776,7 +263,7 @@ class ToeicBlueprintPlanner
     }
 
     /**
-     * Plan a custom batch of selected parts.
+     * Plan a custom batch of selected parts preserving canonical group awareness.
      */
     protected function planCustom(ToeicBlueprintRequest $request, string $standardId, string $standardVersion): ToeicGenerationPlan
     {
@@ -797,12 +284,25 @@ class ToeicBlueprintPlanner
                 throw new InvalidArgumentException("Custom part {$partNum} count {$count} exceeds canonical part limit of {$maxPart}.");
             }
 
+            // Group safe checks
+            if (in_array($partNum, [3, 4], true)) {
+                $qPerG = ToeicQuestionValidator::getAudioGroupQuestionCount();
+                if ($count % $qPerG !== 0) {
+                    throw new InvalidArgumentException("Custom Part {$partNum} item count [{$count}] must be a multiple of {$qPerG} (complete audio groups).");
+                }
+            } elseif ($partNum === 6) {
+                $qPerG = ToeicQuestionValidator::getPart6PassageGroupQuestionCount();
+                if ($count % $qPerG !== 0) {
+                    throw new InvalidArgumentException("Custom Part 6 item count [{$count}] must be a multiple of {$qPerG} (complete passage groups).");
+                }
+            }
+
             $partAllocations[$partNum] = $count;
             $totalSlots += $count;
         }
 
-        if ($totalSlots > 200) {
-            throw new InvalidArgumentException("Custom mode total slots {$totalSlots} cannot exceed 200.");
+        if ($totalSlots > ToeicQuestionValidator::getTotalCanonicalTargetCount()) {
+            throw new InvalidArgumentException("Custom mode total slots {$totalSlots} cannot exceed ".ToeicQuestionValidator::getTotalCanonicalTargetCount().'.');
         }
 
         // Global Distributions
@@ -822,45 +322,30 @@ class ToeicBlueprintPlanner
             $blueprint = ToeicQuestionValidator::getPartBlueprint($partNum);
             $section = SectionType::from($blueprint['section']);
             $sectionCounts[$section->value] += $count;
-            $startNum = $blueprint['start_number'];
 
             $constructDist = $request->constructDistribution[$partNum] ?? $this->defaultConstructDistributions[$partNum];
-            $constructSeq = $this->allocator->allocateSequence($count, $constructDist, $request->seed !== null ? $request->seed + ($partNum * 17) : null);
             $constructCounts[$partNum] = $this->allocator->allocate($count, $constructDist, $request->seed !== null ? $request->seed + ($partNum * 17) : null);
 
-            for ($i = 0; $i < $count; $i++) {
-                $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
-                $slots[] = new ToeicGenerationSlot(
-                    sequence: $globalSeq,
-                    canonicalQuestionNumber: $startNum + $i,
-                    assessmentFamily: AssessmentFamily::Toeic,
-                    assessmentStandardId: $standardId,
-                    standardVersion: $standardVersion,
-                    section: $section,
-                    partNumber: $partNum,
-                    proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
-                    difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
-                    construct: ConstructTaxonomy::from($constructSeq[$i]),
-                    contentMode: $request->contentMode,
-                    domain: $request->domain,
-                    context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
-                    groupType: 'custom_part',
-                    groupIndex: 1,
-                    positionInGroup: $i + 1,
-                    seed: $slotSeed,
-                );
-                $globalSeq++;
-            }
-
-            $groups[] = new ToeicGenerationGroup(
-                groupType: 'custom_part',
-                partNumber: $partNum,
-                groupIndex: 1,
-                documentCount: null,
-                questionCount: $count,
-                questionNumbers: array_map(fn ($idx) => $startNum + $idx, range(0, $count - 1)),
-                slotSequences: array_map(fn ($idx) => ($globalSeq - $count) + $idx, range(0, $count - 1)),
+            // Plan using the exact same canonical group-aware logic
+            $partResult = $this->planPartSlotsAndGroups(
+                partNum: $partNum,
+                itemCount: $count,
+                globalSeq: $globalSeq,
+                diffSequence: $diffSequence,
+                profSequence: $profSequence,
+                ctxSequence: $ctxSequence,
+                constructDist: $constructDist,
+                standardId: $standardId,
+                standardVersion: $standardVersion,
+                request: $request,
             );
+
+            foreach ($partResult['slots'] as $slot) {
+                $slots[] = $slot;
+            }
+            foreach ($partResult['groups'] as $group) {
+                $groups[] = $group;
+            }
         }
 
         $difficultyCounts = $this->allocator->allocate($totalSlots, $request->difficultyDistribution, $request->seed !== null ? $request->seed + 100 : null);
@@ -888,6 +373,314 @@ class ToeicBlueprintPlanner
         $this->validator->validate($plan);
 
         return $plan;
+    }
+
+    /**
+     * Unified group-aware slot and group generation helper for all modes.
+     *
+     * @param  array<string|int, int|float>  $diffSequence
+     * @param  array<string|int, int|float>  $profSequence
+     * @param  array<string|int, int|float>|null  $ctxSequence
+     * @param  array<string, int|float>  $constructDist
+     * @return array{slots: list<ToeicGenerationSlot>, groups: list<ToeicGenerationGroup>}
+     */
+    protected function planPartSlotsAndGroups(
+        int $partNum,
+        int $itemCount,
+        int &$globalSeq,
+        array $diffSequence,
+        array $profSequence,
+        ?array $ctxSequence,
+        array $constructDist,
+        string $standardId,
+        string $standardVersion,
+        ToeicBlueprintRequest $request,
+    ): array {
+        $blueprint = ToeicQuestionValidator::getPartBlueprint($partNum);
+        $section = SectionType::from($blueprint['section']);
+        $startNum = $blueprint['start_number'];
+
+        $constructSeq = $this->allocator->allocateSequence($itemCount, $constructDist, $request->seed !== null ? $request->seed + ($partNum * 17) : null);
+
+        $slots = [];
+        $groups = [];
+
+        if ($partNum === 1 || $partNum === 2 || $partNum === 5) {
+            // Standalone Questions
+            for ($i = 0; $i < $itemCount; $i++) {
+                $qNum = $startNum + $i;
+                $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
+
+                $slots[] = new ToeicGenerationSlot(
+                    sequence: $globalSeq,
+                    canonicalQuestionNumber: $qNum,
+                    assessmentFamily: AssessmentFamily::Toeic,
+                    assessmentStandardId: $standardId,
+                    standardVersion: $standardVersion,
+                    section: $section,
+                    partNumber: $partNum,
+                    proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
+                    difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
+                    construct: ConstructTaxonomy::from($constructSeq[$i]),
+                    contentMode: $request->contentMode,
+                    domain: $request->domain,
+                    context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
+                    groupType: 'standalone',
+                    groupIndex: null,
+                    positionInGroup: null,
+                    seed: $slotSeed,
+                );
+                $globalSeq++;
+            }
+        } elseif ($partNum === 3 || $partNum === 4) {
+            // Audio Groups (3 questions per dialogue/talk)
+            $qPerGroup = ToeicQuestionValidator::getAudioGroupQuestionCount();
+            $groupType = $partNum === 3 ? 'conversation' : 'talk';
+
+            if ($itemCount % $qPerGroup !== 0) {
+                throw new InvalidArgumentException("Part {$partNum} item count [{$itemCount}] must be a multiple of {$qPerGroup} (complete audio groups).");
+            }
+
+            $numGroups = (int) ($itemCount / $qPerGroup);
+            $localQIdx = 0;
+
+            for ($g = 1; $g <= $numGroups; $g++) {
+                $groupQNumbers = [];
+                $groupSlotSeqs = [];
+
+                for ($pos = 1; $pos <= $qPerGroup; $pos++) {
+                    $qNum = $startNum + $localQIdx;
+                    $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
+
+                    $slots[] = new ToeicGenerationSlot(
+                        sequence: $globalSeq,
+                        canonicalQuestionNumber: $qNum,
+                        assessmentFamily: AssessmentFamily::Toeic,
+                        assessmentStandardId: $standardId,
+                        standardVersion: $standardVersion,
+                        section: $section,
+                        partNumber: $partNum,
+                        proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
+                        difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
+                        construct: ConstructTaxonomy::from($constructSeq[$localQIdx]),
+                        contentMode: $request->contentMode,
+                        domain: $request->domain,
+                        context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
+                        groupType: $groupType,
+                        groupIndex: $g,
+                        positionInGroup: $pos,
+                        seed: $slotSeed,
+                    );
+
+                    $groupQNumbers[] = $qNum;
+                    $groupSlotSeqs[] = $globalSeq;
+                    $globalSeq++;
+                    $localQIdx++;
+                }
+
+                $groups[] = new ToeicGenerationGroup(
+                    groupType: $groupType,
+                    partNumber: $partNum,
+                    groupIndex: $g,
+                    documentCount: null,
+                    questionCount: $qPerGroup,
+                    questionNumbers: $groupQNumbers,
+                    slotSequences: $groupSlotSeqs,
+                );
+            }
+        } elseif ($partNum === 6) {
+            // Part 6 Passage Groups (4 questions per passage)
+            $qPerGroup = ToeicQuestionValidator::getPart6PassageGroupQuestionCount();
+
+            if ($itemCount % $qPerGroup !== 0) {
+                throw new InvalidArgumentException("Part 6 item count [{$itemCount}] must be a multiple of {$qPerGroup} (complete passage groups).");
+            }
+
+            $numGroups = (int) ($itemCount / $qPerGroup);
+            $localQIdx = 0;
+
+            for ($g = 1; $g <= $numGroups; $g++) {
+                $groupQNumbers = [];
+                $groupSlotSeqs = [];
+
+                for ($pos = 1; $pos <= $qPerGroup; $pos++) {
+                    $qNum = $startNum + $localQIdx;
+                    $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
+
+                    $slots[] = new ToeicGenerationSlot(
+                        sequence: $globalSeq,
+                        canonicalQuestionNumber: $qNum,
+                        assessmentFamily: AssessmentFamily::Toeic,
+                        assessmentStandardId: $standardId,
+                        standardVersion: $standardVersion,
+                        section: $section,
+                        partNumber: $partNum,
+                        proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
+                        difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
+                        construct: ConstructTaxonomy::from($constructSeq[$localQIdx]),
+                        contentMode: $request->contentMode,
+                        domain: $request->domain,
+                        context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
+                        groupType: 'passage',
+                        groupIndex: $g,
+                        positionInGroup: $pos,
+                        seed: $slotSeed,
+                    );
+
+                    $groupQNumbers[] = $qNum;
+                    $groupSlotSeqs[] = $globalSeq;
+                    $globalSeq++;
+                    $localQIdx++;
+                }
+
+                $groups[] = new ToeicGenerationGroup(
+                    groupType: 'passage',
+                    partNumber: $partNum,
+                    groupIndex: $g,
+                    documentCount: 1,
+                    questionCount: $qPerGroup,
+                    questionNumbers: $groupQNumbers,
+                    slotSequences: $groupSlotSeqs,
+                );
+            }
+        } elseif ($partNum === 7) {
+            // Part 7: Single (10 groups / 29 Q), Double (2 groups / 10 Q), Triple (3 groups / 15 Q)
+            $singleGroupCounts = $this->derivePart7SingleGroupAllocations($request->seed);
+            $groupDefs = [];
+
+            // Single passages (10 groups, 1 doc)
+            foreach ($singleGroupCounts as $cnt) {
+                $groupDefs[] = ['type' => 'single', 'docs' => 1, 'count' => $cnt];
+            }
+
+            // Double passages (2 groups, 2 docs, 5 questions each)
+            $p7Bp = ToeicQuestionValidator::getPart7Blueprint();
+            $doubleGroupCount = $p7Bp['double']['group_count'];
+            $doubleQPerGroup = $p7Bp['double']['questions_per_group'];
+            for ($d = 1; $d <= $doubleGroupCount; $d++) {
+                $groupDefs[] = ['type' => 'double', 'docs' => 2, 'count' => $doubleQPerGroup];
+            }
+
+            // Triple passages (3 groups, 3 docs, 5 questions each)
+            $tripleGroupCount = $p7Bp['triple']['group_count'];
+            $tripleQPerGroup = $p7Bp['triple']['questions_per_group'];
+            for ($t = 1; $t <= $tripleGroupCount; $t++) {
+                $groupDefs[] = ['type' => 'triple', 'docs' => 3, 'count' => $tripleQPerGroup];
+            }
+
+            // Validate that partial itemCount can be cleanly represented as complete passage groups
+            $runningTotal = 0;
+            $validGroupCounts = [];
+            foreach ($groupDefs as $gDef) {
+                $runningTotal += $gDef['count'];
+                $validGroupCounts[] = $runningTotal;
+            }
+
+            if (!in_array($itemCount, $validGroupCounts, true)) {
+                throw new InvalidArgumentException("Part 7 item_count [{$itemCount}] does not align with complete canonical passage groups. Valid complete group counts: ".implode(', ', $validGroupCounts).'.');
+            }
+
+            $localQIdx = 0;
+            $gIndex = 1;
+
+            foreach ($groupDefs as $gDef) {
+                if ($localQIdx >= $itemCount) {
+                    break;
+                }
+
+                $qInThisGroup = $gDef['count'];
+                $groupQNumbers = [];
+                $groupSlotSeqs = [];
+
+                for ($pos = 1; $pos <= $qInThisGroup; $pos++) {
+                    $qNum = $startNum + $localQIdx;
+                    $slotSeed = $request->seed !== null ? $request->seed + $globalSeq : null;
+
+                    $slots[] = new ToeicGenerationSlot(
+                        sequence: $globalSeq,
+                        canonicalQuestionNumber: $qNum,
+                        assessmentFamily: AssessmentFamily::Toeic,
+                        assessmentStandardId: $standardId,
+                        standardVersion: $standardVersion,
+                        section: $section,
+                        partNumber: $partNum,
+                        proficiencyTarget: ProficiencyTarget::from($profSequence[$globalSeq - 1]),
+                        difficulty: DifficultyLevel::from($diffSequence[$globalSeq - 1]),
+                        construct: ConstructTaxonomy::from($constructSeq[$localQIdx]),
+                        contentMode: $request->contentMode,
+                        domain: $request->domain,
+                        context: $ctxSequence !== null ? ContextTaxonomy::from($ctxSequence[$globalSeq - 1]) : null,
+                        groupType: $gDef['type'],
+                        groupIndex: $gIndex,
+                        positionInGroup: $pos,
+                        seed: $slotSeed,
+                    );
+
+                    $groupQNumbers[] = $qNum;
+                    $groupSlotSeqs[] = $globalSeq;
+                    $globalSeq++;
+                    $localQIdx++;
+                }
+
+                $groups[] = new ToeicGenerationGroup(
+                    groupType: $gDef['type'],
+                    partNumber: $partNum,
+                    groupIndex: $gIndex,
+                    documentCount: $gDef['docs'],
+                    questionCount: $qInThisGroup,
+                    questionNumbers: $groupQNumbers,
+                    slotSequences: $groupSlotSeqs,
+                );
+                $gIndex++;
+            }
+        }
+
+        return [
+            'slots' => $slots,
+            'groups' => $groups,
+        ];
+    }
+
+    /**
+     * Deterministic Planner Strategy: derives any valid 29-questions-across-10-groups allocation
+     * satisfying canonical Part 7 Single Passage constraints (min 2, max 4 questions per group).
+     *
+     * @return list<int>
+     */
+    public function derivePart7SingleGroupAllocations(?int $seed = null): array
+    {
+        $p7Bp = ToeicQuestionValidator::getPart7Blueprint();
+        $targetGroups = $p7Bp['single']['group_count']; // 10
+        $targetQuestions = $p7Bp['single']['question_total']; // 29
+        $minQ = $p7Bp['single']['questions_per_group_min']; // 2
+        $maxQ = $p7Bp['single']['questions_per_group_max']; // 4
+
+        // Base allocation: each group starts with minQ (2)
+        $allocations = array_fill(0, $targetGroups, $minQ);
+        $baseTotal = $targetGroups * $minQ; // 20
+        $remainder = $targetQuestions - $baseTotal; // 9
+
+        // Distribute remainder deterministically across groups with max capacity of (maxQ - minQ) = 2 each
+        // Standard deterministic distribution: 4 groups of 2, 3 groups of 3, 3 groups of 4 (4*2 + 3*3 + 3*4 = 8 + 9 + 12 = 29)
+        $extraAllocations = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2];
+
+        // If seed is provided, deterministic permutation of extra allocations using local LCG
+        if ($seed !== null) {
+            $state = ($seed + 777) & 0x7FFFFFFF;
+            for ($i = count($extraAllocations) - 1; $i > 0; $i--) {
+                $state = (1103515245 * $state + 12345) & 0x7FFFFFFF;
+                $j = $state % ($i + 1);
+                $temp = $extraAllocations[$i];
+                $extraAllocations[$i] = $extraAllocations[$j];
+                $extraAllocations[$j] = $temp;
+            }
+        }
+
+        for ($i = 0; $i < $targetGroups; $i++) {
+            $allocations[$i] += $extraAllocations[$i];
+        }
+
+        return $allocations;
     }
 
     /**

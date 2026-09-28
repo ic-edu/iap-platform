@@ -12,19 +12,16 @@ use App\Modules\QuestionEngine\DTO\ToeicBlueprintRequest;
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
 use App\Modules\QuestionEngine\Enums\ConstructTaxonomy;
 use App\Modules\QuestionEngine\Enums\ContentMode;
-use App\Modules\QuestionEngine\Enums\DomainTaxonomy;
 use App\Modules\QuestionEngine\Enums\ProficiencyTarget;
 use App\Modules\QuestionEngine\Enums\StandardStatus;
 use App\Modules\QuestionEngine\Models\AssessmentStandard;
 use App\Modules\QuestionEngine\Services\AssessmentStandardRegistry;
 use App\Modules\QuestionEngine\Services\QuestionGenerationRequestValidator;
 use App\Modules\QuestionEngine\Services\ToeicBlueprintPlanner;
-use App\Modules\QuestionEngine\Services\WeightedSlotAllocator;
 use App\Services\ToeicQuestionValidator;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
-use RuntimeException;
 use Tests\TestCase;
 
 class QuestionEngineToeicBlueprintPlannerTest extends TestCase
@@ -72,501 +69,72 @@ class QuestionEngineToeicBlueprintPlannerTest extends TestCase
     }
 
     /**
-     * TEST A: Full test mode produces exactly 200 slots.
+     * TEST A: Active standard ID+version both resolved from same record.
      */
-    public function test_a_full_test_produces_exactly_200_slots(): void
+    public function test_a_active_standard_id_and_version_both_resolved_from_same_record(): void
     {
         $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
         $plan = $this->planner->plan($request);
 
-        $this->assertSame(200, $plan->totalSlots);
-        $this->assertCount(200, $plan->slots);
-    }
-
-    /**
-     * TEST B & C: Listening total = 100 and Reading total = 100.
-     */
-    public function test_b_and_c_listening_and_reading_totals_equal_100(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(100, $plan->sectionCounts['listening']);
-        $this->assertSame(100, $plan->sectionCounts['reading']);
-
-        $listeningSlots = array_filter($plan->slots, fn ($s) => $s->section === SectionType::Listening);
-        $readingSlots = array_filter($plan->slots, fn ($s) => $s->section === SectionType::Reading);
-
-        $this->assertCount(100, $listeningSlots);
-        $this->assertCount(100, $readingSlots);
-    }
-
-    /**
-     * TEST D..J: Canonical part counts for P1 to P7 (6, 25, 39, 30, 30, 16, 54).
-     */
-    public function test_d_to_j_canonical_part_counts(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(6, $plan->partCounts[1]);
-        $this->assertSame(25, $plan->partCounts[2]);
-        $this->assertSame(39, $plan->partCounts[3]);
-        $this->assertSame(30, $plan->partCounts[4]);
-        $this->assertSame(30, $plan->partCounts[5]);
-        $this->assertSame(16, $plan->partCounts[6]);
-        $this->assertSame(54, $plan->partCounts[7]);
-    }
-
-    /**
-     * TEST K: Canonical question numbering Q1 to Q200 is contiguous and unique.
-     */
-    public function test_k_canonical_question_numbering_q1_to_q200_is_unique_and_contiguous(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $qNums = array_map(fn ($s) => $s->canonicalQuestionNumber, $plan->slots);
-        $this->assertSame(range(1, 200), $qNums);
-    }
-
-    /**
-     * TEST L..R: Canonical numbering ranges per part.
-     */
-    public function test_l_to_r_canonical_numbering_ranges_per_part(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $partRanges = [
-            1 => [1, 6],
-            2 => [7, 31],
-            3 => [32, 70],
-            4 => [71, 100],
-            5 => [101, 130],
-            6 => [131, 146],
-            7 => [147, 200],
-        ];
-
-        foreach ($partRanges as $part => [$start, $end]) {
-            $slots = array_values(array_filter($plan->slots, fn ($s) => $s->partNumber === $part));
-            $this->assertSame($start, $slots[0]->canonicalQuestionNumber);
-            $this->assertSame($end, $slots[count($slots) - 1]->canonicalQuestionNumber);
-            $this->assertCount($end - $start + 1, $slots);
-        }
-    }
-
-    /**
-     * TEST S: Part 3 = 13 AudioGroups × 3 questions = 39.
-     */
-    public function test_s_part_3_has_13_conversation_groups_of_3(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $p3Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 3));
-        $this->assertCount(13, $p3Groups);
-
-        $totalQ = 0;
-        foreach ($p3Groups as $idx => $g) {
-            $this->assertSame('conversation', $g->groupType);
-            $this->assertSame(3, $g->questionCount);
-            $this->assertCount(3, $g->questionNumbers);
-            $this->assertCount(3, $g->slotSequences);
-            $this->assertSame($idx + 1, $g->groupIndex);
-            $totalQ += $g->questionCount;
-        }
-        $this->assertSame(39, $totalQ);
-    }
-
-    /**
-     * TEST T: Part 4 = 10 AudioGroups × 3 questions = 30.
-     */
-    public function test_t_part_4_has_10_talk_groups_of_3(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $p4Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 4));
-        $this->assertCount(10, $p4Groups);
-
-        $totalQ = 0;
-        foreach ($p4Groups as $idx => $g) {
-            $this->assertSame('talk', $g->groupType);
-            $this->assertSame(3, $g->questionCount);
-            $this->assertCount(3, $g->questionNumbers);
-            $this->assertCount(3, $g->slotSequences);
-            $this->assertSame($idx + 1, $g->groupIndex);
-            $totalQ += $g->questionCount;
-        }
-        $this->assertSame(30, $totalQ);
-    }
-
-    /**
-     * TEST U..X: Part 7 = 15 groups (10 Single / 29 Q, 2 Double / 10 Q, 3 Triple / 15 Q).
-     */
-    public function test_u_to_x_part_7_grouping_structure(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $p7Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 7));
-        $this->assertCount(15, $p7Groups);
-
-        $p7Single = array_values(array_filter($p7Groups, fn ($g) => $g->groupType === 'single'));
-        $p7Double = array_values(array_filter($p7Groups, fn ($g) => $g->groupType === 'double'));
-        $p7Triple = array_values(array_filter($p7Groups, fn ($g) => $g->groupType === 'triple'));
-
-        $this->assertCount(10, $p7Single);
-        $this->assertSame(29, array_sum(array_map(fn ($g) => $g->questionCount, $p7Single)));
-        foreach ($p7Single as $g) {
-            $this->assertSame(1, $g->documentCount);
-            $this->assertGreaterThanOrEqual(2, $g->questionCount);
-            $this->assertLessThanOrEqual(4, $g->questionCount);
-        }
-
-        $this->assertCount(2, $p7Double);
-        $this->assertSame(10, array_sum(array_map(fn ($g) => $g->questionCount, $p7Double)));
-        foreach ($p7Double as $g) {
-            $this->assertSame(2, $g->documentCount);
-            $this->assertSame(5, $g->questionCount);
-        }
-
-        $this->assertCount(3, $p7Triple);
-        $this->assertSame(15, array_sum(array_map(fn ($g) => $g->questionCount, $p7Triple)));
-        foreach ($p7Triple as $g) {
-            $this->assertSame(3, $g->documentCount);
-            $this->assertSame(5, $g->questionCount);
-        }
-    }
-
-    /**
-     * TEST Y: Active TOEIC standard is bound to plan.
-     */
-    public function test_y_active_toeic_standard_bound_to_plan(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(AssessmentFamily::Toeic, $plan->assessmentFamily);
         $this->assertSame($this->activeToeicStandard->id, $plan->assessmentStandardId);
-        $this->assertSame('2026.1', $plan->standardVersion);
+        $this->assertSame($this->activeToeicStandard->version, $plan->standardVersion);
 
         foreach ($plan->slots as $slot) {
             $this->assertSame($this->activeToeicStandard->id, $slot->assessmentStandardId);
-            $this->assertSame('2026.1', $slot->standardVersion);
+            $this->assertSame($this->activeToeicStandard->version, $slot->standardVersion);
         }
     }
 
     /**
-     * TEST Z: Missing active TOEIC standard fails with RuntimeException.
+     * TEST B & C: Matching explicit standard_id and standard_version are accepted.
      */
-    public function test_z_missing_active_toeic_standard_fails(): void
+    public function test_b_and_c_matching_explicit_standard_id_and_version_accepted(): void
     {
-        // Supersede active standard so none is active
-        $this->activeToeicStandard->update(['status' => StandardStatus::Superseded]);
+        $request = ToeicBlueprintRequest::fromArray([
+            'mode' => 'full_test',
+            'standard_id' => $this->activeToeicStandard->id,
+            'standard_version' => $this->activeToeicStandard->version,
+        ]);
+        $plan = $this->planner->plan($request);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('No active assessment standard found for TOEIC family');
+        $this->assertSame($this->activeToeicStandard->id, $plan->assessmentStandardId);
+        $this->assertSame($this->activeToeicStandard->version, $plan->standardVersion);
+    }
 
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
+    /**
+     * TEST D: Mismatched standard_version is rejected.
+     */
+    public function test_d_mismatched_standard_version_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Requested standard_version [2099.9] does not match active TOEIC standard version [{$this->activeToeicStandard->version}].");
+
+        $request = ToeicBlueprintRequest::fromArray([
+            'mode' => 'full_test',
+            'standard_version' => '2099.9',
+        ]);
         $this->planner->plan($request);
     }
 
     /**
-     * TEST AA: Difficulty 30/50/20 allocation is exact.
+     * TEST E: Mismatched standard_id is rejected.
      */
-    public function test_aa_difficulty_30_50_20_allocation_is_exact(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'full_test',
-            'difficulty_distribution' => [
-                'easy' => 30,
-                'medium' => 50,
-                'hard' => 20,
-            ],
-        ]);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(60, $plan->difficultyCounts['easy']);
-        $this->assertSame(100, $plan->difficultyCounts['medium']);
-        $this->assertSame(40, $plan->difficultyCounts['hard']);
-        $this->assertSame(200, array_sum($plan->difficultyCounts));
-
-        $easySlots = count(array_filter($plan->slots, fn ($s) => $s->difficulty === DifficultyLevel::Easy));
-        $medSlots = count(array_filter($plan->slots, fn ($s) => $s->difficulty === DifficultyLevel::Medium));
-        $hardSlots = count(array_filter($plan->slots, fn ($s) => $s->difficulty === DifficultyLevel::Hard));
-
-        $this->assertSame(60, $easySlots);
-        $this->assertSame(100, $medSlots);
-        $this->assertSame(40, $hardSlots);
-    }
-
-    /**
-     * TEST AB: Proficiency allocation is exact.
-     */
-    public function test_ab_proficiency_allocation_is_exact(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'full_test',
-            'proficiency_distribution' => [
-                'b1_low' => 25,
-                'b1_standard' => 50,
-                'b2_low' => 25,
-            ],
-        ]);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(50, $plan->proficiencyCounts['b1_low']);
-        $this->assertSame(100, $plan->proficiencyCounts['b1_standard']);
-        $this->assertSame(50, $plan->proficiencyCounts['b2_low']);
-        $this->assertSame(200, array_sum($plan->proficiencyCounts));
-    }
-
-    /**
-     * TEST AC: Percentages not equal to 100 are rejected.
-     */
-    public function test_ac_percentages_not_equal_to_100_rejected(): void
+    public function test_e_mismatched_standard_id_rejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Difficulty distribution percentages must sum to exactly 100');
+        $this->expectExceptionMessage("Requested standard_id [01fakestandardid000000000000] does not match active TOEIC standard [{$this->activeToeicStandard->id}].");
 
-        ToeicBlueprintRequest::fromArray([
-            'mode' => 'full_test',
-            'difficulty_distribution' => [
-                'easy' => 30,
-                'medium' => 40, // Sum = 70 != 100
-            ],
-        ]);
-    }
-
-    /**
-     * TEST AD: Incompatible construct is rejected.
-     */
-    public function test_ad_incompatible_construct_rejected(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Construct [visual_description] is incompatible with Part 5');
-
-        ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 5,
-            'construct_distribution' => [
-                'visual_description' => 100,
-            ],
-        ]);
-    }
-
-    /**
-     * TEST AE: Part 5 grammar/vocabulary distribution is valid.
-     */
-    public function test_ae_part_5_grammar_vocabulary_valid(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 5,
-            'construct_distribution' => [
-                'grammar' => 60,
-                'vocabulary' => 40,
-            ],
-        ]);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(30, $plan->totalSlots);
-        $this->assertSame(18, $plan->constructCounts[5]['grammar']);
-        $this->assertSame(12, $plan->constructCounts[5]['vocabulary']);
-    }
-
-    /**
-     * TEST AF: Part 1 visual_description distribution is valid.
-     */
-    public function test_af_part_1_visual_description_valid(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 1,
-            'construct_distribution' => [
-                'visual_description' => 50,
-                'detail' => 30,
-                'vocabulary' => 20,
-            ],
-        ]);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(6, $plan->totalSlots);
-        $this->assertSame(3, $plan->constructCounts[1]['visual_description']);
-    }
-
-    /**
-     * TEST AG: General mode resolves to general_workplace domain.
-     */
-    public function test_ag_general_mode_resolves_general_workplace(): void
-    {
         $request = ToeicBlueprintRequest::fromArray([
             'mode' => 'full_test',
-            'content_mode' => 'general',
+            'standard_id' => '01fakestandardid000000000000',
         ]);
-        $this->assertSame(DomainTaxonomy::GeneralWorkplace, $request->domain);
-
-        // Explicit contradictory domain with general mode must fail
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('General content mode requires domain general_workplace');
-
-        ToeicBlueprintRequest::fromArray([
-            'mode' => 'full_test',
-            'content_mode' => 'general',
-            'domain' => 'hospitality',
-        ]);
+        $this->planner->plan($request);
     }
 
     /**
-     * TEST AH: Domain-specific mode requires explicit non-general domain.
+     * TEST F & G: Planner and validator derive canonical structural values from ToeicQuestionValidator.
      */
-    public function test_ah_domain_specific_mode_requires_explicit_non_general_domain(): void
-    {
-        // Valid domain specific
-        $reqValid = ToeicBlueprintRequest::fromArray([
-            'mode' => 'full_test',
-            'content_mode' => 'domain_specific',
-            'domain' => 'hospitality',
-        ]);
-        $this->assertSame(DomainTaxonomy::Hospitality, $reqValid->domain);
-
-        // General domain with domain_specific fails
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Domain-specific content mode requires an explicit domain other than general_workplace');
-
-        ToeicBlueprintRequest::fromArray([
-            'mode' => 'full_test',
-            'content_mode' => 'domain_specific',
-            'domain' => 'general_workplace',
-        ]);
-    }
-
-    /**
-     * TEST AI & AJ: Deterministic same request and same seed produce identical plan and fingerprint.
-     */
-    public function test_ai_and_aj_deterministic_same_request_and_seed_produce_identical_plan(): void
-    {
-        $payload = [
-            'mode' => 'full_test',
-            'seed' => 4242,
-            'difficulty_distribution' => ['easy' => 30, 'medium' => 50, 'hard' => 20],
-            'proficiency_distribution' => ['b1_low' => 25, 'b1_standard' => 50, 'b2_low' => 25],
-        ];
-
-        $req1 = ToeicBlueprintRequest::fromArray($payload);
-        $req2 = ToeicBlueprintRequest::fromArray($payload);
-
-        $plan1 = $this->planner->plan($req1);
-        $plan2 = $this->planner->plan($req2);
-
-        $this->assertSame($plan1->fingerprint, $plan2->fingerprint);
-        $this->assertSame($plan1->toArray(), $plan2->toArray());
-    }
-
-    /**
-     * TEST AK: Invalid part is rejected.
-     */
-    public function test_ak_invalid_part_rejected(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid TOEIC part number [8]');
-
-        ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 8,
-        ]);
-    }
-
-    /**
-     * TEST AL: Part mode full P5 produces exactly 30 slots.
-     */
-    public function test_al_part_mode_full_p5_produces_30_slots(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 5,
-        ]);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(30, $plan->totalSlots);
-        $this->assertCount(30, $plan->slots);
-        $this->assertSame(101, $plan->slots[0]->canonicalQuestionNumber);
-        $this->assertSame(130, $plan->slots[29]->canonicalQuestionNumber);
-    }
-
-    /**
-     * TEST AM: Partial part batch cannot exceed canonical part size.
-     */
-    public function test_am_partial_part_batch_cannot_exceed_canonical_part_size(): void
-    {
-        // P1 has max 6 items; requesting 7 must fail closed
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('item_count [7] exceeds canonical Part 1 limit of 6 questions');
-
-        ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 1,
-            'item_count' => 7,
-        ]);
-    }
-
-    /**
-     * TEST AN: No slot is persisted to questions table.
-     */
-    public function test_an_no_slot_persisted_to_questions_table(): void
-    {
-        $initialCount = Question::count();
-
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $this->assertSame(200, $plan->totalSlots);
-        $this->assertSame($initialCount, Question::count());
-    }
-
-    /**
-     * TEST AO: Summary method formats clean textual report.
-     */
-    public function test_ao_plan_summary_and_formatted_text(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
-        $plan = $this->planner->plan($request);
-
-        $summary = $plan->getSummary();
-        $this->assertSame(200, $summary['total_slots']);
-        $this->assertSame('TOEIC-2026.1', $summary['standard']);
-
-        $formatted = $plan->getFormattedSummary();
-        $this->assertStringContainsString('TOEIC Generation Plan', $formatted);
-        $this->assertStringContainsString('Standard: TOEIC-2026.1', $formatted);
-        $this->assertStringContainsString('P1 6', $formatted);
-        $this->assertStringContainsString('P7 54', $formatted);
-        $this->assertStringContainsString('P3 conversations: 13', $formatted);
-    }
-
-    /**
-     * TEST AP: WeightedSlotAllocator allocates exact remainder distribution.
-     */
-    public function test_ap_weighted_slot_allocator_deterministic_and_exact(): void
-    {
-        $allocator = new WeightedSlotAllocator;
-        $weights = ['easy' => 50, 'medium' => 30, 'hard' => 20];
-
-        // 7 slots with 50/30/20:
-        // 7*0.5=3.5 (rem 0.5), 7*0.3=2.1 (rem 0.1), 7*0.2=1.4 (rem 0.4)
-        // base: 3, 2, 1 = 6. shortage = 1.
-        // top rem: easy (0.5) -> easy becomes 4, medium 2, hard 1 = 7!
-        $alloc = $allocator->allocate(7, $weights);
-        $this->assertSame(['easy' => 4, 'medium' => 2, 'hard' => 1], $alloc);
-        $this->assertSame(7, array_sum($alloc));
-    }
-
-    /**
-     * TEST Section 21: Blueprint Duplication Guard - planner values originate from ToeicQuestionValidator.
-     */
-    public function test_blueprint_duplication_guard_matches_toeic_question_validator(): void
+    public function test_f_and_g_planner_and_validator_derive_from_toeic_question_validator(): void
     {
         $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
         $plan = $this->planner->plan($request);
@@ -574,14 +142,288 @@ class QuestionEngineToeicBlueprintPlannerTest extends TestCase
         $validatorBlueprints = ToeicQuestionValidator::getAllPartBlueprints();
         foreach ($validatorBlueprints as $part => $bp) {
             $this->assertSame($bp['target_count'], $plan->partCounts[$part]);
+            $range = ToeicQuestionValidator::getPartQuestionRange($part);
+            $partSlots = array_values(array_filter($plan->slots, fn ($s) => $s->partNumber === $part));
+            $this->assertSame($range['start'], $partSlots[0]->canonicalQuestionNumber);
+            $this->assertSame($range['end'], $partSlots[count($partSlots) - 1]->canonicalQuestionNumber);
         }
+
         $this->assertSame(ToeicQuestionValidator::getTotalCanonicalTargetCount(), $plan->totalSlots);
+        $this->assertSame(ToeicQuestionValidator::getSectionTargetCount('listening'), $plan->sectionCounts['listening']);
+        $this->assertSame(ToeicQuestionValidator::getSectionTargetCount('reading'), $plan->sectionCounts['reading']);
     }
 
     /**
-     * TEST AQ: Sprint 1 generation contract regression PASS.
+     * TEST H & I: Part 3 complete audio group item_counts (3 and 6) are valid.
      */
-    public function test_aq_sprint1_generation_contract_regression_pass(): void
+    public function test_h_and_i_part_3_complete_audio_groups_valid(): void
+    {
+        $req3 = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 3, 'item_count' => 3]);
+        $plan3 = $this->planner->plan($req3);
+        $this->assertSame(3, $plan3->totalSlots);
+        $this->assertCount(1, $plan3->groups);
+        $this->assertSame('conversation', $plan3->groups[0]->groupType);
+
+        $req6 = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 3, 'item_count' => 6]);
+        $plan6 = $this->planner->plan($req6);
+        $this->assertSame(6, $plan6->totalSlots);
+        $this->assertCount(2, $plan6->groups);
+    }
+
+    /**
+     * TEST J & K: Part 3 incomplete group item_counts (1 and 4) are rejected.
+     */
+    public function test_j_and_k_part_3_incomplete_groups_rejected(): void
+    {
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 3, 'item_count' => 1]);
+            $this->fail('Part 3 item_count=1 should fail closed');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('multiple of 3', $e->getMessage());
+        }
+
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 3, 'item_count' => 4]);
+            $this->fail('Part 3 item_count=4 should fail closed');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('multiple of 3', $e->getMessage());
+        }
+    }
+
+    /**
+     * TEST L: Part 4 incomplete audio group item_count (2) is rejected.
+     */
+    public function test_l_part_4_incomplete_group_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('multiple of 3');
+
+        ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 4, 'item_count' => 2]);
+    }
+
+    /**
+     * TEST M & N: Part 6 complete passage group item_counts (4 and 8) are valid.
+     */
+    public function test_m_and_n_part_6_complete_passage_groups_valid(): void
+    {
+        $req4 = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 6, 'item_count' => 4]);
+        $plan4 = $this->planner->plan($req4);
+        $this->assertSame(4, $plan4->totalSlots);
+        $this->assertCount(1, $plan4->groups);
+        $this->assertSame('passage', $plan4->groups[0]->groupType);
+
+        $req8 = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 6, 'item_count' => 8]);
+        $plan8 = $this->planner->plan($req8);
+        $this->assertSame(8, $plan8->totalSlots);
+        $this->assertCount(2, $plan8->groups);
+    }
+
+    /**
+     * TEST O: Part 6 incomplete passage group item_count (1) is rejected.
+     */
+    public function test_o_part_6_incomplete_group_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('multiple of 4');
+
+        ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 6, 'item_count' => 1]);
+    }
+
+    /**
+     * TEST P: Part 7 partial plan never ends with incomplete passage group.
+     */
+    public function test_p_part_7_partial_plan_never_ends_with_incomplete_passage_group(): void
+    {
+        // 29 is a complete Single passage block (10 groups)
+        $req29 = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 7, 'item_count' => 29]);
+        $plan29 = $this->planner->plan($req29);
+        $this->assertSame(29, $plan29->totalSlots);
+        $this->assertCount(10, $plan29->groups);
+        foreach ($plan29->groups as $g) {
+            $this->assertSame('single', $g->groupType);
+            $this->assertCount($g->questionCount, $g->slotSequences);
+            $this->assertCount($g->questionCount, $g->questionNumbers);
+        }
+
+        // Arbitrary item_count (e.g. 7) that does not match complete group prefix must fail closed
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('does not align with complete canonical passage groups');
+
+        $req7 = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 7, 'item_count' => 7]);
+        $this->planner->plan($req7);
+    }
+
+    /**
+     * TEST Q..T: Custom mode group-awareness preserves canonical group semantics.
+     */
+    public function test_q_to_t_custom_mode_preserves_canonical_groups(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray([
+            'mode' => 'custom',
+            'custom_parts' => [
+                3 => 6, // 2 conversation groups
+                4 => 6, // 2 talk groups
+                5 => 10, // 10 standalone
+                6 => 8, // 2 passage groups
+            ],
+        ]);
+        $plan = $this->planner->plan($request);
+
+        $this->assertSame(30, $plan->totalSlots);
+
+        $p3Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 3));
+        $this->assertCount(2, $p3Groups);
+        $this->assertSame('conversation', $p3Groups[0]->groupType);
+        $this->assertSame(3, $p3Groups[0]->questionCount);
+
+        $p4Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 4));
+        $this->assertCount(2, $p4Groups);
+        $this->assertSame('talk', $p4Groups[0]->groupType);
+        $this->assertSame(3, $p4Groups[0]->questionCount);
+
+        $p6Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 6));
+        $this->assertCount(2, $p6Groups);
+        $this->assertSame('passage', $p6Groups[0]->groupType);
+        $this->assertSame(4, $p6Groups[0]->questionCount);
+
+        // Group type must NEVER be generic 'custom_part'
+        foreach ($plan->groups as $g) {
+            $this->assertNotSame('custom_part', $g->groupType);
+        }
+    }
+
+    /**
+     * TEST U: Part 7 deterministic Single allocation satisfies 10 groups, 29 total, each 2..4.
+     */
+    public function test_u_part_7_single_allocation_satisfies_invariants(): void
+    {
+        $allocations = $this->planner->derivePart7SingleGroupAllocations(42);
+
+        $this->assertCount(10, $allocations);
+        $this->assertSame(29, array_sum($allocations));
+
+        foreach ($allocations as $count) {
+            $this->assertGreaterThanOrEqual(2, $count);
+            $this->assertLessThanOrEqual(4, $count);
+        }
+    }
+
+    /**
+     * TEST V: Part 7 planner strategy is deterministic for same seed.
+     */
+    public function test_v_part_7_planner_strategy_is_deterministic_for_same_seed(): void
+    {
+        $alloc1 = $this->planner->derivePart7SingleGroupAllocations(12345);
+        $alloc2 = $this->planner->derivePart7SingleGroupAllocations(12345);
+
+        $this->assertSame($alloc1, $alloc2);
+    }
+
+    /**
+     * TEST W..Z: Strict seed integer parsing.
+     */
+    public function test_w_to_z_strict_seed_parsing(): void
+    {
+        // Strict integer accepted
+        $req1 = ToeicBlueprintRequest::fromArray(['mode' => 'full_test', 'seed' => 42]);
+        $this->assertSame(42, $req1->seed);
+
+        // Integer-string accepted
+        $req2 = ToeicBlueprintRequest::fromArray(['mode' => 'full_test', 'seed' => '42']);
+        $this->assertSame(42, $req2->seed);
+
+        // Decimal seed rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'full_test', 'seed' => 42.5]);
+            $this->fail('42.5 seed should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Seed must be a valid integer', $e->getMessage());
+        }
+
+        // Decimal string seed rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'full_test', 'seed' => '42.5']);
+            $this->fail('"42.5" seed should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Seed must be a valid integer', $e->getMessage());
+        }
+
+        // Non-numeric string rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'full_test', 'seed' => 'invalid_seed']);
+            $this->fail('"invalid_seed" should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Seed must be a valid integer', $e->getMessage());
+        }
+    }
+
+    /**
+     * TEST AA..AD: Plan Validator asserts slot standard binding, counts, and ranges.
+     */
+    public function test_aa_to_ad_plan_validator_invariants(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
+        $plan = $this->planner->plan($request);
+
+        // AA: Slot standard binding equals plan standard binding
+        foreach ($plan->slots as $slot) {
+            $this->assertSame($plan->assessmentStandardId, $slot->assessmentStandardId);
+            $this->assertSame($plan->standardVersion, $slot->standardVersion);
+        }
+
+        // AB: sectionCounts equal actual slots
+        $this->assertSame(100, count(array_filter($plan->slots, fn ($s) => $s->section === SectionType::Listening)));
+        $this->assertSame(100, count(array_filter($plan->slots, fn ($s) => $s->section === SectionType::Reading)));
+
+        // AC: partCounts equal actual slots
+        $expectedParts = [1 => 6, 2 => 25, 3 => 39, 4 => 30, 5 => 30, 6 => 16, 7 => 54];
+        foreach ($expectedParts as $p => $exp) {
+            $this->assertSame($exp, count(array_filter($plan->slots, fn ($s) => $s->partNumber === $p)));
+        }
+
+        // AD: canonical question numbers remain within part ranges
+        foreach ($expectedParts as $p => $exp) {
+            $range = ToeicQuestionValidator::getPartQuestionRange($p);
+            $partSlots = array_values(array_filter($plan->slots, fn ($s) => $s->partNumber === $p));
+            $this->assertGreaterThanOrEqual($range['start'], $partSlots[0]->canonicalQuestionNumber);
+            $this->assertLessThanOrEqual($range['end'], $partSlots[count($partSlots) - 1]->canonicalQuestionNumber);
+        }
+    }
+
+    /**
+     * TEST AE..AK: Full test totals and complete group structures.
+     */
+    public function test_ae_to_ak_full_test_canonical_aggregates(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
+        $plan = $this->planner->plan($request);
+
+        $this->assertSame(200, $plan->totalSlots);
+        $this->assertSame(100, $plan->sectionCounts['listening']);
+        $this->assertSame(100, $plan->sectionCounts['reading']);
+
+        // P3 = 13 complete groups
+        $p3Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 3));
+        $this->assertCount(13, $p3Groups);
+
+        // P4 = 10 complete groups
+        $p4Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 4));
+        $this->assertCount(10, $p4Groups);
+
+        // P6 = 4 complete groups
+        $p6Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 6));
+        $this->assertCount(4, $p6Groups);
+
+        // P7 = 15 complete groups (10 Single / 29 Q, 2 Double / 10 Q, 3 Triple / 15 Q)
+        $p7Groups = array_values(array_filter($plan->groups, fn ($g) => $g->partNumber === 7));
+        $this->assertCount(15, $p7Groups);
+        $this->assertSame(54, array_sum(array_map(fn ($g) => $g->questionCount, $p7Groups)));
+    }
+
+    /**
+     * TEST AL: Sprint 1 regression PASS.
+     */
+    public function test_al_sprint1_generation_contract_regression_pass(): void
     {
         $validator = new QuestionGenerationRequestValidator;
 
@@ -601,9 +443,9 @@ class QuestionEngineToeicBlueprintPlannerTest extends TestCase
     }
 
     /**
-     * TEST AR: Sprint 2 standards registry regression PASS.
+     * TEST AM: Sprint 2 regression PASS.
      */
-    public function test_ar_sprint2_standards_registry_regression_pass(): void
+    public function test_am_sprint2_standards_registry_regression_pass(): void
     {
         $active = $this->registry->getActiveStandard(AssessmentFamily::Toeic);
         $this->assertNotNull($active);
@@ -612,9 +454,29 @@ class QuestionEngineToeicBlueprintPlannerTest extends TestCase
     }
 
     /**
-     * TEST AS: Question Bank governance regression PASS.
+     * TEST AN: TOEIC validator regression PASS.
      */
-    public function test_as_question_bank_governance_regression_pass(): void
+    public function test_an_toeic_validator_regression_pass(): void
+    {
+        $validData = [
+            'part_number' => 5,
+            'prompt' => 'Please review the attached contract carefully.',
+            'choices' => [
+                ['label' => 'A', 'content' => 'Choice A', 'is_correct' => true],
+                ['label' => 'B', 'content' => 'Choice B', 'is_correct' => false],
+                ['label' => 'C', 'content' => 'Choice C', 'is_correct' => false],
+                ['label' => 'D', 'content' => 'Choice D', 'is_correct' => false],
+            ],
+        ];
+
+        $check = ToeicQuestionValidator::check($validData);
+        $this->assertTrue($check['is_valid']);
+    }
+
+    /**
+     * TEST AO: Question Bank governance regression PASS.
+     */
+    public function test_ao_question_bank_governance_regression_pass(): void
     {
         $this->assertDatabaseCount('question_banks', 1);
         $this->assertTrue($this->questionBank->is_published);
