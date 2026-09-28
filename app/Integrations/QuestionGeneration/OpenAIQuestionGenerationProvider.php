@@ -86,25 +86,37 @@ class OpenAIQuestionGenerationProvider implements QuestionGenerationProvider
         // 3. Build Request Payload for OpenAI Responses with Structured Output
         $endpoint = "{$this->baseUrl}/chat/completions";
 
-        $schemaDefinition = $request->promptComposition->schemaDefinition;
-        $jsonSchema = !empty($schemaDefinition) ? $schemaDefinition : [
-            'type' => 'object',
-            'required' => ['schema_version', 'prompt', 'choices', 'correct_answer', 'explanation'],
-            'properties' => [
-                'schema_version' => ['type' => 'string'],
-                'prompt' => ['type' => 'string'],
-                'passage_text' => ['type' => ['string', 'null']],
-                'audio_script' => ['type' => ['string', 'null']],
-                'choices' => ['type' => 'array'],
-                'correct_answer' => ['type' => 'string'],
-                'explanation' => ['type' => 'string'],
-                'metadata' => ['type' => 'object'],
-            ],
-        ];
-
-        // Ensure additionalProperties is false if strict schema is required
-        if (!isset($jsonSchema['additionalProperties'])) {
-            $jsonSchema['additionalProperties'] = false;
+        $jsonSchema = $request->promptComposition->schemaDefinition;
+        if (empty($jsonSchema)) {
+            $jsonSchema = [
+                'type' => 'object',
+                'additionalProperties' => false,
+                'required' => ['schema_version', 'prompt', 'passage_text', 'audio_script', 'choices', 'correct_answer', 'explanation'],
+                'properties' => [
+                    'schema_version' => ['type' => 'string', 'enum' => ['generated_question_candidate_v1']],
+                    'prompt' => ['type' => 'string'],
+                    'passage_text' => ['type' => ['string', 'null']],
+                    'audio_script' => ['type' => ['string', 'null']],
+                    'choices' => [
+                        'type' => 'array',
+                        'minItems' => 4,
+                        'maxItems' => 4,
+                        'items' => [
+                            'type' => 'object',
+                            'additionalProperties' => false,
+                            'required' => ['label', 'content', 'is_correct', 'explanation'],
+                            'properties' => [
+                                'label' => ['type' => 'string', 'enum' => ['A', 'B', 'C', 'D']],
+                                'content' => ['type' => 'string'],
+                                'is_correct' => ['type' => 'boolean'],
+                                'explanation' => ['type' => ['string', 'null']],
+                            ],
+                        ],
+                    ],
+                    'correct_answer' => ['type' => 'string', 'enum' => ['A', 'B', 'C', 'D']],
+                    'explanation' => ['type' => 'string'],
+                ],
+            ];
         }
 
         $requestPayload = [

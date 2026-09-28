@@ -138,33 +138,66 @@ USER_PROMPT;
     protected function buildSchemaDefinition(int $part): array
     {
         $choiceCount = $part === 2 ? 3 : 4;
+        $choiceLabels = $part === 2 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
 
         return [
             'type' => 'object',
-            'required' => ['schema_version', 'prompt', 'choices', 'correct_answer', 'explanation'],
+            'additionalProperties' => false,
+            'required' => [
+                'schema_version',
+                'prompt',
+                'passage_text',
+                'audio_script',
+                'choices',
+                'correct_answer',
+                'explanation',
+            ],
             'properties' => [
-                'schema_version' => ['type' => 'string', 'enum' => ['generated_question_candidate_v1']],
-                'prompt' => ['type' => 'string'],
-                'passage_text' => ['type' => ['string', 'null']],
-                'audio_script' => ['type' => ['string', 'null']],
+                'schema_version' => [
+                    'type' => 'string',
+                    'enum' => ['generated_question_candidate_v1'],
+                ],
+                'prompt' => [
+                    'type' => 'string',
+                ],
+                'passage_text' => [
+                    'type' => ['string', 'null'],
+                ],
+                'audio_script' => [
+                    'type' => ['string', 'null'],
+                ],
                 'choices' => [
                     'type' => 'array',
                     'minItems' => $choiceCount,
                     'maxItems' => $choiceCount,
                     'items' => [
                         'type' => 'object',
-                        'required' => ['label', 'content', 'is_correct'],
+                        'additionalProperties' => false,
+                        'required' => ['label', 'content', 'is_correct', 'explanation'],
                         'properties' => [
-                            'label' => ['type' => 'string'],
-                            'content' => ['type' => 'string'],
-                            'is_correct' => ['type' => 'boolean'],
-                            'explanation' => ['type' => ['string', 'null']],
+                            'label' => [
+                                'type' => 'string',
+                                'enum' => $choiceLabels,
+                            ],
+                            'content' => [
+                                'type' => 'string',
+                            ],
+                            'is_correct' => [
+                                'type' => 'boolean',
+                            ],
+                            'explanation' => [
+                                'type' => ['string', 'null'],
+                            ],
                         ],
                     ],
                 ],
-                'correct_answer' => ['type' => 'string'],
-                'explanation' => ['type' => 'string'],
-                'metadata' => ['type' => 'object'],
+                'correct_answer' => [
+                    'type' => 'string',
+                    'enum' => $choiceLabels,
+                ],
+                'explanation' => [
+                    'type' => 'string',
+                ],
             ],
         ];
     }

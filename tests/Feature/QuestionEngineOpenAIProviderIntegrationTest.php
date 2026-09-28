@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Integrations\QuestionGeneration\OpenAIQuestionGenerationProvider;
 use App\Models\User;
+use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionEngine\Contracts\QuestionGenerationProvider;
@@ -882,5 +883,168 @@ class QuestionEngineOpenAIProviderIntegrationTest extends TestCase
         Http::assertSent(function (Request $request) {
             return ($request->data()['model'] ?? '') === 'gpt-4o-2024-08-06';
         });
+    }
+
+    /**
+     * Test Sprint 7A.2 Strict JSON Schema Compliance for Part 5 (Requirements A through L)
+     */
+    public function test_part5_schema_strict_json_schema_compliance_and_provenance(): void
+    {
+        $composer = new ToeicPromptComposer;
+        $req = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($req);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $item = $batch->items->first();
+
+        // 1. Compose PromptComposition from production composer
+        $composition = $composer->compose($item);
+        $schema = $composition->schemaDefinition;
+
+        // A, B, C, D: Recursive Strict Schema Verification on PromptComposition
+        $this->assertOpenAiStrictSchemaCompliant($schema);
+
+        // Assert specific root requirements
+        $this->assertSame('object', $schema['type']);
+        $this->assertFalse($schema['additionalProperties']);
+        $this->assertArrayNotHasKey('anyOf', $schema);
+
+        // B: All root properties are required
+        $expectedRootProps = ['schema_version', 'prompt', 'passage_text', 'audio_script', 'choices', 'correct_answer', 'explanation'];
+        sort($expectedRootProps);
+        $actualRootRequired = $schema['required'];
+        sort($actualRootRequired);
+        $this->assertSame($expectedRootProps, $actualRootRequired, 'All root properties must be explicitly in required array.');
+
+        // E: Nullable Part 5 non-applicable fields are valid
+        $this->assertSame(['string', 'null'], $schema['properties']['passage_text']['type']);
+        $this->assertSame(['string', 'null'], $schema['properties']['audio_script']['type']);
+
+        // Assert choices structure
+        $choicesSchema = $schema['properties']['choices'];
+        $this->assertSame('array', $choicesSchema['type']);
+        $this->assertSame(4, $choicesSchema['minItems']);
+        $this->assertSame(4, $choicesSchema['maxItems']);
+
+        // C, D: All choice properties are required and additionalProperties=false
+        $choiceItemSchema = $choicesSchema['items'];
+        $this->assertSame('object', $choiceItemSchema['type']);
+        $this->assertFalse($choiceItemSchema['additionalProperties']);
+        $expectedChoiceProps = ['content', 'explanation', 'is_correct', 'label'];
+        $actualChoiceRequired = $choiceItemSchema['required'];
+        sort($actualChoiceRequired);
+        $this->assertSame($expectedChoiceProps, $actualChoiceRequired);
+        $this->assertSame(['string', 'null'], $choiceItemSchema['properties']['explanation']['type']);
+
+        // Provider Execution & Request Schema Matching (F, G, H, I, J, K)
+        Http::fake([
+            'https://api.openai.com/v1/*' => Http::response([
+                'id' => 'chatcmpl-strict-test',
+                'model' => 'gpt-4o-mini',
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => json_encode([
+                                'schema_version' => 'generated_question_candidate_v1',
+                                'prompt' => 'The quarterly sales figures _____ substantial growth across all international divisions.',
+                                'passage_text' => null,
+                                'audio_script' => null,
+                                'choices' => [
+                                    ['label' => 'A', 'content' => 'indicate', 'is_correct' => true, 'explanation' => 'Plural verb matches figures.'],
+                                    ['label' => 'B', 'content' => 'indicates', 'is_correct' => false, 'explanation' => 'Singular verb mismatch.'],
+                                    ['label' => 'C', 'content' => 'indication', 'is_correct' => false, 'explanation' => 'Noun cannot occupy verb slot.'],
+                                    ['label' => 'D', 'content' => 'indicative', 'is_correct' => false, 'explanation' => 'Adjective cannot occupy verb slot.'],
+                                ],
+                                'correct_answer' => 'A',
+                                'explanation' => 'The plural subject "figures" requires the plural base verb "indicate".',
+                            ]),
+                        ],
+                    ],
+                ],
+                'usage' => ['prompt_tokens' => 220, 'completion_tokens' => 90, 'total_tokens' => 310],
+            ], 200),
+        ]);
+
+        $provider = new OpenAIQuestionGenerationProvider(apiKey: 'sk-test-strict-schema-key');
+        $orchestrator = new QuestionGenerationOrchestrator(
+            $this->batchFactory,
+            $this->composerResolver,
+            $this->normalizer,
+            $this->qualityGate,
+            $this->materializer,
+            $provider
+        );
+
+        $processedItem = $orchestrator->processItem($item);
+        $this->assertSame(GenerationItemStatus::Materialized, $processedItem->status);
+
+        // F: Provider sends exact PromptComposition schema unchanged (no rewriting)
+        Http::assertSent(function (Request $req) use ($schema) {
+            $data = $req->data();
+            $responseFormat = $data['response_format'] ?? [];
+            $this->assertSame('json_schema', $responseFormat['type'] ?? null);
+            $this->assertTrue($responseFormat['json_schema']['strict'] ?? false);
+            $this->assertSame($schema, $responseFormat['json_schema']['schema']);
+
+            return true;
+        });
+
+        // G: Prompt hash corresponds to exact schema sent
+        $computedHash = $composition->computePromptHash();
+        $this->assertSame($computedHash, $processedItem->prompt_payload['prompt_hash']);
+
+        // H, I: Provider output without metadata recovers structural identity from trusted item
+        $question = Question::find($processedItem->question_id);
+        $this->assertNotNull($question);
+        $this->assertSame(AssessmentFamily::Toeic, $question->assessment_family);
+        $this->assertSame(5, $question->part_number);
+        $this->assertSame(SectionType::Reading, $question->section);
+        $this->assertSame($item->standard_version, $question->standard_version);
+        $this->assertSame(ContentOrigin::Generated, $question->content_origin);
+        $this->assertFalse($question->questionBank->is_published);
+    }
+
+    /**
+     * Recursive validator ensuring strict schema compatibility with OpenAI strict mode.
+     */
+    protected function assertOpenAiStrictSchemaCompliant(array $schema): void
+    {
+        $this->assertArrayNotHasKey('anyOf', $schema, 'Schema must not use anyOf at root.');
+        $this->assertSame('object', $schema['type'] ?? null, 'Root schema type must be object.');
+
+        $this->recursivelyAssertStrictObjectSchema($schema);
+    }
+
+    protected function recursivelyAssertStrictObjectSchema(array $schema): void
+    {
+        if (($schema['type'] ?? null) === 'object' || isset($schema['properties'])) {
+            $this->assertArrayHasKey('additionalProperties', $schema, 'Object schema must declare additionalProperties.');
+            $this->assertFalse($schema['additionalProperties'], 'additionalProperties must be false.');
+
+            $this->assertArrayHasKey('properties', $schema, 'Object schema must declare properties.');
+            $this->assertArrayHasKey('required', $schema, 'Object schema must declare required array.');
+
+            $propertyKeys = array_keys($schema['properties']);
+            $requiredKeys = (array) $schema['required'];
+
+            sort($propertyKeys);
+            sort($requiredKeys);
+
+            $this->assertSame(
+                $propertyKeys,
+                $requiredKeys,
+                'Every field in properties must be listed in required, and vice versa.'
+            );
+
+            foreach ($schema['properties'] as $propName => $propDef) {
+                if (is_array($propDef)) {
+                    $this->recursivelyAssertStrictObjectSchema($propDef);
+                }
+            }
+        }
+
+        if (($schema['type'] ?? null) === 'array' && isset($schema['items']) && is_array($schema['items'])) {
+            $this->recursivelyAssertStrictObjectSchema($schema['items']);
+        }
     }
 }
