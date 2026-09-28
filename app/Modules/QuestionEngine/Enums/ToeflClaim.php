@@ -18,10 +18,10 @@ enum ToeflClaim: string
     public function officialText(): string
     {
         return match ($this) {
-            self::Claim1Reading => 'Process and understand academic and nonacademic written texts for meaning and form across varied formats.',
-            self::Claim2Listening => 'Understand conversational dialogue between two people and extended monologic speech across academic and navigational contexts.',
-            self::Claim3Writing => 'Reconstruct sentence structures with appropriate grammar and write effective responses in academic and interpersonal contexts.',
-            self::Claim4Speaking => 'Speak intelligibly and spontaneously in response to interview questions and repeat spoken sentences accurately.',
+            self::Claim1Reading => 'The test taker can read and understand academic and nonacademic written texts presented in a variety of formats.',
+            self::Claim2Listening => 'The test taker can understand spoken English in academic and social contexts, including single exchanges, short conversations, announcements, and academic talks, in order to identify meaning, purpose, and appropriate responses.',
+            self::Claim3Writing => 'The test taker can produce grammatically accurate and contextually appropriate written English across a range of academic and interpersonal situations, including sentence-level construction, multi-sentence responses, and extended academic discourse.',
+            self::Claim4Speaking => 'The test taker can produce intelligible and coherent spoken English to effectively communicate in both brief and extended interactions across general and academic contexts.',
         };
     }
 

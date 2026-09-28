@@ -39,22 +39,22 @@ enum ToeflSkill: string
             self::ReadingProcessMeaningAndForm => 'Process academic written texts for meaning and form',
             self::ReadingComprehendVariedFormats => 'Read and comprehend information presented in a variety of formats',
             self::ReadingShortNonacademicTexts => 'Understand short nonacademic written texts',
-            self::ReadingAcademicTexts => 'Understand academic text by identifying main ideas, details, relationships, and rhetorical purpose',
+            self::ReadingAcademicTexts => 'Understand academic text by identifying main ideas, key details, inferred meanings, idea relationships, and rhetorical structures',
 
             self::ListeningConversationalDialogue => 'Listen to conversational dialogue between two people',
             self::ListeningSingleExchangeDialogue => 'Understand a single-exchange dialogue between two people',
             self::ListeningShortConversations => 'Understand short conversations between two people',
             self::ListeningExtendedMonologicSpeech => 'Listen to and comprehend extended monologic speech',
-            self::ListeningAnnouncements => 'Understand classroom- and campus-related announcements and instructions',
-            self::ListeningAcademicTalks => 'Understand academic talks and introductory lectures by identifying main ideas and organizational structure',
+            self::ListeningAnnouncements => 'Understand classroom or campus-related announcements',
+            self::ListeningAcademicTalks => 'Understand academic talks, including identifying main and supporting ideas, making inferences, and sometimes interpreting less common or idiomatic vocabulary.',
 
-            self::WritingReconstructSentencesGrammar => 'Reconstruct sentence structures with appropriate grammar and word order',
-            self::WritingEffectiveResponsesAcademicContext => 'Write effective multi-sentence responses to common situations in academic and navigational contexts',
-            self::WritingAcademicDiscussion => 'Write an effective paragraph expressing and supporting an opinion in an online academic discussion',
+            self::WritingReconstructSentencesGrammar => 'Reconstruct a range of sentence structures',
+            self::WritingEffectiveResponsesAcademicContext => 'Write appropriate multi-sentence text',
+            self::WritingAcademicDiscussion => 'Write academic paragraph text that present a clear, well-supported argument using varied grammar and vocabulary',
 
-            self::SpeakingRepeatSpokenSentences => 'Repeat spoken sentences accurately with intelligible pronunciation and rhythm',
-            self::SpeakingSpontaneousInterview => 'Speak spontaneously and meaningfully in response to interview questions',
-            self::SpeakingIntelligibly => 'Speak intelligibly with appropriate pacing, clarity, and coherence',
+            self::SpeakingRepeatSpokenSentences => 'Repeat spoken sentences with accuracy and intelligibility',
+            self::SpeakingSpontaneousInterview => 'Respond to questions with clear, coherent elaboration using accurate grammar, varied vocabulary, and intelligible prosody',
+            self::SpeakingIntelligibly => 'Speak in a way that is intelligible to proficient speakers of English',
         };
     }
 

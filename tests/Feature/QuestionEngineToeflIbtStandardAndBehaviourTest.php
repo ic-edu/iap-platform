@@ -96,7 +96,7 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST C: Every claim has non-empty official_text.
+     * TEST C: Every claim has non-empty official_text, label(), and provenance().
      */
     public function test_c_every_claim_has_non_empty_official_text(): void
     {
@@ -109,55 +109,59 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST D: Claim 1 official text matches canonical stored ETS text.
+     * TEST D: Claim 1 Reading official text matches exact ETS statement.
      */
-    public function test_d_claim_1_official_text_matches_canonical_ets(): void
+    public function test_d_claim_1_reading_official_text_matches_canonical_ets(): void
     {
         $claim = ToeflClaim::Claim1Reading;
         $this->assertSame(
-            'Process and understand academic and nonacademic written texts for meaning and form across varied formats.',
+            'The test taker can read and understand academic and nonacademic written texts presented in a variety of formats.',
             $claim->officialText()
         );
         $this->assertSame('Claim 1 (Reading)', $claim->shortLabel());
+        $this->assertSame('reading', $claim->section());
     }
 
     /**
-     * TEST E: Claim 2 official text matches canonical stored ETS text.
+     * TEST E: Claim 2 Listening official text matches exact ETS statement.
      */
-    public function test_e_claim_2_official_text_matches_canonical_ets(): void
+    public function test_e_claim_2_listening_official_text_matches_canonical_ets(): void
     {
         $claim = ToeflClaim::Claim2Listening;
         $this->assertSame(
-            'Understand conversational dialogue between two people and extended monologic speech across academic and navigational contexts.',
+            'The test taker can understand spoken English in academic and social contexts, including single exchanges, short conversations, announcements, and academic talks, in order to identify meaning, purpose, and appropriate responses.',
             $claim->officialText()
         );
         $this->assertSame('Claim 2 (Listening)', $claim->shortLabel());
+        $this->assertSame('listening', $claim->section());
     }
 
     /**
-     * TEST F: Claim 3 official text matches canonical stored ETS text.
+     * TEST F: Claim 3 Writing official text matches exact ETS statement.
      */
-    public function test_f_claim_3_official_text_matches_canonical_ets(): void
+    public function test_f_claim_3_writing_official_text_matches_canonical_ets(): void
     {
         $claim = ToeflClaim::Claim3Writing;
         $this->assertSame(
-            'Reconstruct sentence structures with appropriate grammar and write effective responses in academic and interpersonal contexts.',
+            'The test taker can produce grammatically accurate and contextually appropriate written English across a range of academic and interpersonal situations, including sentence-level construction, multi-sentence responses, and extended academic discourse.',
             $claim->officialText()
         );
         $this->assertSame('Claim 3 (Writing)', $claim->shortLabel());
+        $this->assertSame('writing', $claim->section());
     }
 
     /**
-     * TEST G: Claim 4 official text matches canonical stored ETS text.
+     * TEST G: Claim 4 Speaking official text matches exact ETS statement.
      */
-    public function test_g_claim_4_official_text_matches_canonical_ets(): void
+    public function test_g_claim_4_speaking_official_text_matches_canonical_ets(): void
     {
         $claim = ToeflClaim::Claim4Speaking;
         $this->assertSame(
-            'Speak intelligibly and spontaneously in response to interview questions and repeat spoken sentences accurately.',
+            'The test taker can produce intelligible and coherent spoken English to effectively communicate in both brief and extended interactions across general and academic contexts.',
             $claim->officialText()
         );
         $this->assertSame('Claim 4 (Speaking)', $claim->shortLabel());
+        $this->assertSame('speaking', $claim->section());
     }
 
     /**
@@ -165,91 +169,188 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
      */
     public function test_h_all_toefl_skills_carry_explicit_provenance(): void
     {
+        $this->assertCount(16, ToeflSkill::cases());
         foreach (ToeflSkill::cases() as $skill) {
             $this->assertSame('official_ets', $skill->provenance());
             $this->assertNotEmpty($skill->officialText());
+            $this->assertSame($skill->officialText(), $skill->label());
             $this->assertNotEmpty($skill->shortLabel());
+            $this->assertNotEmpty($skill->section());
+            $this->assertInstanceOf(ToeflClaim::class, $skill->claim());
         }
     }
 
     /**
-     * TEST I: Academic Passage skill retains complete official meaning.
+     * TEST I: Reading skills official text exact match.
      */
-    public function test_i_academic_passage_skill_retains_complete_official_meaning(): void
+    public function test_i_reading_skills_official_text_exact_match(): void
+    {
+        $this->assertSame(
+            'Process academic written texts for meaning and form',
+            ToeflSkill::ReadingProcessMeaningAndForm->officialText()
+        );
+        $this->assertSame(
+            'Read and comprehend information presented in a variety of formats',
+            ToeflSkill::ReadingComprehendVariedFormats->officialText()
+        );
+        $this->assertSame(
+            'Understand short nonacademic written texts',
+            ToeflSkill::ReadingShortNonacademicTexts->officialText()
+        );
+        $this->assertSame(
+            'Understand academic text by identifying main ideas, key details, inferred meanings, idea relationships, and rhetorical structures',
+            ToeflSkill::ReadingAcademicTexts->officialText()
+        );
+    }
+
+    /**
+     * TEST J: Listening skills official text exact match.
+     */
+    public function test_j_listening_skills_official_text_exact_match(): void
+    {
+        $this->assertSame(
+            'Listen to conversational dialogue between two people',
+            ToeflSkill::ListeningConversationalDialogue->officialText()
+        );
+        $this->assertSame(
+            'Understand a single-exchange dialogue between two people',
+            ToeflSkill::ListeningSingleExchangeDialogue->officialText()
+        );
+        $this->assertSame(
+            'Understand short conversations between two people',
+            ToeflSkill::ListeningShortConversations->officialText()
+        );
+        $this->assertSame(
+            'Listen to and comprehend extended monologic speech',
+            ToeflSkill::ListeningExtendedMonologicSpeech->officialText()
+        );
+        $this->assertSame(
+            'Understand classroom or campus-related announcements',
+            ToeflSkill::ListeningAnnouncements->officialText()
+        );
+        $this->assertSame(
+            'Understand academic talks, including identifying main and supporting ideas, making inferences, and sometimes interpreting less common or idiomatic vocabulary.',
+            ToeflSkill::ListeningAcademicTalks->officialText()
+        );
+    }
+
+    /**
+     * TEST K: Writing skills official text exact match.
+     */
+    public function test_k_writing_skills_official_text_exact_match(): void
+    {
+        $this->assertSame(
+            'Reconstruct a range of sentence structures',
+            ToeflSkill::WritingReconstructSentencesGrammar->officialText()
+        );
+        $this->assertSame(
+            'Write appropriate multi-sentence text',
+            ToeflSkill::WritingEffectiveResponsesAcademicContext->officialText()
+        );
+        $this->assertSame(
+            'Write academic paragraph text that present a clear, well-supported argument using varied grammar and vocabulary',
+            ToeflSkill::WritingAcademicDiscussion->officialText()
+        );
+    }
+
+    /**
+     * TEST L: Speaking skills official text exact match.
+     */
+    public function test_l_speaking_skills_official_text_exact_match(): void
+    {
+        $this->assertSame(
+            'Repeat spoken sentences with accuracy and intelligibility',
+            ToeflSkill::SpeakingRepeatSpokenSentences->officialText()
+        );
+        $this->assertSame(
+            'Respond to questions with clear, coherent elaboration using accurate grammar, varied vocabulary, and intelligible prosody',
+            ToeflSkill::SpeakingSpontaneousInterview->officialText()
+        );
+        $this->assertSame(
+            'Speak in a way that is intelligible to proficient speakers of English',
+            ToeflSkill::SpeakingIntelligibly->officialText()
+        );
+    }
+
+    /**
+     * TEST M: Academic Passage skill exact statements.
+     */
+    public function test_m_academic_passage_skill_exact_statements(): void
     {
         $skill = ToeflSkill::ReadingAcademicTexts;
-        $text = $skill->officialText();
-        $this->assertStringContainsString('main ideas', $text);
-        $this->assertStringContainsString('details', $text);
-        $this->assertStringContainsString('relationships', $text);
-        $this->assertStringContainsString('rhetorical purpose', $text);
+        $this->assertSame(
+            'Understand academic text by identifying main ideas, key details, inferred meanings, idea relationships, and rhetorical structures',
+            $skill->officialText()
+        );
     }
 
     /**
-     * TEST J: Conversation subskill identifies two-person conversation.
+     * TEST N: Conversational dialogue skills exact statements.
      */
-    public function test_j_conversation_subskill_identifies_two_person_conversation(): void
+    public function test_n_conversational_dialogue_skills_exact_statements(): void
     {
         $skill1 = ToeflSkill::ListeningSingleExchangeDialogue;
-        $this->assertStringContainsString('two people', $skill1->officialText());
+        $this->assertSame('Understand a single-exchange dialogue between two people', $skill1->officialText());
 
         $skill2 = ToeflSkill::ListeningShortConversations;
-        $this->assertStringContainsString('two people', $skill2->officialText());
+        $this->assertSame('Understand short conversations between two people', $skill2->officialText());
     }
 
     /**
-     * TEST K: Announcement skill uses classroom/campus-related semantics.
+     * TEST O: Announcement and academic talk skills exact statements.
      */
-    public function test_k_announcement_skill_uses_campus_related_semantics(): void
+    public function test_o_announcement_and_talk_skills_exact_statements(): void
     {
-        $skill = ToeflSkill::ListeningAnnouncements;
-        $this->assertStringContainsString('classroom-', $skill->officialText());
-        $this->assertStringContainsString('campus-related', $skill->officialText());
+        $announcement = ToeflSkill::ListeningAnnouncements;
+        $this->assertSame('Understand classroom or campus-related announcements', $announcement->officialText());
+
+        $talk = ToeflSkill::ListeningAcademicTalks;
+        $this->assertSame(
+            'Understand academic talks, including identifying main and supporting ideas, making inferences, and sometimes interpreting less common or idiomatic vocabulary.',
+            $talk->officialText()
+        );
     }
 
     /**
-     * TEST L: Write Email skill matches official multi-sentence requirement.
+     * TEST P: Sentence reconstruction and multi-sentence writing skills exact statements.
      */
-    public function test_l_write_email_skill_matches_multi_sentence_requirement(): void
+    public function test_p_sentence_reconstruction_and_multi_sentence_writing_skills_exact_statements(): void
     {
-        $skill = ToeflSkill::WritingEffectiveResponsesAcademicContext;
-        $this->assertStringContainsString('multi-sentence', $skill->officialText());
+        $reconstruct = ToeflSkill::WritingReconstructSentencesGrammar;
+        $this->assertSame('Reconstruct a range of sentence structures', $reconstruct->officialText());
+
+        $email = ToeflSkill::WritingEffectiveResponsesAcademicContext;
+        $this->assertSame('Write appropriate multi-sentence text', $email->officialText());
+
+        $discussion = ToeflSkill::WritingAcademicDiscussion;
+        $this->assertSame(
+            'Write academic paragraph text that present a clear, well-supported argument using varied grammar and vocabulary',
+            $discussion->officialText()
+        );
     }
 
     /**
-     * TEST M: Academic Discussion skill preserves official argument requirement.
+     * TEST Q: Speaking skills exact statements.
      */
-    public function test_m_academic_discussion_skill_preserves_argument_requirement(): void
+    public function test_q_speaking_skills_exact_statements(): void
     {
-        $skill = ToeflSkill::WritingAcademicDiscussion;
-        $this->assertStringContainsString('paragraph', $skill->officialText());
-        $this->assertStringContainsString('supporting an opinion', $skill->officialText());
+        $repeat = ToeflSkill::SpeakingRepeatSpokenSentences;
+        $this->assertSame('Repeat spoken sentences with accuracy and intelligibility', $repeat->officialText());
+
+        $interview = ToeflSkill::SpeakingSpontaneousInterview;
+        $this->assertSame(
+            'Respond to questions with clear, coherent elaboration using accurate grammar, varied vocabulary, and intelligible prosody',
+            $interview->officialText()
+        );
+
+        $intelligibly = ToeflSkill::SpeakingIntelligibly;
+        $this->assertSame('Speak in a way that is intelligible to proficient speakers of English', $intelligibly->officialText());
     }
 
     /**
-     * TEST N: Listen/Repeat skill preserves accuracy/intelligibility requirement.
+     * TEST R: Missing expected skill fails validator.
      */
-    public function test_n_listen_repeat_skill_preserves_accuracy_intelligibility(): void
-    {
-        $skill = ToeflSkill::SpeakingRepeatSpokenSentences;
-        $this->assertStringContainsString('accurately', $skill->officialText());
-        $this->assertStringContainsString('intelligible', $skill->officialText());
-    }
-
-    /**
-     * TEST O: Take Interview skill preserves official response requirement.
-     */
-    public function test_o_take_interview_skill_preserves_official_response(): void
-    {
-        $skill = ToeflSkill::SpeakingSpontaneousInterview;
-        $this->assertStringContainsString('spontaneously', $skill->officialText());
-        $this->assertStringContainsString('interview questions', $skill->officialText());
-    }
-
-    /**
-     * TEST P: Missing expected skill fails validator.
-     */
-    public function test_p_missing_expected_skill_fails_validator(): void
+    public function test_r_missing_expected_skill_fails_validator(): void
     {
         $def = ToeflIbt2026StandardDefinition::getDefinition();
         // Remove ReadingShortNonacademicTexts from read_in_daily_life
@@ -263,9 +364,9 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST Q: Extra unexpected skill fails validator.
+     * TEST S: Extra unexpected skill fails validator.
      */
-    public function test_q_extra_unexpected_skill_fails_validator(): void
+    public function test_s_extra_unexpected_skill_fails_validator(): void
     {
         $def = ToeflIbt2026StandardDefinition::getDefinition();
         // Add an extra skill to complete_the_words
@@ -277,9 +378,9 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST R: Wrong-task skill fails validator.
+     * TEST T: Wrong-task skill fails validator.
      */
-    public function test_r_wrong_task_skill_fails_validator(): void
+    public function test_t_wrong_task_skill_fails_validator(): void
     {
         $def = ToeflIbt2026StandardDefinition::getDefinition();
         // Replace skill for build_a_sentence with speaking skill
@@ -293,9 +394,9 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST S: Exact canonical skill set passes validator.
+     * TEST U: Exact canonical skill set passes validator.
      */
-    public function test_s_exact_canonical_skill_set_passes_validator(): void
+    public function test_u_exact_canonical_skill_set_passes_validator(): void
     {
         $def = ToeflIbt2026StandardDefinition::getDefinition();
         $res = $this->validator->validate($def);
@@ -304,9 +405,9 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST T: source_checked_at differs semantically from effective_from.
+     * TEST V: source_checked_at differs semantically from effective_from.
      */
-    public function test_t_source_checked_at_differs_from_effective_from(): void
+    public function test_v_source_checked_at_differs_from_effective_from(): void
     {
         $def = ToeflIbt2026StandardDefinition::getDefinition();
         $this->assertNotSame($def['effective_from'], $def['source_checked_at']);
@@ -317,9 +418,9 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST U: TOEFL four-claim hierarchy regression PASS.
+     * TEST W: TOEFL four-claim hierarchy regression PASS.
      */
-    public function test_u_toefl_four_claim_hierarchy_regression_pass(): void
+    public function test_w_toefl_four_claim_hierarchy_regression_pass(): void
     {
         $this->assertSame(4, count(ToeflClaim::cases()));
         $this->assertSame(ToeflClaim::Claim1Reading, ToeflTaskType::CompleteTheWords->claim());
@@ -329,9 +430,9 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST V: Reading/Listening adaptive range regression PASS.
+     * TEST X: Reading/Listening adaptive range regression PASS.
      */
-    public function test_v_reading_listening_adaptive_range_regression_pass(): void
+    public function test_x_reading_listening_adaptive_range_regression_pass(): void
     {
         $rSpec = $this->toeflBehaviour->getSectionSpecification('reading');
         $this->assertNull($rSpec->totalItemsMin);
@@ -343,9 +444,9 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST W: Writing/Speaking fixed-count regression PASS.
+     * TEST Y: Writing/Speaking fixed-count regression PASS.
      */
-    public function test_w_writing_speaking_fixed_count_regression_pass(): void
+    public function test_y_writing_speaking_fixed_count_regression_pass(): void
     {
         $wSpec = $this->toeflBehaviour->getSectionSpecification('writing');
         $this->assertSame(12, $wSpec->fixedTotalItems);
@@ -355,9 +456,86 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST X: TOEIC Sprint 1-3 regression PASS.
+     * TEST Z: All sixteen skills mapped to proper claims and sections.
      */
-    public function test_x_toeic_sprint_1_to_3_regression_pass(): void
+    public function test_z_all_sixteen_skills_mapped_to_proper_claims_and_sections(): void
+    {
+        $readingSkills = ToeflSkill::forSection('reading');
+        $this->assertCount(4, $readingSkills);
+        foreach ($readingSkills as $s) {
+            $this->assertSame('reading', $s->section());
+            $this->assertSame(ToeflClaim::Claim1Reading, $s->claim());
+        }
+
+        $listeningSkills = ToeflSkill::forSection('listening');
+        $this->assertCount(6, $listeningSkills);
+        foreach ($listeningSkills as $s) {
+            $this->assertSame('listening', $s->section());
+            $this->assertSame(ToeflClaim::Claim2Listening, $s->claim());
+        }
+
+        $writingSkills = ToeflSkill::forSection('writing');
+        $this->assertCount(3, $writingSkills);
+        foreach ($writingSkills as $s) {
+            $this->assertSame('writing', $s->section());
+            $this->assertSame(ToeflClaim::Claim3Writing, $s->claim());
+        }
+
+        $speakingSkills = ToeflSkill::forSection('speaking');
+        $this->assertCount(3, $speakingSkills);
+        foreach ($speakingSkills as $s) {
+            $this->assertSame('speaking', $s->section());
+            $this->assertSame(ToeflClaim::Claim4Speaking, $s->claim());
+        }
+    }
+
+    /**
+     * TEST AA: Task type to skill mappings integrity.
+     */
+    public function test_aa_task_type_to_skill_mappings_integrity(): void
+    {
+        foreach (ToeflTaskType::cases() as $task) {
+            $skills = $task->skills();
+            $this->assertNotEmpty($skills, "Task {$task->value} must have associated skills");
+            foreach ($skills as $skill) {
+                $this->assertSame(
+                    $task->section(),
+                    $skill->section(),
+                    "Task {$task->value} section must match skill {$skill->value} section"
+                );
+            }
+        }
+    }
+
+    /**
+     * TEST AB: TOEFL standard definition claims and skills metadata.
+     */
+    public function test_ab_toefl_standard_definition_claims_and_skills_metadata(): void
+    {
+        $def = ToeflIbt2026StandardDefinition::getDefinition();
+        $claimsMeta = $def['structure_definition']['claims_metadata'];
+        $skillsMeta = $def['structure_definition']['skills_metadata'];
+
+        $this->assertCount(4, $claimsMeta);
+        $this->assertCount(16, $skillsMeta);
+
+        foreach (ToeflClaim::cases() as $claim) {
+            $this->assertArrayHasKey($claim->value, $claimsMeta);
+            $this->assertSame($claim->officialText(), $claimsMeta[$claim->value]['official_text']);
+            $this->assertSame('official_ets', $claimsMeta[$claim->value]['provenance']);
+        }
+
+        foreach (ToeflSkill::cases() as $skill) {
+            $this->assertArrayHasKey($skill->value, $skillsMeta);
+            $this->assertSame($skill->officialText(), $skillsMeta[$skill->value]['official_text']);
+            $this->assertSame('official_ets', $skillsMeta[$skill->value]['provenance']);
+        }
+    }
+
+    /**
+     * TEST AC: TOEIC Sprint 1 to 3 regression PASS.
+     */
+    public function test_ac_toeic_sprint_1_to_3_regression_pass(): void
     {
         // Sprint 1
         $validator = new QuestionGenerationRequestValidator;
@@ -390,12 +568,60 @@ class QuestionEngineToeflIbtStandardAndBehaviourTest extends TestCase
     }
 
     /**
-     * TEST Y: Question Bank governance PASS.
+     * TEST AD: IELTS and General English behaviours intact.
      */
-    public function test_y_question_bank_governance_pass(): void
+    public function test_ad_ielts_and_general_english_behaviours_intact(): void
+    {
+        $ieltsBehaviour = $this->resolver->resolve(AssessmentFamily::Ielts);
+        $this->assertSame(AssessmentFamily::Ielts, $ieltsBehaviour->family());
+
+        $geBehaviour = $this->resolver->resolve(AssessmentFamily::GeneralEnglish);
+        $this->assertSame(AssessmentFamily::GeneralEnglish, $geBehaviour->family());
+    }
+
+    /**
+     * TEST AE: Question Bank governance PASS.
+     */
+    public function test_ae_question_bank_governance_pass(): void
     {
         $this->assertDatabaseCount('question_banks', 1);
         $this->assertTrue($this->questionBank->is_published);
         $this->assertSame($this->teacher->id, $this->questionBank->created_by);
+    }
+
+    /**
+     * TEST AF: ToeflClaim resolve helper.
+     */
+    public function test_af_toefl_claim_resolve_helper(): void
+    {
+        $this->assertSame(ToeflClaim::Claim1Reading, ToeflClaim::resolve('reading'));
+        $this->assertSame(ToeflClaim::Claim1Reading, ToeflClaim::resolve('claim_1_reading'));
+        $this->assertSame(ToeflClaim::Claim2Listening, ToeflClaim::resolve('listening'));
+        $this->assertSame(ToeflClaim::Claim3Writing, ToeflClaim::resolve('writing'));
+        $this->assertSame(ToeflClaim::Claim4Speaking, ToeflClaim::resolve('speaking'));
+        $this->assertNull(ToeflClaim::resolve('invalid'));
+    }
+
+    /**
+     * TEST AG: ToeflSkill forSection and forClaim helpers.
+     */
+    public function test_ag_toefl_skill_for_section_and_claim_helpers(): void
+    {
+        $this->assertSame(
+            ToeflSkill::forSection('reading'),
+            ToeflSkill::forClaim(ToeflClaim::Claim1Reading)
+        );
+        $this->assertSame(
+            ToeflSkill::forSection('listening'),
+            ToeflSkill::forClaim(ToeflClaim::Claim2Listening)
+        );
+        $this->assertSame(
+            ToeflSkill::forSection('writing'),
+            ToeflSkill::forClaim(ToeflClaim::Claim3Writing)
+        );
+        $this->assertSame(
+            ToeflSkill::forSection('speaking'),
+            ToeflSkill::forClaim(ToeflClaim::Claim4Speaking)
+        );
     }
 }
