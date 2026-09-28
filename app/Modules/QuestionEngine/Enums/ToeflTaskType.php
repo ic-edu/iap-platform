@@ -68,6 +68,78 @@ enum ToeflTaskType: string
         };
     }
 
+    /**
+     * Top-level official psychometric claim for this task type.
+     */
+    public function claim(): ToeflClaim
+    {
+        return ToeflClaim::forSection($this->section());
+    }
+
+    /**
+     * @return list<ToeflClaim>
+     */
+    public function allowedClaims(): array
+    {
+        return [$this->claim()];
+    }
+
+    /**
+     * Official ETS skills and subskills mapped to this task type.
+     *
+     * @return list<ToeflSkill>
+     */
+    public function skills(): array
+    {
+        return match ($this) {
+            self::CompleteTheWords => [
+                ToeflSkill::ReadingProcessMeaningAndForm,
+            ],
+            self::ReadInDailyLife => [
+                ToeflSkill::ReadingComprehendVariedFormats,
+                ToeflSkill::ReadingShortNonacademicTexts,
+            ],
+            self::ReadAnAcademicPassage => [
+                ToeflSkill::ReadingComprehendVariedFormats,
+                ToeflSkill::ReadingAcademicTexts,
+            ],
+            self::ListenAndChooseAResponse => [
+                ToeflSkill::ListeningConversationalDialogue,
+                ToeflSkill::ListeningSingleExchangeDialogue,
+            ],
+            self::ListenToAConversation => [
+                ToeflSkill::ListeningConversationalDialogue,
+                ToeflSkill::ListeningShortConversations,
+            ],
+            self::ListenToAnAnnouncement => [
+                ToeflSkill::ListeningExtendedMonologicSpeech,
+                ToeflSkill::ListeningAnnouncements,
+            ],
+            self::ListenToAnAcademicTalk => [
+                ToeflSkill::ListeningExtendedMonologicSpeech,
+                ToeflSkill::ListeningAcademicTalks,
+            ],
+            self::BuildASentence => [
+                ToeflSkill::WritingReconstructSentencesGrammar,
+            ],
+            self::WriteAnEmail => [
+                ToeflSkill::WritingEffectiveResponsesAcademicContext,
+            ],
+            self::WriteForAnAcademicDiscussion => [
+                ToeflSkill::WritingAcademicDiscussion,
+                ToeflSkill::WritingEffectiveResponsesAcademicContext,
+            ],
+            self::ListenAndRepeat => [
+                ToeflSkill::SpeakingRepeatSpokenSentences,
+                ToeflSkill::SpeakingIntelligibly,
+            ],
+            self::TakeAnInterview => [
+                ToeflSkill::SpeakingSpontaneousInterview,
+                ToeflSkill::SpeakingIntelligibly,
+            ],
+        };
+    }
+
     public function responseMode(): ToeflResponseMode
     {
         return match ($this) {
@@ -156,52 +228,8 @@ enum ToeflTaskType: string
     }
 
     /**
-     * @return list<ToeflClaim>
-     */
-    public function allowedClaims(): array
-    {
-        return match ($this) {
-            self::CompleteTheWords => [
-                ToeflClaim::ReadingAcademicMeaningAndForm,
-            ],
-            self::ReadInDailyLife => [
-                ToeflClaim::ReadingComprehendVariedFormats,
-            ],
-            self::ReadAnAcademicPassage => [
-                ToeflClaim::ReadingComprehendVariedFormats,
-                ToeflClaim::ReadingAcademicComprehension,
-            ],
-            self::ListenAndChooseAResponse,
-            self::ListenToAConversation => [
-                ToeflClaim::ListeningConversationalDialogue,
-            ],
-            self::ListenToAnAnnouncement => [
-                ToeflClaim::ListeningExtendedMonologicSpeech,
-            ],
-            self::ListenToAnAcademicTalk => [
-                ToeflClaim::ListeningExtendedMonologicSpeech,
-                ToeflClaim::ListeningAcademicMonologicSpeech,
-            ],
-            self::BuildASentence => [
-                ToeflClaim::WritingReconstructSentencesGrammar,
-            ],
-            self::WriteAnEmail => [
-                ToeflClaim::WritingEffectiveResponseAcademicContext,
-            ],
-            self::WriteForAnAcademicDiscussion => [
-                ToeflClaim::WritingAcademicDiscussionResponse,
-                ToeflClaim::WritingEffectiveResponseAcademicContext,
-            ],
-            self::ListenAndRepeat => [
-                ToeflClaim::SpeakingRepeatMonologicSpeech,
-            ],
-            self::TakeAnInterview => [
-                ToeflClaim::SpeakingSpontaneousInterviewResponse,
-            ],
-        };
-    }
-
-    /**
+     * Official ETS language use contexts mapped according to the 2026 Test Specification.
+     *
      * @return list<ToeflLanguageUseContext>
      */
     public function allowedLanguageUseContexts(): array
@@ -213,31 +241,16 @@ enum ToeflTaskType: string
             self::WriteForAnAcademicDiscussion => [
                 ToeflLanguageUseContext::Academic,
             ],
-            self::ReadInDailyLife => [
-                ToeflLanguageUseContext::AcademicNavigational,
+            self::ReadInDailyLife,
+            self::ListenAndChooseAResponse,
+            self::ListenToAConversation,
+            self::BuildASentence => [
                 ToeflLanguageUseContext::SocialInterpersonal,
-            ],
-            self::ListenAndChooseAResponse => [
-                ToeflLanguageUseContext::SocialInterpersonal,
-            ],
-            self::ListenToAConversation => [
-                ToeflLanguageUseContext::SocialInterpersonal,
-                ToeflLanguageUseContext::AcademicNavigational,
             ],
             self::ListenToAnAnnouncement,
-            self::WriteAnEmail => [
-                ToeflLanguageUseContext::AcademicNavigational,
-            ],
-            self::BuildASentence => [
-                ToeflLanguageUseContext::Academic,
-                ToeflLanguageUseContext::AcademicNavigational,
-            ],
-            self::ListenAndRepeat => [
-                ToeflLanguageUseContext::Academic,
-                ToeflLanguageUseContext::SocialInterpersonal,
-            ],
+            self::WriteAnEmail,
+            self::ListenAndRepeat,
             self::TakeAnInterview => [
-                ToeflLanguageUseContext::SocialInterpersonal,
                 ToeflLanguageUseContext::AcademicNavigational,
             ],
         };

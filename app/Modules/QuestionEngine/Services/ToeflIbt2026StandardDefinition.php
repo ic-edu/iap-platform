@@ -8,6 +8,7 @@ use App\Modules\QuestionEngine\Enums\ToeflClaim;
 use App\Modules\QuestionEngine\Enums\ToeflLanguageUseContext;
 use App\Modules\QuestionEngine\Enums\ToeflResponseMode;
 use App\Modules\QuestionEngine\Enums\ToeflScoringMode;
+use App\Modules\QuestionEngine\Enums\ToeflSkill;
 use App\Modules\QuestionEngine\Enums\ToeflTaskType;
 
 class ToeflIbt2026StandardDefinition
@@ -20,9 +21,13 @@ class ToeflIbt2026StandardDefinition
 
     public const SOURCE_NAME = 'TOEFL iBT Test: 2026 Update Test Blueprint and Specifications Document';
 
-    public const SOURCE_URL = 'https://www.ets.org/toefl/test-takers/ibt/about/content.html';
+    public const SOURCE_URL = 'https://www.ets.org/pdfs/toefl/toefl-ibt-test-blueprint-2026.pdf';
+
+    public const SECONDARY_SOURCE_URL = 'https://www.ets.org/toefl/test-takers/ibt/about/content.html';
 
     public const EFFECTIVE_FROM = '2026-01-21 00:00:00';
+
+    public const SOURCE_CHECKED_AT = '2026-09-28 12:00:00';
 
     /**
      * Get the authoritative canonical 2026.1 TOEFL iBT AssessmentStandard registration payload.
@@ -34,8 +39,11 @@ class ToeflIbt2026StandardDefinition
         $sections = ['reading', 'listening', 'writing', 'speaking'];
 
         $sectionSpecs = [];
+        $sectionContexts = [];
         foreach ($sections as $section) {
-            $sectionSpecs[$section] = ToeflSectionSpecification::forSection($section)->toArray();
+            $spec = ToeflSectionSpecification::forSection($section);
+            $sectionSpecs[$section] = $spec->toArray();
+            $sectionContexts[$section] = array_map(fn (ToeflLanguageUseContext $c) => $c->value, $spec->supportedLanguageUseContexts);
         }
 
         $sectionTaskMap = [];
@@ -47,13 +55,12 @@ class ToeflIbt2026StandardDefinition
         }
 
         $claimTaskMap = [];
+        $skillTaskMap = [];
         $cefrRanges = [];
         $taskScoringCategories = [];
         foreach (ToeflTaskType::cases() as $task) {
-            $claimTaskMap[$task->value] = array_map(
-                fn (ToeflClaim $c) => $c->value,
-                $task->allowedClaims()
-            );
+            $claimTaskMap[$task->value] = [$task->claim()->value];
+            $skillTaskMap[$task->value] = array_map(fn (ToeflSkill $s) => $s->value, $task->skills());
             $cefrRanges[$task->value] = $task->cefrRange();
             $taskScoringCategories[$task->value] = $task->scoringMode()->value;
         }
@@ -67,19 +74,22 @@ class ToeflIbt2026StandardDefinition
             'effective_from' => self::EFFECTIVE_FROM,
             'source_name' => self::SOURCE_NAME,
             'source_url' => self::SOURCE_URL,
-            'source_checked_at' => self::EFFECTIVE_FROM,
+            'source_checked_at' => self::SOURCE_CHECKED_AT,
             'structure_definition' => [
                 'sections' => $sections,
-                'task_types' => ToeflTaskType::values(),
                 'claims' => ToeflClaim::values(),
+                'skills' => ToeflSkill::values(),
+                'task_types' => ToeflTaskType::values(),
                 'adaptive_sections' => ['reading', 'listening'],
                 'linear_sections' => ['writing', 'speaking'],
                 'language_use_contexts' => ToeflLanguageUseContext::values(),
+                'section_language_use_contexts' => $sectionContexts,
                 'response_modes' => ToeflResponseMode::values(),
                 'scoring_modes' => ToeflScoringMode::values(),
                 'supports_part_numbers' => false,
                 'supports_task_types' => true,
                 'supports_claims' => true,
+                'supports_skills' => true,
             ],
             'blueprint_definition' => [
                 'sections' => $sectionSpecs,
@@ -87,6 +97,7 @@ class ToeflIbt2026StandardDefinition
                     'mode' => 'two_stage_adaptive',
                     'maximum_target_items' => 50,
                     'includes_pretest' => true,
+                    'total_items_min' => null,
                     'tasks' => [
                         'complete_the_words' => ['target_items' => 30, 'cefr' => 'B1-C1+'],
                         'read_in_daily_life' => ['target_items_range' => [5, 15], 'cefr' => 'A1-C1'],
@@ -97,6 +108,7 @@ class ToeflIbt2026StandardDefinition
                     'mode' => 'two_stage_adaptive',
                     'maximum_target_items' => 47,
                     'includes_pretest' => true,
+                    'total_items_min' => null,
                     'tasks' => [
                         'listen_and_choose_a_response' => ['target_items_range' => [15, 19], 'cefr' => 'A1-B2'],
                         'listen_to_a_conversation' => ['target_items' => 10, 'cefr' => 'A2-C1'],
@@ -128,7 +140,9 @@ class ToeflIbt2026StandardDefinition
                 'part_number_allowed' => false,
                 'section_task_compatibility' => $sectionTaskMap,
                 'claim_task_compatibility' => $claimTaskMap,
+                'skill_task_compatibility' => $skillTaskMap,
                 'cefr_target_ranges' => $cefrRanges,
+                'section_language_use_contexts' => $sectionContexts,
                 'language_use_contexts' => ToeflLanguageUseContext::values(),
             ],
             'scoring_definition' => [
@@ -156,6 +170,22 @@ class ToeflIbt2026StandardDefinition
                 'official' => true,
                 'effective_date' => '2026-01-21',
                 'retrieved_version' => self::VERSION,
+                'primary_source' => [
+                    'name' => self::SOURCE_NAME,
+                    'url' => self::SOURCE_URL,
+                    'type' => 'official_specification_pdf',
+                ],
+                'secondary_sources' => [
+                    [
+                        'name' => 'ETS TOEFL iBT Test Content & Structure Page',
+                        'url' => self::SECONDARY_SOURCE_URL,
+                        'type' => 'operational_confirmation',
+                    ],
+                ],
+                'provenance_separation' => [
+                    'official_properties' => ['section', 'task_type', 'claim', 'skills', 'cefr_range', 'language_use_contexts', 'response_mode', 'scoring_mode'],
+                    'iap_derived_properties' => ['stimulus_type', 'stimulus_type_provenance', 'generation_metadata'],
+                ],
                 'notes' => 'Official ETS TOEFL iBT 2026 Update Blueprint & Specification standard.',
             ],
         ];

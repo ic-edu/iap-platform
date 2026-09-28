@@ -4,23 +4,28 @@ namespace App\Modules\QuestionEngine\DTO;
 
 use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\QuestionEngine\Enums\AdaptiveType;
+use App\Modules\QuestionEngine\Enums\ToeflClaim;
+use App\Modules\QuestionEngine\Enums\ToeflLanguageUseContext;
 use App\Modules\QuestionEngine\Enums\ToeflTaskType;
 use InvalidArgumentException;
 
 class ToeflSectionSpecification
 {
     /**
+     * @param  list<ToeflLanguageUseContext>  $supportedLanguageUseContexts
      * @param  array<string, ToeflTaskSpecification>  $taskSpecifications
      * @param  array<string, mixed>  $scoringScale
      * @param  array<string, mixed>  $metadata
      */
     public function __construct(
         public string $section,
+        public ToeflClaim $claim,
         public bool $isAdaptive,
         public AdaptiveType $adaptiveType,
         public ?int $totalItemsMin = null,
         public ?int $totalItemsMax = null,
         public ?int $fixedTotalItems = null,
+        public array $supportedLanguageUseContexts = [],
         public array $taskSpecifications = [],
         public ?AdaptiveSectionSpecification $adaptiveSpecification = null,
         public array $scoringScale = [],
@@ -28,7 +33,7 @@ class ToeflSectionSpecification
     ) {}
 
     /**
-     * Generate canonical specification for a TOEFL section.
+     * Generate canonical specification for a TOEFL section according to official ETS 2026 specs.
      */
     public static function forSection(string|SectionType $section): self
     {
@@ -46,6 +51,8 @@ class ToeflSectionSpecification
             $taskSpecs[$task->value] = ToeflTaskSpecification::forTaskType($task);
         }
 
+        $claim = ToeflClaim::forSection($normalized);
+
         $commonScoring = [
             'score_range' => ['min' => 1.0, 'max' => 6.0],
             'increment' => 0.5,
@@ -56,11 +63,16 @@ class ToeflSectionSpecification
         return match ($normalized) {
             'reading' => new self(
                 section: 'reading',
+                claim: $claim,
                 isAdaptive: true,
                 adaptiveType: AdaptiveType::TwoStage,
-                totalItemsMin: 40,
+                totalItemsMin: null,
                 totalItemsMax: 50,
                 fixedTotalItems: null,
+                supportedLanguageUseContexts: [
+                    ToeflLanguageUseContext::Academic,
+                    ToeflLanguageUseContext::SocialInterpersonal,
+                ],
                 taskSpecifications: $taskSpecs,
                 adaptiveSpecification: AdaptiveSectionSpecification::forSection('reading'),
                 scoringScale: $commonScoring,
@@ -72,11 +84,17 @@ class ToeflSectionSpecification
             ),
             'listening' => new self(
                 section: 'listening',
+                claim: $claim,
                 isAdaptive: true,
                 adaptiveType: AdaptiveType::TwoStage,
-                totalItemsMin: 39,
+                totalItemsMin: null,
                 totalItemsMax: 47,
                 fixedTotalItems: null,
+                supportedLanguageUseContexts: [
+                    ToeflLanguageUseContext::Academic,
+                    ToeflLanguageUseContext::AcademicNavigational,
+                    ToeflLanguageUseContext::SocialInterpersonal,
+                ],
                 taskSpecifications: $taskSpecs,
                 adaptiveSpecification: AdaptiveSectionSpecification::forSection('listening'),
                 scoringScale: $commonScoring,
@@ -88,11 +106,17 @@ class ToeflSectionSpecification
             ),
             'writing' => new self(
                 section: 'writing',
+                claim: $claim,
                 isAdaptive: false,
                 adaptiveType: AdaptiveType::Linear,
                 totalItemsMin: 12,
                 totalItemsMax: 12,
                 fixedTotalItems: 12,
+                supportedLanguageUseContexts: [
+                    ToeflLanguageUseContext::Academic,
+                    ToeflLanguageUseContext::AcademicNavigational,
+                    ToeflLanguageUseContext::SocialInterpersonal,
+                ],
                 taskSpecifications: $taskSpecs,
                 adaptiveSpecification: AdaptiveSectionSpecification::forSection('writing'),
                 scoringScale: $commonScoring,
@@ -104,11 +128,15 @@ class ToeflSectionSpecification
             ),
             'speaking' => new self(
                 section: 'speaking',
+                claim: $claim,
                 isAdaptive: false,
                 adaptiveType: AdaptiveType::Linear,
                 totalItemsMin: 11,
                 totalItemsMax: 11,
                 fixedTotalItems: 11,
+                supportedLanguageUseContexts: [
+                    ToeflLanguageUseContext::AcademicNavigational,
+                ],
                 taskSpecifications: $taskSpecs,
                 adaptiveSpecification: AdaptiveSectionSpecification::forSection('speaking'),
                 scoringScale: $commonScoring,
@@ -129,11 +157,13 @@ class ToeflSectionSpecification
     {
         return [
             'section' => $this->section,
+            'claim' => $this->claim->value,
             'is_adaptive' => $this->isAdaptive,
             'adaptive_type' => $this->adaptiveType->value,
             'total_items_min' => $this->totalItemsMin,
             'total_items_max' => $this->totalItemsMax,
             'fixed_total_items' => $this->fixedTotalItems,
+            'supported_language_use_contexts' => array_map(fn (ToeflLanguageUseContext $ctx) => $ctx->value, $this->supportedLanguageUseContexts),
             'task_specifications' => array_map(fn (ToeflTaskSpecification $s) => $s->toArray(), $this->taskSpecifications),
             'adaptive_specification' => $this->adaptiveSpecification?->toArray(),
             'scoring_scale' => $this->scoringScale,

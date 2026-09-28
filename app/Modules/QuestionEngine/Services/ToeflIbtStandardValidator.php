@@ -4,6 +4,7 @@ namespace App\Modules\QuestionEngine\Services;
 
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
 use App\Modules\QuestionEngine\Enums\ToeflClaim;
+use App\Modules\QuestionEngine\Enums\ToeflSkill;
 use App\Modules\QuestionEngine\Enums\ToeflTaskType;
 use App\Modules\QuestionEngine\Models\AssessmentStandard;
 use InvalidArgumentException;
@@ -38,8 +39,11 @@ class ToeflIbtStandardValidator
         if (empty($data['source_url'])) {
             $errors[] = 'Source URL is required for official ETS standard provenance.';
         }
+        if (empty($data['source_checked_at'])) {
+            $errors[] = 'source_checked_at is required for standard verification provenance.';
+        }
 
-        // 3. Structure Definition Checks
+        // 3. Structure Definition Checks (Sections, 4 Claims, Skills, 12 Tasks)
         $structure = (array) ($data['structure_definition'] ?? []);
         $sections = $structure['sections'] ?? [];
         $expectedSections = ['reading', 'listening', 'writing', 'speaking'];
@@ -52,10 +56,33 @@ class ToeflIbtStandardValidator
             $errors[] = 'TOEFL iBT does not support TOEIC part numbers (supports_part_numbers must be false).';
         }
 
+        // Exactly 4 top-level claims
+        $claims = $structure['claims'] ?? [];
+        $expectedClaims = ToeflClaim::values();
+        if (count($claims) !== 4 || array_diff($expectedClaims, $claims) !== []) {
+            $errors[] = 'Structure definition must contain exactly the 4 official top-level TOEFL claims: claim_1_reading, claim_2_listening, claim_3_writing, claim_4_speaking.';
+        }
+
+        // Canonical 12 task types
         $taskTypes = $structure['task_types'] ?? [];
         $expectedTaskTypes = ToeflTaskType::values();
         if (count($taskTypes) !== 12 || array_diff($expectedTaskTypes, $taskTypes) !== []) {
             $errors[] = 'Structure definition must contain all 12 canonical TOEFL task types.';
+        }
+
+        // Section language use contexts
+        $secContexts = (array) ($structure['section_language_use_contexts'] ?? []);
+        $expectedSecContexts = [
+            'reading' => ['academic', 'social_interpersonal'],
+            'listening' => ['academic', 'academic_navigational', 'social_interpersonal'],
+            'writing' => ['academic', 'academic_navigational', 'social_interpersonal'],
+            'speaking' => ['academic_navigational'],
+        ];
+        foreach ($expectedSecContexts as $sec => $expectedCtx) {
+            $actualCtx = $secContexts[$sec] ?? [];
+            if (array_diff($expectedCtx, $actualCtx) !== [] || array_diff($actualCtx, $expectedCtx) !== []) {
+                $errors[] = "Official language use contexts for section '{$sec}' must be exactly [".implode(', ', $expectedCtx).'].';
+            }
         }
 
         $adaptiveSections = $structure['adaptive_sections'] ?? [];
@@ -83,7 +110,24 @@ class ToeflIbtStandardValidator
             }
         }
 
-        // 5. Blueprint Definition Checks
+        // 5. Claim-Task and Skill-Task Compatibility
+        $claimTaskMap = (array) ($valDef['claim_task_compatibility'] ?? []);
+        $skillTaskMap = (array) ($valDef['skill_task_compatibility'] ?? []);
+        foreach (ToeflTaskType::cases() as $task) {
+            $expectedClaim = $task->claim()->value;
+            $actualClaims = $claimTaskMap[$task->value] ?? [];
+            if ($actualClaims !== [$expectedClaim]) {
+                $errors[] = "Task '{$task->value}' must map to its section claim '{$expectedClaim}'.";
+            }
+
+            $expectedSkills = array_map(fn (ToeflSkill $s) => $s->value, $task->skills());
+            $actualSkills = $skillTaskMap[$task->value] ?? [];
+            if (array_diff($expectedSkills, $actualSkills) !== []) {
+                $errors[] = "Skill compatibility mismatch for task '{$task->value}'.";
+            }
+        }
+
+        // 6. Blueprint Definition Checks (No invented min totals for adaptive sections)
         $blueprint = (array) ($data['blueprint_definition'] ?? []);
 
         // Reading Blueprint
@@ -93,6 +137,9 @@ class ToeflIbtStandardValidator
         }
         if (($readingBp['maximum_target_items'] ?? null) !== 50) {
             $errors[] = 'Reading blueprint maximum target items must be 50.';
+        }
+        if (!empty($readingBp['total_items_min'])) {
+            $errors[] = 'Reading blueprint must not define an invented total_items_min.';
         }
         $rTasks = $readingBp['tasks'] ?? [];
         if (($rTasks['complete_the_words']['target_items'] ?? null) !== 30) {
@@ -112,6 +159,9 @@ class ToeflIbtStandardValidator
         }
         if (($listeningBp['maximum_target_items'] ?? null) !== 47) {
             $errors[] = 'Listening blueprint maximum target items must be 47.';
+        }
+        if (!empty($listeningBp['total_items_min'])) {
+            $errors[] = 'Listening blueprint must not define an invented total_items_min.';
         }
         $lTasks = $listeningBp['tasks'] ?? [];
         if (($lTasks['listen_and_choose_a_response']['target_items_range'] ?? null) !== [15, 19]) {
@@ -160,16 +210,6 @@ class ToeflIbtStandardValidator
         }
         if (($sTasks['take_an_interview']['fixed_items'] ?? null) !== 4) {
             $errors[] = 'Take an Interview fixed items must be 4.';
-        }
-
-        // 6. Claim Task Compatibility
-        $claimTaskMap = (array) ($valDef['claim_task_compatibility'] ?? []);
-        foreach (ToeflTaskType::cases() as $task) {
-            $expectedClaims = array_map(fn (ToeflClaim $c) => $c->value, $task->allowedClaims());
-            $actualClaims = $claimTaskMap[$task->value] ?? [];
-            if (array_diff($expectedClaims, $actualClaims) !== []) {
-                $errors[] = "Claim task compatibility mismatch for task '{$task->value}'.";
-            }
         }
 
         // 7. CEFR Target Ranges
