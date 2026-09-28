@@ -154,6 +154,43 @@ class ToeicQuestionValidator
     }
 
     /**
+     * Get canonical section target question count (100 for listening/reading).
+     */
+    public static function getSectionTargetCount(string|SectionType $section): int
+    {
+        $sec = $section instanceof SectionType ? $section->value : strtolower($section);
+
+        return match ($sec) {
+            'listening', 'reading' => 100,
+            default => 100,
+        };
+    }
+
+    /**
+     * Get canonical AudioGroup question count for Part 3 or Part 4 (3).
+     */
+    public static function getAudioGroupQuestionCount(): int
+    {
+        return 3;
+    }
+
+    /**
+     * Get canonical Part 6 PassageGroup question count (4).
+     */
+    public static function getPart6PassageGroupQuestionCount(): int
+    {
+        return 4;
+    }
+
+    /**
+     * Get canonical Part 6 PassageGroup total count (4 groups).
+     */
+    public static function getPart6PassageGroupCount(): int
+    {
+        return 4;
+    }
+
+    /**
      * Detect canonical TOEIC part number (1..7) from section or question context.
      *
      * @param mixed $section
