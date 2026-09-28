@@ -6,7 +6,11 @@ use App\Modules\QuestionBank\Enums\SectionType;
 use App\Modules\QuestionEngine\Contracts\AssessmentBehaviour;
 use App\Modules\QuestionEngine\DTO\AssessmentCapabilities;
 use App\Modules\QuestionEngine\DTO\AssessmentItemIdentity;
+use App\Modules\QuestionEngine\DTO\ToeflSectionSpecification;
+use App\Modules\QuestionEngine\DTO\ToeflTaskSpecification;
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
+use App\Modules\QuestionEngine\Enums\ToeflClaim;
+use App\Modules\QuestionEngine\Enums\ToeflTaskType;
 use InvalidArgumentException;
 
 class ToeflIbtAssessmentBehaviour implements AssessmentBehaviour
@@ -26,6 +30,11 @@ class ToeflIbtAssessmentBehaviour implements AssessmentBehaviour
         return true;
     }
 
+    public function supportsClaims(): bool
+    {
+        return true;
+    }
+
     public function supportsAdaptiveBlueprint(): bool
     {
         return true;
@@ -36,42 +45,181 @@ class ToeflIbtAssessmentBehaviour implements AssessmentBehaviour
         return false;
     }
 
+    public function supportsCefrTargeting(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function supportedSections(): array
+    {
+        return ['reading', 'listening', 'writing', 'speaking'];
+    }
+
+    /**
+     * @return list<ToeflTaskType>
+     */
+    public function taskTypesForSection(string|SectionType $section): array
+    {
+        return ToeflTaskType::forSection($section);
+    }
+
+    /**
+     * @return list<ToeflClaim>
+     */
+    public function claimsForTaskType(ToeflTaskType|string $taskType): array
+    {
+        $resolved = $taskType instanceof ToeflTaskType ? $taskType : ToeflTaskType::tryFrom((string) $taskType);
+
+        if ($resolved === null) {
+            throw new InvalidArgumentException("Unknown TOEFL task type '{$taskType}'.");
+        }
+
+        return $resolved->allowedClaims();
+    }
+
+    public function isTaskTypeCompatibleWithSection(ToeflTaskType|string $taskType, string|SectionType $section): bool
+    {
+        $resolvedTask = $taskType instanceof ToeflTaskType ? $taskType : ToeflTaskType::tryFrom((string) $taskType);
+        if ($resolvedTask === null) {
+            return false;
+        }
+
+        $secStr = $section instanceof SectionType ? $section->value : strtolower(trim((string) $section));
+
+        return $resolvedTask->section() === $secStr;
+    }
+
+    public function isClaimCompatibleWithTaskType(ToeflClaim|string $claim, ToeflTaskType|string $taskType): bool
+    {
+        $resolvedTask = $taskType instanceof ToeflTaskType ? $taskType : ToeflTaskType::tryFrom((string) $taskType);
+        $resolvedClaim = $claim instanceof ToeflClaim ? $claim : ToeflClaim::tryFrom((string) $claim);
+
+        if ($resolvedTask === null || $resolvedClaim === null) {
+            return false;
+        }
+
+        return in_array($resolvedClaim, $resolvedTask->allowedClaims(), true);
+    }
+
+    public function getTaskSpecification(ToeflTaskType|string $taskType): ToeflTaskSpecification
+    {
+        return ToeflTaskSpecification::forTaskType($taskType);
+    }
+
+    public function getSectionSpecification(string|SectionType $section): ToeflSectionSpecification
+    {
+        return ToeflSectionSpecification::forSection($section);
+    }
+
     public function resolveSection(?int $partNumber = null, ?string $taskType = null, ?string $section = null): ?SectionType
     {
         if ($partNumber !== null) {
             throw new InvalidArgumentException('TOEFL iBT does not support part-number resolution.');
         }
 
+        if ($taskType !== null) {
+            $resolvedTask = ToeflTaskType::tryFrom($taskType);
+            if ($resolvedTask !== null) {
+                return SectionType::tryFrom($resolvedTask->section());
+            }
+        }
+
         if ($section !== null) {
-            return SectionType::tryFrom($section);
+            return SectionType::tryFrom(strtolower(trim($section)));
         }
 
         return null;
     }
 
+    /**
+     * Validate the structural dimensions of a TOEFL item according to official ETS 2026 rules.
+     *
+     * @param  AssessmentItemIdentity|array<string, mixed>  $identity
+     * @return array<string, mixed>
+     *
+     * @throws InvalidArgumentException
+     */
     public function validateStructure(AssessmentItemIdentity|array $identity): array
+    {
+        return $this->validateStructuralIdentity($identity);
+    }
+
+    /**
+     * Canonical structural validation for TOEFL iBT items.
+     *
+     * @param  AssessmentItemIdentity|array<string, mixed>  $identity
+     * @return array<string, mixed>
+     *
+     * @throws InvalidArgumentException
+     */
+    public function validateStructuralIdentity(AssessmentItemIdentity|array $identity): array
     {
         $data = $identity instanceof AssessmentItemIdentity ? $identity->toArray() : $identity;
 
-        if (!empty($data['part_number'])) {
+        // Invariant: part_number must be NULL for TOEFL
+        if (array_key_exists('part_number', $data) && $data['part_number'] !== null) {
             throw new InvalidArgumentException('TOEFL iBT does not support TOEIC part numbers. Structure is section and task-type driven.');
         }
 
-        $sectionRaw = $data['section'] ?? null;
-        if (empty($sectionRaw)) {
-            throw new InvalidArgumentException('TOEFL iBT requires a section identifier (reading, listening, speaking, writing).');
+        $taskTypeObj = null;
+        $taskTypeRaw = $data['task_type'] ?? null;
+        if (!empty($taskTypeRaw)) {
+            $taskTypeObj = $taskTypeRaw instanceof ToeflTaskType ? $taskTypeRaw : ToeflTaskType::tryFrom((string) $taskTypeRaw);
+            if ($taskTypeObj === null) {
+                throw new InvalidArgumentException("Invalid task_type '{$taskTypeRaw}' for TOEFL iBT.");
+            }
         }
 
-        $validSections = ['reading', 'listening', 'speaking', 'writing'];
-        if (!in_array($sectionRaw, $validSections, true)) {
+        $sectionRaw = $data['section'] ?? null;
+        if (empty($sectionRaw) && $taskTypeObj !== null) {
+            $sectionRaw = $taskTypeObj->section();
+        }
+
+        if (empty($sectionRaw)) {
+            throw new InvalidArgumentException('TOEFL iBT requires a section identifier (reading, listening, speaking, writing) or a valid task_type.');
+        }
+
+        $sectionNormalized = strtolower(trim((string) $sectionRaw));
+        if (!in_array($sectionNormalized, $this->supportedSections(), true)) {
             throw new InvalidArgumentException("Invalid section '{$sectionRaw}' for TOEFL iBT.");
+        }
+
+        if ($taskTypeObj !== null && $taskTypeObj->section() !== $sectionNormalized) {
+            throw new InvalidArgumentException("Task type '{$taskTypeObj->value}' belongs to section '{$taskTypeObj->section()}', not '{$sectionNormalized}'.");
+        }
+
+        $claimObj = null;
+        $claimRaw = $data['claim'] ?? null;
+        if (!empty($claimRaw)) {
+            $claimObj = $claimRaw instanceof ToeflClaim ? $claimRaw : ToeflClaim::tryFrom((string) $claimRaw);
+            if ($claimObj === null) {
+                throw new InvalidArgumentException("Invalid claim '{$claimRaw}' for TOEFL iBT.");
+            }
+
+            if ($claimObj->section() !== $sectionNormalized) {
+                throw new InvalidArgumentException("Claim '{$claimObj->value}' belongs to section '{$claimObj->section()}', not '{$sectionNormalized}'.");
+            }
+
+            if ($taskTypeObj !== null && !in_array($claimObj, $taskTypeObj->allowedClaims(), true)) {
+                throw new InvalidArgumentException("Claim '{$claimObj->value}' is not compatible with task type '{$taskTypeObj->value}'.");
+            }
         }
 
         return [
             'assessment_family' => AssessmentFamily::ToeflIbt->value,
-            'section' => $sectionRaw,
-            'task_type' => $data['task_type'] ?? null,
-            'claim' => $data['claim'] ?? null,
+            'assessment_standard_id' => $data['assessment_standard_id'] ?? null,
+            'standard_version' => $data['standard_version'] ?? null,
+            'section' => $sectionNormalized,
+            'part_number' => null,
+            'task_type' => $taskTypeObj?->value,
+            'claim' => $claimObj?->value,
+            'skill' => $data['skill'] ?? null,
+            'proficiency_target' => $data['proficiency_target'] ?? null,
+            'difficulty' => $data['difficulty'] ?? null,
+            'language_use_context' => $data['language_use_context'] ?? null,
         ];
     }
 
@@ -82,9 +230,9 @@ class ToeflIbtAssessmentBehaviour implements AssessmentBehaviour
             'task_type',
             'claim',
             'skill',
-            'construct',
             'proficiency_target',
             'difficulty',
+            'language_use_context',
         ];
     }
 
@@ -98,7 +246,7 @@ class ToeflIbtAssessmentBehaviour implements AssessmentBehaviour
             supportsFixedFullTestBlueprint: false,
             supportsDomainSpecificity: false,
             supportsCefrTargeting: true,
-            supportedSections: ['reading', 'listening', 'speaking', 'writing']
+            supportedSections: $this->supportedSections()
         );
     }
 }

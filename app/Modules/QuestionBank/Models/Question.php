@@ -36,6 +36,9 @@ use Illuminate\Support\Collection;
  * @property string|null $question_text
  * @property SectionType $section
  * @property int|null $part_number
+ * @property string|null $task_type
+ * @property string|null $claim
+ * @property string|null $skill
  * @property QuestionType $question_type
  * @property DifficultyLevel $difficulty
  * @property AssessmentFamily|null $assessment_family
@@ -74,6 +77,9 @@ class Question extends Model
         'prompt',
         'section',
         'part_number',
+        'task_type',
+        'claim',
+        'skill',
         'question_type',
         'difficulty',
         'difficulty_score',
