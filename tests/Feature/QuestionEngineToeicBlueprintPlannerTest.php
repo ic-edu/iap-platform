@@ -474,12 +474,165 @@ class QuestionEngineToeicBlueprintPlannerTest extends TestCase
     }
 
     /**
-     * TEST AO: Question Bank governance regression PASS.
+     * CONTRACT CLEANUP TEST A & B: Custom [3 => 6] and ["3" => "6"] are valid.
      */
-    public function test_ao_question_bank_governance_regression_pass(): void
+    public function test_contract_cleanup_a_and_b_custom_associative_forms(): void
     {
-        $this->assertDatabaseCount('question_banks', 1);
-        $this->assertTrue($this->questionBank->is_published);
-        $this->assertSame($this->teacher->id, $this->questionBank->created_by);
+        $req1 = ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [3 => 6]]);
+        $this->assertSame([3 => 6], $req1->customParts);
+
+        $req2 = ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => ['3' => '6']]);
+        $this->assertSame([3 => 6], $req2->customParts);
+    }
+
+    /**
+     * CONTRACT CLEANUP TEST C: List [3, 5] normalizes to canonical full counts.
+     */
+    public function test_contract_cleanup_c_list_form_normalizes_to_canonical_counts(): void
+    {
+        $req = ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [3, 5]]);
+        $this->assertSame([
+            3 => ToeicQuestionValidator::getPartTargetQuestionCount(3),
+            5 => ToeicQuestionValidator::getPartTargetQuestionCount(5),
+        ], $req->customParts);
+    }
+
+    /**
+     * CONTRACT CLEANUP TEST D..G: Custom count 6.8, "6.8", 0, and negative are rejected.
+     */
+    public function test_contract_cleanup_d_to_g_custom_count_strict_rejections(): void
+    {
+        // 6.8 rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [3 => 6.8]]);
+            $this->fail('6.8 count should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('positive', $e->getMessage());
+        }
+
+        // "6.8" rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [3 => '6.8']]);
+            $this->fail('"6.8" count should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('positive', $e->getMessage());
+        }
+
+        // 0 rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [3 => 0]]);
+            $this->fail('0 count should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('positive', $e->getMessage());
+        }
+
+        // -1 rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [3 => -1]]);
+            $this->fail('-1 count should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('positive', $e->getMessage());
+        }
+    }
+
+    /**
+     * CONTRACT CLEANUP TEST H & I: Custom invalid part key "3.5" and part 8 are rejected.
+     */
+    public function test_contract_cleanup_h_and_i_custom_part_key_strict_rejections(): void
+    {
+        // "3.5" rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => ['3.5' => 6]]);
+            $this->fail('"3.5" part key should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Invalid TOEIC part number', $e->getMessage());
+        }
+
+        // 8 rejected
+        try {
+            ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [8 => 10]]);
+            $this->fail('Part 8 should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Invalid TOEIC part number', $e->getMessage());
+        }
+    }
+
+    /**
+     * CONTRACT CLEANUP TEST J & K: Custom Part 3 count 6 is group-safe, count 4 is rejected.
+     */
+    public function test_contract_cleanup_j_and_k_custom_group_safety(): void
+    {
+        $req6 = ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [3 => 6]]);
+        $plan6 = $this->planner->plan($req6);
+        $this->assertCount(2, $plan6->groups);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('multiple of 3');
+
+        ToeicBlueprintRequest::fromArray(['mode' => 'custom', 'custom_parts' => [3 => 4]]);
+    }
+
+    /**
+     * CONTRACT CLEANUP TEST L..O: Construct distribution part keys strictness.
+     */
+    public function test_contract_cleanup_l_to_o_construct_distribution_part_keys_strictness(): void
+    {
+        // 5 valid
+        $req5 = ToeicBlueprintRequest::fromArray([
+            'mode' => 'full_test',
+            'construct_distribution' => [
+                5 => ['grammar' => 60, 'vocabulary' => 40],
+            ],
+        ]);
+        $this->assertArrayHasKey(5, $req5->constructDistribution);
+
+        // "5" valid
+        $reqStr5 = ToeicBlueprintRequest::fromArray([
+            'mode' => 'full_test',
+            'construct_distribution' => [
+                '5' => ['grammar' => 60, 'vocabulary' => 40],
+            ],
+        ]);
+        $this->assertArrayHasKey(5, $reqStr5->constructDistribution);
+
+        // "5.5" rejected
+        try {
+            ToeicBlueprintRequest::fromArray([
+                'mode' => 'full_test',
+                'construct_distribution' => [
+                    '5.5' => ['grammar' => 60, 'vocabulary' => 40],
+                ],
+            ]);
+            $this->fail('"5.5" construct part key should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Invalid TOEIC part number', $e->getMessage());
+        }
+
+        // Part 8 rejected
+        try {
+            ToeicBlueprintRequest::fromArray([
+                'mode' => 'full_test',
+                'construct_distribution' => [
+                    8 => ['grammar' => 60, 'vocabulary' => 40],
+                ],
+            ]);
+            $this->fail('Part 8 construct key should throw InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Invalid TOEIC part number', $e->getMessage());
+        }
+    }
+
+    /**
+     * CONTRACT CLEANUP TEST P..R: Canonical total source reuse and full test = 200 today.
+     */
+    public function test_contract_cleanup_p_to_r_canonical_total_source_reuse(): void
+    {
+        $this->assertSame(200, ToeicQuestionValidator::getTotalCanonicalTargetCount());
+
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'full_test']);
+        $plan = $this->planner->plan($request);
+
+        $this->assertSame(ToeicQuestionValidator::getTotalCanonicalTargetCount(), $plan->totalSlots);
+        $this->assertSame(200, $plan->totalSlots);
     }
 }

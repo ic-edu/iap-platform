@@ -267,42 +267,15 @@ class ToeicBlueprintPlanner
      */
     protected function planCustom(ToeicBlueprintRequest $request, string $standardId, string $standardVersion): ToeicGenerationPlan
     {
-        $customParts = $request->customParts;
-        if (empty($customParts)) {
+        $partAllocations = $request->customParts;
+        if (empty($partAllocations)) {
             throw new InvalidArgumentException('Custom mode requires custom_parts to be defined.');
         }
 
-        $partAllocations = [];
-        $totalSlots = 0;
-
-        foreach ($customParts as $k => $v) {
-            $partNum = is_int($k) && $k >= 1 && $k <= 7 ? $k : (int) $v;
-            $count = is_int($k) && $k >= 1 && $k <= 7 ? (int) $v : ToeicQuestionValidator::getPartTargetQuestionCount($partNum);
-
-            $maxPart = ToeicQuestionValidator::getPartTargetQuestionCount($partNum);
-            if ($count > $maxPart) {
-                throw new InvalidArgumentException("Custom part {$partNum} count {$count} exceeds canonical part limit of {$maxPart}.");
-            }
-
-            // Group safe checks
-            if (in_array($partNum, [3, 4], true)) {
-                $qPerG = ToeicQuestionValidator::getAudioGroupQuestionCount();
-                if ($count % $qPerG !== 0) {
-                    throw new InvalidArgumentException("Custom Part {$partNum} item count [{$count}] must be a multiple of {$qPerG} (complete audio groups).");
-                }
-            } elseif ($partNum === 6) {
-                $qPerG = ToeicQuestionValidator::getPart6PassageGroupQuestionCount();
-                if ($count % $qPerG !== 0) {
-                    throw new InvalidArgumentException("Custom Part 6 item count [{$count}] must be a multiple of {$qPerG} (complete passage groups).");
-                }
-            }
-
-            $partAllocations[$partNum] = $count;
-            $totalSlots += $count;
-        }
-
-        if ($totalSlots > ToeicQuestionValidator::getTotalCanonicalTargetCount()) {
-            throw new InvalidArgumentException("Custom mode total slots {$totalSlots} cannot exceed ".ToeicQuestionValidator::getTotalCanonicalTargetCount().'.');
+        $totalSlots = array_sum($partAllocations);
+        $canonicalMaxTotal = ToeicQuestionValidator::getTotalCanonicalTargetCount();
+        if ($totalSlots > $canonicalMaxTotal) {
+            throw new InvalidArgumentException("Custom mode total slots {$totalSlots} cannot exceed {$canonicalMaxTotal}.");
         }
 
         // Global Distributions

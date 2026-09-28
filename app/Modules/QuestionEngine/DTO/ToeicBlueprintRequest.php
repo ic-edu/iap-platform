@@ -39,7 +39,7 @@ final class ToeicBlueprintRequest
      * @param  int|null  $seed  Deterministic seed
      * @param  string|null  $standardId  Optional explicit standard ID
      * @param  string|null  $standardVersion  Optional explicit standard version
-     * @param  array<int, int>|list<int>  $customParts  Parts specification for custom mode
+     * @param  array<int, int>  $customParts  Normalized parts specification for custom mode [partNumber => count]
      * @param  array<string, mixed>  $metadata  Additional metadata
      */
     public function __construct(
@@ -78,22 +78,16 @@ final class ToeicBlueprintRequest
     {
         $mode = (string) ($data['mode'] ?? self::MODE_FULL_TEST);
 
-        // Normalize Part Number
+        // Normalize Part Number (Strict Integer Parsing)
         $partNumber = null;
         if (isset($data['part_number']) && $data['part_number'] !== null && $data['part_number'] !== '') {
-            if (!is_int($data['part_number']) && !(is_string($data['part_number']) && ctype_digit($data['part_number']))) {
-                throw new InvalidArgumentException("Part number must be a valid integer, got [{$data['part_number']}].");
-            }
-            $partNumber = (int) $data['part_number'];
+            $partNumber = self::parseStrictPartNumber($data['part_number'], 'part_number');
         }
 
-        // Normalize Item Count
+        // Normalize Item Count (Strict Integer Parsing)
         $itemCount = null;
         if (isset($data['item_count']) && $data['item_count'] !== null && $data['item_count'] !== '') {
-            if (!is_int($data['item_count']) && !(is_string($data['item_count']) && ctype_digit($data['item_count']))) {
-                throw new InvalidArgumentException("Item count must be a valid integer, got [{$data['item_count']}].");
-            }
-            $itemCount = (int) $data['item_count'];
+            $itemCount = self::parseStrictPositiveInteger($data['item_count'], 'item_count');
         }
 
         // Normalize Content Mode
@@ -165,22 +159,19 @@ final class ToeicBlueprintRequest
             $difficultyDistribution[$level->value] = is_numeric($dWeight) ? (float) $dWeight : $dWeight;
         }
 
-        // Normalize Construct Distribution
+        // Normalize Construct Distribution (Strict Part Keys)
         $constructDistribution = null;
         if (!empty($data['construct_distribution']) && is_array($data['construct_distribution'])) {
             $constructDistribution = [];
-            // Check if keyed by part or direct construct map
-            $isPerPart = false;
-            foreach ($data['construct_distribution'] as $k => $v) {
-                if (is_numeric($k) && is_array($v)) {
-                    $isPerPart = true;
-                    break;
-                }
-            }
+            $firstKey = array_key_first($data['construct_distribution']);
+            $isPerPart = is_array($data['construct_distribution'][$firstKey] ?? null);
 
             if ($isPerPart) {
                 foreach ($data['construct_distribution'] as $partKey => $partConstructs) {
-                    $pNum = (int) $partKey;
+                    $pNum = self::parseStrictPartNumber($partKey, 'construct_distribution part key');
+                    if (!is_array($partConstructs)) {
+                        throw new InvalidArgumentException("Construct distribution for Part {$pNum} must be an array.");
+                    }
                     $constructDistribution[$pNum] = [];
                     foreach ($partConstructs as $cKey => $cWeight) {
                         $cKeyStr = $cKey instanceof ConstructTaxonomy ? $cKey->value : (string) $cKey;
@@ -195,7 +186,6 @@ final class ToeicBlueprintRequest
                     }
                 }
             } else {
-                // Direct construct map (applicable for part mode or default)
                 $tempMap = [];
                 foreach ($data['construct_distribution'] as $cKey => $cWeight) {
                     $cKeyStr = $cKey instanceof ConstructTaxonomy ? $cKey->value : (string) $cKey;
@@ -244,7 +234,11 @@ final class ToeicBlueprintRequest
 
         $standardId = isset($data['standard_id']) ? (string) $data['standard_id'] : (isset($data['assessment_standard_id']) ? (string) $data['assessment_standard_id'] : null);
         $standardVersion = isset($data['standard_version']) ? (string) $data['standard_version'] : null;
-        $customParts = isset($data['custom_parts']) && is_array($data['custom_parts']) ? $data['custom_parts'] : [];
+
+        // Normalize custom_parts ONCE strictly
+        $rawCustomParts = isset($data['custom_parts']) && is_array($data['custom_parts']) ? $data['custom_parts'] : [];
+        $customParts = self::normalizeCustomParts($rawCustomParts);
+
         $metadata = isset($data['metadata']) && is_array($data['metadata']) ? $data['metadata'] : [];
 
         return new self(
@@ -263,6 +257,97 @@ final class ToeicBlueprintRequest
             customParts: $customParts,
             metadata: $metadata,
         );
+    }
+
+    /**
+     * Parse strict positive integer.
+     */
+    private static function parseStrictPositiveInteger(mixed $value, string $context): int
+    {
+        if (is_int($value)) {
+            if ($value <= 0) {
+                throw new InvalidArgumentException("{$context} must be positive, got [{$value}].");
+            }
+
+            return $value;
+        }
+
+        if (is_string($value) && preg_match('/^[1-9]\d*$/', trim($value))) {
+            return (int) trim($value);
+        }
+
+        throw new InvalidArgumentException("{$context} must be a valid positive integer, got [".(is_scalar($value) ? (string) $value : gettype($value)).'].');
+    }
+
+    /**
+     * Parse strict TOEIC part number (1..7).
+     */
+    private static function parseStrictPartNumber(mixed $value, string $context): int
+    {
+        if (is_int($value)) {
+            if ($value < 1 || $value > 7) {
+                throw new InvalidArgumentException("Invalid TOEIC part number [{$value}] in {$context}. Must be between 1 and 7.");
+            }
+
+            return $value;
+        }
+
+        if (is_string($value) && preg_match('/^[1-7]$/', trim($value))) {
+            return (int) trim($value);
+        }
+
+        throw new InvalidArgumentException('Invalid TOEIC part number ['.(is_scalar($value) ? (string) $value : gettype($value))."] in {$context}. Must be integer between 1 and 7.");
+    }
+
+    /**
+     * Normalize custom_parts into canonical [part_number => item_count] map.
+     *
+     * @param  array<mixed, mixed>  $customParts
+     * @return array<int, int>
+     */
+    private static function normalizeCustomParts(array $customParts): array
+    {
+        if (empty($customParts)) {
+            return [];
+        }
+
+        $normalized = [];
+        $isList = array_is_list($customParts);
+
+        if ($isList) {
+            foreach ($customParts as $idx => $partVal) {
+                $part = self::parseStrictPartNumber($partVal, "custom_parts index {$idx}");
+                $canonicalCount = ToeicQuestionValidator::getPartTargetQuestionCount($part);
+                $normalized[$part] = $canonicalCount;
+            }
+        } else {
+            foreach ($customParts as $partKey => $countVal) {
+                $part = self::parseStrictPartNumber($partKey, 'custom_parts key');
+                $canonicalMax = ToeicQuestionValidator::getPartTargetQuestionCount($part);
+                $count = self::parseStrictPositiveInteger($countVal, "custom_parts count for Part {$part}");
+
+                if ($count > $canonicalMax) {
+                    throw new InvalidArgumentException("Custom count [{$count}] exceeds canonical Part {$part} limit of {$canonicalMax} questions.");
+                }
+
+                // Group-safe checks for Part 3 & 4
+                if (in_array($part, [3, 4], true)) {
+                    $qPerG = ToeicQuestionValidator::getAudioGroupQuestionCount();
+                    if ($count % $qPerG !== 0) {
+                        throw new InvalidArgumentException("Custom Part {$part} item count [{$count}] must be a multiple of {$qPerG} (complete audio groups).");
+                    }
+                } elseif ($part === 6) {
+                    $qPerG = ToeicQuestionValidator::getPart6PassageGroupQuestionCount();
+                    if ($count % $qPerG !== 0) {
+                        throw new InvalidArgumentException("Custom Part 6 item count [{$count}] must be a multiple of {$qPerG} (complete passage groups).");
+                    }
+                }
+
+                $normalized[$part] = $count;
+            }
+        }
+
+        return $normalized;
     }
 
     /**
@@ -317,29 +402,22 @@ final class ToeicBlueprintRequest
             if ($this->partNumber !== null) {
                 throw new InvalidArgumentException('Full test mode must not specify a part_number.');
             }
-            if ($this->itemCount !== null && $this->itemCount !== 200) {
-                throw new InvalidArgumentException("Full test mode item_count must be exactly 200, got [{$this->itemCount}].");
+            $fullTarget = ToeicQuestionValidator::getTotalCanonicalTargetCount();
+            if ($this->itemCount !== null && $this->itemCount !== $fullTarget) {
+                throw new InvalidArgumentException("Full test mode item_count must be exactly {$fullTarget}, got [{$this->itemCount}].");
             }
         }
 
         // Validate Custom Mode
         if ($this->mode === self::MODE_CUSTOM) {
+            $maxCanonical = ToeicQuestionValidator::getTotalCanonicalTargetCount();
             if (!empty($this->customParts)) {
-                $totalCustom = 0;
-                foreach ($this->customParts as $pNum => $cnt) {
-                    $part = is_numeric($pNum) && !is_int($pNum) ? (int) $pNum : (is_int($pNum) && $pNum >= 1 && $pNum <= 7 ? $pNum : (int) $cnt);
-                    $count = is_int($pNum) && $pNum >= 1 && $pNum <= 7 ? (int) $cnt : ToeicQuestionValidator::getPartTargetQuestionCount($part);
-
-                    if ($part < 1 || $part > 7) {
-                        throw new InvalidArgumentException("Invalid custom part number [{$part}]. Must be between 1 and 7.");
-                    }
-                    $totalCustom += $count;
+                $totalCustom = array_sum($this->customParts);
+                if ($totalCustom > $maxCanonical) {
+                    throw new InvalidArgumentException("Custom mode total item count [{$totalCustom}] cannot exceed {$maxCanonical}.");
                 }
-                if ($totalCustom > 200) {
-                    throw new InvalidArgumentException("Custom mode total item count [{$totalCustom}] cannot exceed 200.");
-                }
-            } elseif ($this->itemCount !== null && $this->itemCount > 200) {
-                throw new InvalidArgumentException("Custom mode item_count [{$this->itemCount}] cannot exceed 200.");
+            } elseif ($this->itemCount !== null && $this->itemCount > $maxCanonical) {
+                throw new InvalidArgumentException("Custom mode item_count [{$this->itemCount}] cannot exceed {$maxCanonical}.");
             }
         }
 
