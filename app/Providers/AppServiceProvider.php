@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Integrations\QuestionGeneration\OpenAIQuestionGenerationProvider;
+use App\Modules\QuestionEngine\Contracts\QuestionGenerationProvider;
+use App\Modules\QuestionEngine\Providers\FakeGenerationProvider;
+use App\Modules\QuestionEngine\Providers\NullGenerationProvider;
 use App\Services\DatabaseSafetyService;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +19,25 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            QuestionGenerationProvider::class,
+            function ($app) {
+                $providerKey = strtolower((string) config('question_generation.provider', 'null'));
+
+                return match ($providerKey) {
+                    'openai' => new OpenAIQuestionGenerationProvider(
+                        apiKey: config('question_generation.openai.api_key'),
+                        model: config('question_generation.openai.model'),
+                        baseUrl: config('question_generation.openai.base_url'),
+                        timeout: (int) config('question_generation.openai.timeout', 30),
+                        connectTimeout: (int) config('question_generation.openai.connect_timeout', 10),
+                    ),
+                    'fake' => new FakeGenerationProvider,
+                    'null' => new NullGenerationProvider,
+                    default => new NullGenerationProvider,
+                };
+            }
+        );
     }
 
     /**

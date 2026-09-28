@@ -27,8 +27,13 @@ class QuestionGenerationOrchestrator
         protected GeneratedQuestionMaterializer $materializer,
         protected ?QuestionGenerationProvider $defaultProvider = null
     ) {
-        // Issue 3: Canonical runtime default is NullGenerationProvider (fail closed, never FakeGenerationProvider)
-        $this->defaultProvider ??= new NullGenerationProvider;
+        if ($this->defaultProvider === null) {
+            if (app()->bound(QuestionGenerationProvider::class)) {
+                $this->defaultProvider = app(QuestionGenerationProvider::class);
+            } else {
+                $this->defaultProvider = new NullGenerationProvider;
+            }
+        }
     }
 
     /**
@@ -188,6 +193,7 @@ class QuestionGenerationOrchestrator
                     'provider_name' => $providerResponse->providerName,
                     'latency_ms' => $providerResponse->latencyMs,
                 ]);
+                $item->refresh();
             } catch (Exception $e) {
                 $item->markFailed(
                     errorCode: GenerationErrorCode::MaterializationFailed,
@@ -197,8 +203,6 @@ class QuestionGenerationOrchestrator
 
                 return $item;
             }
-
-            $item->save();
 
             return $item;
         } catch (Exception $e) {

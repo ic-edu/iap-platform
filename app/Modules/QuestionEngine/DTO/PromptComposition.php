@@ -43,12 +43,52 @@ final class PromptComposition
     }
 
     /**
+     * Compute a deterministic SHA-256 hash of the canonical prompt representation.
+     */
+    public function computePromptHash(): string
+    {
+        $canonicalData = [
+            'prompt_contract_version' => $this->promptContractVersion,
+            'system_prompt' => $this->systemPrompt,
+            'user_prompt' => $this->userPrompt,
+            'structural_constraints' => $this->sortArrayRecursively($this->structuralConstraints),
+            'target_metadata' => $this->sortArrayRecursively($this->targetMetadata),
+            'schema_definition' => $this->sortArrayRecursively($this->schemaDefinition),
+        ];
+
+        return hash('sha256', (string) json_encode($canonicalData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    /**
+     * @param  array<mixed>  $array
+     * @return array<mixed>
+     */
+    private function sortArrayRecursively(array $array): array
+    {
+        // If sequential array (list), sort elements recursively
+        $isAssoc = array_keys($array) !== range(0, count($array) - 1);
+
+        if ($isAssoc) {
+            ksort($array);
+        }
+
+        foreach ($array as $k => $v) {
+            if (is_array($v)) {
+                $array[$k] = $this->sortArrayRecursively($v);
+            }
+        }
+
+        return $array;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(): array
     {
         return [
             'prompt_contract_version' => $this->promptContractVersion,
+            'prompt_hash' => $this->computePromptHash(),
             'system_prompt' => $this->systemPrompt,
             'user_prompt' => $this->userPrompt,
             'structural_constraints' => $this->structuralConstraints,

@@ -114,6 +114,7 @@ class GeneratedQuestionMaterializer
                 'slot_sequence' => $lockedItem->slot_sequence,
                 'slot_fingerprint' => $lockedItem->slot_fingerprint,
                 'prompt_contract_version' => $batch->prompt_contract_version ?? 'question_generation_v1',
+                'prompt_hash' => $lockedItem->prompt_payload['prompt_hash'] ?? null,
                 'schema_version' => $candidate->schemaVersion,
                 'provider_name' => $providerMetadata['provider_name'] ?? 'orchestrator',
                 'latency_ms' => $providerMetadata['latency_ms'] ?? 0,

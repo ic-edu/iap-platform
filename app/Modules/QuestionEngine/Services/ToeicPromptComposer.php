@@ -64,8 +64,8 @@ class ToeicPromptComposer implements QuestionPromptComposer
     protected function buildSystemPrompt(): string
     {
         return <<<'PROMPT'
-You are an expert psychometric item writer and assessment designer for the official TOEIC (Test of English for International Communication) test.
-Generate authentic, high-quality, standardized questions strictly adhering to official ETS specifications, CEFR proficiency frameworks, and domain taxonomy constraints.
+You are a professional TOEIC-style assessment item writer.
+Generate authentic, high-quality, standardized questions strictly adhering to the IAP canonical assessment standard and supplied generation metadata, CEFR proficiency frameworks, and domain taxonomy constraints.
 Output your response STRICTLY as valid JSON conforming to the requested schema. Do not enclose your output in extraneous conversational prose.
 PROMPT;
     }
@@ -81,14 +81,21 @@ PROMPT;
         string $context
     ): string {
         $partGuidelines = match ($part) {
-            1 => 'Generate a TOEIC Part 1 Photograph question. Provide 4 answer options (A, B, C, D) describing a workplace or public scene. Exactly 1 must be unequivocally correct.',
-            2 => 'Generate a TOEIC Part 2 Question-Response item. The prompt is a spoken question or statement. Provide exactly 3 options (A, B, C). Exactly 1 option must be logically correct.',
-            3 => "Generate a TOEIC Part 3 Short Conversation item. Include a realistic business dialogue transcript in 'audio_script', followed by a targeted comprehension question with 4 options (A, B, C, D).",
-            4 => "Generate a TOEIC Part 4 Short Talk item. Include a realistic workplace announcement, voice message, or report transcript in 'audio_script', followed by a targeted question with 4 options (A, B, C, D).",
-            5 => 'Generate a TOEIC Part 5 Incomplete Sentence item. The sentence must test vocabulary, syntax, or grammar in a professional context. Provide 4 single-word or short-phrase options (A, B, C, D).',
-            6 => "Generate a TOEIC Part 6 Text Completion item. Provide a short professional document (letter, notice, email) in 'passage_text' containing a contextual blank, with 4 options (A, B, C, D).",
-            7 => "Generate a TOEIC Part 7 Reading Comprehension item. Provide a realistic business text (email, schedule, article) in 'passage_text', and a question testing information retrieval or inference with 4 options (A, B, C, D).",
-            default => "Generate a TOEIC Part {$part} question adhering to official ETS standards.",
+            1 => 'Generate a TOEIC-style Part 1 Photograph question. Provide 4 answer options (A, B, C, D) describing a workplace or public scene. Exactly 1 must be unequivocally correct.',
+            2 => 'Generate a TOEIC-style Part 2 Question-Response item. The prompt is a spoken question or statement. Provide exactly 3 options (A, B, C). Exactly 1 option must be logically correct.',
+            3 => "Generate a TOEIC-style Part 3 Short Conversation item. Include a realistic business dialogue transcript in 'audio_script', followed by a targeted comprehension question with 4 options (A, B, C, D).",
+            4 => "Generate a TOEIC-style Part 4 Short Talk item. Include a realistic workplace announcement, voice message, or report transcript in 'audio_script', followed by a targeted question with 4 options (A, B, C, D).",
+            5 => "Generate a TOEIC Part 5 Incomplete Sentence item.
+Requirements:
+- Exactly one incomplete sentence in 'prompt' containing exactly one blank represented as '_____'.
+- Exactly four answer choices (A, B, C, D) with exactly one correct answer and three grammatically plausible distractors.
+- Test vocabulary, syntax, or grammar in a realistic professional/workplace context.
+- No stimulus reading passage ('passage_text' must be null).
+- No audio script ('audio_script' must be null).
+- Output must strictly conform to schema_version 'generated_question_candidate_v1'.",
+            6 => "Generate a TOEIC-style Part 6 Text Completion item. Provide a short professional document (letter, notice, email) in 'passage_text' containing a contextual blank, with 4 options (A, B, C, D).",
+            7 => "Generate a TOEIC-style Part 7 Reading Comprehension item. Provide a realistic business text (email, schedule, article) in 'passage_text', and a question testing information retrieval or inference with 4 options (A, B, C, D).",
+            default => "Generate a TOEIC-style Part {$part} question adhering to canonical assessment standards.",
         };
 
         return <<<USER_PROMPT
@@ -121,6 +128,7 @@ USER_PROMPT;
             'requires_passage' => in_array($part, [6, 7], true),
             'requires_audio_script' => in_array($part, [1, 2, 3, 4], true),
             'allow_multiple_correct' => false,
+            'blank_count' => $part === 5 ? 1 : ($part === 6 ? 1 : 0),
         ];
     }
 
