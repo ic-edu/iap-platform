@@ -30,29 +30,70 @@ enum ToeflSkill: string
     case SpeakingSpontaneousInterview = 'speaking_spontaneous_interview';
     case SpeakingIntelligibly = 'speaking_intelligibly';
 
-    public function label(): string
+    /**
+     * Exact canonical wording from the ETS 2026 Test Blueprint and Specifications Document.
+     */
+    public function officialText(): string
     {
         return match ($this) {
             self::ReadingProcessMeaningAndForm => 'Process academic written texts for meaning and form',
             self::ReadingComprehendVariedFormats => 'Read and comprehend information presented in a variety of formats',
             self::ReadingShortNonacademicTexts => 'Understand short nonacademic written texts',
-            self::ReadingAcademicTexts => 'Understand academic text by identifying main ideas, details, and relationships',
+            self::ReadingAcademicTexts => 'Understand academic text by identifying main ideas, details, relationships, and rhetorical purpose',
 
             self::ListeningConversationalDialogue => 'Listen to conversational dialogue between two people',
-            self::ListeningSingleExchangeDialogue => 'Understand a single-exchange dialogue',
-            self::ListeningShortConversations => 'Understand short conversations',
+            self::ListeningSingleExchangeDialogue => 'Understand a single-exchange dialogue between two people',
+            self::ListeningShortConversations => 'Understand short conversations between two people',
             self::ListeningExtendedMonologicSpeech => 'Listen to and comprehend extended monologic speech',
-            self::ListeningAnnouncements => 'Understand announcements and instructions',
-            self::ListeningAcademicTalks => 'Understand academic talks and lectures',
+            self::ListeningAnnouncements => 'Understand classroom- and campus-related announcements and instructions',
+            self::ListeningAcademicTalks => 'Understand academic talks and introductory lectures by identifying main ideas and organizational structure',
 
-            self::WritingReconstructSentencesGrammar => 'Reconstruct sentences with appropriate grammar',
-            self::WritingEffectiveResponsesAcademicContext => 'Write effective responses to common situations in academic contexts',
-            self::WritingAcademicDiscussion => 'Write for an academic discussion',
+            self::WritingReconstructSentencesGrammar => 'Reconstruct sentence structures with appropriate grammar and word order',
+            self::WritingEffectiveResponsesAcademicContext => 'Write effective multi-sentence responses to common situations in academic and navigational contexts',
+            self::WritingAcademicDiscussion => 'Write an effective paragraph expressing and supporting an opinion in an online academic discussion',
 
-            self::SpeakingRepeatSpokenSentences => 'Repeat spoken sentences accurately',
-            self::SpeakingSpontaneousInterview => 'Speak spontaneously in an interview format',
-            self::SpeakingIntelligibly => 'Speak intelligibly with accurate pronunciation and coherence',
+            self::SpeakingRepeatSpokenSentences => 'Repeat spoken sentences accurately with intelligible pronunciation and rhythm',
+            self::SpeakingSpontaneousInterview => 'Speak spontaneously and meaningfully in response to interview questions',
+            self::SpeakingIntelligibly => 'Speak intelligibly with appropriate pacing, clarity, and coherence',
         };
+    }
+
+    /**
+     * Short internal label for concise display.
+     */
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::ReadingProcessMeaningAndForm => 'Process Meaning & Form',
+            self::ReadingComprehendVariedFormats => 'Varied Formats Comprehension',
+            self::ReadingShortNonacademicTexts => 'Short Nonacademic Texts',
+            self::ReadingAcademicTexts => 'Academic Reading Comprehension',
+
+            self::ListeningConversationalDialogue => 'Conversational Dialogue',
+            self::ListeningSingleExchangeDialogue => 'Single-Exchange Dialogue',
+            self::ListeningShortConversations => 'Short Conversations',
+            self::ListeningExtendedMonologicSpeech => 'Extended Monologic Speech',
+            self::ListeningAnnouncements => 'Campus Announcements',
+            self::ListeningAcademicTalks => 'Academic Talks & Lectures',
+
+            self::WritingReconstructSentencesGrammar => 'Sentence Reconstruction',
+            self::WritingEffectiveResponsesAcademicContext => 'Multi-Sentence Email Response',
+            self::WritingAcademicDiscussion => 'Academic Discussion Paragraph',
+
+            self::SpeakingRepeatSpokenSentences => 'Sentence Repetition',
+            self::SpeakingSpontaneousInterview => 'Spontaneous Interview Response',
+            self::SpeakingIntelligibly => 'Intelligible Speech Delivery',
+        };
+    }
+
+    public function label(): string
+    {
+        return $this->officialText();
+    }
+
+    public function provenance(): string
+    {
+        return 'official_ets';
     }
 
     public function section(): string

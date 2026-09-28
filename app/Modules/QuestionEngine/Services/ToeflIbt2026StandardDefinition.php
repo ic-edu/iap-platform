@@ -21,13 +21,13 @@ class ToeflIbt2026StandardDefinition
 
     public const SOURCE_NAME = 'TOEFL iBT Test: 2026 Update Test Blueprint and Specifications Document';
 
-    public const SOURCE_URL = 'https://www.ets.org/pdfs/toefl/toefl-ibt-test-blueprint-2026.pdf';
+    public const SOURCE_URL = 'https://www.ets.org/content/dam/ets-org/pdfs/toefl/toefl-ibt-test-specifications-2026.pdf';
 
     public const SECONDARY_SOURCE_URL = 'https://www.ets.org/toefl/test-takers/ibt/about/content.html';
 
     public const EFFECTIVE_FROM = '2026-01-21 00:00:00';
 
-    public const SOURCE_CHECKED_AT = '2026-09-28 12:00:00';
+    public const SOURCE_CHECKED_AT = '2026-09-28 16:30:00';
 
     /**
      * Get the authoritative canonical 2026.1 TOEFL iBT AssessmentStandard registration payload.
@@ -65,6 +65,29 @@ class ToeflIbt2026StandardDefinition
             $taskScoringCategories[$task->value] = $task->scoringMode()->value;
         }
 
+        $claimsMetadata = [];
+        foreach (ToeflClaim::cases() as $claim) {
+            $claimsMetadata[$claim->value] = [
+                'machine_id' => $claim->value,
+                'short_label' => $claim->shortLabel(),
+                'official_text' => $claim->officialText(),
+                'provenance' => $claim->provenance(),
+                'section' => $claim->section(),
+            ];
+        }
+
+        $skillsMetadata = [];
+        foreach (ToeflSkill::cases() as $skill) {
+            $skillsMetadata[$skill->value] = [
+                'machine_id' => $skill->value,
+                'short_label' => $skill->shortLabel(),
+                'official_text' => $skill->officialText(),
+                'provenance' => $skill->provenance(),
+                'section' => $skill->section(),
+                'claim' => $skill->claim()->value,
+            ];
+        }
+
         return [
             'assessment_family' => AssessmentFamily::ToeflIbt,
             'standard_code' => self::STANDARD_CODE,
@@ -78,7 +101,9 @@ class ToeflIbt2026StandardDefinition
             'structure_definition' => [
                 'sections' => $sections,
                 'claims' => ToeflClaim::values(),
+                'claims_metadata' => $claimsMetadata,
                 'skills' => ToeflSkill::values(),
+                'skills_metadata' => $skillsMetadata,
                 'task_types' => ToeflTaskType::values(),
                 'adaptive_sections' => ['reading', 'listening'],
                 'linear_sections' => ['writing', 'speaking'],
@@ -181,6 +206,12 @@ class ToeflIbt2026StandardDefinition
                         'url' => self::SECONDARY_SOURCE_URL,
                         'type' => 'operational_confirmation',
                     ],
+                ],
+                'verification_metadata' => [
+                    'effective_from' => self::EFFECTIVE_FROM,
+                    'source_checked_at' => self::SOURCE_CHECKED_AT,
+                    'timezone' => 'UTC+07:00 (Asia/Jakarta)',
+                    'verification_note' => 'Standard specifications verified against official ETS 2026 PDF document.',
                 ],
                 'provenance_separation' => [
                     'official_properties' => ['section', 'task_type', 'claim', 'skills', 'cefr_range', 'language_use_contexts', 'response_mode', 'scoring_mode'],

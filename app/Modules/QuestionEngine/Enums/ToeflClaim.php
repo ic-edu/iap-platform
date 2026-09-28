@@ -12,14 +12,40 @@ enum ToeflClaim: string
     case Claim3Writing = 'claim_3_writing';
     case Claim4Speaking = 'claim_4_speaking';
 
-    public function label(): string
+    /**
+     * Canonical official ETS Claim statement from the 2026 Test Blueprint and Specifications.
+     */
+    public function officialText(): string
     {
         return match ($this) {
-            self::Claim1Reading => 'Claim 1 (Reading): Process and understand academic and nonacademic written texts for meaning and form',
-            self::Claim2Listening => 'Claim 2 (Listening): Understand conversational dialogue and extended monologic speech across academic and navigational contexts',
-            self::Claim3Writing => 'Claim 3 (Writing): Reconstruct sentences and write effective responses in academic and interpersonal contexts',
-            self::Claim4Speaking => 'Claim 4 (Speaking): Speak intelligibly and spontaneously in interview format and sentence repetition',
+            self::Claim1Reading => 'Process and understand academic and nonacademic written texts for meaning and form across varied formats.',
+            self::Claim2Listening => 'Understand conversational dialogue between two people and extended monologic speech across academic and navigational contexts.',
+            self::Claim3Writing => 'Reconstruct sentence structures with appropriate grammar and write effective responses in academic and interpersonal contexts.',
+            self::Claim4Speaking => 'Speak intelligibly and spontaneously in response to interview questions and repeat spoken sentences accurately.',
         };
+    }
+
+    /**
+     * Short internal display label.
+     */
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::Claim1Reading => 'Claim 1 (Reading)',
+            self::Claim2Listening => 'Claim 2 (Listening)',
+            self::Claim3Writing => 'Claim 3 (Writing)',
+            self::Claim4Speaking => 'Claim 4 (Speaking)',
+        };
+    }
+
+    public function label(): string
+    {
+        return $this->officialText();
+    }
+
+    public function provenance(): string
+    {
+        return 'official_ets';
     }
 
     public function section(): string

@@ -59,14 +59,22 @@ class ToeflIbtStandardValidator
         // Exactly 4 top-level claims
         $claims = $structure['claims'] ?? [];
         $expectedClaims = ToeflClaim::values();
-        if (count($claims) !== 4 || array_diff($expectedClaims, $claims) !== []) {
+        $claimsSorted = $claims;
+        $expClaimsSorted = $expectedClaims;
+        sort($claimsSorted);
+        sort($expClaimsSorted);
+        if ($claimsSorted !== $expClaimsSorted) {
             $errors[] = 'Structure definition must contain exactly the 4 official top-level TOEFL claims: claim_1_reading, claim_2_listening, claim_3_writing, claim_4_speaking.';
         }
 
         // Canonical 12 task types
         $taskTypes = $structure['task_types'] ?? [];
         $expectedTaskTypes = ToeflTaskType::values();
-        if (count($taskTypes) !== 12 || array_diff($expectedTaskTypes, $taskTypes) !== []) {
+        $tasksSorted = $taskTypes;
+        $expTasksSorted = $expectedTaskTypes;
+        sort($tasksSorted);
+        sort($expTasksSorted);
+        if ($tasksSorted !== $expTasksSorted) {
             $errors[] = 'Structure definition must contain all 12 canonical TOEFL task types.';
         }
 
@@ -80,7 +88,11 @@ class ToeflIbtStandardValidator
         ];
         foreach ($expectedSecContexts as $sec => $expectedCtx) {
             $actualCtx = $secContexts[$sec] ?? [];
-            if (array_diff($expectedCtx, $actualCtx) !== [] || array_diff($actualCtx, $expectedCtx) !== []) {
+            $expCtxSorted = $expectedCtx;
+            $actCtxSorted = $actualCtx;
+            sort($expCtxSorted);
+            sort($actCtxSorted);
+            if ($expCtxSorted !== $actCtxSorted) {
                 $errors[] = "Official language use contexts for section '{$sec}' must be exactly [".implode(', ', $expectedCtx).'].';
             }
         }
@@ -95,7 +107,7 @@ class ToeflIbtStandardValidator
             $errors[] = 'Linear sections must be exactly [writing, speaking].';
         }
 
-        // 4. Section Task Compatibility & Task Validation
+        // 4. Section Task Compatibility
         $valDef = (array) ($data['validation_definition'] ?? []);
         if (array_key_exists('part_number_allowed', $valDef) && $valDef['part_number_allowed'] === true) {
             $errors[] = 'part_number_allowed must be false in validation definition.';
@@ -105,25 +117,44 @@ class ToeflIbtStandardValidator
         foreach ($expectedSections as $sec) {
             $expectedTasksForSec = array_map(fn (ToeflTaskType $t) => $t->value, ToeflTaskType::forSection($sec));
             $actualTasksForSec = $secTaskMap[$sec] ?? [];
-            if (array_diff($expectedTasksForSec, $actualTasksForSec) !== [] || array_diff($actualTasksForSec, $expectedTasksForSec) !== []) {
+            $expT = $expectedTasksForSec;
+            $actT = $actualTasksForSec;
+            sort($expT);
+            sort($actT);
+            if ($expT !== $actT) {
                 $errors[] = "Section task compatibility mismatch for section '{$sec}'.";
             }
         }
 
-        // 5. Claim-Task and Skill-Task Compatibility
+        // 5. Claim-Task and Skill-Task Compatibility (Strict Bidirectional Exact Equality)
         $claimTaskMap = (array) ($valDef['claim_task_compatibility'] ?? []);
         $skillTaskMap = (array) ($valDef['skill_task_compatibility'] ?? []);
         foreach (ToeflTaskType::cases() as $task) {
             $expectedClaim = $task->claim()->value;
             $actualClaims = $claimTaskMap[$task->value] ?? [];
             if ($actualClaims !== [$expectedClaim]) {
-                $errors[] = "Task '{$task->value}' must map to its section claim '{$expectedClaim}'.";
+                $errors[] = "Task '{$task->value}' must map exactly to its section claim '{$expectedClaim}'.";
             }
 
             $expectedSkills = array_map(fn (ToeflSkill $s) => $s->value, $task->skills());
-            $actualSkills = $skillTaskMap[$task->value] ?? [];
-            if (array_diff($expectedSkills, $actualSkills) !== []) {
-                $errors[] = "Skill compatibility mismatch for task '{$task->value}'.";
+            $actualSkills = (array) ($skillTaskMap[$task->value] ?? []);
+
+            $expSkillsSorted = $expectedSkills;
+            $actSkillsSorted = $actualSkills;
+            sort($expSkillsSorted);
+            sort($actSkillsSorted);
+
+            if ($expSkillsSorted !== $actSkillsSorted) {
+                $missing = array_diff($expectedSkills, $actualSkills);
+                $extra = array_diff($actualSkills, $expectedSkills);
+                $detail = [];
+                if (!empty($missing)) {
+                    $detail[] = 'missing expected: '.implode(', ', $missing);
+                }
+                if (!empty($extra)) {
+                    $detail[] = 'unexpected extra: '.implode(', ', $extra);
+                }
+                $errors[] = "Skill compatibility mismatch for task '{$task->value}' (".implode('; ', $detail).').';
             }
         }
 
