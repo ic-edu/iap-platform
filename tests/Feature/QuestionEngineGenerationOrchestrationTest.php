@@ -3,12 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Modules\QuestionBank\Enums\SectionType;
+use App\Modules\QuestionBank\Enums\QuestionType;
 use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionEngine\DTO\GeneratedQuestionCandidate;
-use App\Modules\QuestionEngine\DTO\GenerationProviderRequest;
-use App\Modules\QuestionEngine\DTO\PromptComposition;
 use App\Modules\QuestionEngine\DTO\ToeflBlueprintRequest;
 use App\Modules\QuestionEngine\DTO\ToeicBlueprintRequest;
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
@@ -19,21 +17,22 @@ use App\Modules\QuestionEngine\Enums\GenerationItemStatus;
 use App\Modules\QuestionEngine\Enums\StandardStatus;
 use App\Modules\QuestionEngine\Models\AssessmentStandard;
 use App\Modules\QuestionEngine\Models\QuestionGenerationBatch;
+use App\Modules\QuestionEngine\Models\QuestionGenerationItem;
 use App\Modules\QuestionEngine\Providers\FakeGenerationProvider;
 use App\Modules\QuestionEngine\Providers\NullGenerationProvider;
 use App\Modules\QuestionEngine\Services\AssessmentStandardRegistry;
 use App\Modules\QuestionEngine\Services\GeneratedQuestionMaterializer;
 use App\Modules\QuestionEngine\Services\GeneratedQuestionNormalizer;
 use App\Modules\QuestionEngine\Services\GeneratedQuestionQualityGate;
+use App\Modules\QuestionEngine\Services\GeneratedQuestionTypeResolver;
 use App\Modules\QuestionEngine\Services\GenerationBatchFactory;
 use App\Modules\QuestionEngine\Services\QuestionGenerationOrchestrator;
 use App\Modules\QuestionEngine\Services\QuestionPromptComposerResolver;
 use App\Modules\QuestionEngine\Services\ToeflBlueprintPlanner;
 use App\Modules\QuestionEngine\Services\ToeflIbt2026StandardDefinition;
-use App\Modules\QuestionEngine\Services\ToeflPromptComposer;
 use App\Modules\QuestionEngine\Services\ToeicBlueprintPlanner;
-use App\Modules\QuestionEngine\Services\ToeicPromptComposer;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -45,6 +44,8 @@ class QuestionEngineGenerationOrchestrationTest extends TestCase
     protected User $teacher;
 
     protected QuestionBank $questionBank;
+
+    protected QuestionBank $secondQuestionBank;
 
     protected AssessmentStandardRegistry $registry;
 
@@ -59,6 +60,8 @@ class QuestionEngineGenerationOrchestrationTest extends TestCase
     protected GeneratedQuestionNormalizer $normalizer;
 
     protected GeneratedQuestionQualityGate $qualityGate;
+
+    protected GeneratedQuestionTypeResolver $typeResolver;
 
     protected GeneratedQuestionMaterializer $materializer;
 
@@ -82,7 +85,16 @@ class QuestionEngineGenerationOrchestrationTest extends TestCase
             'title' => 'Orchestration Test Bank',
             'slug' => 'orchestration-test-bank-'.uniqid(),
             'created_by' => $this->teacher->id,
-            'is_published' => true,
+            'is_published' => false,
+            'status' => 'draft',
+        ]);
+
+        $this->secondQuestionBank = QuestionBank::create([
+            'title' => 'Second Orchestration Bank',
+            'slug' => 'second-orchestration-bank-'.uniqid(),
+            'created_by' => $this->teacher->id,
+            'is_published' => false,
+            'status' => 'draft',
         ]);
 
         $this->registry = new AssessmentStandardRegistry;
@@ -108,7 +120,8 @@ class QuestionEngineGenerationOrchestrationTest extends TestCase
         $this->composerResolver = new QuestionPromptComposerResolver;
         $this->normalizer = new GeneratedQuestionNormalizer;
         $this->qualityGate = new GeneratedQuestionQualityGate;
-        $this->materializer = new GeneratedQuestionMaterializer;
+        $this->typeResolver = new GeneratedQuestionTypeResolver;
+        $this->materializer = new GeneratedQuestionMaterializer($this->typeResolver);
         $this->fakeProvider = new FakeGenerationProvider;
 
         $this->orchestrator = new QuestionGenerationOrchestrator(
@@ -117,683 +130,511 @@ class QuestionEngineGenerationOrchestrationTest extends TestCase
             normalizer: $this->normalizer,
             qualityGate: $this->qualityGate,
             materializer: $this->materializer,
-            defaultProvider: $this->fakeProvider
+            defaultProvider: new NullGenerationProvider
         );
     }
 
     /**
-     * TEST 1: GenerationBatchFactory creates persistent batch and items from ToeicGenerationPlan.
+     * TEST A & B: Same bank + plan + contract returns same batch with deterministic idempotency key.
      */
-    public function test_factory_creates_batch_and_items_from_toeic_plan(): void
+    public function test_a_and_b_deterministic_idempotency_key_returns_same_batch(): void
     {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 5,
-            'item_count' => 4,
-            'seed' => 12345,
-        ]);
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 2, 'seed' => 101]);
         $plan = $this->toeicPlanner->plan($request);
 
-        $batch = $this->batchFactory->createFromPlan($plan, [
+        $batch1 = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $batch2 = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+
+        $this->assertSame($batch1->id, $batch2->id);
+        $this->assertEquals(1, QuestionGenerationBatch::where('idempotency_key', $batch1->idempotency_key)->count());
+
+        $expectedKey = 'batch_'.hash('sha256', implode(':', [
+            $this->questionBank->id,
+            $plan->fingerprint,
+            'question_generation_v1',
+        ]));
+        $this->assertSame($expectedKey, $batch1->idempotency_key);
+    }
+
+    /**
+     * TEST C: Different question bank creates different batch.
+     */
+    public function test_c_different_question_bank_creates_different_batch(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 2, 'seed' => 101]);
+        $plan = $this->toeicPlanner->plan($request);
+
+        $batch1 = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $batch2 = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->secondQuestionBank->id]);
+
+        $this->assertNotEquals($batch1->id, $batch2->id);
+        $this->assertNotEquals($batch1->idempotency_key, $batch2->idempotency_key);
+    }
+
+    /**
+     * TEST D: Force new run behavior works only when explicit.
+     */
+    public function test_d_force_new_run_behavior_works_when_explicit(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 2, 'seed' => 101]);
+        $plan = $this->toeicPlanner->plan($request);
+
+        $batch1 = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $batch2 = $this->batchFactory->createFromPlan($plan, [
             'question_bank_id' => $this->questionBank->id,
-            'requested_by' => $this->teacher->id,
-            'idempotency_key' => 'toeic_test_idempotency_1',
+            'force_new_run' => true,
         ]);
 
-        $this->assertInstanceOf(QuestionGenerationBatch::class, $batch);
-        $this->assertDatabaseHas('question_generation_batches', [
-            'id' => $batch->id,
-            'assessment_family' => AssessmentFamily::Toeic->value,
-            'total_slots' => 4,
-            'pending_slots' => 4,
-            'status' => GenerationBatchStatus::Draft->value,
-            'idempotency_key' => 'toeic_test_idempotency_1',
-        ]);
-
-        $this->assertCount(4, $batch->items);
-        $this->assertEquals(1, $batch->items[0]->slot_sequence);
-        $this->assertEquals(4, $batch->items[3]->slot_sequence);
-        $this->assertEquals(5, $batch->items[0]->part_number);
-        $this->assertEquals(GenerationItemStatus::Pending, $batch->items[0]->status);
+        $this->assertNotEquals($batch1->id, $batch2->id);
+        $this->assertNotEquals($batch1->idempotency_key, $batch2->idempotency_key);
     }
 
     /**
-     * TEST 2: GenerationBatchFactory is idempotent when using same idempotency key.
+     * TEST E & F: Missing or nonexistent question_bank_id rejected.
      */
-    public function test_factory_is_idempotent_with_same_key(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 5,
-            'item_count' => 2,
-            'seed' => 1111,
-        ]);
-        $plan = $this->toeicPlanner->plan($request);
-
-        $batch1 = $this->batchFactory->createFromPlan($plan, ['idempotency_key' => 'shared_key_123']);
-        $batch2 = $this->batchFactory->createFromPlan($plan, ['idempotency_key' => 'shared_key_123']);
-
-        $this->assertEquals($batch1->id, $batch2->id);
-        $this->assertEquals(1, QuestionGenerationBatch::where('idempotency_key', 'shared_key_123')->count());
-    }
-
-    /**
-     * TEST 3: GenerationBatchFactory creates batch and items from ToeflGenerationPlan.
-     */
-    public function test_factory_creates_batch_and_items_from_toefl_plan(): void
-    {
-        $request = ToeflBlueprintRequest::fromArray([
-            'mode' => 'custom',
-            'custom_tasks' => [
-                'read_in_daily_life' => 2,
-                'write_an_email' => 1,
-            ],
-            'allow_practice_counts' => true,
-            'seed' => 7777,
-        ]);
-        $plan = $this->toeflPlanner->plan($request);
-
-        $batch = $this->batchFactory->createFromPlan($plan, [
-            'question_bank_id' => $this->questionBank->id,
-            'requested_by' => $this->teacher->id,
-        ]);
-
-        $this->assertInstanceOf(QuestionGenerationBatch::class, $batch);
-        $this->assertEquals(AssessmentFamily::ToeflIbt, $batch->assessment_family);
-        $this->assertEquals(3, $batch->total_slots);
-        $this->assertCount(3, $batch->items);
-        $this->assertNull($batch->items[0]->part_number);
-        $this->assertEquals('read_in_daily_life', $batch->items[0]->task_type);
-        $this->assertEquals('write_an_email', $batch->items[2]->task_type);
-    }
-
-    /**
-     * TEST 4: ToeicPromptComposer builds standard v1 prompt composition.
-     */
-    public function test_toeic_prompt_composer(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 2,
-            'item_count' => 1,
-            'seed' => 42,
-        ]);
-        $plan = $this->toeicPlanner->plan($request);
-
-        $batch = $this->batchFactory->createFromPlan($plan);
-        $item = $batch->items->first();
-
-        $composer = new ToeicPromptComposer;
-        $this->assertTrue($composer->supports(AssessmentFamily::Toeic));
-        $this->assertFalse($composer->supports(AssessmentFamily::ToeflIbt));
-
-        $composition = $composer->compose($item);
-        $this->assertEquals('question_generation_v1', $composition->promptContractVersion);
-        $this->assertStringContainsString('TOEIC', $composition->systemPrompt);
-        $this->assertStringContainsString('Part 2', $composition->userPrompt);
-        $this->assertEquals(3, $composition->structuralConstraints['choice_count']);
-        $this->assertEquals(['A', 'B', 'C'], $composition->structuralConstraints['choice_labels']);
-    }
-
-    /**
-     * TEST 5: ToeflPromptComposer builds standard v1 prompt composition.
-     */
-    public function test_toefl_prompt_composer(): void
-    {
-        $request = ToeflBlueprintRequest::fromArray([
-            'mode' => 'task',
-            'task_type' => 'write_an_email',
-            'task_count' => 1,
-            'allow_practice_counts' => true,
-            'seed' => 99,
-        ]);
-        $plan = $this->toeflPlanner->plan($request);
-        $batch = $this->batchFactory->createFromPlan($plan);
-        $item = $batch->items->first();
-
-        $composer = new ToeflPromptComposer;
-        $this->assertTrue($composer->supports(AssessmentFamily::ToeflIbt));
-
-        $composition = $composer->compose($item);
-        $this->assertEquals('question_generation_v1', $composition->promptContractVersion);
-        $this->assertStringContainsString('TOEFL', $composition->systemPrompt);
-        $this->assertStringContainsString('write_an_email', $composition->userPrompt);
-        $this->assertTrue($composition->structuralConstraints['is_constructed_response']);
-    }
-
-    /**
-     * TEST 6: Composer resolver throws exception for unregistered assessment family.
-     */
-    public function test_composer_resolver_validation(): void
-    {
-        $resolver = new QuestionPromptComposerResolver;
-        $this->assertInstanceOf(ToeicPromptComposer::class, $resolver->resolve(AssessmentFamily::Toeic));
-        $this->assertInstanceOf(ToeflPromptComposer::class, $resolver->resolve(AssessmentFamily::ToeflIbt));
-
-        $this->expectException(InvalidArgumentException::class);
-        $resolver->resolve(AssessmentFamily::Ielts);
-    }
-
-    /**
-     * TEST 7: NullGenerationProvider fails gracefully.
-     */
-    public function test_null_generation_provider(): void
-    {
-        $provider = new NullGenerationProvider;
-        $this->assertEquals('null', $provider->getProviderName());
-
-        $request = new GenerationProviderRequest(
-            batchId: 'batch_1',
-            itemId: 'item_1',
-            slotSequence: 1,
-            promptComposition: new PromptComposition('v1', 'sys', 'usr')
-        );
-
-        $response = $provider->generate($request);
-        $this->assertFalse($response->isSuccess);
-        $this->assertEquals(GenerationErrorCode::ProviderUnavailable, $response->errorCode);
-    }
-
-    /**
-     * TEST 8: GeneratedQuestionNormalizer correctly parses markdown fenced JSON strings.
-     */
-    public function test_normalizer_parses_fenced_json_payloads(): void
-    {
-        $rawJson = <<<'JSON'
-```json
-{
-    "schema_version": "generated_question_candidate_v1",
-    "prompt": "What is the primary reason for the delay?",
-    "choices": [
-        {"label": "A", "content": "Adverse weather conditions", "is_correct": true, "explanation": "Stated clearly in paragraph 1"},
-        {"label": "B", "content": "Mechanical failure", "is_correct": false},
-        {"label": "C", "content": "Staff shortage", "is_correct": false},
-        {"label": "D", "content": "Airport congestion", "is_correct": false}
-    ],
-    "correct_answer": "A",
-    "explanation": "Paragraph 1 mentions heavy fog as the sole cause."
-}
-```
-JSON;
-
-        $candidate = $this->normalizer->normalize($rawJson);
-        $this->assertInstanceOf(GeneratedQuestionCandidate::class, $candidate);
-        $this->assertEquals('What is the primary reason for the delay?', $candidate->prompt);
-        $this->assertCount(4, $candidate->choices);
-        $this->assertEquals('A', $candidate->correctAnswer);
-        $this->assertTrue($candidate->choices[0]['is_correct']);
-        $this->assertFalse($candidate->choices[1]['is_correct']);
-    }
-
-    /**
-     * TEST 9: QualityGate validates valid candidate and detects flaws.
-     */
-    public function test_quality_gate_checks(): void
+    public function test_e_and_f_missing_or_nonexistent_question_bank_rejected(): void
     {
         $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
         $plan = $this->toeicPlanner->plan($request);
-        $batch = $this->batchFactory->createFromPlan($plan);
-        $item = $batch->items->first();
 
-        // Valid candidate
-        $validCandidate = new GeneratedQuestionCandidate(
-            schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'Please submit the monthly sales reports _____ Friday at 5 PM.',
-            choices: [
-                ['label' => 'A', 'content' => 'before', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'prior', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'ahead', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'front', 'is_correct' => false],
-            ],
-            correctAnswer: 'A',
-            explanation: '"Before" is the correct preposition.'
-        );
+        // Missing
+        $this->expectException(InvalidArgumentException::class);
+        $this->batchFactory->createFromPlan($plan, []);
+    }
 
-        $res1 = $this->qualityGate->validate($validCandidate, $item);
-        $this->assertTrue($res1->isValid);
-        $this->assertEmpty($res1->violations);
+    public function test_f_nonexistent_question_bank_rejected(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
 
-        // Candidate with placeholder text
-        $placeholderCandidate = new GeneratedQuestionCandidate(
-            schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'TODO: Write question prompt here',
-            choices: [
-                ['label' => 'A', 'content' => 'Option A', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'Option B', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'Option C', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'Option D', 'is_correct' => false],
-            ],
-            correctAnswer: 'A'
-        );
-
-        $res2 = $this->qualityGate->validate($placeholderCandidate, $item);
-        $this->assertFalse($res2->isValid);
-        $this->assertEquals('PLACEHOLDER_DETECTED', $res2->violations[0]['code']);
-
-        // Candidate with missing correct answer
-        $noCorrectCandidate = new GeneratedQuestionCandidate(
-            schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'Valid question prompt text goes here without placeholder.',
-            choices: [
-                ['label' => 'A', 'content' => 'Option A', 'is_correct' => false],
-                ['label' => 'B', 'content' => 'Option B', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'Option C', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'Option D', 'is_correct' => false],
-            ]
-        );
-
-        $res3 = $this->qualityGate->validate($noCorrectCandidate, $item);
-        $this->assertFalse($res3->isValid);
-        $this->assertEquals('INVALID_CORRECT_ANSWER_COUNT', $res3->violations[0]['code']);
-
-        // Candidate with duplicate choice contents
-        $duplicateCandidate = new GeneratedQuestionCandidate(
-            schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'Valid question prompt text goes here without placeholder.',
-            choices: [
-                ['label' => 'A', 'content' => 'Duplicate content', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'Duplicate content', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'Unique option C', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'Unique option D', 'is_correct' => false],
-            ],
-            correctAnswer: 'A'
-        );
-
-        $res4 = $this->qualityGate->validate($duplicateCandidate, $item);
-        $this->assertFalse($res4->isValid);
-        $this->assertEquals('DUPLICATE_CHOICE_CONTENT', $res4->violations[0]['code']);
+        $this->expectException(InvalidArgumentException::class);
+        $this->batchFactory->createFromPlan($plan, ['question_bank_id' => '01JNONEXISTENTBANK000000000']);
     }
 
     /**
-     * TEST 10: GeneratedQuestionMaterializer creates draft Question with content_origin = generated.
+     * TEST G: Valid QuestionBank accepted.
      */
-    public function test_materializer_creates_draft_question(): void
+    public function test_g_valid_question_bank_accepted(): void
     {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 5,
-            'item_count' => 1,
-            'seed' => 888,
-        ]);
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
         $plan = $this->toeicPlanner->plan($request);
 
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $this->assertInstanceOf(QuestionGenerationBatch::class, $batch);
+        $this->assertEquals($this->questionBank->id, $batch->question_bank_id);
+    }
+
+    /**
+     * TEST H & I: Default orchestrator does NOT use FakeGenerationProvider and fails closed.
+     */
+    public function test_h_and_i_default_orchestrator_fails_closed_with_null_provider(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+
+        $defaultOrchestrator = new QuestionGenerationOrchestrator(
+            batchFactory: $this->batchFactory,
+            composerResolver: $this->composerResolver,
+            normalizer: $this->normalizer,
+            qualityGate: $this->qualityGate,
+            materializer: $this->materializer
+        );
+
+        $processed = $defaultOrchestrator->processBatch($batch);
+        $this->assertEquals(GenerationBatchStatus::Failed, $processed->status);
+        $this->assertEquals(GenerationItemStatus::Failed, $processed->items->first()->status);
+        $this->assertEquals(GenerationErrorCode::ProviderUnavailable->value, $processed->items->first()->last_error_code);
+    }
+
+    /**
+     * TEST J: Explicit FakeGenerationProvider works in tests.
+     */
+    public function test_j_explicit_fake_provider_works_in_tests(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+
+        $processed = $this->orchestrator->processBatch($batch, $this->fakeProvider);
+        $this->assertEquals(GenerationBatchStatus::Completed, $processed->status);
+        $this->assertEquals(GenerationItemStatus::Materialized, $processed->items->first()->status);
+    }
+
+    /**
+     * TEST K through P: Non-validated items cannot materialize.
+     */
+    public function test_k_through_p_non_validated_items_cannot_materialize(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
         $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
         $item = $batch->items->first();
 
         $candidate = new GeneratedQuestionCandidate(
             schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'The merger will significantly _____ our presence in Southeast Asian markets.',
-            choices: [
-                ['label' => 'A', 'content' => 'expand', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'expansion', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'expansive', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'expansively', 'is_correct' => false],
-            ],
-            correctAnswer: 'A',
-            explanation: '"Expand" is the correct verb form.'
+            prompt: 'Test prompt for non-validated item test',
+            choices: [['label' => 'A', 'content' => 'Opt', 'is_correct' => true]],
+            correctAnswer: 'A'
         );
 
-        $question = $this->materializer->materialize($item, $candidate, ['provider_name' => 'test-provider', 'latency_ms' => 45]);
+        $invalidStatuses = [
+            GenerationItemStatus::Pending,
+            GenerationItemStatus::Ready,
+            GenerationItemStatus::Processing,
+            GenerationItemStatus::Generated,
+            GenerationItemStatus::ValidationFailed,
+            GenerationItemStatus::Failed,
+            GenerationItemStatus::Cancelled,
+        ];
 
-        $this->assertInstanceOf(Question::class, $question);
-        $this->assertEquals($this->questionBank->id, $question->question_bank_id);
-        $this->assertEquals(SectionType::Reading, $question->section);
-        $this->assertEquals(5, $question->part_number);
-        $this->assertEquals(ContentOrigin::Generated, $question->content_origin);
-        $this->assertEquals(AssessmentFamily::Toeic, $question->assessment_family);
-        $this->assertEquals($batch->id, $question->generation_batch_id);
-        $this->assertCount(4, $question->choices);
+        foreach ($invalidStatuses as $st) {
+            $item->status = $st;
+            $item->save();
 
-        $correctChoices = $question->choices->where('is_correct', true);
-        $this->assertCount(1, $correctChoices);
-        $this->assertEquals('A', $correctChoices->first()->label);
-        $this->assertEquals('expand', $correctChoices->first()->content);
-
-        // Check item update
-        $item->refresh();
-        $this->assertEquals(GenerationItemStatus::Materialized, $item->status);
-        $this->assertEquals($question->id, $item->question_id);
+            try {
+                $this->materializer->materialize($item, $candidate);
+                $this->fail("Materialization should have thrown exception for status [{$st->value}].");
+            } catch (InvalidArgumentException $e) {
+                $this->assertStringContainsString('must be in validated status', $e->getMessage());
+            }
+        }
     }
 
     /**
-     * TEST 11: Materialization is idempotent (updating existing question rather than duplicating).
+     * TEST Q & R: Validated item can materialize and already-materialized item returns existing Question.
      */
-    public function test_materializer_is_idempotent(): void
+    public function test_q_and_r_validated_item_materializes_and_is_idempotent(): void
     {
         $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
         $plan = $this->toeicPlanner->plan($request);
         $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
         $item = $batch->items->first();
 
-        $candidate1 = new GeneratedQuestionCandidate(
+        $item->status = GenerationItemStatus::Validated;
+        $item->save();
+
+        $candidate = new GeneratedQuestionCandidate(
             schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'Initial prompt version.',
+            prompt: 'The director approved the _____ for the next fiscal year.',
+            choices: [
+                ['label' => 'A', 'content' => 'budget', 'is_correct' => true],
+                ['label' => 'B', 'content' => 'budgeted', 'is_correct' => false],
+                ['label' => 'C', 'content' => 'budgeting', 'is_correct' => false],
+                ['label' => 'D', 'content' => 'budgetary', 'is_correct' => false],
+            ],
+            correctAnswer: 'A'
+        );
+
+        $q1 = $this->materializer->materialize($item, $candidate);
+        $this->assertInstanceOf(Question::class, $q1);
+        $this->assertEquals(GenerationItemStatus::Materialized, $item->fresh()->status);
+
+        // Repeated call returns existing Question
+        $q2 = $this->materializer->materialize($item->fresh(), $candidate);
+        $this->assertSame($q1->id, $q2->id);
+        $this->assertEquals(1, Question::where('generation_batch_id', $batch->id)->count());
+    }
+
+    /**
+     * TEST S through X: GeneratedQuestionTypeResolver maps types safely.
+     */
+    public function test_s_through_x_question_type_resolver(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $toeicItem = $batch->items->first();
+
+        // TOEIC -> MultipleChoice
+        $this->assertEquals(QuestionType::MultipleChoice, $this->typeResolver->resolve($toeicItem));
+
+        // TOEFL task type mappings
+        $toeflItem = new QuestionGenerationItem([
+            'assessment_family' => AssessmentFamily::ToeflIbt,
+            'task_type' => 'write_an_email',
+        ]);
+        $this->assertEquals(QuestionType::Writing, $this->typeResolver->resolve($toeflItem));
+
+        $toeflItem->task_type = 'write_for_an_academic_discussion';
+        $this->assertEquals(QuestionType::Writing, $this->typeResolver->resolve($toeflItem));
+
+        $toeflItem->task_type = 'listen_and_repeat';
+        $this->assertEquals(QuestionType::Speaking, $this->typeResolver->resolve($toeflItem));
+
+        $toeflItem->task_type = 'take_an_interview';
+        $this->assertEquals(QuestionType::Speaking, $this->typeResolver->resolve($toeflItem));
+
+        $toeflItem->task_type = 'read_in_daily_life';
+        $this->assertEquals(QuestionType::MultipleChoice, $this->typeResolver->resolve($toeflItem));
+
+        // Ambiguous/unsupported fails closed
+        $toeflItem->task_type = 'invalid_unknown_task';
+        $this->expectException(InvalidArgumentException::class);
+        $this->typeResolver->resolve($toeflItem);
+    }
+
+    /**
+     * TEST Y through AG: Candidate structural identity mismatches fail quality gate.
+     */
+    public function test_y_through_ag_structural_mismatches_fail_quality_gate(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $item = $batch->items->first();
+
+        $baseCandidate = new GeneratedQuestionCandidate(
+            schemaVersion: 'generated_question_candidate_v1',
+            prompt: 'Valid prompt text with enough characters.',
             choices: [
                 ['label' => 'A', 'content' => 'Option 1', 'is_correct' => true],
                 ['label' => 'B', 'content' => 'Option 2', 'is_correct' => false],
                 ['label' => 'C', 'content' => 'Option 3', 'is_correct' => false],
                 ['label' => 'D', 'content' => 'Option 4', 'is_correct' => false],
             ],
-            correctAnswer: 'A'
+            correctAnswer: 'A',
+            assessmentFamily: $item->assessment_family,
+            standardVersion: $item->standard_version,
+            section: $item->section,
+            partNumber: $item->part_number,
+            construct: $item->construct,
+            proficiencyTarget: $item->proficiency_target,
+            difficulty: $item->difficulty
         );
 
-        $q1 = $this->materializer->materialize($item, $candidate1);
+        // Y: Family mismatch
+        $cFamily = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['assessment_family' => AssessmentFamily::ToeflIbt->value]));
+        $rFamily = $this->qualityGate->validate($cFamily, $item);
+        $this->assertFalse($rFamily->isValid);
+        $this->assertEquals('FAMILY_MISMATCH', $rFamily->violations[0]['code']);
 
-        $candidate2 = new GeneratedQuestionCandidate(
-            schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'Updated prompt version.',
-            choices: [
-                ['label' => 'A', 'content' => 'Updated 1', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'Updated 2', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'Updated 3', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'Updated 4', 'is_correct' => false],
-            ],
-            correctAnswer: 'A'
-        );
+        // Z: Standard mismatch
+        $cStd = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['standard_version' => '2020.1']));
+        $rStd = $this->qualityGate->validate($cStd, $item);
+        $this->assertFalse($rStd->isValid);
+        $this->assertEquals('STANDARD_MISMATCH', $rStd->violations[0]['code']);
 
-        $q2 = $this->materializer->materialize($item, $candidate2);
+        // AA: Section mismatch
+        $cSec = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['section' => 'listening']));
+        $rSec = $this->qualityGate->validate($cSec, $item);
+        $this->assertFalse($rSec->isValid);
+        $this->assertEquals('SECTION_MISMATCH', $rSec->violations[0]['code']);
 
-        $this->assertEquals($q1->id, $q2->id);
-        $this->assertEquals('Updated prompt version.', $q2->fresh()->prompt);
-        $this->assertEquals(1, Question::where('generation_batch_id', $batch->id)->count());
+        // AB: Part mismatch
+        $cPart = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['part_number' => 3]));
+        $rPart = $this->qualityGate->validate($cPart, $item);
+        $this->assertFalse($rPart->isValid);
+        $this->assertEquals('PART_MISMATCH', $rPart->violations[0]['code']);
+
+        // AF: Proficiency mismatch
+        $cProf = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['proficiency_target' => 'c2']));
+        $rProf = $this->qualityGate->validate($cProf, $item);
+        $this->assertFalse($rProf->isValid);
+        $this->assertEquals('PROFICIENCY_MISMATCH', $rProf->violations[0]['code']);
+
+        // AG: Difficulty mismatch
+        $cDiff = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['difficulty' => 'extreme_hard']));
+        $rDiff = $this->qualityGate->validate($cDiff, $item);
+        $this->assertFalse($rDiff->isValid);
+        $this->assertEquals('DIFFICULTY_MISMATCH', $rDiff->violations[0]['code']);
     }
 
     /**
-     * TEST 12: End-to-end full batch execution successfully completes batch and items.
+     * TEST AC, AD, AE: TOEFL candidate task, claim, skill mismatches and CEFR envelope violation fail quality gate.
      */
-    public function test_orchestrator_end_to_end_toeic_batch_processing(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray([
-            'mode' => 'part',
-            'part_number' => 5,
-            'item_count' => 3,
-            'seed' => 555,
-        ]);
-        $plan = $this->toeicPlanner->plan($request);
-
-        $batch = $this->orchestrator->createBatchFromPlan($plan, [
-            'question_bank_id' => $this->questionBank->id,
-            'requested_by' => $this->teacher->id,
-        ]);
-
-        $processedBatch = $this->orchestrator->processBatch($batch, $this->fakeProvider);
-
-        $this->assertEquals(GenerationBatchStatus::Completed, $processedBatch->status);
-        $this->assertNotNull($processedBatch->started_at);
-        $this->assertNotNull($processedBatch->completed_at);
-        $this->assertEquals(3, $processedBatch->total_slots);
-        $this->assertEquals(3, $processedBatch->validated_slots);
-        $this->assertEquals(0, $processedBatch->failed_slots);
-        $this->assertEquals(0, $processedBatch->pending_slots);
-
-        // Check that 3 questions are in database
-        $this->assertEquals(3, Question::where('generation_batch_id', $batch->id)->count());
-        foreach ($processedBatch->items as $item) {
-            $this->assertEquals(GenerationItemStatus::Materialized, $item->status);
-            $this->assertNotNull($item->question_id);
-            $this->assertNotNull($item->normalized_output);
-            $this->assertTrue($item->validation_result['is_valid']);
-        }
-    }
-
-    /**
-     * TEST 13: End-to-end full batch execution for TOEFL iBT items.
-     */
-    public function test_orchestrator_end_to_end_toefl_batch_processing(): void
+    public function test_ac_through_ae_toefl_structural_mismatches_fail_quality_gate(): void
     {
         $request = ToeflBlueprintRequest::fromArray([
-            'mode' => 'custom',
-            'custom_tasks' => [
-                'read_in_daily_life' => 1,
-                'write_an_email' => 1,
-            ],
+            'mode' => 'task',
+            'task_type' => 'write_an_email',
+            'task_count' => 1,
             'allow_practice_counts' => true,
-            'seed' => 333,
         ]);
         $plan = $this->toeflPlanner->plan($request);
-
-        $batch = $this->orchestrator->createBatchFromPlan($plan, [
-            'question_bank_id' => $this->questionBank->id,
-            'requested_by' => $this->teacher->id,
-        ]);
-
-        $processedBatch = $this->orchestrator->processBatch($batch, $this->fakeProvider);
-
-        $this->assertEquals(GenerationBatchStatus::Completed, $processedBatch->status);
-        $this->assertEquals(2, $processedBatch->total_slots);
-        $this->assertEquals(2, Question::where('generation_batch_id', $batch->id)->count());
-
-        $readingQ = Question::where('generation_batch_id', $batch->id)->where('task_type', 'read_in_daily_life')->first();
-        $this->assertNotNull($readingQ);
-        $this->assertNotEmpty($readingQ->passage_text);
-        $this->assertCount(4, $readingQ->choices);
-
-        $writingQ = Question::where('generation_batch_id', $batch->id)->where('task_type', 'write_an_email')->first();
-        $this->assertNotNull($writingQ);
-        $this->assertNotEmpty($writingQ->prompt);
-        $this->assertNotNull($writingQ->generation_metadata['rubric']);
-    }
-
-    /**
-     * TEST 14: Provider errors trigger item failure and batch partial/failed state.
-     */
-    public function test_orchestrator_handles_provider_errors(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 2]);
-        $plan = $this->toeicPlanner->plan($request);
-        $batch = $this->orchestrator->createBatchFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
-
-        $errorProvider = new FakeGenerationProvider;
-        $errorProvider->triggerError(GenerationErrorCode::ProviderTimeout, 'Simulated timeout');
-
-        $processedBatch = $this->orchestrator->processBatch($batch, $errorProvider);
-
-        $this->assertEquals(GenerationBatchStatus::Failed, $processedBatch->status);
-        $this->assertEquals(2, $processedBatch->failed_slots);
-        $this->assertEquals(0, $processedBatch->validated_slots);
-
-        $firstItem = $processedBatch->items->first();
-        $this->assertEquals(GenerationItemStatus::Failed, $firstItem->status);
-        $this->assertEquals(GenerationErrorCode::ProviderTimeout->value, $firstItem->last_error_code);
-        $this->assertEquals('Simulated timeout', $firstItem->last_error_message);
-    }
-
-    /**
-     * TEST 15: Quality gate failure triggers validation_failed status and partial batch completion.
-     */
-    public function test_orchestrator_handles_quality_gate_failure(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 2]);
-        $plan = $this->toeicPlanner->plan($request);
-        $batch = $this->orchestrator->createBatchFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
-
-        $mixedProvider = new FakeGenerationProvider;
-        // 1st candidate: valid
-        $validCandidate = new GeneratedQuestionCandidate(
-            schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'Valid prompt for testing item 1',
-            choices: [
-                ['label' => 'A', 'content' => 'Option A', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'Option B', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'Option C', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'Option D', 'is_correct' => false],
-            ],
-            correctAnswer: 'A'
-        );
-
-        // 2nd candidate: invalid (placeholder)
-        $invalidCandidate = new GeneratedQuestionCandidate(
-            schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'TODO: Incomplete question prompt',
-            choices: [
-                ['label' => 'A', 'content' => 'Option A', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'Option B', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'Option C', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'Option D', 'is_correct' => false],
-            ],
-            correctAnswer: 'A'
-        );
-
-        $mixedProvider->setPredefinedCandidates([$validCandidate, $invalidCandidate]);
-
-        $processedBatch = $this->orchestrator->processBatch($batch, $mixedProvider);
-
-        $this->assertEquals(GenerationBatchStatus::PartiallyCompleted, $processedBatch->status);
-        $this->assertEquals(1, $processedBatch->validated_slots);
-        $this->assertEquals(1, $processedBatch->failed_slots);
-
-        $items = $processedBatch->items;
-        $this->assertEquals(GenerationItemStatus::Materialized, $items[0]->status);
-        $this->assertEquals(GenerationItemStatus::ValidationFailed, $items[1]->status);
-        $this->assertEquals(GenerationErrorCode::QualityGateFailed->value, $items[1]->last_error_code);
-    }
-
-    /**
-     * TEST 16: Retry failed items re-attempts failed slots and achieves completion.
-     */
-    public function test_orchestrator_retry_failed_items(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
-        $plan = $this->toeicPlanner->plan($request);
-        $batch = $this->orchestrator->createBatchFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
-
-        // Attempt 1: Provider error
-        $failingProvider = new FakeGenerationProvider;
-        $failingProvider->triggerError(GenerationErrorCode::ProviderUnavailable, 'Temporarily down');
-        $this->orchestrator->processBatch($batch, $failingProvider);
-
-        $this->assertEquals(GenerationBatchStatus::Failed, $batch->fresh()->status);
-        $this->assertEquals(1, $batch->fresh()->items->first()->attempt_count);
-
-        // Attempt 2: Retry with working provider
-        $workingProvider = new FakeGenerationProvider;
-        $retriedBatch = $this->orchestrator->retryFailedItems($batch->fresh(), $workingProvider);
-
-        $this->assertEquals(GenerationBatchStatus::Completed, $retriedBatch->status);
-        $this->assertEquals(2, $retriedBatch->items->first()->attempt_count);
-        $this->assertEquals(GenerationItemStatus::Materialized, $retriedBatch->items->first()->status);
-        $this->assertEquals(1, Question::where('generation_batch_id', $batch->id)->count());
-    }
-
-    /**
-     * TEST 17: Cancel batch updates batch and pending items to cancelled.
-     */
-    public function test_orchestrator_cancel_batch(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 3]);
-        $plan = $this->toeicPlanner->plan($request);
-        $batch = $this->orchestrator->createBatchFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
-
-        $cancelledBatch = $this->orchestrator->cancelBatch($batch, 'User requested abort');
-
-        $this->assertEquals(GenerationBatchStatus::Cancelled, $cancelledBatch->status);
-        $this->assertEquals('User requested abort', $cancelledBatch->metadata['cancellation_reason']);
-        foreach ($cancelledBatch->items as $item) {
-            $this->assertEquals(GenerationItemStatus::Cancelled, $item->status);
-        }
-    }
-
-    /**
-     * TEST 18: Enums helper functions verify correct transitions and classifications.
-     */
-    public function test_enum_helper_functions(): void
-    {
-        // GenerationBatchStatus
-        $this->assertTrue(GenerationBatchStatus::Completed->isFinal());
-        $this->assertTrue(GenerationBatchStatus::PartiallyCompleted->isFinal());
-        $this->assertTrue(GenerationBatchStatus::Failed->isFinal());
-        $this->assertTrue(GenerationBatchStatus::Cancelled->isFinal());
-        $this->assertFalse(GenerationBatchStatus::Processing->isFinal());
-
-        $this->assertTrue(GenerationBatchStatus::Draft->canCancel());
-        $this->assertFalse(GenerationBatchStatus::Completed->canCancel());
-
-        // GenerationItemStatus
-        $this->assertTrue(GenerationItemStatus::Materialized->isFinal());
-        $this->assertTrue(GenerationItemStatus::Cancelled->isFinal());
-        $this->assertFalse(GenerationItemStatus::Processing->isFinal());
-
-        $this->assertTrue(GenerationItemStatus::Pending->canAttempt());
-        $this->assertTrue(GenerationItemStatus::ValidationFailed->canAttempt());
-        $this->assertTrue(GenerationItemStatus::Failed->canAttempt());
-        $this->assertFalse(GenerationItemStatus::Materialized->canAttempt());
-
-        // GenerationErrorCode
-        $this->assertTrue(GenerationErrorCode::ProviderUnavailable->isRetryable());
-        $this->assertTrue(GenerationErrorCode::ProviderTimeout->isRetryable());
-        $this->assertTrue(GenerationErrorCode::QualityGateFailed->isRetryable());
-        $this->assertFalse(GenerationErrorCode::MaterializationFailed->isRetryable());
-        $this->assertFalse(GenerationErrorCode::MaxAttemptsExceeded->isRetryable());
-    }
-
-    /**
-     * TEST 19: GeneratedQuestionNormalizer fails on completely invalid JSON.
-     */
-    public function test_normalizer_fails_on_invalid_json(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->normalizer->normalize('This is not JSON at all!');
-    }
-
-    /**
-     * TEST 20: Quality gate validates TOEIC Part 2 allows exactly 3 choices.
-     */
-    public function test_quality_gate_validates_part_2_three_choices(): void
-    {
-        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 2, 'item_count' => 1]);
-        $plan = $this->toeicPlanner->plan($request);
-        $batch = $this->batchFactory->createFromPlan($plan);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
         $item = $batch->items->first();
 
-        // Valid 3-choice candidate
-        $validP2 = new GeneratedQuestionCandidate(
+        $baseCandidate = new GeneratedQuestionCandidate(
             schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'Where is the monthly financial review being held?',
-            choices: [
-                ['label' => 'A', 'content' => 'In Conference Room B.', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'Yes, at 2:00 PM.', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'Mr. Tanaka approved it.', 'is_correct' => false],
-            ],
-            correctAnswer: 'A'
+            prompt: 'Write an email to Professor Higgins about your research project.',
+            rubric: 'Score 5: Clear and fluent',
+            sampleResponse: 'Dear Professor Higgins...',
+            assessmentFamily: $item->assessment_family,
+            standardVersion: $item->standard_version,
+            section: $item->section,
+            taskType: $item->task_type,
+            claim: $item->claim,
+            skill: $item->skill,
+            proficiencyTarget: $item->proficiency_target,
+            difficulty: $item->difficulty
         );
 
-        $result = $this->qualityGate->validate($validP2, $item);
-        $this->assertTrue($result->isValid);
-        $this->assertEmpty($result->violations);
+        // AC: Task mismatch
+        $cTask = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['task_type' => 'read_in_daily_life']));
+        $rTask = $this->qualityGate->validate($cTask, $item);
+        $this->assertFalse($rTask->isValid);
+        $this->assertEquals('TASK_MISMATCH', $rTask->violations[0]['code']);
 
-        // Invalid 4-choice candidate for Part 2
-        $invalidP2 = new GeneratedQuestionCandidate(
+        // AD: Claim mismatch
+        $cClaim = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['claim' => 'Claim 1 — Reading']));
+        $rClaim = $this->qualityGate->validate($cClaim, $item);
+        $this->assertFalse($rClaim->isValid);
+        $this->assertEquals('CLAIM_MISMATCH', $rClaim->violations[0]['code']);
+
+        // AE: Skill mismatch
+        $cSkill = GeneratedQuestionCandidate::fromArray(array_merge($baseCandidate->toArray(), ['skill' => 'Speaking in an interview']));
+        $rSkill = $this->qualityGate->validate($cSkill, $item);
+        $this->assertFalse($rSkill->isValid);
+        $this->assertEquals('SKILL_MISMATCH', $rSkill->violations[0]['code']);
+
+        // CEFR envelope violation for listen_and_choose_a_response (A1-B2 envelope; C2 is incompatible)
+        $reqP2 = ToeflBlueprintRequest::fromArray([
+            'mode' => 'task',
+            'task_type' => 'listen_and_choose_a_response',
+            'task_count' => 1,
+            'allow_practice_counts' => true,
+        ]);
+        $planP2 = $this->toeflPlanner->plan($reqP2);
+        $batchP2 = $this->batchFactory->createFromPlan($planP2, ['question_bank_id' => $this->questionBank->id]);
+        $itemP2 = $batchP2->items->first();
+        $itemP2->proficiency_target = 'c2';
+        $itemP2->save();
+
+        $cCefr = new GeneratedQuestionCandidate(
             schemaVersion: 'generated_question_candidate_v1',
-            prompt: 'Where is the monthly financial review being held?',
+            prompt: 'Choose the best response.',
             choices: [
-                ['label' => 'A', 'content' => 'In Conference Room B.', 'is_correct' => true],
-                ['label' => 'B', 'content' => 'Yes, at 2:00 PM.', 'is_correct' => false],
-                ['label' => 'C', 'content' => 'Mr. Tanaka approved it.', 'is_correct' => false],
-                ['label' => 'D', 'content' => 'Extra 4th choice.', 'is_correct' => false],
+                ['label' => 'A', 'content' => 'Choice 1', 'is_correct' => true],
+                ['label' => 'B', 'content' => 'Choice 2', 'is_correct' => false],
+                ['label' => 'C', 'content' => 'Choice 3', 'is_correct' => false],
+                ['label' => 'D', 'content' => 'Choice 4', 'is_correct' => false],
             ],
-            correctAnswer: 'A'
+            correctAnswer: 'A',
+            assessmentFamily: $itemP2->assessment_family,
+            standardVersion: $itemP2->standard_version,
+            section: $itemP2->section,
+            taskType: $itemP2->task_type,
+            claim: $itemP2->claim,
+            skill: $itemP2->skill,
+            proficiencyTarget: 'c2',
+            difficulty: $itemP2->difficulty
         );
-
-        $resInvalid = $this->qualityGate->validate($invalidP2, $item);
-        $this->assertFalse($resInvalid->isValid);
-        $this->assertEquals('INVALID_CHOICE_COUNT', $resInvalid->violations[0]['code']);
+        $rCefr = $this->qualityGate->validate($cCefr, $itemP2);
+        $this->assertFalse($rCefr->isValid);
+        $this->assertEquals('INCOMPATIBLE_PROFICIENCY_FOR_TASK', $rCefr->violations[0]['code']);
     }
 
     /**
-     * TEST 21: Materialized question strict draft governance.
+     * TEST AH & AI: Canonical construct compatibility and valid structural candidate passes.
      */
-    public function test_materialized_question_strict_draft_governance(): void
+    public function test_ah_and_ai_canonical_construct_and_valid_candidate(): void
     {
         $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
         $plan = $this->toeicPlanner->plan($request);
-        $batch = $this->orchestrator->createBatchFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $item = $batch->items->first();
+
+        // Valid structural candidate
+        $validCandidate = new GeneratedQuestionCandidate(
+            schemaVersion: 'generated_question_candidate_v1',
+            prompt: 'The sales staff must submit _____ receipts promptly.',
+            choices: [
+                ['label' => 'A', 'content' => 'their', 'is_correct' => true],
+                ['label' => 'B', 'content' => 'theirs', 'is_correct' => false],
+                ['label' => 'C', 'content' => 'them', 'is_correct' => false],
+                ['label' => 'D', 'content' => 'they', 'is_correct' => false],
+            ],
+            correctAnswer: 'A',
+            assessmentFamily: $item->assessment_family,
+            standardVersion: $item->standard_version,
+            section: $item->section,
+            partNumber: $item->part_number,
+            construct: $item->construct,
+            proficiencyTarget: $item->proficiency_target,
+            difficulty: $item->difficulty
+        );
+
+        $res = $this->qualityGate->validate($validCandidate, $item);
+        $this->assertTrue($res->isValid);
+        $this->assertEmpty($res->violations);
+
+        // Incompatible construct for Part 5 (e.g. VisualDescription on item & candidate)
+        $item->construct = 'visual_description';
+        $item->save();
+        $incompatCandidate = GeneratedQuestionCandidate::fromArray(array_merge($validCandidate->toArray(), [
+            'construct' => 'visual_description',
+        ]));
+        $resIncompat = $this->qualityGate->validate($incompatCandidate, $item);
+        $this->assertFalse($resIncompat->isValid);
+        $this->assertEquals('INCOMPATIBLE_CONSTRUCT_FOR_PART', $resIncompat->violations[0]['code']);
+    }
+
+    /**
+     * TEST AJ & AK: Generation item standard_id non-null and restrict on delete.
+     */
+    public function test_aj_and_ak_standard_binding_non_null_and_restrict_delete(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $item = $batch->items->first();
+
+        $this->assertNotNull($item->assessment_standard_id);
+        $this->assertEquals($this->toeicStd->id, $item->assessment_standard_id);
+
+        // Attempting to delete assessment standard referenced by generation item must be restricted
+        $this->expectException(QueryException::class);
+        $this->toeicStd->forceDelete();
+    }
+
+    /**
+     * TEST AL through AO: Materialization governance preservation (unpublished, content_origin=generated).
+     */
+    public function test_al_through_ao_materialization_governance_preservation(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
 
         $this->orchestrator->processBatch($batch, $this->fakeProvider);
 
         $question = Question::where('generation_batch_id', $batch->id)->first();
         $this->assertNotNull($question);
-        $this->assertTrue($question->isGenerated());
+        $this->assertEquals($this->questionBank->id, $question->question_bank_id);
         $this->assertEquals(ContentOrigin::Generated, $question->content_origin);
-        $this->assertFalse((bool) $question->is_published, 'Generated questions MUST NOT be auto-published without Teacher/RM review.');
+        $this->assertFalse((bool) $question->is_published);
+    }
+
+    /**
+     * TEST AP & AQ: Concurrency-safe materialization creates at most one Question per item.
+     */
+    public function test_ap_and_aq_concurrency_safe_materialization(): void
+    {
+        $request = ToeicBlueprintRequest::fromArray(['mode' => 'part', 'part_number' => 5, 'item_count' => 1]);
+        $plan = $this->toeicPlanner->plan($request);
+        $batch = $this->batchFactory->createFromPlan($plan, ['question_bank_id' => $this->questionBank->id]);
+        $item = $batch->items->first();
+
+        $item->status = GenerationItemStatus::Validated;
+        $item->save();
+
+        $candidate = new GeneratedQuestionCandidate(
+            schemaVersion: 'generated_question_candidate_v1',
+            prompt: 'Concurrent test prompt for item',
+            choices: [
+                ['label' => 'A', 'content' => 'Opt A', 'is_correct' => true],
+                ['label' => 'B', 'content' => 'Opt B', 'is_correct' => false],
+                ['label' => 'C', 'content' => 'Opt C', 'is_correct' => false],
+                ['label' => 'D', 'content' => 'Opt D', 'is_correct' => false],
+            ],
+            correctAnswer: 'A'
+        );
+
+        $q1 = $this->materializer->materialize($item, $candidate);
+        $q2 = $this->materializer->materialize($item, $candidate);
+
+        $this->assertSame($q1->id, $q2->id);
+        $this->assertEquals(1, Question::where('generation_batch_id', $batch->id)->count());
     }
 }

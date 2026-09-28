@@ -11,7 +11,7 @@ return new class extends Migration
         if (!Schema::hasTable('question_generation_batches')) {
             Schema::create('question_generation_batches', function (Blueprint $table) {
                 $table->ulid('id')->primary();
-                $table->foreignUlid('question_bank_id')->nullable()->constrained('question_banks')->nullOnDelete();
+                $table->foreignUlid('question_bank_id')->constrained('question_banks')->restrictOnDelete();
                 $table->string('assessment_family', 40)->index();
                 $table->foreignUlid('assessment_standard_id')->constrained('assessment_standards')->restrictOnDelete();
                 $table->string('standard_version', 30);

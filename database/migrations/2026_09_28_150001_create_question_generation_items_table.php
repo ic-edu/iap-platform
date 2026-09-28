@@ -15,7 +15,7 @@ return new class extends Migration
                 $table->integer('slot_sequence');
                 $table->string('slot_fingerprint', 64)->nullable()->index();
                 $table->string('assessment_family', 40)->index();
-                $table->foreignUlid('assessment_standard_id')->nullable()->constrained('assessment_standards')->nullOnDelete();
+                $table->foreignUlid('assessment_standard_id')->constrained('assessment_standards')->restrictOnDelete();
                 $table->string('standard_version', 30)->nullable();
                 $table->string('section', 40)->nullable()->index();
                 $table->integer('part_number')->nullable()->index();

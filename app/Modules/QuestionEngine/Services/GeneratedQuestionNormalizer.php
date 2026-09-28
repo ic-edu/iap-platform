@@ -4,6 +4,7 @@ namespace App\Modules\QuestionEngine\Services;
 
 use App\Modules\QuestionEngine\DTO\GeneratedQuestionCandidate;
 use App\Modules\QuestionEngine\DTO\GenerationProviderResponse;
+use App\Modules\QuestionEngine\Enums\AssessmentFamily;
 use InvalidArgumentException;
 
 class GeneratedQuestionNormalizer
@@ -88,6 +89,27 @@ class GeneratedQuestionNormalizer
         $correctAnswer = isset($payload['correct_answer']) ? (string) $payload['correct_answer'] : null;
         $metadata = isset($payload['metadata']) && is_array($payload['metadata']) ? $payload['metadata'] : [];
 
+        // Extract structural identity
+        $rawFamily = $payload['assessment_family'] ?? ($metadata['assessment_family'] ?? null);
+        $assessmentFamily = null;
+        if ($rawFamily !== null) {
+            $assessmentFamily = $rawFamily instanceof AssessmentFamily
+                ? $rawFamily
+                : AssessmentFamily::tryFrom((string) $rawFamily);
+        }
+
+        $standardVersion = isset($payload['standard_version']) ? (string) $payload['standard_version'] : ($metadata['standard_version'] ?? null);
+        $section = isset($payload['section']) ? (string) $payload['section'] : ($metadata['section'] ?? null);
+        $partNumber = isset($payload['part_number']) && $payload['part_number'] !== null
+            ? (int) $payload['part_number']
+            : (isset($metadata['part_number']) && $metadata['part_number'] !== null ? (int) $metadata['part_number'] : null);
+        $taskType = isset($payload['task_type']) ? (string) $payload['task_type'] : ($metadata['task_type'] ?? null);
+        $claim = isset($payload['claim']) ? (string) $payload['claim'] : ($metadata['claim'] ?? null);
+        $skill = isset($payload['skill']) ? (string) $payload['skill'] : ($metadata['skill'] ?? null);
+        $construct = isset($payload['construct']) ? (string) $payload['construct'] : ($metadata['construct'] ?? null);
+        $proficiencyTarget = isset($payload['proficiency_target']) ? (string) $payload['proficiency_target'] : ($metadata['proficiency_target'] ?? null);
+        $difficulty = isset($payload['difficulty']) ? (string) $payload['difficulty'] : ($metadata['difficulty'] ?? null);
+
         $rawChoices = (array) ($payload['choices'] ?? ($payload['options'] ?? []));
         $normalizedChoices = $this->normalizeChoices($rawChoices, $correctAnswer);
 
@@ -101,6 +123,16 @@ class GeneratedQuestionNormalizer
             explanation: $explanation,
             rubric: $rubric,
             sampleResponse: $sampleResponse,
+            assessmentFamily: $assessmentFamily,
+            standardVersion: $standardVersion ? (string) $standardVersion : null,
+            section: $section ? (string) $section : null,
+            partNumber: $partNumber,
+            taskType: $taskType ? (string) $taskType : null,
+            claim: $claim ? (string) $claim : null,
+            skill: $skill ? (string) $skill : null,
+            construct: $construct ? (string) $construct : null,
+            proficiencyTarget: $proficiencyTarget ? (string) $proficiencyTarget : null,
+            difficulty: $difficulty ? (string) $difficulty : null,
             metadata: $metadata,
         );
     }

@@ -2,27 +2,64 @@
 
 namespace App\Modules\QuestionEngine\Services;
 
+use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionEngine\DTO\ToeflGenerationPlan;
 use App\Modules\QuestionEngine\DTO\ToeflGenerationSlot;
 use App\Modules\QuestionEngine\DTO\ToeicGenerationPlan;
 use App\Modules\QuestionEngine\DTO\ToeicGenerationSlot;
 use App\Modules\QuestionEngine\Enums\GenerationBatchStatus;
 use App\Modules\QuestionEngine\Enums\GenerationItemStatus;
+use App\Modules\QuestionEngine\Models\AssessmentStandard;
 use App\Modules\QuestionEngine\Models\QuestionGenerationBatch;
 use App\Modules\QuestionEngine\Models\QuestionGenerationItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class GenerationBatchFactory
 {
     /**
      * Create persistent generation batch and items from a generation plan.
      *
-     * @param  array<string, mixed>  $options  ['question_bank_id' => string, 'requested_by' => int, 'idempotency_key' => string, 'generation_config' => array]
+     * @param  array<string, mixed>  $options  ['question_bank_id' => string, 'requested_by' => int, 'idempotency_key' => string, 'force_new_run' => bool, 'new_run_nonce' => string, 'generation_config' => array]
+     *
+     * @throws InvalidArgumentException
      */
     public function createFromPlan(ToeicGenerationPlan|ToeflGenerationPlan $plan, array $options = []): QuestionGenerationBatch
     {
-        $idempotencyKey = $options['idempotency_key'] ?? ('batch_'.substr($plan->fingerprint, 0, 24).'_'.Str::random(8));
+        // Issue 2: QuestionBank destination is strictly required
+        $questionBankId = $options['question_bank_id'] ?? null;
+        if (empty($questionBankId)) {
+            throw new InvalidArgumentException('question_bank_id is required to create a generation batch.');
+        }
+
+        /** @var QuestionBank|null $questionBank */
+        $questionBank = QuestionBank::find($questionBankId);
+        if ($questionBank === null || $questionBank->trashed()) {
+            throw new InvalidArgumentException("QuestionBank [{$questionBankId}] does not exist or has been deleted.");
+        }
+
+        // Issue 8: Validate AssessmentStandard exists and is valid
+        $standardId = $plan->assessmentStandardId;
+        if (empty($standardId) || !AssessmentStandard::where('id', $standardId)->exists()) {
+            throw new InvalidArgumentException("AssessmentStandard [{$standardId}] bound to plan does not exist in database.");
+        }
+
+        // Issue 1: Deterministic Idempotency Key
+        $promptContractVersion = 'question_generation_v1';
+        $keyParts = [
+            $questionBankId,
+            $plan->fingerprint,
+            $promptContractVersion,
+        ];
+
+        if (!empty($options['force_new_run'])) {
+            $keyParts[] = Str::uuid()->toString();
+        } elseif (isset($options['new_run_nonce']) && $options['new_run_nonce'] !== '') {
+            $keyParts[] = (string) $options['new_run_nonce'];
+        }
+
+        $idempotencyKey = $options['idempotency_key'] ?? ('batch_'.hash('sha256', implode(':', $keyParts)));
 
         // If an existing batch exists with this idempotency key, return it
         $existing = QuestionGenerationBatch::where('idempotency_key', $idempotencyKey)->first();
@@ -30,12 +67,10 @@ class GenerationBatchFactory
             return $existing;
         }
 
-        return DB::transaction(function () use ($plan, $options, $idempotencyKey) {
+        return DB::transaction(function () use ($plan, $options, $idempotencyKey, $questionBankId, $standardId, $promptContractVersion) {
             $isToeic = $plan instanceof ToeicGenerationPlan;
-            $isToefl = $plan instanceof ToeflGenerationPlan;
 
             $family = $plan->assessmentFamily;
-            $standardId = $plan->assessmentStandardId;
             $standardVersion = $plan->standardVersion;
             $fingerprint = $plan->fingerprint;
             $plannerType = $isToeic ? 'toeic_blueprint_planner' : 'toefl_blueprint_planner';
@@ -43,7 +78,7 @@ class GenerationBatchFactory
             $totalSlots = $plan->totalSlots;
 
             $batch = QuestionGenerationBatch::create([
-                'question_bank_id' => $options['question_bank_id'] ?? null,
+                'question_bank_id' => $questionBankId,
                 'assessment_family' => $family,
                 'assessment_standard_id' => $standardId,
                 'standard_version' => $standardVersion,
@@ -53,7 +88,7 @@ class GenerationBatchFactory
                 'status' => GenerationBatchStatus::Draft,
                 'requested_by' => $options['requested_by'] ?? null,
                 'idempotency_key' => $idempotencyKey,
-                'prompt_contract_version' => 'question_generation_v1',
+                'prompt_contract_version' => $promptContractVersion,
                 'total_slots' => $totalSlots,
                 'pending_slots' => $totalSlots,
                 'processing_slots' => 0,

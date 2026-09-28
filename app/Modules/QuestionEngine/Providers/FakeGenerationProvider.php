@@ -93,7 +93,6 @@ class FakeGenerationProvider implements QuestionGenerationProvider
             $code = $this->errorToTrigger;
             $msg = $this->errorMessageToTrigger ?? $code->label();
 
-            // Reset one-shot trigger if needed or keep until reset
             return GenerationProviderResponse::failure(
                 errorCode: $code,
                 errorMessage: $msg,
@@ -183,11 +182,21 @@ class FakeGenerationProvider implements QuestionGenerationProvider
     {
         $domain = $meta['domain'] ?? 'general_business';
         $difficulty = $meta['difficulty'] ?? 'medium';
-        $construct = $meta['construct'] ?? 'main_idea';
+        $construct = $meta['construct'] ?? ($part === 1 ? 'visual_description' : ($part === 2 ? 'intent' : 'detail'));
+        $proficiency = $meta['proficiency_target'] ?? 'b2';
+        $standardVersion = $meta['standard_version'] ?? '2026.1';
+        $section = $part <= 4 ? 'listening' : 'reading';
 
         if ($part === 1) {
             return [
                 'schema_version' => 'generated_question_candidate_v1',
+                'assessment_family' => AssessmentFamily::Toeic->value,
+                'standard_version' => $standardVersion,
+                'section' => $section,
+                'part_number' => 1,
+                'construct' => $construct,
+                'proficiency_target' => $proficiency,
+                'difficulty' => $difficulty,
                 'prompt' => 'Look at the photograph and choose the statement that best describes what you see.',
                 'passage_text' => null,
                 'audio_script' => '(A) A man is carrying a briefcase across the plaza. (B) A man is sitting on a park bench reading. (C) Several cyclists are waiting at a traffic signal. (D) Construction workers are repairing the road.',
@@ -211,6 +220,13 @@ class FakeGenerationProvider implements QuestionGenerationProvider
         if ($part === 2) {
             return [
                 'schema_version' => 'generated_question_candidate_v1',
+                'assessment_family' => AssessmentFamily::Toeic->value,
+                'standard_version' => $standardVersion,
+                'section' => $section,
+                'part_number' => 2,
+                'construct' => $construct,
+                'proficiency_target' => $proficiency,
+                'difficulty' => $difficulty,
                 'prompt' => 'When will the annual corporate budget report be finalized?',
                 'passage_text' => null,
                 'audio_script' => "M: When will the annual corporate budget report be finalized?\n(A) By next Tuesday afternoon.\n(B) Yes, it was very expensive.\n(C) In the second-floor conference room.",
@@ -233,6 +249,13 @@ class FakeGenerationProvider implements QuestionGenerationProvider
         if ($part === 3 || $part === 4) {
             return [
                 'schema_version' => 'generated_question_candidate_v1',
+                'assessment_family' => AssessmentFamily::Toeic->value,
+                'standard_version' => $standardVersion,
+                'section' => $section,
+                'part_number' => $part,
+                'construct' => $construct,
+                'proficiency_target' => $proficiency,
+                'difficulty' => $difficulty,
                 'prompt' => 'What is the main topic of the discussion?',
                 'passage_text' => null,
                 'audio_script' => "Speaker A: Good morning, Sarah. Have you had a chance to review the vendor proposals for the upcoming cloud migration?\nSpeaker B: Yes, Mark. TechCore's bid looks promising, but their implementation timeline is slightly longer than we anticipated.",
@@ -256,6 +279,13 @@ class FakeGenerationProvider implements QuestionGenerationProvider
         if ($part === 6 || $part === 7) {
             return [
                 'schema_version' => 'generated_question_candidate_v1',
+                'assessment_family' => AssessmentFamily::Toeic->value,
+                'standard_version' => $standardVersion,
+                'section' => $section,
+                'part_number' => $part,
+                'construct' => $construct,
+                'proficiency_target' => $proficiency,
+                'difficulty' => $difficulty,
                 'prompt' => 'According to the notice, why is the main lobby entrance temporarily closed?',
                 'passage_text' => "MEMORANDUM\n\nTo: All Employees\nFrom: Building Facilities Management\nDate: October 14\nSubject: Main Lobby Renovation\n\nPlease be advised that the main lobby entrance on Elm Street will be closed from October 18 through October 22 due to floor resurfacing and security barrier installations. During this period, all staff and visitors must enter via the North Courtyard entrance.\n\nWe apologize for any inconvenience.",
                 'audio_script' => null,
@@ -279,6 +309,13 @@ class FakeGenerationProvider implements QuestionGenerationProvider
         // Part 5 Default
         return [
             'schema_version' => 'generated_question_candidate_v1',
+            'assessment_family' => AssessmentFamily::Toeic->value,
+            'standard_version' => $standardVersion,
+            'section' => $section,
+            'part_number' => 5,
+            'construct' => $construct ?? 'grammar',
+            'proficiency_target' => $proficiency,
+            'difficulty' => $difficulty,
             'prompt' => 'The regional sales manager praised the procurement team for their _____ handling of international supplier negotiations.',
             'passage_text' => null,
             'audio_script' => null,
@@ -294,7 +331,7 @@ class FakeGenerationProvider implements QuestionGenerationProvider
                 'part_number' => 5,
                 'domain' => $domain,
                 'difficulty' => $difficulty,
-                'construct' => $construct,
+                'construct' => $construct ?? 'grammar',
             ],
         ];
     }
@@ -307,10 +344,23 @@ class FakeGenerationProvider implements QuestionGenerationProvider
     {
         $domain = $meta['domain'] ?? 'academic';
         $difficulty = $meta['difficulty'] ?? 'medium';
+        $proficiency = $meta['proficiency_target'] ?? 'b2';
+        $standardVersion = $meta['standard_version'] ?? '2026.1';
+        $section = $meta['section'] ?? 'reading';
+        $claim = $meta['claim'] ?? 'Claim 1 — Reading';
+        $skill = $meta['skill'] ?? 'Reading for basic comprehension';
 
         if (in_array($taskType, ['read_an_academic_passage', 'read_in_daily_life', 'listen_to_an_academic_talk', 'listen_to_a_conversation', 'listen_and_choose_a_response'], true)) {
             return [
                 'schema_version' => 'generated_question_candidate_v1',
+                'assessment_family' => AssessmentFamily::ToeflIbt->value,
+                'standard_version' => $standardVersion,
+                'section' => $section,
+                'task_type' => $taskType,
+                'claim' => $claim,
+                'skill' => $skill,
+                'proficiency_target' => $proficiency,
+                'difficulty' => $difficulty,
                 'prompt' => 'In the passage, what does the author imply about biodiversity in temperate rainforests?',
                 'passage_text' => 'Temperate rainforests occur in oceanic moist climates where high rainfall supports dense canopy vegetation. Unlike tropical counterparts, biomass in temperate forests is predominantly concentrated in long-lived coniferous trees rather than understory shrub diversity.',
                 'audio_script' => null,
@@ -333,6 +383,14 @@ class FakeGenerationProvider implements QuestionGenerationProvider
         if (in_array($taskType, ['write_an_email', 'write_for_an_academic_discussion', 'build_a_sentence'], true)) {
             return [
                 'schema_version' => 'generated_question_candidate_v1',
+                'assessment_family' => AssessmentFamily::ToeflIbt->value,
+                'standard_version' => $standardVersion,
+                'section' => 'writing',
+                'task_type' => $taskType,
+                'claim' => $claim,
+                'skill' => $skill,
+                'proficiency_target' => $proficiency,
+                'difficulty' => $difficulty,
                 'prompt' => 'Your university professor has announced a proposal to replace all printed textbooks with open-source digital readings. Write an email to Professor Anderson expressing your perspective, outlining two benefits and one potential challenge of this transition.',
                 'passage_text' => null,
                 'audio_script' => null,
@@ -352,13 +410,21 @@ class FakeGenerationProvider implements QuestionGenerationProvider
         // Speaking tasks (listen_and_repeat, take_an_interview)
         return [
             'schema_version' => 'generated_question_candidate_v1',
+            'assessment_family' => AssessmentFamily::ToeflIbt->value,
+            'standard_version' => $standardVersion,
+            'section' => 'speaking',
+            'task_type' => $taskType,
+            'claim' => $claim,
+            'skill' => $skill,
+            'proficiency_target' => $proficiency,
+            'difficulty' => $difficulty,
             'prompt' => 'You will participate in a short simulated interview. Listen to the interviewer\'s question regarding your experience collaborating on academic group projects and provide your response.',
             'passage_text' => null,
             'audio_script' => 'Interviewer: Could you describe a time when you and your classmates had differing opinions on a project topic, and how you resolved that disagreement?',
             'choices' => [],
             'correct_answer' => null,
             'explanation' => 'Assesses spoken fluency, pronunciation clarity, vocabulary precision, and coherence.',
-            'rubric' => 'Score 4: Highly intelligible speech, natural pacing, effective discourse markers.\nScore 3: Generally intelligible with occasional hesitation or phonological inaccuracies.\nScore 2: Limited expression, frequent pauses affecting comprehensibility.\nScore 1: Insufficient intelligible speech.',
+            'rubric' => "Score 4: Highly intelligible speech, natural pacing, effective discourse markers.\nScore 3: Generally intelligible with occasional hesitation or phonological inaccuracies.\nScore 2: Limited expression, frequent pauses affecting comprehensibility.\nScore 1: Insufficient intelligible speech.",
             'sample_response' => 'In my sophomore year biology seminar, our four-member team debated whether to focus our research poster on marine acidification or wetland restoration...',
             'metadata' => [
                 'task_type' => $taskType,

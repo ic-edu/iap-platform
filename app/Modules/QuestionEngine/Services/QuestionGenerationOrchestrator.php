@@ -11,7 +11,7 @@ use App\Modules\QuestionEngine\Enums\GenerationErrorCode;
 use App\Modules\QuestionEngine\Enums\GenerationItemStatus;
 use App\Modules\QuestionEngine\Models\QuestionGenerationBatch;
 use App\Modules\QuestionEngine\Models\QuestionGenerationItem;
-use App\Modules\QuestionEngine\Providers\FakeGenerationProvider;
+use App\Modules\QuestionEngine\Providers\NullGenerationProvider;
 use Exception;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -27,9 +27,8 @@ class QuestionGenerationOrchestrator
         protected GeneratedQuestionMaterializer $materializer,
         protected ?QuestionGenerationProvider $defaultProvider = null
     ) {
-        if ($this->defaultProvider === null) {
-            $this->defaultProvider = new FakeGenerationProvider;
-        }
+        // Issue 3: Canonical runtime default is NullGenerationProvider (fail closed, never FakeGenerationProvider)
+        $this->defaultProvider ??= new NullGenerationProvider;
     }
 
     /**
@@ -181,6 +180,7 @@ class QuestionGenerationOrchestrator
             }
 
             $item->markValidated($validationResult->toArray());
+            $item->save();
 
             // 6. Materialize into Question Draft
             try {

@@ -5,6 +5,8 @@ namespace App\Modules\QuestionEngine\Services;
 use App\Modules\QuestionEngine\DTO\GeneratedQuestionCandidate;
 use App\Modules\QuestionEngine\DTO\GenerationValidationResult;
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
+use App\Modules\QuestionEngine\Enums\ProficiencyTarget;
+use App\Modules\QuestionEngine\Enums\ToeflTaskType;
 use App\Modules\QuestionEngine\Models\QuestionGenerationItem;
 
 class GeneratedQuestionQualityGate
@@ -25,7 +27,7 @@ class GeneratedQuestionQualityGate
     ];
 
     /**
-     * Validate candidate against slot constraints and quality rules.
+     * Validate candidate against slot constraints, structural identity, and quality rules.
      */
     public function validate(GeneratedQuestionCandidate $candidate, QuestionGenerationItem $item): GenerationValidationResult
     {
@@ -33,7 +35,10 @@ class GeneratedQuestionQualityGate
         $warnings = [];
         $metrics = [];
 
-        // 1. Stem / Prompt checks
+        // 1. Validate Structural Identity Match between Candidate and Generation Item
+        $this->validateStructuralIdentityMatch($candidate, $item, $violations);
+
+        // 2. Stem / Prompt checks
         $prompt = trim($candidate->prompt);
         if (empty($prompt)) {
             $violations[] = [
@@ -51,7 +56,7 @@ class GeneratedQuestionQualityGate
 
         $this->checkForPlaceholders($prompt, 'prompt', $violations);
 
-        // 2. Family & Part specific structural checks
+        // 3. Family & Part specific structural checks and Canonical Rules
         $family = $item->assessment_family;
 
         if ($family === AssessmentFamily::Toeic) {
@@ -78,6 +83,105 @@ class GeneratedQuestionQualityGate
 
     /**
      * @param  list<array<string, mixed>>  $violations
+     */
+    protected function validateStructuralIdentityMatch(
+        GeneratedQuestionCandidate $candidate,
+        QuestionGenerationItem $item,
+        array &$violations
+    ): void {
+        // Family
+        if ($candidate->assessmentFamily !== null && $candidate->assessmentFamily !== $item->assessment_family) {
+            $violations[] = [
+                'code' => 'FAMILY_MISMATCH',
+                'field' => 'assessment_family',
+                'message' => "Candidate family [{$candidate->assessmentFamily->value}] does not match slot [{$item->assessment_family->value}].",
+            ];
+        }
+
+        // Standard Version
+        if ($candidate->standardVersion !== null && !empty($item->standard_version) && $candidate->standardVersion !== $item->standard_version) {
+            $violations[] = [
+                'code' => 'STANDARD_MISMATCH',
+                'field' => 'standard_version',
+                'message' => "Candidate standard version [{$candidate->standardVersion}] does not match slot [{$item->standard_version}].",
+            ];
+        }
+
+        // Section
+        if ($candidate->section !== null && !empty($item->section) && strtolower($candidate->section) !== strtolower((string) $item->section)) {
+            $violations[] = [
+                'code' => 'SECTION_MISMATCH',
+                'field' => 'section',
+                'message' => "Candidate section [{$candidate->section}] does not match slot [{$item->section}].",
+            ];
+        }
+
+        // TOEIC Part
+        if ($candidate->partNumber !== null && $item->part_number !== null && $candidate->partNumber !== (int) $item->part_number) {
+            $violations[] = [
+                'code' => 'PART_MISMATCH',
+                'field' => 'part_number',
+                'message' => "Candidate part [{$candidate->partNumber}] does not match slot [{$item->part_number}].",
+            ];
+        }
+
+        // TOEFL Task Type
+        if ($candidate->taskType !== null && !empty($item->task_type) && strtolower($candidate->taskType) !== strtolower((string) $item->task_type)) {
+            $violations[] = [
+                'code' => 'TASK_MISMATCH',
+                'field' => 'task_type',
+                'message' => "Candidate task type [{$candidate->taskType}] does not match slot [{$item->task_type}].",
+            ];
+        }
+
+        // Claim
+        if ($candidate->claim !== null && !empty($item->claim) && strtolower($candidate->claim) !== strtolower((string) $item->claim)) {
+            $violations[] = [
+                'code' => 'CLAIM_MISMATCH',
+                'field' => 'claim',
+                'message' => "Candidate claim [{$candidate->claim}] does not match slot [{$item->claim}].",
+            ];
+        }
+
+        // Skill
+        if ($candidate->skill !== null && !empty($item->skill) && strtolower($candidate->skill) !== strtolower((string) $item->skill)) {
+            $violations[] = [
+                'code' => 'SKILL_MISMATCH',
+                'field' => 'skill',
+                'message' => "Candidate skill [{$candidate->skill}] does not match slot [{$item->skill}].",
+            ];
+        }
+
+        // Construct
+        if ($candidate->construct !== null && !empty($item->construct) && strtolower($candidate->construct) !== strtolower((string) $item->construct)) {
+            $violations[] = [
+                'code' => 'CONSTRUCT_MISMATCH',
+                'field' => 'construct',
+                'message' => "Candidate construct [{$candidate->construct}] does not match slot [{$item->construct}].",
+            ];
+        }
+
+        // Proficiency Target
+        if ($candidate->proficiencyTarget !== null && !empty($item->proficiency_target) && strtolower($candidate->proficiencyTarget) !== strtolower((string) $item->proficiency_target)) {
+            $violations[] = [
+                'code' => 'PROFICIENCY_MISMATCH',
+                'field' => 'proficiency_target',
+                'message' => "Candidate proficiency [{$candidate->proficiencyTarget}] does not match slot [{$item->proficiency_target}].",
+            ];
+        }
+
+        // Difficulty
+        if ($candidate->difficulty !== null && !empty($item->difficulty) && strtolower($candidate->difficulty) !== strtolower((string) $item->difficulty)) {
+            $violations[] = [
+                'code' => 'DIFFICULTY_MISMATCH',
+                'field' => 'difficulty',
+                'message' => "Candidate difficulty [{$candidate->difficulty}] does not match slot [{$item->difficulty}].",
+            ];
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $violations
      * @param  list<string>  $warnings
      * @param  array<string, mixed>  $metrics
      */
@@ -98,6 +202,16 @@ class GeneratedQuestionQualityGate
                 'code' => 'MISSING_CHOICES',
                 'field' => 'choices',
                 'message' => "TOEIC Part {$part} questions require multiple choice options.",
+            ];
+        }
+
+        // Validate Part-Construct compatibility using canonical PartConstructCompatibility
+        $construct = $candidate->construct ?? $item->construct;
+        if ($construct !== null && !PartConstructCompatibility::isCompatible($part, $construct)) {
+            $violations[] = [
+                'code' => 'INCOMPATIBLE_CONSTRUCT_FOR_PART',
+                'field' => 'construct',
+                'message' => "Construct [{$construct}] is incompatible with TOEIC Part {$part}.",
             ];
         }
 
@@ -137,6 +251,8 @@ class GeneratedQuestionQualityGate
         array &$metrics
     ): void {
         $task = (string) ($item->task_type ?? '');
+        $taskTypeEnum = ToeflTaskType::tryFrom($task);
+
         $isConstructed = in_array($task, [
             'build_a_sentence',
             'write_an_email',
@@ -144,6 +260,19 @@ class GeneratedQuestionQualityGate
             'listen_and_repeat',
             'take_an_interview',
         ], true);
+
+        // Validate CEFR envelope using canonical ToeflProficiencyCompatibility
+        $proficiency = $candidate->proficiencyTarget ?? $item->proficiency_target;
+        if ($taskTypeEnum !== null && $proficiency !== null) {
+            $targetEnum = ProficiencyTarget::tryFrom($proficiency);
+            if ($targetEnum !== null && !ToeflProficiencyCompatibility::isTargetCompatible($taskTypeEnum, $targetEnum)) {
+                $violations[] = [
+                    'code' => 'INCOMPATIBLE_PROFICIENCY_FOR_TASK',
+                    'field' => 'proficiency_target',
+                    'message' => "Proficiency [{$proficiency}] is outside the official CEFR envelope for TOEFL task [{$task}].",
+                ];
+            }
+        }
 
         if ($isConstructed) {
             if (empty(trim((string) $candidate->rubric)) && empty(trim((string) $candidate->sampleResponse))) {
