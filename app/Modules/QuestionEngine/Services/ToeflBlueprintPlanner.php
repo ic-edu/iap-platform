@@ -213,7 +213,6 @@ class ToeflBlueprintPlanner
         string $standardVersion
     ): ToeflGenerationPlan {
         $slots = [];
-        $adaptiveModules = [];
         $globalSeq = 1;
 
         $sectionCounts = [];
@@ -267,7 +266,7 @@ class ToeflBlueprintPlanner
                 $request->seed !== null ? $request->seed + ($globalSeq * 23) : null
             );
 
-            // 4. Proficiency Sequence Allocation
+            // 4. Proficiency Sequence Allocation (Fail-closed on explicit incompatible targets)
             $profDist = $this->resolveProficiencyDistribution($task, $request);
             $profSeq = $this->allocator->allocateSequence(
                 $taskCount,
@@ -286,8 +285,9 @@ class ToeflBlueprintPlanner
                 $adaptiveStage = null;
                 $moduleRole = null;
                 if ($isAdaptive) {
-                    $adaptiveStage = ($i < (int) ceil($taskCount / 2)) ? 1 : 2;
-                    $moduleRole = $adaptiveStage === 1 ? 'stage_1_router' : 'stage_2_module';
+                    $isRouter = ($i < (int) ceil($taskCount / 2));
+                    $adaptiveStage = $isRouter ? 1 : 2;
+                    $moduleRole = $isRouter ? 'stage_1_router_candidate' : 'stage_2_candidate';
                 }
 
                 $slot = new ToeflGenerationSlot(
@@ -325,7 +325,7 @@ class ToeflBlueprintPlanner
                 );
 
                 $slots[] = $slot;
-                $sectionSlots[$section][] = $globalSeq;
+                $sectionSlots[$section][] = $slot;
 
                 // Accumulate counts
                 $sectionCounts[$section] = ($sectionCounts[$section] ?? 0) + 1;
@@ -342,12 +342,13 @@ class ToeflBlueprintPlanner
         }
 
         // Build Adaptive Module Plans for Reading and Listening
+        $adaptiveModules = [];
         if (!empty($sectionSlots['reading'])) {
-            $adaptiveModules = array_merge($adaptiveModules, $this->buildAdaptiveModules('reading', $sectionSlots['reading'], $actualTaskCounts));
+            $adaptiveModules = array_merge($adaptiveModules, $this->buildAdaptiveModules('reading', $sectionSlots['reading']));
         }
 
         if (!empty($sectionSlots['listening'])) {
-            $adaptiveModules = array_merge($adaptiveModules, $this->buildAdaptiveModules('listening', $sectionSlots['listening'], $actualTaskCounts));
+            $adaptiveModules = array_merge($adaptiveModules, $this->buildAdaptiveModules('listening', $sectionSlots['listening']));
         }
 
         $totalSlots = count($slots);
@@ -451,72 +452,46 @@ class ToeflBlueprintPlanner
 
     /**
      * Resolve proficiency target distribution for a task.
+     * Fail closed on explicit caller distribution if any target is incompatible with task envelope.
      *
      * @return array<string, int|float>
      */
     protected function resolveProficiencyDistribution(ToeflTaskType $task, ToeflBlueprintRequest $request): array
     {
-        $allowedTargets = ToeflProficiencyCompatibility::getAllowedTargetsForTask($task);
-        $allowedMap = [];
-        foreach ($allowedTargets as $t) {
-            $allowedMap[$t->value] = true;
-        }
-
-        $userDist = $request->proficiencyDistribution;
-        $filtered = [];
-        $filteredSum = 0.0;
-
-        foreach ($userDist as $pKey => $pWeight) {
-            if (isset($allowedMap[$pKey]) && $pWeight > 0) {
-                $filtered[$pKey] = (float) $pWeight;
-                $filteredSum += (float) $pWeight;
-            }
-        }
-
-        if ($filteredSum > 0) {
-            // Renormalize to 100%
-            $normalized = [];
-            $sum = 0.0;
-            $keys = array_keys($filtered);
-            $totalKeys = count($keys);
-
-            foreach ($keys as $idx => $k) {
-                if ($idx === $totalKeys - 1) {
-                    $normalized[$k] = round(100.0 - $sum, 4);
-                } else {
-                    $w = round(($filtered[$k] / $filteredSum) * 100.0, 4);
-                    $normalized[$k] = $w;
-                    $sum += $w;
+        if ($request->hasExplicitProficiencyDistribution && $request->proficiencyDistribution !== null) {
+            foreach ($request->proficiencyDistribution as $targetKey => $weight) {
+                if ($weight > 0) {
+                    if (!ToeflProficiencyCompatibility::isTargetCompatible($task, $targetKey)) {
+                        throw new InvalidArgumentException("Explicit proficiency target '{$targetKey}' is outside official CEFR envelope [{$task->cefrMin()}-{$task->cefrMax()}] for task '{$task->value}'.");
+                    }
                 }
             }
 
-            return $normalized;
+            return $request->proficiencyDistribution;
         }
 
-        // Fallback to task default distribution
+        // Fallback to task default distribution (derived directly from task allowed envelope)
         return ToeflProficiencyCompatibility::getDefaultDistributionForTask($task);
     }
 
     /**
-     * Build placeholder adaptive module representations for Reading and Listening.
+     * Build adaptive module representations for Reading and Listening.
+     * Router module references actual candidate slots with accurate matching taskCounts.
+     * Stage 2 Lower and Upper are structural placeholders with empty slots/counts.
      *
-     * @param  list<int>  $slotSeqs
-     * @param  array<string, int>  $taskCounts
+     * @param  list<ToeflGenerationSlot>  $sectionSlotObjects
      * @return list<ToeflAdaptiveModulePlan>
      */
-    protected function buildAdaptiveModules(string $section, array $slotSeqs, array $taskCounts): array
+    protected function buildAdaptiveModules(string $section, array $sectionSlotObjects): array
     {
-        $total = count($slotSeqs);
-        $routerCount = (int) ceil($total / 2);
-        $routerSeqs = array_slice($slotSeqs, 0, $routerCount);
-        $stage2Seqs = array_slice($slotSeqs, $routerCount);
+        $routerSeqs = [];
+        $routerTaskCounts = [];
 
-        // Filter task counts for this section
-        $secTasks = [];
-        foreach ($taskCounts as $t => $cnt) {
-            $type = ToeflTaskType::tryFrom($t);
-            if ($type !== null && $type->section() === $section) {
-                $secTasks[$t] = $cnt;
+        foreach ($sectionSlotObjects as $slot) {
+            if ($slot->adaptiveStage === 1) {
+                $routerSeqs[] = $slot->sequence;
+                $tVal = $slot->taskType->value;
+                $routerTaskCounts[$tVal] = ($routerTaskCounts[$tVal] ?? 0) + 1;
             }
         }
 
@@ -525,39 +500,39 @@ class ToeflBlueprintPlanner
                 section: $section,
                 stage: 1,
                 moduleRole: 'stage_1_router',
-                taskCounts: $secTasks,
+                taskCounts: $routerTaskCounts,
                 slotSequences: $routerSeqs,
                 routingRule: 'unspecified',
                 routingThreshold: null,
                 provenance: 'official_structure_plus_iap_planning',
                 metadata: [
-                    'note' => 'IAP generation pool placeholder for Stage 1 router items.',
+                    'note' => 'IAP generation pool for Stage 1 router items.',
                 ]
             ),
             new ToeflAdaptiveModulePlan(
                 section: $section,
                 stage: 2,
                 moduleRole: 'stage_2_lower',
-                taskCounts: $secTasks,
-                slotSequences: $stage2Seqs,
+                taskCounts: [],
+                slotSequences: [],
                 routingRule: 'unspecified',
                 routingThreshold: null,
                 provenance: 'official_structure_plus_iap_planning',
                 metadata: [
-                    'note' => 'IAP generation pool placeholder for Stage 2 lower-routed items.',
+                    'note' => 'Structural placeholder for Stage 2 lower-routed items (unresolved operational routing threshold).',
                 ]
             ),
             new ToeflAdaptiveModulePlan(
                 section: $section,
                 stage: 2,
                 moduleRole: 'stage_2_upper',
-                taskCounts: $secTasks,
-                slotSequences: $stage2Seqs,
+                taskCounts: [],
+                slotSequences: [],
                 routingRule: 'unspecified',
                 routingThreshold: null,
                 provenance: 'official_structure_plus_iap_planning',
                 metadata: [
-                    'note' => 'IAP generation pool placeholder for Stage 2 upper-routed items.',
+                    'note' => 'Structural placeholder for Stage 2 upper-routed items (unresolved operational routing threshold).',
                 ]
             ),
         ];

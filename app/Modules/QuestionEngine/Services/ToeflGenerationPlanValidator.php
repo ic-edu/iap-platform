@@ -200,17 +200,76 @@ class ToeflGenerationPlanValidator
             $this->assertTaskCount(ToeflTaskType::TakeAnInterview, 4, $actualTaskCounts);
         }
 
-        // Check ranged task counts
-        if (!$allowPractice) {
-            foreach (ToeflTaskType::cases() as $tType) {
-                $count = $actualTaskCounts[$tType->value] ?? 0;
-                if ($count > 0) {
-                    $range = $tType->itemCountRange();
-                    if ($range !== null) {
+        // Check task bounds (fixed and ranged)
+        foreach (ToeflTaskType::cases() as $tType) {
+            $count = $actualTaskCounts[$tType->value] ?? 0;
+            if ($count > 0) {
+                $fixed = $tType->itemCountFixed();
+                $range = $tType->itemCountRange();
+
+                if ($fixed !== null) {
+                    if (!$allowPractice && $plan->mode !== 'custom') {
+                        if ($count !== $fixed) {
+                            throw new InvalidArgumentException("Task '{$tType->value}' count ({$count}) must equal canonical fixed count of {$fixed}.");
+                        }
+                    } else {
+                        if ($count > $fixed) {
+                            throw new InvalidArgumentException("Task '{$tType->value}' count ({$count}) exceeds canonical fixed count of {$fixed}.");
+                        }
+                    }
+                }
+
+                if ($range !== null) {
+                    if (!$allowPractice) {
                         if ($count < $range['min'] || $count > $range['max']) {
                             throw new InvalidArgumentException("Task '{$tType->value}' count ({$count}) is outside official bounds [{$range['min']}-{$range['max']}].");
                         }
+                    } else {
+                        if ($count > $range['max']) {
+                            throw new InvalidArgumentException("Task '{$tType->value}' practice count ({$count}) exceeds official maximum of {$range['max']}.");
+                        }
                     }
+                }
+            }
+        }
+
+        // 5. Adaptive Modules Integrity Validation
+        foreach ($plan->adaptiveModules as $mod) {
+            $seqCount = count($mod->slotSequences);
+            $taskSum = array_sum($mod->taskCounts);
+
+            if ($seqCount !== $taskSum) {
+                throw new InvalidArgumentException("Adaptive module [{$mod->section}:{$mod->moduleRole}] slot sequence count ({$seqCount}) does not match task counts sum ({$taskSum}).");
+            }
+
+            if ($mod->moduleRole === 'stage_1_router') {
+                if ($seqCount === 0) {
+                    throw new InvalidArgumentException("Router module for section [{$mod->section}] must contain planned candidate slot references.");
+                }
+
+                $computedTasks = [];
+                foreach ($mod->slotSequences as $seq) {
+                    if (!isset($slots[$seq - 1])) {
+                        throw new InvalidArgumentException("Router module referenced invalid slot sequence [{$seq}].");
+                    }
+                    $slot = $slots[$seq - 1];
+                    if ($slot->section !== $mod->section) {
+                        throw new InvalidArgumentException("Router module section [{$mod->section}] does not match slot section [{$slot->section}].");
+                    }
+                    $tVal = $slot->taskType->value;
+                    $computedTasks[$tVal] = ($computedTasks[$tVal] ?? 0) + 1;
+                }
+
+                if ($mod->taskCounts !== $computedTasks) {
+                    throw new InvalidArgumentException('Router module task_counts does not match actual referenced slot task counts.');
+                }
+            } elseif (in_array($mod->moduleRole, ['stage_2_lower', 'stage_2_upper'], true)) {
+                // Lower and Upper must remain unassigned placeholders unless explicitly modeled
+                if (!empty($mod->slotSequences)) {
+                    throw new InvalidArgumentException("Stage 2 placeholder module [{$mod->moduleRole}] must not contain fake shared operational slot references.");
+                }
+                if ($mod->routingThreshold !== null) {
+                    throw new InvalidArgumentException("Stage 2 placeholder module [{$mod->moduleRole}] must not invent proprietary ETS routing thresholds.");
                 }
             }
         }

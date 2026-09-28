@@ -7,6 +7,7 @@ use App\Modules\QuestionEngine\Enums\ProficiencyTarget;
 use App\Modules\QuestionEngine\Enums\ToeflLanguageUseContext;
 use App\Modules\QuestionEngine\Enums\ToeflSkill;
 use App\Modules\QuestionEngine\Enums\ToeflTaskType;
+use App\Modules\QuestionEngine\Services\ToeflProficiencyCompatibility;
 use InvalidArgumentException;
 
 final class ToeflBlueprintRequest
@@ -35,12 +36,11 @@ final class ToeflBlueprintRequest
 
     /**
      * @param  string  $mode  'full_test' | 'section' | 'task' | 'custom'
-     * @param  list<string>|null  $selectedSections  Optional list of sections for multi-section planning
      * @param  string|null  $section  Required for 'section' mode ('reading', 'listening', 'writing', 'speaking')
      * @param  ToeflTaskType|null  $taskType  Required for 'task' mode
      * @param  int|null  $taskCount  Item count for 'task' mode
      * @param  array<string, int>  $customTasks  Normalized tasks specification for custom mode [task_type_value => count]
-     * @param  array<string, int|float>  $proficiencyDistribution  Proficiency target distribution (sum = 100)
+     * @param  array<string, int|float>|null  $proficiencyDistribution  Explicit proficiency target distribution (sum = 100) or null
      * @param  array<string, int|float>  $difficultyDistribution  Difficulty level distribution (sum = 100)
      * @param  array<string, array<string, int|float>>|null  $skillDistribution  Per-task skill distribution [task_type => [skill => weight]]
      * @param  array<string, array<string, int|float>>|null  $languageContextDistribution  Per-task context distribution [task_type => [context => weight]]
@@ -48,23 +48,17 @@ final class ToeflBlueprintRequest
      * @param  int|null  $seed  Deterministic seed
      * @param  string|null  $standardId  Optional explicit standard ID assertion
      * @param  string|null  $standardVersion  Optional explicit standard version assertion
-     * @param  bool  $allowPracticeCounts  Whether practice-mode counts below official ranges are permitted
+     * @param  bool  $allowPracticeCounts  Whether practice-mode counts below official ranges/fixed counts are permitted
+     * @param  bool  $hasExplicitProficiencyDistribution  Whether proficiency distribution was explicitly supplied
      * @param  array<string, mixed>  $metadata  Additional metadata
      */
     public function __construct(
         public readonly string $mode = self::MODE_FULL_TEST,
-        public readonly ?array $selectedSections = null,
         public readonly ?string $section = null,
         public readonly ?ToeflTaskType $taskType = null,
         public readonly ?int $taskCount = null,
         public readonly array $customTasks = [],
-        public readonly array $proficiencyDistribution = [
-            'b1_low' => 20,
-            'b1_standard' => 30,
-            'b2_low' => 25,
-            'b2_standard' => 15,
-            'c1' => 10,
-        ],
+        public readonly ?array $proficiencyDistribution = null,
         public readonly array $difficultyDistribution = [
             'easy' => 30,
             'medium' => 50,
@@ -77,6 +71,7 @@ final class ToeflBlueprintRequest
         public readonly ?string $standardId = null,
         public readonly ?string $standardVersion = null,
         public readonly bool $allowPracticeCounts = false,
+        public readonly bool $hasExplicitProficiencyDistribution = false,
         public readonly array $metadata = [],
     ) {
         $this->validate();
@@ -98,6 +93,10 @@ final class ToeflBlueprintRequest
             throw new InvalidArgumentException('TOEFL iBT does not use custom_parts. Use custom_tasks.');
         }
 
+        if (array_key_exists('selected_sections', $data) && $data['selected_sections'] !== null) {
+            throw new InvalidArgumentException("selected_sections is unsupported. Use mode 'full_test', 'section', 'task', or 'custom'.");
+        }
+
         $mode = strtolower(trim((string) ($data['mode'] ?? self::MODE_FULL_TEST)));
 
         // Normalize section
@@ -106,19 +105,6 @@ final class ToeflBlueprintRequest
             $section = strtolower(trim((string) $data['section']));
             if (!in_array($section, self::ALLOWED_SECTIONS, true)) {
                 throw new InvalidArgumentException("Invalid TOEFL section '{$data['section']}'. Allowed sections: ".implode(', ', self::ALLOWED_SECTIONS));
-            }
-        }
-
-        // Normalize selected_sections
-        $selectedSections = null;
-        if (isset($data['selected_sections']) && is_array($data['selected_sections'])) {
-            $selectedSections = [];
-            foreach ($data['selected_sections'] as $sec) {
-                $secNorm = strtolower(trim((string) $sec));
-                if (!in_array($secNorm, self::ALLOWED_SECTIONS, true)) {
-                    throw new InvalidArgumentException("Invalid TOEFL section '{$sec}' in selected_sections.");
-                }
-                $selectedSections[] = $secNorm;
             }
         }
 
@@ -146,21 +132,22 @@ final class ToeflBlueprintRequest
         $customTasks = self::normalizeCustomTasks($rawCustomTasks);
 
         // Normalize proficiency distribution
-        $rawProf = $data['proficiency_distribution'] ?? [
-            'b1_low' => 20,
-            'b1_standard' => 30,
-            'b2_low' => 25,
-            'b2_standard' => 15,
-            'c1' => 10,
-        ];
-        $proficiencyDistribution = [];
-        foreach ($rawProf as $pKey => $pWeight) {
-            $keyStr = $pKey instanceof ProficiencyTarget ? $pKey->value : (string) $pKey;
-            $target = ProficiencyTarget::tryFrom($keyStr);
-            if ($target === null) {
-                throw new InvalidArgumentException("Invalid proficiency target in distribution: [{$keyStr}].");
+        $hasExplicitProf = array_key_exists('proficiency_distribution', $data) && $data['proficiency_distribution'] !== null;
+        $proficiencyDistribution = null;
+        if ($hasExplicitProf) {
+            $rawProf = $data['proficiency_distribution'];
+            if (!is_array($rawProf)) {
+                throw new InvalidArgumentException('proficiency_distribution must be an array.');
             }
-            $proficiencyDistribution[$target->value] = is_numeric($pWeight) ? (float) $pWeight : $pWeight;
+            $proficiencyDistribution = [];
+            foreach ($rawProf as $pKey => $pWeight) {
+                $keyStr = $pKey instanceof ProficiencyTarget ? $pKey->value : (string) $pKey;
+                $target = ProficiencyTarget::tryFrom($keyStr);
+                if ($target === null) {
+                    throw new InvalidArgumentException("Invalid proficiency target in distribution: [{$keyStr}].");
+                }
+                $proficiencyDistribution[$target->value] = is_numeric($pWeight) ? (float) $pWeight : $pWeight;
+            }
         }
 
         // Normalize difficulty distribution
@@ -257,12 +244,21 @@ final class ToeflBlueprintRequest
 
         $standardId = isset($data['standard_id']) ? (string) $data['standard_id'] : (isset($data['assessment_standard_id']) ? (string) $data['assessment_standard_id'] : null);
         $standardVersion = isset($data['standard_version']) ? (string) $data['standard_version'] : null;
-        $allowPracticeCounts = (bool) ($data['allow_practice_counts'] ?? false);
+
+        // Strict Boolean Parsing for allow_practice_counts
+        $allowPracticeCounts = false;
+        if (array_key_exists('allow_practice_counts', $data)) {
+            $rawVal = $data['allow_practice_counts'];
+            if (!is_bool($rawVal)) {
+                throw new InvalidArgumentException('allow_practice_counts must be a strict boolean (true/false), got ['.(is_scalar($rawVal) ? (string) $rawVal : gettype($rawVal)).'].');
+            }
+            $allowPracticeCounts = $rawVal;
+        }
+
         $metadata = isset($data['metadata']) && is_array($data['metadata']) ? $data['metadata'] : [];
 
         return new self(
             mode: $mode,
-            selectedSections: $selectedSections,
             section: $section,
             taskType: $taskType,
             taskCount: $taskCount,
@@ -276,6 +272,7 @@ final class ToeflBlueprintRequest
             standardId: $standardId,
             standardVersion: $standardVersion,
             allowPracticeCounts: $allowPracticeCounts,
+            hasExplicitProficiencyDistribution: $hasExplicitProf,
             metadata: $metadata,
         );
     }
@@ -359,13 +356,37 @@ final class ToeflBlueprintRequest
                     throw new InvalidArgumentException("task_count must be positive, got [{$this->taskCount}].");
                 }
 
-                if (!$this->allowPracticeCounts) {
-                    if ($fixed !== null && $this->taskCount > $fixed) {
-                        throw new InvalidArgumentException("Task count [{$this->taskCount}] exceeds canonical fixed count of {$fixed} for task '{$this->taskType->value}'.");
+                if ($fixed !== null) {
+                    if (!$this->allowPracticeCounts) {
+                        if ($this->taskCount !== $fixed) {
+                            throw new InvalidArgumentException("Task count [{$this->taskCount}] must equal canonical fixed count of {$fixed} for task '{$this->taskType->value}'.");
+                        }
+                    } else {
+                        if ($this->taskCount > $fixed) {
+                            throw new InvalidArgumentException("Practice task count [{$this->taskCount}] cannot exceed canonical fixed limit of {$fixed} for task '{$this->taskType->value}'.");
+                        }
                     }
-                    if ($range !== null) {
+                }
+
+                if ($range !== null) {
+                    if (!$this->allowPracticeCounts) {
                         if ($this->taskCount < $range['min'] || $this->taskCount > $range['max']) {
                             throw new InvalidArgumentException("Task count [{$this->taskCount}] is outside canonical official range of [{$range['min']}-{$range['max']}] for task '{$this->taskType->value}'.");
+                        }
+                    } else {
+                        if ($this->taskCount > $range['max']) {
+                            throw new InvalidArgumentException("Practice task count [{$this->taskCount}] cannot exceed official maximum of {$range['max']} for task '{$this->taskType->value}'.");
+                        }
+                    }
+                }
+            }
+
+            // Validate explicit proficiency distribution against this task
+            if ($this->hasExplicitProficiencyDistribution && $this->proficiencyDistribution !== null) {
+                foreach ($this->proficiencyDistribution as $targetKey => $weight) {
+                    if ($weight > 0) {
+                        if (!ToeflProficiencyCompatibility::isTargetCompatible($this->taskType, $targetKey)) {
+                            throw new InvalidArgumentException("Explicit proficiency target '{$targetKey}' is outside official CEFR envelope [{$this->taskType->cefrMin()}-{$this->taskType->cefrMax()}] for task '{$this->taskType->value}'.");
                         }
                     }
                 }
@@ -378,23 +399,54 @@ final class ToeflBlueprintRequest
                 throw new InvalidArgumentException('Custom mode requires custom_tasks to be non-empty.');
             }
 
-            if (!$this->allowPracticeCounts) {
-                foreach ($this->customTasks as $taskVal => $cnt) {
-                    $tType = ToeflTaskType::from($taskVal);
-                    $range = $tType->itemCountRange();
-                    if ($range !== null) {
+            foreach ($this->customTasks as $taskVal => $cnt) {
+                $tType = ToeflTaskType::from($taskVal);
+                $fixed = $tType->itemCountFixed();
+                $range = $tType->itemCountRange();
+
+                if ($fixed !== null) {
+                    if (!$this->allowPracticeCounts) {
+                        if ($cnt !== $fixed) {
+                            throw new InvalidArgumentException("Custom task '{$taskVal}' count [{$cnt}] must equal canonical fixed count of {$fixed}.");
+                        }
+                    } else {
+                        if ($cnt > $fixed) {
+                            throw new InvalidArgumentException("Custom practice count [{$cnt}] exceeds canonical fixed count of {$fixed} for task '{$taskVal}'.");
+                        }
+                    }
+                }
+
+                if ($range !== null) {
+                    if (!$this->allowPracticeCounts) {
                         if ($cnt < $range['min'] || $cnt > $range['max']) {
                             throw new InvalidArgumentException("Custom count [{$cnt}] is outside canonical official range of [{$range['min']}-{$range['max']}] for task '{$taskVal}'.");
+                        }
+                    } else {
+                        if ($cnt > $range['max']) {
+                            throw new InvalidArgumentException("Custom practice count [{$cnt}] exceeds official maximum of {$range['max']} for task '{$taskVal}'.");
+                        }
+                    }
+                }
+
+                // Check explicit proficiency distribution if provided
+                if ($this->hasExplicitProficiencyDistribution && $this->proficiencyDistribution !== null) {
+                    foreach ($this->proficiencyDistribution as $targetKey => $weight) {
+                        if ($weight > 0) {
+                            if (!ToeflProficiencyCompatibility::isTargetCompatible($tType, $targetKey)) {
+                                throw new InvalidArgumentException("Explicit proficiency target '{$targetKey}' is outside official CEFR envelope [{$tType->cefrMin()}-{$tType->cefrMax()}] for task '{$taskVal}'.");
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Validate Proficiency Distribution
-        $profSum = array_sum($this->proficiencyDistribution);
-        if (abs($profSum - 100.0) > 0.0001) {
-            throw new InvalidArgumentException("Proficiency distribution percentages must sum to exactly 100. Sum: {$profSum}.");
+        // Validate Proficiency Distribution Sum if present
+        if ($this->proficiencyDistribution !== null) {
+            $profSum = array_sum($this->proficiencyDistribution);
+            if (abs($profSum - 100.0) > 0.0001) {
+                throw new InvalidArgumentException("Proficiency distribution percentages must sum to exactly 100. Sum: {$profSum}.");
+            }
         }
 
         // Validate Difficulty Distribution
@@ -453,7 +505,6 @@ final class ToeflBlueprintRequest
     {
         $data = [
             'mode' => $this->mode,
-            'selected_sections' => $this->selectedSections,
             'section' => $this->section,
             'task_type' => $this->taskType?->value,
             'task_count' => $this->taskCount,
@@ -464,6 +515,7 @@ final class ToeflBlueprintRequest
             'language_context_distribution' => $this->languageContextDistribution,
             'item_scoring_category' => $this->itemScoringCategory,
             'allow_practice_counts' => $this->allowPracticeCounts,
+            'has_explicit_proficiency_distribution' => $this->hasExplicitProficiencyDistribution,
             'seed' => $this->seed,
         ];
 
@@ -479,7 +531,6 @@ final class ToeflBlueprintRequest
     {
         return [
             'mode' => $this->mode,
-            'selected_sections' => $this->selectedSections,
             'section' => $this->section,
             'task_type' => $this->taskType?->value,
             'task_count' => $this->taskCount,
@@ -493,6 +544,7 @@ final class ToeflBlueprintRequest
             'standard_id' => $this->standardId,
             'standard_version' => $this->standardVersion,
             'allow_practice_counts' => $this->allowPracticeCounts,
+            'has_explicit_proficiency_distribution' => $this->hasExplicitProficiencyDistribution,
             'metadata' => $this->metadata,
         ];
     }
