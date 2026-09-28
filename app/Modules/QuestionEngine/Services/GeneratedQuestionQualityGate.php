@@ -35,7 +35,7 @@ class GeneratedQuestionQualityGate
         $warnings = [];
         $metrics = [];
 
-        // 1. Validate Structural Identity Match between Candidate and Generation Item
+        // 1. Validate Structural Identity Match between Candidate and Generation Item (Non-optional)
         $this->validateStructuralIdentityMatch($candidate, $item, $violations);
 
         // 2. Stem / Prompt checks
@@ -90,7 +90,13 @@ class GeneratedQuestionQualityGate
         array &$violations
     ): void {
         // Family
-        if ($candidate->assessmentFamily !== null && $candidate->assessmentFamily !== $item->assessment_family) {
+        if ($candidate->assessmentFamily === null) {
+            $violations[] = [
+                'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                'field' => 'assessment_family',
+                'message' => 'Candidate is missing required assessment family identity.',
+            ];
+        } elseif ($candidate->assessmentFamily !== $item->assessment_family) {
             $violations[] = [
                 'code' => 'FAMILY_MISMATCH',
                 'field' => 'assessment_family',
@@ -99,7 +105,13 @@ class GeneratedQuestionQualityGate
         }
 
         // Standard Version
-        if ($candidate->standardVersion !== null && !empty($item->standard_version) && $candidate->standardVersion !== $item->standard_version) {
+        if ($candidate->standardVersion === null) {
+            $violations[] = [
+                'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                'field' => 'standard_version',
+                'message' => 'Candidate is missing required standard version identity.',
+            ];
+        } elseif (!empty($item->standard_version) && $candidate->standardVersion !== $item->standard_version) {
             $violations[] = [
                 'code' => 'STANDARD_MISMATCH',
                 'field' => 'standard_version',
@@ -108,7 +120,13 @@ class GeneratedQuestionQualityGate
         }
 
         // Section
-        if ($candidate->section !== null && !empty($item->section) && strtolower($candidate->section) !== strtolower((string) $item->section)) {
+        if ($candidate->section === null) {
+            $violations[] = [
+                'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                'field' => 'section',
+                'message' => 'Candidate is missing required section identity.',
+            ];
+        } elseif (!empty($item->section) && strtolower($candidate->section) !== strtolower((string) $item->section)) {
             $violations[] = [
                 'code' => 'SECTION_MISMATCH',
                 'field' => 'section',
@@ -116,53 +134,90 @@ class GeneratedQuestionQualityGate
             ];
         }
 
-        // TOEIC Part
-        if ($candidate->partNumber !== null && $item->part_number !== null && $candidate->partNumber !== (int) $item->part_number) {
-            $violations[] = [
-                'code' => 'PART_MISMATCH',
-                'field' => 'part_number',
-                'message' => "Candidate part [{$candidate->partNumber}] does not match slot [{$item->part_number}].",
-            ];
+        // TOEIC specific required identity
+        if ($item->assessment_family === AssessmentFamily::Toeic) {
+            if ($candidate->partNumber === null) {
+                $violations[] = [
+                    'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                    'field' => 'part_number',
+                    'message' => 'TOEIC candidate is missing required part number.',
+                ];
+            } elseif ($item->part_number !== null && $candidate->partNumber !== (int) $item->part_number) {
+                $violations[] = [
+                    'code' => 'PART_MISMATCH',
+                    'field' => 'part_number',
+                    'message' => "Candidate part [{$candidate->partNumber}] does not match slot [{$item->part_number}].",
+                ];
+            }
+
+            if ($candidate->construct === null) {
+                $violations[] = [
+                    'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                    'field' => 'construct',
+                    'message' => 'TOEIC candidate is missing required construct.',
+                ];
+            } elseif (!empty($item->construct) && strtolower($candidate->construct) !== strtolower((string) $item->construct)) {
+                $violations[] = [
+                    'code' => 'CONSTRUCT_MISMATCH',
+                    'field' => 'construct',
+                    'message' => "Candidate construct [{$candidate->construct}] does not match slot [{$item->construct}].",
+                ];
+            }
         }
 
-        // TOEFL Task Type
-        if ($candidate->taskType !== null && !empty($item->task_type) && strtolower($candidate->taskType) !== strtolower((string) $item->task_type)) {
-            $violations[] = [
-                'code' => 'TASK_MISMATCH',
-                'field' => 'task_type',
-                'message' => "Candidate task type [{$candidate->taskType}] does not match slot [{$item->task_type}].",
-            ];
-        }
+        // TOEFL specific required identity
+        if ($item->assessment_family === AssessmentFamily::ToeflIbt) {
+            if ($candidate->taskType === null) {
+                $violations[] = [
+                    'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                    'field' => 'task_type',
+                    'message' => 'TOEFL candidate is missing required task type.',
+                ];
+            } elseif (!empty($item->task_type) && strtolower($candidate->taskType) !== strtolower((string) $item->task_type)) {
+                $violations[] = [
+                    'code' => 'TASK_MISMATCH',
+                    'field' => 'task_type',
+                    'message' => "Candidate task type [{$candidate->taskType}] does not match slot [{$item->task_type}].",
+                ];
+            }
 
-        // Claim
-        if ($candidate->claim !== null && !empty($item->claim) && strtolower($candidate->claim) !== strtolower((string) $item->claim)) {
-            $violations[] = [
-                'code' => 'CLAIM_MISMATCH',
-                'field' => 'claim',
-                'message' => "Candidate claim [{$candidate->claim}] does not match slot [{$item->claim}].",
-            ];
-        }
+            if ($candidate->claim === null) {
+                $violations[] = [
+                    'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                    'field' => 'claim',
+                    'message' => 'TOEFL candidate is missing required claim.',
+                ];
+            } elseif (!empty($item->claim) && strtolower($candidate->claim) !== strtolower((string) $item->claim)) {
+                $violations[] = [
+                    'code' => 'CLAIM_MISMATCH',
+                    'field' => 'claim',
+                    'message' => "Candidate claim [{$candidate->claim}] does not match slot [{$item->claim}].",
+                ];
+            }
 
-        // Skill
-        if ($candidate->skill !== null && !empty($item->skill) && strtolower($candidate->skill) !== strtolower((string) $item->skill)) {
-            $violations[] = [
-                'code' => 'SKILL_MISMATCH',
-                'field' => 'skill',
-                'message' => "Candidate skill [{$candidate->skill}] does not match slot [{$item->skill}].",
-            ];
-        }
-
-        // Construct
-        if ($candidate->construct !== null && !empty($item->construct) && strtolower($candidate->construct) !== strtolower((string) $item->construct)) {
-            $violations[] = [
-                'code' => 'CONSTRUCT_MISMATCH',
-                'field' => 'construct',
-                'message' => "Candidate construct [{$candidate->construct}] does not match slot [{$item->construct}].",
-            ];
+            if ($candidate->skill === null) {
+                $violations[] = [
+                    'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                    'field' => 'skill',
+                    'message' => 'TOEFL candidate is missing required skill.',
+                ];
+            } elseif (!empty($item->skill) && strtolower($candidate->skill) !== strtolower((string) $item->skill)) {
+                $violations[] = [
+                    'code' => 'SKILL_MISMATCH',
+                    'field' => 'skill',
+                    'message' => "Candidate skill [{$candidate->skill}] does not match slot [{$item->skill}].",
+                ];
+            }
         }
 
         // Proficiency Target
-        if ($candidate->proficiencyTarget !== null && !empty($item->proficiency_target) && strtolower($candidate->proficiencyTarget) !== strtolower((string) $item->proficiency_target)) {
+        if ($candidate->proficiencyTarget === null) {
+            $violations[] = [
+                'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                'field' => 'proficiency_target',
+                'message' => 'Candidate is missing required proficiency target.',
+            ];
+        } elseif (!empty($item->proficiency_target) && strtolower($candidate->proficiencyTarget) !== strtolower((string) $item->proficiency_target)) {
             $violations[] = [
                 'code' => 'PROFICIENCY_MISMATCH',
                 'field' => 'proficiency_target',
@@ -171,7 +226,13 @@ class GeneratedQuestionQualityGate
         }
 
         // Difficulty
-        if ($candidate->difficulty !== null && !empty($item->difficulty) && strtolower($candidate->difficulty) !== strtolower((string) $item->difficulty)) {
+        if ($candidate->difficulty === null) {
+            $violations[] = [
+                'code' => 'MISSING_STRUCTURAL_IDENTITY',
+                'field' => 'difficulty',
+                'message' => 'Candidate is missing required difficulty.',
+            ];
+        } elseif (!empty($item->difficulty) && strtolower($candidate->difficulty) !== strtolower((string) $item->difficulty)) {
             $violations[] = [
                 'code' => 'DIFFICULTY_MISMATCH',
                 'field' => 'difficulty',

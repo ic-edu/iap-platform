@@ -154,7 +154,7 @@ class QuestionGenerationOrchestrator
 
             // 4. Normalize Candidate
             try {
-                $candidate = $this->normalizer->normalize($providerResponse);
+                $candidate = $this->normalizer->normalize($providerResponse, $item);
                 $item->normalized_output = $candidate->toArray();
             } catch (Exception $e) {
                 $item->markFailed(

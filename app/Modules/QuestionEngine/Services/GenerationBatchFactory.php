@@ -12,9 +12,11 @@ use App\Modules\QuestionEngine\Enums\GenerationItemStatus;
 use App\Modules\QuestionEngine\Models\AssessmentStandard;
 use App\Modules\QuestionEngine\Models\QuestionGenerationBatch;
 use App\Modules\QuestionEngine\Models\QuestionGenerationItem;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Throwable;
 
 class GenerationBatchFactory
 {
@@ -39,6 +41,16 @@ class GenerationBatchFactory
             throw new InvalidArgumentException("QuestionBank [{$questionBankId}] does not exist or has been deleted.");
         }
 
+        // Issue 2: QuestionBank must be in an editable authoring state under governance rules
+        $editableStatuses = ['draft', 'needs_revision', 'revision_requested', 'rejected'];
+        $isEditable = in_array($questionBank->status, $editableStatuses, true)
+            && !$questionBank->isPublished()
+            && $questionBank->getLockMessage() === null;
+
+        if (!$isEditable) {
+            throw new InvalidArgumentException("QuestionBank [{$questionBankId}] is in a locked or non-editable status [{$questionBank->status}] and cannot accept new question generation.");
+        }
+
         // Issue 8: Validate AssessmentStandard exists and is valid
         $standardId = $plan->assessmentStandardId;
         if (empty($standardId) || !AssessmentStandard::where('id', $standardId)->exists()) {
@@ -61,56 +73,72 @@ class GenerationBatchFactory
 
         $idempotencyKey = $options['idempotency_key'] ?? ('batch_'.hash('sha256', implode(':', $keyParts)));
 
-        // If an existing batch exists with this idempotency key, return it
+        // Pre-check: If an existing batch exists with this idempotency key, return it
         $existing = QuestionGenerationBatch::where('idempotency_key', $idempotencyKey)->first();
         if ($existing) {
             return $existing;
         }
 
-        return DB::transaction(function () use ($plan, $options, $idempotencyKey, $questionBankId, $standardId, $promptContractVersion) {
-            $isToeic = $plan instanceof ToeicGenerationPlan;
-
-            $family = $plan->assessmentFamily;
-            $standardVersion = $plan->standardVersion;
-            $fingerprint = $plan->fingerprint;
-            $plannerType = $isToeic ? 'toeic_blueprint_planner' : 'toefl_blueprint_planner';
-            $plannerStrategyVersion = $isToeic ? '2026.1' : ($plan->plannerStrategyVersion ?? '2026.1');
-            $totalSlots = $plan->totalSlots;
-
-            $batch = QuestionGenerationBatch::create([
-                'question_bank_id' => $questionBankId,
-                'assessment_family' => $family,
-                'assessment_standard_id' => $standardId,
-                'standard_version' => $standardVersion,
-                'planner_type' => $plannerType,
-                'planner_strategy_version' => $plannerStrategyVersion,
-                'plan_fingerprint' => $fingerprint,
-                'status' => GenerationBatchStatus::Draft,
-                'requested_by' => $options['requested_by'] ?? null,
-                'idempotency_key' => $idempotencyKey,
-                'prompt_contract_version' => $promptContractVersion,
-                'total_slots' => $totalSlots,
-                'pending_slots' => $totalSlots,
-                'processing_slots' => 0,
-                'generated_slots' => 0,
-                'validated_slots' => 0,
-                'failed_slots' => 0,
-                'generation_config' => $options['generation_config'] ?? [],
-                'plan_snapshot' => $plan->toArray(),
-                'metadata' => $options['metadata'] ?? [],
-            ]);
-
-            $slots = $plan->slots;
-            foreach ($slots as $slot) {
-                if ($slot instanceof ToeicGenerationSlot) {
-                    $this->createToeicItem($batch, $slot);
-                } elseif ($slot instanceof ToeflGenerationSlot) {
-                    $this->createToeflItem($batch, $slot);
+        // Issue 3: Race-safe transaction with unique constraint catch
+        try {
+            return DB::transaction(function () use ($plan, $options, $idempotencyKey, $questionBankId, $standardId, $promptContractVersion) {
+                // Double check inside transaction
+                $existingInside = QuestionGenerationBatch::where('idempotency_key', $idempotencyKey)->first();
+                if ($existingInside) {
+                    return $existingInside;
                 }
+
+                $isToeic = $plan instanceof ToeicGenerationPlan;
+                $family = $plan->assessmentFamily;
+                $standardVersion = $plan->standardVersion;
+                $fingerprint = $plan->fingerprint;
+                $plannerType = $isToeic ? 'toeic_blueprint_planner' : 'toefl_blueprint_planner';
+                $plannerStrategyVersion = $isToeic ? '2026.1' : ($plan->plannerStrategyVersion ?? '2026.1');
+                $totalSlots = $plan->totalSlots;
+
+                $batch = QuestionGenerationBatch::create([
+                    'question_bank_id' => $questionBankId,
+                    'assessment_family' => $family,
+                    'assessment_standard_id' => $standardId,
+                    'standard_version' => $standardVersion,
+                    'planner_type' => $plannerType,
+                    'planner_strategy_version' => $plannerStrategyVersion,
+                    'plan_fingerprint' => $fingerprint,
+                    'status' => GenerationBatchStatus::Draft,
+                    'requested_by' => $options['requested_by'] ?? null,
+                    'idempotency_key' => $idempotencyKey,
+                    'prompt_contract_version' => $promptContractVersion,
+                    'total_slots' => $totalSlots,
+                    'pending_slots' => $totalSlots,
+                    'processing_slots' => 0,
+                    'generated_slots' => 0,
+                    'validated_slots' => 0,
+                    'failed_slots' => 0,
+                    'generation_config' => $options['generation_config'] ?? [],
+                    'plan_snapshot' => $plan->toArray(),
+                    'metadata' => $options['metadata'] ?? [],
+                ]);
+
+                $slots = $plan->slots;
+                foreach ($slots as $slot) {
+                    if ($slot instanceof ToeicGenerationSlot) {
+                        $this->createToeicItem($batch, $slot);
+                    } elseif ($slot instanceof ToeflGenerationSlot) {
+                        $this->createToeflItem($batch, $slot);
+                    }
+                }
+
+                return $batch->fresh(['items']);
+            });
+        } catch (QueryException|Throwable $e) {
+            // Concurrent insert race condition: fetch the canonical winner batch
+            $existingRaceWinner = QuestionGenerationBatch::where('idempotency_key', $idempotencyKey)->first();
+            if ($existingRaceWinner) {
+                return $existingRaceWinner;
             }
 
-            return $batch->fresh(['items']);
-        });
+            throw $e;
+        }
     }
 
     protected function createToeicItem(QuestionGenerationBatch $batch, ToeicGenerationSlot $slot): QuestionGenerationItem

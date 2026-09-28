@@ -5,19 +5,25 @@ namespace App\Modules\QuestionEngine\Services;
 use App\Modules\QuestionEngine\DTO\GeneratedQuestionCandidate;
 use App\Modules\QuestionEngine\DTO\GenerationProviderResponse;
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
+use App\Modules\QuestionEngine\Models\QuestionGenerationItem;
 use InvalidArgumentException;
 
 class GeneratedQuestionNormalizer
 {
     /**
      * Normalize raw provider response or payload into a GeneratedQuestionCandidate.
+     * Populates missing structural identity from trusted item or metadata context.
      *
      * @param  GenerationProviderResponse|string|array<string, mixed>  $raw
+     * @param  array<string, mixed>|null  $trustedMetadata
      *
      * @throws InvalidArgumentException
      */
-    public function normalize(GenerationProviderResponse|string|array $raw): GeneratedQuestionCandidate
-    {
+    public function normalize(
+        GenerationProviderResponse|string|array $raw,
+        ?QuestionGenerationItem $item = null,
+        ?array $trustedMetadata = null
+    ): GeneratedQuestionCandidate {
         $payload = null;
 
         if ($raw instanceof GenerationProviderResponse) {
@@ -38,7 +44,7 @@ class GeneratedQuestionNormalizer
             throw new InvalidArgumentException('Normalized payload must be an associative array.');
         }
 
-        return $this->buildCandidateFromPayload($payload);
+        return $this->buildCandidateFromPayload($payload, $item, $trustedMetadata);
     }
 
     /**
@@ -77,9 +83,13 @@ class GeneratedQuestionNormalizer
 
     /**
      * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>|null  $trustedMetadata
      */
-    protected function buildCandidateFromPayload(array $payload): GeneratedQuestionCandidate
-    {
+    protected function buildCandidateFromPayload(
+        array $payload,
+        ?QuestionGenerationItem $item = null,
+        ?array $trustedMetadata = null
+    ): GeneratedQuestionCandidate {
         $prompt = (string) ($payload['prompt'] ?? ($payload['question_text'] ?? ($payload['question'] ?? '')));
         $passageText = isset($payload['passage_text']) && !empty($payload['passage_text']) ? (string) $payload['passage_text'] : null;
         $audioScript = isset($payload['audio_script']) && !empty($payload['audio_script']) ? (string) $payload['audio_script'] : null;
@@ -89,26 +99,58 @@ class GeneratedQuestionNormalizer
         $correctAnswer = isset($payload['correct_answer']) ? (string) $payload['correct_answer'] : null;
         $metadata = isset($payload['metadata']) && is_array($payload['metadata']) ? $payload['metadata'] : [];
 
-        // Extract structural identity
+        // Extract structural identity: provider-supplied first, fallback to trusted slot context
         $rawFamily = $payload['assessment_family'] ?? ($metadata['assessment_family'] ?? null);
         $assessmentFamily = null;
         if ($rawFamily !== null) {
             $assessmentFamily = $rawFamily instanceof AssessmentFamily
                 ? $rawFamily
                 : AssessmentFamily::tryFrom((string) $rawFamily);
+        } elseif ($item !== null) {
+            $assessmentFamily = $item->assessment_family;
+        } elseif (isset($trustedMetadata['assessment_family'])) {
+            $assessmentFamily = $trustedMetadata['assessment_family'] instanceof AssessmentFamily
+                ? $trustedMetadata['assessment_family']
+                : AssessmentFamily::tryFrom((string) $trustedMetadata['assessment_family']);
         }
 
-        $standardVersion = isset($payload['standard_version']) ? (string) $payload['standard_version'] : ($metadata['standard_version'] ?? null);
-        $section = isset($payload['section']) ? (string) $payload['section'] : ($metadata['section'] ?? null);
-        $partNumber = isset($payload['part_number']) && $payload['part_number'] !== null
+        $standardVersion = isset($payload['standard_version']) && $payload['standard_version'] !== ''
+            ? (string) $payload['standard_version']
+            : ($metadata['standard_version'] ?? ($item?->standard_version ?? ($trustedMetadata['standard_version'] ?? null)));
+
+        $section = isset($payload['section']) && $payload['section'] !== ''
+            ? (string) $payload['section']
+            : ($metadata['section'] ?? ($item?->section ?? ($trustedMetadata['section'] ?? null)));
+
+        $partNumber = isset($payload['part_number']) && $payload['part_number'] !== null && $payload['part_number'] !== ''
             ? (int) $payload['part_number']
-            : (isset($metadata['part_number']) && $metadata['part_number'] !== null ? (int) $metadata['part_number'] : null);
-        $taskType = isset($payload['task_type']) ? (string) $payload['task_type'] : ($metadata['task_type'] ?? null);
-        $claim = isset($payload['claim']) ? (string) $payload['claim'] : ($metadata['claim'] ?? null);
-        $skill = isset($payload['skill']) ? (string) $payload['skill'] : ($metadata['skill'] ?? null);
-        $construct = isset($payload['construct']) ? (string) $payload['construct'] : ($metadata['construct'] ?? null);
-        $proficiencyTarget = isset($payload['proficiency_target']) ? (string) $payload['proficiency_target'] : ($metadata['proficiency_target'] ?? null);
-        $difficulty = isset($payload['difficulty']) ? (string) $payload['difficulty'] : ($metadata['difficulty'] ?? null);
+            : (isset($metadata['part_number']) && $metadata['part_number'] !== null && $metadata['part_number'] !== ''
+                ? (int) $metadata['part_number']
+                : ($item?->part_number ?? (isset($trustedMetadata['part_number']) && $trustedMetadata['part_number'] !== null ? (int) $trustedMetadata['part_number'] : null)));
+
+        $taskType = isset($payload['task_type']) && $payload['task_type'] !== ''
+            ? (string) $payload['task_type']
+            : ($metadata['task_type'] ?? ($item?->task_type ?? ($trustedMetadata['task_type'] ?? null)));
+
+        $claim = isset($payload['claim']) && $payload['claim'] !== ''
+            ? (string) $payload['claim']
+            : ($metadata['claim'] ?? ($item?->claim ?? ($trustedMetadata['claim'] ?? null)));
+
+        $skill = isset($payload['skill']) && $payload['skill'] !== ''
+            ? (string) $payload['skill']
+            : ($metadata['skill'] ?? ($item?->skill ?? ($trustedMetadata['skill'] ?? null)));
+
+        $construct = isset($payload['construct']) && $payload['construct'] !== ''
+            ? (string) $payload['construct']
+            : ($metadata['construct'] ?? ($item?->construct ?? ($trustedMetadata['construct'] ?? null)));
+
+        $proficiencyTarget = isset($payload['proficiency_target']) && $payload['proficiency_target'] !== ''
+            ? (string) $payload['proficiency_target']
+            : ($metadata['proficiency_target'] ?? ($item?->proficiency_target ?? ($trustedMetadata['proficiency_target'] ?? null)));
+
+        $difficulty = isset($payload['difficulty']) && $payload['difficulty'] !== ''
+            ? (string) $payload['difficulty']
+            : ($metadata['difficulty'] ?? ($item?->difficulty ?? ($trustedMetadata['difficulty'] ?? null)));
 
         $rawChoices = (array) ($payload['choices'] ?? ($payload['options'] ?? []));
         $normalizedChoices = $this->normalizeChoices($rawChoices, $correctAnswer);
