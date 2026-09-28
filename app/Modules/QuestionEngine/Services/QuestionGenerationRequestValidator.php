@@ -29,9 +29,14 @@ class QuestionGenerationRequestValidator
         $data = $input instanceof QuestionGenerationRequest ? $input->toArray() : $input;
 
         // 1. Part Number Validation
-        $partNumber = (int) ($data['part_number'] ?? $data['part'] ?? 0);
-        if ($partNumber < 1 || $partNumber > 7) {
-            $errors['part_number'] = 'The part_number must be an integer between 1 and 7 for TOEIC.';
+        if (!isset($data['part_number']) && !isset($data['part'])) {
+            $errors['part_number'] = 'The part_number is required for TOEIC question generation.';
+            $partNumber = 0;
+        } else {
+            $partNumber = (int) ($data['part_number'] ?? $data['part']);
+            if ($partNumber < 1 || $partNumber > 7) {
+                $errors['part_number'] = 'The part_number must be an integer between 1 and 7 for TOEIC.';
+            }
         }
 
         // 2. Section vs Part Compatibility
@@ -54,20 +59,23 @@ class QuestionGenerationRequestValidator
         }
 
         $domainRaw = $data['domain'] ?? null;
-        $domain = $domainRaw instanceof DomainTaxonomy ? $domainRaw : (is_string($domainRaw) && !empty($domainRaw) ? DomainTaxonomy::tryFrom($domainRaw) : null);
+        $domain = $domainRaw instanceof DomainTaxonomy
+            ? $domainRaw
+            : (is_string($domainRaw) && $domainRaw !== '' ? DomainTaxonomy::tryFrom($domainRaw) : null);
 
-        if ($contentMode === ContentMode::DomainSpecific) {
+        if ($contentMode === ContentMode::General) {
+            if ($domainRaw === null || $domainRaw === '' || $domain === DomainTaxonomy::GeneralWorkplace) {
+                $domain = DomainTaxonomy::GeneralWorkplace;
+            } else {
+                $errors['domain'] = 'General content mode requires domain general_workplace.';
+            }
+        } elseif ($contentMode === ContentMode::DomainSpecific) {
             if (empty($domainRaw)) {
                 $errors['domain'] = 'Domain-specific generation requires an explicit domain.';
             } elseif ($domain === null) {
                 $errors['domain'] = "Invalid domain '{$domainRaw}' for domain-specific mode.";
-            }
-        } else {
-            // General mode defaults domain to general_workplace if omitted
-            if ($domain === null && empty($domainRaw)) {
-                $domain = DomainTaxonomy::GeneralWorkplace;
-            } elseif ($domain === null && !empty($domainRaw)) {
-                $errors['domain'] = "Invalid domain '{$domainRaw}'.";
+            } elseif ($domain === DomainTaxonomy::GeneralWorkplace) {
+                $errors['domain'] = 'Domain-specific content mode requires a specific domain other than general_workplace.';
             }
         }
 
@@ -107,16 +115,24 @@ class QuestionGenerationRequestValidator
         }
 
         // 8. Item Count Validation
-        $itemCount = isset($data['item_count']) ? (int) $data['item_count'] : 1;
-        if ($itemCount < 1) {
-            $errors['item_count'] = 'The item_count must be a positive integer greater than or equal to 1.';
+        if (array_key_exists('item_count', $data) && $data['item_count'] !== null) {
+            if (!is_numeric($data['item_count']) || (int) $data['item_count'] < 1) {
+                $errors['item_count'] = 'The item_count must be a positive integer greater than or equal to 1.';
+                $itemCount = 1;
+            } else {
+                $itemCount = (int) $data['item_count'];
+            }
+        } else {
+            $itemCount = 1;
         }
 
-        // 9. Test Type Validation
+        // 9. Test Type Validation & Scope Guard
         $testTypeRaw = $data['test_type'] ?? TestType::Toeic->value;
         $testType = $testTypeRaw instanceof TestType ? $testTypeRaw : TestType::tryFrom((string) $testTypeRaw);
         if ($testType === null) {
             $errors['test_type'] = 'Invalid test_type.';
+        } elseif ($testType !== TestType::Toeic) {
+            $errors['test_type'] = 'Question generation currently supports TOEIC only.';
         }
 
         if (!empty($errors)) {

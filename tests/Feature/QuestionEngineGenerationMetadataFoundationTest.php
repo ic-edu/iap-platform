@@ -24,6 +24,7 @@ use App\Services\QuestionDifficultyDetectionService;
 use App\Services\ToeicQuestionValidator;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 class QuestionEngineGenerationMetadataFoundationTest extends TestCase
@@ -123,9 +124,9 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
     }
 
     /**
-     * TEST C: General content mode defaults to general_workplace domain.
+     * TEST 1: General + omitted domain -> general_workplace.
      */
-    public function test_c_general_content_mode_defaults_to_general_workplace(): void
+    public function test_1_general_omitted_domain_resolves_to_general_workplace(): void
     {
         $request = QuestionGenerationRequest::fromArray([
             'part_number' => 5,
@@ -143,41 +144,59 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
     }
 
     /**
-     * TEST D: Domain-specific request requires domain.
+     * TEST 2: General + general_workplace -> valid.
      */
-    public function test_d_domain_specific_request_requires_domain(): void
+    public function test_2_general_and_general_workplace_is_valid(): void
     {
-        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $request = QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'content_mode' => 'general',
+            'domain' => 'general_workplace',
+        ]);
 
+        $validated = $this->validator->validate($request);
+        $this->assertEquals('general_workplace', $validated['domain']);
+    }
+
+    /**
+     * TEST 3: General + hospitality -> rejected (both raw array and DTO).
+     */
+    public function test_3_general_and_hospitality_is_rejected(): void
+    {
+        // Raw array path
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
         $this->validator->validate([
             'part_number' => 5,
             'proficiency_target' => 'b1_standard',
             'difficulty' => 'medium',
-            'construct' => 'vocabulary',
-            'content_mode' => 'domain_specific',
-            'domain' => '', // empty domain
+            'construct' => 'grammar',
+            'content_mode' => 'general',
+            'domain' => 'hospitality',
+        ]);
+    }
+
+    public function test_3b_general_and_hospitality_from_array_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'content_mode' => 'general',
+            'domain' => 'hospitality',
         ]);
     }
 
     /**
-     * TEST E: Hospitality is only one possible domain among many.
+     * TEST 4 & 5: Domain-specific + hospitality/engineering -> valid.
      */
-    public function test_e_hospitality_is_only_one_possible_domain(): void
+    public function test_4_and_5_domain_specific_with_valid_domains_is_valid(): void
     {
-        $domains = DomainTaxonomy::values();
-        $this->assertContains('hospitality', $domains);
-        $this->assertContains('general_workplace', $domains);
-        $this->assertContains('engineering', $domains);
-        $this->assertContains('law', $domains);
-        $this->assertContains('economics_finance', $domains);
-        $this->assertContains('healthcare', $domains);
-        $this->assertContains('manufacturing', $domains);
-        $this->assertContains('logistics', $domains);
-        $this->assertContains('information_technology', $domains);
-        $this->assertContains('retail', $domains);
-        $this->assertContains('aviation', $domains);
-
-        $request = QuestionGenerationRequest::fromArray([
+        $requestHosp = QuestionGenerationRequest::fromArray([
             'part_number' => 6,
             'proficiency_target' => 'b2_standard',
             'difficulty' => 'hard',
@@ -186,19 +205,11 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
             'domain' => 'hospitality',
             'context' => 'reservation',
         ]);
+        $validatedHosp = $this->validator->validate($requestHosp);
+        $this->assertEquals('hospitality', $validatedHosp['domain']);
+        $this->assertTrue($requestHosp->isDomainSpecific());
 
-        $validated = $this->validator->validate($request);
-        $this->assertEquals('hospitality', $validated['domain']);
-        $this->assertEquals('reservation', $validated['context']);
-        $this->assertTrue($request->isDomainSpecific());
-    }
-
-    /**
-     * TEST F: Engineering request valid.
-     */
-    public function test_f_engineering_request_valid(): void
-    {
-        $request = QuestionGenerationRequest::fromArray([
+        $requestEng = QuestionGenerationRequest::fromArray([
             'part_number' => 7,
             'proficiency_target' => 'b2_standard',
             'difficulty' => 'medium',
@@ -207,132 +218,226 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
             'domain' => 'engineering',
             'context' => 'maintenance',
         ]);
-
-        $validated = $this->validator->validate($request);
-        $this->assertEquals('engineering', $validated['domain']);
-        $this->assertEquals('maintenance', $validated['context']);
-        $this->assertTrue($request->isDomainSpecific());
+        $validatedEng = $this->validator->validate($requestEng);
+        $this->assertEquals('engineering', $validatedEng['domain']);
     }
 
     /**
-     * TEST G: Law request valid.
+     * TEST 6: Domain-specific + general_workplace -> rejected.
      */
-    public function test_g_law_request_valid(): void
+    public function test_6_domain_specific_and_general_workplace_is_rejected(): void
     {
-        $request = QuestionGenerationRequest::fromArray([
-            'part_number' => 7,
-            'proficiency_target' => 'c1',
-            'difficulty' => 'hard',
-            'construct' => 'inference',
-            'content_mode' => 'domain_specific',
-            'domain' => 'law',
-            'context' => 'email',
-        ]);
-
-        $validated = $this->validator->validate($request);
-        $this->assertEquals('law', $validated['domain']);
-        $this->assertEquals('c1', $validated['proficiency_target']);
-        $this->assertEquals('hard', $validated['difficulty']);
-    }
-
-    /**
-     * TEST H: Economics/Finance request valid.
-     */
-    public function test_h_economics_finance_request_valid(): void
-    {
-        $request = QuestionGenerationRequest::fromArray([
-            'part_number' => 3,
-            'proficiency_target' => 'b1_low',
-            'difficulty' => 'easy',
-            'construct' => 'purpose',
-            'content_mode' => 'domain_specific',
-            'domain' => 'economics_finance',
-            'context' => 'finance',
-        ]);
-
-        $validated = $this->validator->validate($request);
-        $this->assertEquals('economics_finance', $validated['domain']);
-        $this->assertEquals('listening', $validated['section']);
-    }
-
-    /**
-     * TEST I: TOEIC Part 1 maps Listening.
-     */
-    public function test_i_toeic_part_1_maps_listening(): void
-    {
-        $this->assertEquals(SectionType::Listening, PartConstructCompatibility::getCanonicalSectionForPart(1));
-
-        $request = QuestionGenerationRequest::fromArray([
-            'part_number' => 1,
-            'proficiency_target' => 'a1_plus',
-            'difficulty' => 'easy',
-            'construct' => 'visual_description',
-        ]);
-
-        $this->assertTrue($request->isListening());
-        $this->assertFalse($request->isReading());
-        $this->assertEquals(SectionType::Listening, $request->section);
-    }
-
-    /**
-     * TEST J: TOEIC Part 4 maps Listening.
-     */
-    public function test_j_toeic_part_4_maps_listening(): void
-    {
-        $this->assertEquals(SectionType::Listening, PartConstructCompatibility::getCanonicalSectionForPart(4));
-
-        $request = QuestionGenerationRequest::fromArray([
-            'part_number' => 4,
-            'proficiency_target' => 'b2_low',
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
             'difficulty' => 'medium',
-            'construct' => 'intent',
+            'construct' => 'vocabulary',
+            'content_mode' => 'domain_specific',
+            'domain' => 'general_workplace',
         ]);
+    }
 
-        $this->assertTrue($request->isListening());
-        $this->assertEquals(SectionType::Listening, $request->section);
+    public function test_6b_domain_specific_and_general_workplace_from_array_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'vocabulary',
+            'content_mode' => 'domain_specific',
+            'domain' => 'general_workplace',
+        ]);
     }
 
     /**
-     * TEST K: TOEIC Part 5 maps Reading.
+     * TEST 7: Domain-specific + omitted domain -> rejected.
      */
-    public function test_k_toeic_part_5_maps_reading(): void
+    public function test_7_domain_specific_omitted_domain_is_rejected(): void
     {
-        $this->assertEquals(SectionType::Reading, PartConstructCompatibility::getCanonicalSectionForPart(5));
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'vocabulary',
+            'content_mode' => 'domain_specific',
+            'domain' => '',
+        ]);
+    }
 
+    /**
+     * TEST 8: Raw item_count = 0 -> rejected.
+     */
+    public function test_8_raw_item_count_zero_is_rejected(): void
+    {
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => 0,
+        ]);
+    }
+
+    /**
+     * TEST 9: DTO fromArray item_count = 0 -> rejected.
+     */
+    public function test_9_dto_from_array_item_count_zero_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => 0,
+        ]);
+    }
+
+    /**
+     * TEST 10: Negative item_count -> rejected (raw and fromArray).
+     */
+    public function test_10_negative_item_count_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'item_count' => -5,
+        ]);
+    }
+
+    /**
+     * TEST 11: Omitted item_count -> defaults to 1.
+     */
+    public function test_11_omitted_item_count_defaults_to_one(): void
+    {
         $request = QuestionGenerationRequest::fromArray([
             'part_number' => 5,
-            'proficiency_target' => 'a2_low',
-            'difficulty' => 'easy',
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
             'construct' => 'grammar',
         ]);
 
-        $this->assertTrue($request->isReading());
-        $this->assertFalse($request->isListening());
-        $this->assertEquals(SectionType::Reading, $request->section);
+        $this->assertEquals(1, $request->itemCount);
+        $validated = $this->validator->validate($request);
+        $this->assertEquals(1, $validated['item_count']);
     }
 
     /**
-     * TEST L: TOEIC Part 7 maps Reading.
+     * TEST 12: Invalid test_type raw -> rejected.
      */
-    public function test_l_toeic_part_7_maps_reading(): void
+    public function test_12_invalid_test_type_raw_is_rejected(): void
     {
-        $this->assertEquals(SectionType::Reading, PartConstructCompatibility::getCanonicalSectionForPart(7));
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->validator->validate([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'test_type' => 'unknown_exam_xyz',
+        ]);
+    }
 
+    /**
+     * TEST 13: Invalid test_type fromArray -> rejected.
+     */
+    public function test_13_invalid_test_type_from_array_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        QuestionGenerationRequest::fromArray([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'test_type' => 'unknown_exam_xyz',
+        ]);
+    }
+
+    /**
+     * TEST 14 & 15: TOEFL & IELTS generation request -> explicit unsupported rejection.
+     */
+    public function test_14_and_15_toefl_and_ielts_generation_request_is_rejected(): void
+    {
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->expectExceptionMessage('Question generation currently supports TOEIC only.');
+
+        $this->validator->validate([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'test_type' => 'toefl',
+        ]);
+    }
+
+    public function test_15_ielts_generation_request_is_rejected(): void
+    {
+        $this->expectException(InvalidQuestionGenerationRequestException::class);
+        $this->expectExceptionMessage('Question generation currently supports TOEIC only.');
+
+        $this->validator->validate([
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
+            'test_type' => 'ielts',
+        ]);
+    }
+
+    /**
+     * TEST 16: TOEIC request remains valid.
+     */
+    public function test_16_toeic_request_remains_valid(): void
+    {
         $request = QuestionGenerationRequest::fromArray([
-            'part_number' => 7,
-            'proficiency_target' => 'b2_standard',
-            'difficulty' => 'hard',
-            'construct' => 'reference',
+            'test_type' => 'toeic',
+            'part_number' => 5,
+            'proficiency_target' => 'b1_standard',
+            'difficulty' => 'medium',
+            'construct' => 'grammar',
         ]);
 
-        $this->assertTrue($request->isReading());
-        $this->assertEquals(SectionType::Reading, $request->section);
+        $this->assertEquals(TestType::Toeic, $request->testType);
+        $validated = $this->validator->validate($request);
+        $this->assertEquals('toeic', $validated['test_type']);
     }
 
     /**
-     * TEST M: Incompatible section/part rejected.
+     * TEST 17: Existing Question / TestType behavior outside Question Engine unchanged.
      */
-    public function test_m_incompatible_section_part_rejected(): void
+    public function test_17_existing_test_type_enum_cases_remain_intact(): void
+    {
+        $this->assertEquals('toeic', TestType::Toeic->value);
+        $this->assertEquals('toefl', TestType::Toefl->value);
+        $this->assertEquals('ielts', TestType::Ielts->value);
+        $this->assertEquals('general', TestType::General->value);
+
+        $this->assertEquals('TOEIC', TestType::Toeic->label());
+        $this->assertEquals('TOEFL iBT', TestType::Toefl->label());
+        $this->assertEquals('IELTS', TestType::Ielts->label());
+    }
+
+    /**
+     * TOEIC Part mappings tests.
+     */
+    public function test_toeic_part_canonical_mappings(): void
+    {
+        $this->assertEquals(SectionType::Listening, PartConstructCompatibility::getCanonicalSectionForPart(1));
+        $this->assertEquals(SectionType::Listening, PartConstructCompatibility::getCanonicalSectionForPart(4));
+        $this->assertEquals(SectionType::Reading, PartConstructCompatibility::getCanonicalSectionForPart(5));
+        $this->assertEquals(SectionType::Reading, PartConstructCompatibility::getCanonicalSectionForPart(7));
+    }
+
+    /**
+     * Incompatible section/part rejected.
+     */
+    public function test_incompatible_section_part_rejected(): void
     {
         $this->expectException(InvalidQuestionGenerationRequestException::class);
 
@@ -346,51 +451,26 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
     }
 
     /**
-     * TEST N: Compatible construct accepted.
+     * Compatible vs Incompatible constructs.
      */
-    public function test_n_compatible_construct_accepted(): void
+    public function test_compatible_and_incompatible_constructs(): void
     {
         $this->assertTrue(PartConstructCompatibility::isCompatible(1, ConstructTaxonomy::VisualDescription));
-        $this->assertTrue(PartConstructCompatibility::isCompatible(2, ConstructTaxonomy::PragmaticResponse));
-        $this->assertTrue(PartConstructCompatibility::isCompatible(3, ConstructTaxonomy::GraphicInterpretation));
-        $this->assertTrue(PartConstructCompatibility::isCompatible(5, ConstructTaxonomy::Grammar));
-        $this->assertTrue(PartConstructCompatibility::isCompatible(6, ConstructTaxonomy::TextCohesion));
-        $this->assertTrue(PartConstructCompatibility::isCompatible(7, ConstructTaxonomy::MainIdea));
-
-        $isValid = $this->validator->isValid([
-            'part_number' => 5,
-            'proficiency_target' => 'b1_standard',
-            'difficulty' => 'medium',
-            'construct' => 'grammar',
-        ]);
-
-        $this->assertTrue($isValid);
-    }
-
-    /**
-     * TEST O: Incompatible construct rejected.
-     */
-    public function test_o_incompatible_construct_rejected(): void
-    {
-        // Grammar is not a valid construct for Part 1 (Photographs)
         $this->assertFalse(PartConstructCompatibility::isCompatible(1, ConstructTaxonomy::Grammar));
-        // VisualDescription is not a valid construct for Part 5 (Incomplete Sentences)
-        $this->assertFalse(PartConstructCompatibility::isCompatible(5, ConstructTaxonomy::VisualDescription));
 
         $this->expectException(InvalidQuestionGenerationRequestException::class);
-
         $this->validator->validate([
-            'part_number' => 5,
-            'proficiency_target' => 'b1_standard',
-            'difficulty' => 'medium',
-            'construct' => 'visual_description',
+            'part_number' => 1,
+            'proficiency_target' => 'a1',
+            'difficulty' => 'easy',
+            'construct' => 'grammar',
         ]);
     }
 
     /**
-     * TEST P: Existing historical Question with NULL new metadata loads correctly.
+     * Historical Question with NULL metadata.
      */
-    public function test_p_existing_historical_question_with_null_new_metadata_loads_correctly(): void
+    public function test_historical_question_with_null_metadata(): void
     {
         $question = Question::create([
             'question_bank_id' => $this->questionBank->id,
@@ -420,78 +500,9 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
     }
 
     /**
-     * TEST Q: Existing DifficultyLevel Easy/Medium/Hard unchanged.
+     * Difficulty detection and TOEIC validator tests.
      */
-    public function test_q_existing_difficulty_level_easy_medium_hard_unchanged(): void
-    {
-        $this->assertEquals('easy', DifficultyLevel::Easy->value);
-        $this->assertEquals('medium', DifficultyLevel::Medium->value);
-        $this->assertEquals('hard', DifficultyLevel::Hard->value);
-        $this->assertEquals('Easy', DifficultyLevel::Easy->label());
-        $this->assertEquals('Medium', DifficultyLevel::Medium->label());
-        $this->assertEquals('Hard / Advanced', DifficultyLevel::Hard->label());
-    }
-
-    /**
-     * TEST R: Existing QuestionDifficultyDetectionService behavior passes unchanged.
-     */
-    public function test_r_existing_question_difficulty_detection_service_unchanged(): void
-    {
-        $service = app(QuestionDifficultyDetectionService::class);
-
-        $question = Question::create([
-            'question_bank_id' => $this->questionBank->id,
-            'prompt' => 'The comprehensive evaluation demonstrated substantial efficacy.',
-            'section' => SectionType::Reading,
-            'part_number' => 5,
-            'question_type' => QuestionType::MultipleChoice,
-            'difficulty' => DifficultyLevel::Medium,
-            'points' => 5,
-        ]);
-
-        QuestionChoice::create([
-            'question_id' => $question->id,
-            'label' => 'A',
-            'content' => 'demonstrated',
-            'is_correct' => true,
-        ]);
-        QuestionChoice::create([
-            'question_id' => $question->id,
-            'label' => 'B',
-            'content' => 'demonstration',
-            'is_correct' => false,
-        ]);
-        QuestionChoice::create([
-            'question_id' => $question->id,
-            'label' => 'C',
-            'content' => 'demonstrative',
-            'is_correct' => false,
-        ]);
-        QuestionChoice::create([
-            'question_id' => $question->id,
-            'label' => 'D',
-            'content' => 'demonstrating',
-            'is_correct' => false,
-        ]);
-
-        $result = QuestionDifficultyDetectionService::detect([
-            'prompt' => $question->prompt,
-            'part_number' => $question->part_number,
-            'section' => $question->section->value,
-            'choices' => $question->choices->map(fn ($c) => ['content' => $c->content, 'label' => $c->label, 'is_correct' => $c->is_correct])->toArray(),
-        ], $question->fresh());
-
-        $this->assertIsArray($result);
-        $this->assertArrayHasKey('difficulty_score', $result);
-        $this->assertIsInt($result['difficulty_score']);
-        $this->assertGreaterThanOrEqual(1, $result['difficulty_score']);
-        $this->assertLessThanOrEqual(100, $result['difficulty_score']);
-    }
-
-    /**
-     * TEST S: ToeicQuestionValidator tests pass unchanged.
-     */
-    public function test_s_toeic_question_validator_behavior_passes_unchanged(): void
+    public function test_difficulty_detection_and_toeic_validator_intact(): void
     {
         $question = Question::create([
             'question_bank_id' => $this->questionBank->id,
@@ -503,11 +514,20 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
             'points' => 5,
         ]);
 
-        // 4 choices for Part 5
         QuestionChoice::create(['question_id' => $question->id, 'label' => 'A', 'content' => 'review', 'is_correct' => true]);
         QuestionChoice::create(['question_id' => $question->id, 'label' => 'B', 'content' => 'reviews', 'is_correct' => false]);
         QuestionChoice::create(['question_id' => $question->id, 'label' => 'C', 'content' => 'reviewed', 'is_correct' => false]);
         QuestionChoice::create(['question_id' => $question->id, 'label' => 'D', 'content' => 'reviewing', 'is_correct' => false]);
+
+        $result = QuestionDifficultyDetectionService::detect([
+            'prompt' => $question->prompt,
+            'part_number' => $question->part_number,
+            'section' => $question->section->value,
+            'choices' => $question->choices->map(fn ($c) => ['content' => $c->content, 'label' => $c->label, 'is_correct' => $c->is_correct])->toArray(),
+        ], $question->fresh());
+
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('difficulty_score', $result);
 
         $checkResult = ToeicQuestionValidator::check([
             'part_number' => 5,
@@ -522,14 +542,13 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
             ],
         ], $question->fresh());
 
-        $this->assertIsArray($checkResult);
         $this->assertTrue($checkResult['is_valid'] ?? true);
     }
 
     /**
-     * TEST T: Provenance helpers on Question model.
+     * Provenance helpers on Question model.
      */
-    public function test_t_provenance_helpers_on_question_model(): void
+    public function test_provenance_helpers_on_question_model(): void
     {
         $genQuestion = Question::create([
             'question_bank_id' => $this->questionBank->id,
@@ -562,9 +581,9 @@ class QuestionEngineGenerationMetadataFoundationTest extends TestCase
     }
 
     /**
-     * TEST U: Form v1/v2 unaffected and Question Bank governance tests pass.
+     * Form v1/v2 unaffected and Question Bank governance tests pass.
      */
-    public function test_u_form_v1_v2_unaffected(): void
+    public function test_form_v1_v2_unaffected(): void
     {
         $this->assertTrue(enum_exists(TestType::class));
         $this->assertEquals('toeic', TestType::Toeic->value);

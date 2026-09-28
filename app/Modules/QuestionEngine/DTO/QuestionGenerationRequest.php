@@ -34,10 +34,6 @@ class QuestionGenerationRequest
         if ($this->section === null) {
             $this->section = $canonicalSection;
         }
-
-        if ($this->contentMode === ContentMode::General && $this->domain === DomainTaxonomy::GeneralWorkplace) {
-            $this->domain = DomainTaxonomy::GeneralWorkplace;
-        }
     }
 
     /**
@@ -49,7 +45,14 @@ class QuestionGenerationRequest
      */
     public static function fromArray(array $data): self
     {
-        $partNumber = (int) ($data['part_number'] ?? $data['part'] ?? 0);
+        if (!isset($data['part_number']) && !isset($data['part'])) {
+            throw new InvalidArgumentException('Missing part_number.');
+        }
+
+        $partNumber = (int) ($data['part_number'] ?? $data['part']);
+        if ($partNumber < 1 || $partNumber > 7) {
+            throw new InvalidArgumentException('The part_number must be an integer between 1 and 7 for TOEIC.');
+        }
 
         $proficiencyRaw = $data['proficiency_target'] ?? $data['proficiency'] ?? null;
         $proficiencyTarget = $proficiencyRaw instanceof ProficiencyTarget
@@ -87,34 +90,81 @@ class QuestionGenerationRequest
             throw new InvalidArgumentException('Invalid content_mode.');
         }
 
-        $domainRaw = $data['domain'] ?? ($contentMode === ContentMode::General ? DomainTaxonomy::GeneralWorkplace->value : null);
-        $domain = $domainRaw instanceof DomainTaxonomy
-            ? $domainRaw
-            : (is_string($domainRaw) ? DomainTaxonomy::tryFrom($domainRaw) : null);
-
-        if ($domain === null) {
-            if ($contentMode === ContentMode::DomainSpecific) {
-                throw new InvalidArgumentException('Domain-specific generation requires a valid domain.');
+        $domainRaw = $data['domain'] ?? null;
+        if ($domainRaw instanceof DomainTaxonomy) {
+            $domain = $domainRaw;
+        } elseif (is_string($domainRaw) && $domainRaw !== '') {
+            $domain = DomainTaxonomy::tryFrom($domainRaw);
+            if ($domain === null) {
+                throw new InvalidArgumentException("Invalid domain '{$domainRaw}'.");
             }
-            $domain = DomainTaxonomy::GeneralWorkplace;
+        } else {
+            $domain = null;
+        }
+
+        if ($contentMode === ContentMode::General) {
+            if ($domain === null || $domain === DomainTaxonomy::GeneralWorkplace) {
+                $domain = DomainTaxonomy::GeneralWorkplace;
+            } else {
+                throw new InvalidArgumentException('General content mode requires domain general_workplace.');
+            }
+        } elseif ($contentMode === ContentMode::DomainSpecific) {
+            if ($domain === null) {
+                throw new InvalidArgumentException('Domain-specific generation requires an explicit domain.');
+            }
+            if ($domain === DomainTaxonomy::GeneralWorkplace) {
+                throw new InvalidArgumentException('Domain-specific content mode requires a specific domain other than general_workplace.');
+            }
         }
 
         $sectionRaw = $data['section'] ?? null;
-        $section = $sectionRaw instanceof SectionType
-            ? $sectionRaw
-            : (is_string($sectionRaw) ? SectionType::tryFrom($sectionRaw) : null);
+        if ($sectionRaw !== null) {
+            $section = $sectionRaw instanceof SectionType
+                ? $sectionRaw
+                : (is_string($sectionRaw) ? SectionType::tryFrom($sectionRaw) : null);
+
+            if ($section === null) {
+                throw new InvalidArgumentException('Invalid section.');
+            }
+        } else {
+            $section = null;
+        }
 
         $contextRaw = $data['context'] ?? null;
-        $context = $contextRaw instanceof ContextTaxonomy
-            ? $contextRaw
-            : (is_string($contextRaw) ? ContextTaxonomy::tryFrom($contextRaw) : null);
+        if ($contextRaw !== null && $contextRaw !== '') {
+            $context = $contextRaw instanceof ContextTaxonomy
+                ? $contextRaw
+                : (is_string($contextRaw) ? ContextTaxonomy::tryFrom($contextRaw) : null);
 
-        $testTypeRaw = $data['test_type'] ?? TestType::Toeic->value;
-        $testType = $testTypeRaw instanceof TestType
-            ? $testTypeRaw
-            : (is_string($testTypeRaw) ? TestType::tryFrom($testTypeRaw) : TestType::Toeic);
+            if ($context === null) {
+                throw new InvalidArgumentException("Invalid context '{$contextRaw}'.");
+            }
+        } else {
+            $context = null;
+        }
 
-        $itemCount = max(1, (int) ($data['item_count'] ?? 1));
+        if (array_key_exists('test_type', $data) && $data['test_type'] !== null) {
+            $testTypeRaw = $data['test_type'];
+            $testType = $testTypeRaw instanceof TestType
+                ? $testTypeRaw
+                : (is_string($testTypeRaw) ? TestType::tryFrom($testTypeRaw) : null);
+
+            if ($testType === null) {
+                throw new InvalidArgumentException('Invalid test_type.');
+            }
+        } else {
+            $testType = TestType::Toeic;
+        }
+
+        if (array_key_exists('item_count', $data) && $data['item_count'] !== null) {
+            if (!is_numeric($data['item_count']) || (int) $data['item_count'] < 1) {
+                throw new InvalidArgumentException('The item_count must be a positive integer greater than or equal to 1.');
+            }
+            $itemCount = (int) $data['item_count'];
+        } else {
+            $itemCount = 1;
+        }
+
         $locale = (string) ($data['locale'] ?? 'en');
         $seed = isset($data['seed']) ? (string) $data['seed'] : null;
         $metadata = (array) ($data['metadata'] ?? []);
@@ -129,7 +179,7 @@ class QuestionGenerationRequest
             section: $section,
             context: $context,
             itemCount: $itemCount,
-            testType: $testType ?? TestType::Toeic,
+            testType: $testType,
             locale: $locale,
             seed: $seed,
             metadata: $metadata
