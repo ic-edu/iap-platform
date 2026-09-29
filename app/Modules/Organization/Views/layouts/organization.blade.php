@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,12 +14,12 @@
     <!-- Early Theme Initialization to prevent flash of wrong theme -->
     <script>
         (function() {
-            var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
+            var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}';
             function resolveTheme(pref) {
                 if (pref === 'system') {
                     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                return pref === 'light' ? 'light' : 'dark';
+                return pref === 'dark' ? 'dark' : 'light';
             }
             var activeTheme = resolveTheme(preference);
             var root = document.documentElement;
@@ -162,7 +162,7 @@
                         <div class="p-2 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-100 dark:border-slate-800/80 space-y-1.5">
                             <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                 <span>Appearance</span>
-                                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono capitalize" id="current-theme-label">{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}</span>
+                                <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono capitalize" id="current-theme-label">{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}</span>
                             </div>
                             <div class="grid grid-cols-3 gap-1 p-0.5 bg-slate-200/60 dark:bg-slate-900 border border-slate-300/60 dark:border-slate-800 rounded-lg" role="group" aria-label="Theme selector">
                                 <button type="button"
@@ -329,7 +329,7 @@
         };
 
         document.addEventListener('DOMContentLoaded', function() {
-            var currentPref = document.documentElement.getAttribute('data-preference') || 'dark';
+            var currentPref = document.documentElement.getAttribute('data-preference') || 'light';
             updateSwitcherButtonsUI(currentPref);
 
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {

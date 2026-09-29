@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,12 +14,12 @@
         <!-- Early Theme Initialization to prevent flash of wrong theme -->
         <script>
             (function() {
-                var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'dark') }}';
+                var preference = '{{ Auth::user()?->getThemePreference() ?? session('theme_preference', 'light') }}';
                 function resolveTheme(pref) {
                     if (pref === 'system') {
                         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                     }
-                    return pref === 'light' ? 'light' : 'dark';
+                    return pref === 'dark' ? 'dark' : 'light';
                 }
                 var activeTheme = resolveTheme(preference);
                 var root = document.documentElement;

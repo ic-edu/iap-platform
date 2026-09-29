@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Modules\Assessment\Engines\AssignmentEngine;
 use App\Modules\Assessment\Enums\AssessmentMode;
 use App\Modules\Assessment\Models\Attempt;
 use App\Modules\Assessment\Models\CandidateTestAssignment;
@@ -28,11 +27,17 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $superAdmin;
+
     protected User $rm;
+
     protected User $teacher;
+
     protected User $student;
+
     protected Test $simulatorTest;
+
     protected Test $realTest;
 
     protected function setUp(): void
@@ -56,27 +61,27 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $this->student->assignRole('student');
 
         $this->simulatorTest = Test::create([
-            'title'            => 'TOEIC Simulator 01',
-            'slug'             => 'toeic-sim-01',
-            'test_type'        => TestType::Toeic,
-            'assessment_mode'  => AssessmentMode::Simulator,
+            'title' => 'TOEIC Simulator 01',
+            'slug' => 'toeic-sim-01',
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::Simulator,
             'duration_minutes' => 60,
-            'pass_score'       => 400,
-            'is_published'     => true,
-            'status'           => 'published',
-            'created_by'       => $this->teacher->id,
+            'pass_score' => 400,
+            'is_published' => true,
+            'status' => 'published',
+            'created_by' => $this->teacher->id,
         ]);
 
         $this->realTest = Test::create([
-            'title'            => 'TOEIC Real Exam 01',
-            'slug'             => 'toeic-real-01',
-            'test_type'        => TestType::Toeic,
-            'assessment_mode'  => AssessmentMode::RealTest,
+            'title' => 'TOEIC Real Exam 01',
+            'slug' => 'toeic-real-01',
+            'test_type' => TestType::Toeic,
+            'assessment_mode' => AssessmentMode::RealTest,
             'duration_minutes' => 120,
-            'pass_score'       => 600,
-            'is_published'     => true,
-            'status'           => 'published',
-            'created_by'       => $this->rm->id,
+            'pass_score' => 600,
+            'is_published' => true,
+            'status' => 'published',
+            'created_by' => $this->rm->id,
         ]);
     }
 
@@ -324,13 +329,13 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
     {
         $cat = ProductCategory::create(['name' => 'Vouchers', 'slug' => 'vouchers']);
         $product = Product::create([
-            'title'        => 'Real Test Voucher',
-            'slug'         => 'real-test-voucher',
+            'title' => 'Real Test Voucher',
+            'slug' => 'real-test-voucher',
             'product_type' => 'assessment',
-            'category_id'  => $cat->id,
-            'price'        => 500000,
-            'is_active'    => true,
-            'test_id'      => $this->realTest->id,
+            'category_id' => $cat->id,
+            'price' => 500000,
+            'is_active' => true,
+            'test_id' => $this->realTest->id,
         ]);
 
         $checkout = new CheckoutEngine(new PricingEngine, new InvoiceEngine);
@@ -432,13 +437,13 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         // Test Hydration of Payment model with both success and paid statuses
         $cat = ProductCategory::create(['name' => 'Assessments', 'slug' => 'assessments']);
         $product = Product::create([
-            'title'        => 'TOEIC Exam Voucher',
-            'slug'         => 'toeic-exam-voucher',
+            'title' => 'TOEIC Exam Voucher',
+            'slug' => 'toeic-exam-voucher',
             'product_type' => 'assessment',
-            'category_id'  => $cat->id,
-            'price'        => 250000,
-            'is_active'    => true,
-            'test_id'      => $this->simulatorTest->id,
+            'category_id' => $cat->id,
+            'price' => 250000,
+            'is_active' => true,
+            'test_id' => $this->simulatorTest->id,
         ]);
 
         $checkout = new CheckoutEngine(new PricingEngine, new InvoiceEngine);
@@ -585,17 +590,17 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
 
     public function test_appearance_settings_persists_theme_preference_per_user(): void
     {
-        // Default is dark
-        $this->assertSame('dark', $this->student->getThemePreference());
+        // Default is light
+        $this->assertSame('light', $this->student->getThemePreference());
 
-        // Update to light
+        // Update to dark
         $response = $this->actingAs($this->student)->post(route('settings.appearance.update'), [
-            'theme' => 'light',
+            'theme' => 'dark',
         ]);
         $response->assertSessionHas('status', 'theme-updated');
         $this->student->refresh();
-        $this->assertSame('light', $this->student->getThemePreference());
-        $this->assertSame('light', session('theme_preference'));
+        $this->assertSame('dark', $this->student->getThemePreference());
+        $this->assertSame('dark', session('theme_preference'));
 
         // Update to system via JSON
         $jsonResponse = $this->actingAs($this->admin)->postJson(route('settings.appearance.update'), [
@@ -735,4 +740,3 @@ class AdminOperationalWorkspaceRefactorTest extends TestCase
         $this->assertSame('Administrative Management', $staffItem['section']);
     }
 }
-

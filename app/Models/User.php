@@ -3,7 +3,11 @@
 namespace App\Models;
 
 use App\Modules\Academic\Models\CourseEnrollment;
+use App\Modules\Assessment\Models\Attempt;
+use App\Modules\Assessment\Models\CandidateTestAssignment;
 use App\Modules\Certificate\Models\Certificate;
+use App\Modules\Commerce\Domain\Models\Order;
+use App\Modules\Organization\Models\OrganizationMembership;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -41,7 +45,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function getThemePreference(): string
     {
-        return $this->theme_preference ?? 'dark';
+        return $this->theme_preference ?? 'light';
     }
 
     /**
@@ -125,47 +129,47 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Get orders placed by user.
      *
-     * @return HasMany<\App\Modules\Commerce\Domain\Models\Order, $this>
+     * @return HasMany<Order, $this>
      */
     public function orders(): HasMany
     {
-        return $this->hasMany(\App\Modules\Commerce\Domain\Models\Order::class, 'user_id');
+        return $this->hasMany(Order::class, 'user_id');
     }
 
     /**
      * Get test assignments for candidate user.
      *
-     * @return HasMany<\App\Modules\Assessment\Models\CandidateTestAssignment, $this>
+     * @return HasMany<CandidateTestAssignment, $this>
      */
     public function assignments(): HasMany
     {
-        return $this->hasMany(\App\Modules\Assessment\Models\CandidateTestAssignment::class, 'user_id');
+        return $this->hasMany(CandidateTestAssignment::class, 'user_id');
     }
 
     /**
      * Get assessment attempts for candidate user.
      *
-     * @return HasMany<\App\Modules\Assessment\Models\Attempt, $this>
+     * @return HasMany<Attempt, $this>
      */
     public function attempts(): HasMany
     {
-        return $this->hasMany(\App\Modules\Assessment\Models\Attempt::class, 'user_id');
+        return $this->hasMany(Attempt::class, 'user_id');
     }
 
     /**
      * Get organization memberships for user.
      *
-     * @return HasMany<\App\Modules\Organization\Models\OrganizationMembership, $this>
+     * @return HasMany<OrganizationMembership, $this>
      */
     public function organizationMemberships(): HasMany
     {
-        return $this->hasMany(\App\Modules\Organization\Models\OrganizationMembership::class, 'user_id');
+        return $this->hasMany(OrganizationMembership::class, 'user_id');
     }
 
     /**
      * Get active organization memberships for user.
      *
-     * @return HasMany<\App\Modules\Organization\Models\OrganizationMembership, $this>
+     * @return HasMany<OrganizationMembership, $this>
      */
     public function activeOrganizationMemberships(): HasMany
     {

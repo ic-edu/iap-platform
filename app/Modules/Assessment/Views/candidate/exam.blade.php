@@ -15,7 +15,7 @@
                 if (pref === 'system') {
                     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
-                return pref === 'light' ? 'light' : 'dark';
+                return pref === 'dark' ? 'dark' : 'light';
             }
             var activeTheme = resolveTheme(preference);
             var root = document.documentElement;
