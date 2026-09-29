@@ -27,6 +27,7 @@ use App\Http\Controllers\Teacher\TeacherRepositoryRevisionController;
 use App\Models\User;
 use App\Modules\Assessment\Controllers\TestBuilderController;
 use App\Modules\QuestionBank\Controllers\QuestionBankController;
+use App\Modules\QuestionBank\Controllers\QuestionGenerationWorkspaceController;
 use App\Services\NavigationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -71,6 +72,8 @@ Route::middleware(['web', 'auth', 'role:teacher'])->group(function () {
         ->name('teacher.question-banks.index');
     Route::get('/teacher/question-banks/{questionBank}', [QuestionBankController::class, 'show'])
         ->name('teacher.question-banks.show');
+    Route::get('/teacher/question-generator', [QuestionGenerationWorkspaceController::class, 'landing'])
+        ->name('teacher.question-generator.index');
     Route::get('/teacher/assessments', [TestBuilderController::class, 'index'])
         ->name('teacher.tests.index');
     Route::get('/teacher/assessments/{test}', [TestBuilderController::class, 'show'])

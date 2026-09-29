@@ -26,6 +26,29 @@ class QuestionGenerationWorkspaceController extends Controller
     ) {}
 
     /**
+     * Display Question Generator landing page listing Teacher's owned editable question banks.
+     */
+    public function landing(Request $request): View
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->hasRole('teacher')) {
+            abort(403, 'Unauthorized access to question generator.');
+        }
+
+        $questionBanks = QuestionBank::where('created_by', $user->id)
+            ->whereIn('status', ['draft', 'needs_revision', 'rejected'])
+            ->withCount('questions')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        /** @var view-string $viewName */
+        $viewName = 'question_bank::generation_landing';
+
+        return view($viewName, compact('questionBanks'));
+    }
+
+    /**
      * Display the Question Generation Workspace for an authorized Question Bank.
      */
     public function index(Request $request, QuestionBank $questionBank): View

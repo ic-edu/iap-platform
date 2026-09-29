@@ -123,6 +123,17 @@
                     <button onclick="openCreateQuestionModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition-colors">
                         + Add Question
                     </button>
+
+                    @if ($questionBank->status === 'draft' && (int)$questionBank->created_by === (int)Auth::id())
+                    <form action="{{ route('admin.question-banks.destroy', $questionBank->id) }}" method="POST" class="inline"
+                          onsubmit="event.preventDefault(); iapConfirm({ title: 'Delete Draft Question Bank?', message: 'Are you sure you want to delete draft question bank \'{{ addslashes($questionBank->title) }}\'? This action cannot be undone.', confirmText: 'Delete Draft', variant: 'danger', form: this });">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-lg border border-rose-500/30 transition-colors">
+                            🗑 Delete Draft
+                        </button>
+                    </form>
+                    @endif
                 @else
                     @if($questionBank->getLockMessage())
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-lg">

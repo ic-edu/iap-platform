@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class NavigationService
@@ -22,10 +23,10 @@ class NavigationService
     /**
      * Resolve the canonical dashboard route for an authenticated user based on role precedence.
      */
-    public static function getDashboardRouteForUser(?\App\Models\User $user = null): string
+    public static function getDashboardRouteForUser(?User $user = null): string
     {
         $user = $user ?? Auth::user();
-        if (! $user) {
+        if (!$user) {
             return route('login');
         }
 
@@ -55,7 +56,7 @@ class NavigationService
                 ->whereIn('role', ['owner', 'admin', 'coordinator'])
                 ->with('organization')
                 ->get();
-            $activeOrgs = $memberships->map(fn($m) => $m->organization)->filter(fn($o) => $o && $o->isActive());
+            $activeOrgs = $memberships->map(fn ($m) => $m->organization)->filter(fn ($o) => $o && $o->isActive());
 
             if ($activeOrgs->count() === 1) {
                 return route('organization.dashboard', $activeOrgs->first()->slug);
@@ -63,16 +64,17 @@ class NavigationService
             if ($activeOrgs->count() > 1) {
                 return route('organization.select');
             }
+
             return route('organization.no-access');
         }
 
         return route('candidate.portal');
     }
 
-    public static function getMenuItems(): array
+    public static function getMenuItems(?User $user = null): array
     {
-        $user = Auth::user();
-        if (! $user) {
+        $user = $user ?? Auth::user();
+        if (!$user) {
             return [];
         }
 
@@ -340,6 +342,15 @@ class NavigationService
                     'icon' => 'folder',
                     'permission' => null,
                     'active_pattern' => 'admin/question-banks*',
+                    'badge' => null,
+                ],
+                [
+                    'section' => 'Authoring',
+                    'label' => 'Question Generator',
+                    'route' => 'teacher.question-generator.index',
+                    'icon' => 'sparkles',
+                    'permission' => null,
+                    'active_pattern' => 'teacher/question-generator*',
                     'badge' => null,
                 ],
                 [

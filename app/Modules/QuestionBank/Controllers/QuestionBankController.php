@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AclAuditTrail;
 use App\Models\AclCategory;
 use App\Models\AclVersion;
+use App\Models\GovernanceApprovalTask;
 use App\Models\QuestionBankArchiveRequest;
 use App\Models\RepositoryActivityLog;
 use App\Models\RepositoryRevisionRequest;
@@ -26,6 +27,7 @@ use App\Services\RepositoryQualityService;
 use App\Services\ToeicQuestionValidator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -44,7 +46,7 @@ class QuestionBankController extends Controller
      */
     public function index(Request $request): View
     {
-        $user  = $request->user();
+        $user = $request->user();
         $query = QuestionBank::with(['category', 'aclCategory', 'creator', 'questions', 'archiveRequests', 'versions', 'auditTrails']);
 
         // Filter by author=me or my=1
@@ -61,8 +63,8 @@ class QuestionBankController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('slug', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%");
             });
         }
 
@@ -79,7 +81,7 @@ class QuestionBankController extends Controller
             if ($aclCategory) {
                 $query->where(function ($q) use ($aclCategory) {
                     $q->where('acl_category_id', $aclCategory->id)
-                      ->orWhere('slug', 'like', "%{$aclCategory->slug}%");
+                        ->orWhere('slug', 'like', "%{$aclCategory->slug}%");
                 });
             }
         }
@@ -104,10 +106,10 @@ class QuestionBankController extends Controller
         // Sorting
         $sort = $request->input('sort', 'updated');
         match ($sort) {
-            'created'      => $query->latest('created_at'),
-            'questions'    => $query->withCount('questions')->orderBy('questions_count', 'desc'),
+            'created' => $query->latest('created_at'),
+            'questions' => $query->withCount('questions')->orderBy('questions_count', 'desc'),
             'alphabetical' => $query->orderBy('title', 'asc'),
-            default        => $query->latest('updated_at'),
+            default => $query->latest('updated_at'),
         };
 
         $banks = $query->paginate(10)->withQueryString();
@@ -118,11 +120,11 @@ class QuestionBankController extends Controller
             $myBanksQuery->where('created_by', $user->id);
         }
 
-        $totalBanks           = (clone $myBanksQuery)->count();
-        $draftBanks           = (clone $myBanksQuery)->where('status', 'draft')->count();
+        $totalBanks = (clone $myBanksQuery)->count();
+        $draftBanks = (clone $myBanksQuery)->where('status', 'draft')->count();
         $pendingApprovalBanks = (clone $myBanksQuery)->whereIn('status', ['pending_approval', 'submitted', 'pending_archive_approval'])->count();
-        $rejectedBanks        = (clone $myBanksQuery)->whereIn('status', ['needs_revision', 'rejected', 'revision_requested'])->count();
-        $approvedBanks        = (clone $myBanksQuery)->whereIn('status', ['approved', 'published'])->count();
+        $rejectedBanks = (clone $myBanksQuery)->whereIn('status', ['needs_revision', 'rejected', 'revision_requested'])->count();
+        $approvedBanks = (clone $myBanksQuery)->whereIn('status', ['approved', 'published'])->count();
 
         // "Continue Working" spotlight card — last edited Question Bank
         $latestEditedBank = (clone $myBanksQuery)->with(['questions'])->latest('updated_at')->first();
@@ -132,8 +134,8 @@ class QuestionBankController extends Controller
 
         // ACL Dynamic Coverage Indicators & Content Health Score
         $coverageReport = $this->coverageService->getCategoryCoverageReport();
-        $healthData     = $this->healthScoreService->calculateHealthScore();
-        $aclCategories  = AclCategory::where('is_active', true)->get();
+        $healthData = $this->healthScoreService->calculateHealthScore();
+        $aclCategories = AclCategory::where('is_active', true)->get();
 
         $categories = CourseCategory::all();
 
@@ -191,25 +193,25 @@ class QuestionBankController extends Controller
         }
 
         $validated = $request->validate([
-            'title'           => ['required', 'string', 'max:255'],
-            'test_type'       => ['required', 'string'],
-            'description'     => ['nullable', 'string', 'max:1000'],
-            'category_id'     => ['nullable', 'exists:course_categories,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'test_type' => ['required', 'string'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'category_id' => ['nullable', 'exists:course_categories,id'],
             'acl_category_id' => ['nullable', 'exists:acl_categories,id'],
         ]);
 
         $aclCatId = $validated['acl_category_id'] ?? AclCategory::where('test_type', $validated['test_type'])->value('id');
 
         $bank = QuestionBank::create([
-            'title'           => $validated['title'],
-            'slug'            => Str::slug($validated['title']).'-'.Str::random(5),
-            'test_type'       => $validated['test_type'],
-            'description'     => $validated['description'] ?? null,
-            'category_id'     => $validated['category_id'] ?? null,
+            'title' => $validated['title'],
+            'slug' => Str::slug($validated['title']).'-'.Str::random(5),
+            'test_type' => $validated['test_type'],
+            'description' => $validated['description'] ?? null,
+            'category_id' => $validated['category_id'] ?? null,
             'acl_category_id' => $aclCatId,
-            'status'          => 'draft',
+            'status' => 'draft',
             'current_version' => '1.0',
-            'created_by'      => $user?->id,
+            'created_by' => $user?->id,
         ]);
 
         ActivityLogger::log('question_bank_created', "Created question bank: {$bank->title}", $user);
@@ -219,12 +221,12 @@ class QuestionBankController extends Controller
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $bank->id,
-            'action'        => 'created',
-            'actor_id'      => $user?->id,
-            'created_by'    => $user?->id,
-            'version'       => '1.0',
-            'reason'        => 'Initial creation of academic question bank',
+            'resource_id' => $bank->id,
+            'action' => 'created',
+            'actor_id' => $user?->id,
+            'created_by' => $user?->id,
+            'version' => '1.0',
+            'reason' => 'Initial creation of academic question bank',
         ]);
 
         return redirect()->route('admin.question-banks.index')
@@ -248,27 +250,28 @@ class QuestionBankController extends Controller
         }
 
         $validated = $request->validate([
-            'title'           => ['required', 'string', 'max:255'],
-            'test_type'       => ['required', 'string'],
-            'description'     => ['nullable', 'string', 'max:1000'],
+            'title' => ['required', 'string', 'max:255'],
+            'test_type' => ['required', 'string'],
+            'description' => ['nullable', 'string', 'max:1000'],
             'acl_category_id' => ['nullable', 'exists:acl_categories,id'],
             'current_version' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $isPublished = $questionBank->status === 'published' || (bool) $questionBank->is_published;        $questionBank->update($validated);
+        $isPublished = $questionBank->status === 'published' || (bool) $questionBank->is_published;
+        $questionBank->update($validated);
 
         // Auto-reconcile repository revision findings against updated metadata & question count
-        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+        app(RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
 
         ActivityLogger::log('QUESTION_BANK_EDITED', "Updated question bank: {$questionBank->title}", $user);
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'action'        => 'edited',
-            'actor_id'      => $user?->id,
-            'version'       => $questionBank->current_version ?? '1.0',
-            'reason'        => 'Updated question bank details',
+            'resource_id' => $questionBank->id,
+            'action' => 'edited',
+            'actor_id' => $user?->id,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => 'Updated question bank details',
         ]);
 
         return redirect()->route('admin.question-banks.show', $questionBank->id)
@@ -280,7 +283,7 @@ class QuestionBankController extends Controller
      */
     public function submitForApproval(QuestionBank $questionBank): RedirectResponse
     {
-        $user = request()->user() ?? \Illuminate\Support\Facades\Auth::user();
+        $user = request()->user() ?? Auth::user();
 
         if ($user && $user->hasRole('teacher')) {
             if ((int) $questionBank->created_by !== (int) $user->id) {
@@ -292,7 +295,7 @@ class QuestionBankController extends Controller
 
             // State Integrity Guard: Reconcile findings and ensure all findings are CLOSED
             if (Schema::hasTable('repository_revision_requests')) {
-                app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+                app(RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
 
                 $activeRevision = RepositoryRevisionRequest::where('question_bank_id', $questionBank->id)
                     ->whereIn('status', ['OPEN', 'IN_PROGRESS'])
@@ -314,36 +317,36 @@ class QuestionBankController extends Controller
         $questionBank->update(['status' => 'pending_approval']);
 
         // Guarantee GovernanceApprovalTask creation (Idempotent: prevents duplicates)
-        if (\Illuminate\Support\Facades\Schema::hasTable('governance_approval_tasks')) {
-            \App\Models\GovernanceApprovalTask::firstOrCreate([
+        if (Schema::hasTable('governance_approval_tasks')) {
+            GovernanceApprovalTask::firstOrCreate([
                 'question_bank_id' => $questionBank->id,
-                'status'           => 'OPEN',
+                'status' => 'OPEN',
             ], [
-                'teacher_id'       => $user?->id ?? $questionBank->created_by,
-                'workflow'         => 'APPROVAL',
-                'submitted_at'     => now(),
+                'teacher_id' => $user?->id ?? $questionBank->created_by,
+                'workflow' => 'APPROVAL',
+                'submitted_at' => now(),
             ]);
         }
 
         // Dispatch Repository Manager Notification
-        if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
-            $repoManagers = \App\Models\User::role(['repository-manager', 'super-admin'])->get();
+        if (Schema::hasTable('notifications')) {
+            $repoManagers = User::role(['repository-manager', 'super-admin'])->get();
             $submitterName = $user?->name ?? 'Teacher';
             foreach ($repoManagers as $rm) {
-                \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                    'id'              => (string) \Illuminate\Support\Str::uuid(),
-                    'type'            => 'repository_submitted_for_approval',
+                DB::table('notifications')->insert([
+                    'id' => (string) Str::uuid(),
+                    'type' => 'repository_submitted_for_approval',
                     'notifiable_type' => 'App\Models\User',
-                    'notifiable_id'   => $rm->id,
-                    'data'            => json_encode([
-                        'title'        => 'New Repository Submitted',
-                        'message'      => "Repository '{$questionBank->title}' submitted by {$submitterName}",
-                        'repository'   => $questionBank->title,
+                    'notifiable_id' => $rm->id,
+                    'data' => json_encode([
+                        'title' => 'New Repository Submitted',
+                        'message' => "Repository '{$questionBank->title}' submitted by {$submitterName}",
+                        'repository' => $questionBank->title,
                         'submitted_by' => $submitterName,
-                        'link'         => route('admin.repository-manager.question-bank-validate', $questionBank->id),
+                        'link' => route('admin.repository-manager.question-bank-validate', $questionBank->id),
                     ]),
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         }
@@ -352,11 +355,11 @@ class QuestionBankController extends Controller
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'action'        => 'submitted',
-            'actor_id'      => $user?->id,
-            'version'       => $questionBank->current_version ?? '1.0',
-            'reason'        => 'Submitted for Repository Manager governance approval',
+            'resource_id' => $questionBank->id,
+            'action' => 'submitted',
+            'actor_id' => $user?->id,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => 'Submitted for Repository Manager governance approval',
         ]);
 
         // Context-aware post-submit redirection
@@ -395,12 +398,12 @@ class QuestionBankController extends Controller
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'action'        => 'reviewed',
-            'actor_id'      => $user?->id,
-            'reviewer_id'   => $user?->id,
-            'version'       => $questionBank->current_version ?? '1.0',
-            'reason'        => 'Reviewed academic content',
+            'resource_id' => $questionBank->id,
+            'action' => 'reviewed',
+            'actor_id' => $user?->id,
+            'reviewer_id' => $user?->id,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => 'Reviewed academic content',
         ]);
 
         return redirect()->route('admin.question-banks.index')
@@ -423,12 +426,12 @@ class QuestionBankController extends Controller
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'action'        => 'revision_requested',
-            'actor_id'      => $user->id,
-            'reviewer_id'   => $user->id,
-            'version'       => $questionBank->current_version ?? '1.0',
-            'reason'        => $reason,
+            'resource_id' => $questionBank->id,
+            'action' => 'revision_requested',
+            'actor_id' => $user->id,
+            'reviewer_id' => $user->id,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => $reason,
         ]);
 
         return redirect()->route('admin.question-banks.index')
@@ -451,7 +454,7 @@ class QuestionBankController extends Controller
         }
 
         $questionBank->update([
-            'status'       => 'published',
+            'status' => 'published',
             'is_published' => true,
         ]);
 
@@ -459,12 +462,12 @@ class QuestionBankController extends Controller
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'action'        => 'published',
-            'actor_id'      => $user?->id,
-            'published_by'  => $user?->id,
-            'version'       => $questionBank->current_version ?? '1.0',
-            'reason'        => 'Published live to institutional repository',
+            'resource_id' => $questionBank->id,
+            'action' => 'published',
+            'actor_id' => $user?->id,
+            'published_by' => $user?->id,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => 'Published live to institutional repository',
         ]);
 
         if ($questionBank->creator) {
@@ -493,7 +496,7 @@ class QuestionBankController extends Controller
         }
 
         $questionBank->update([
-            'status'       => 'approved',
+            'status' => 'approved',
             'is_published' => false,
         ]);
 
@@ -517,21 +520,21 @@ class QuestionBankController extends Controller
 
         QuestionBankArchiveRequest::create([
             'question_bank_id' => $questionBank->id,
-            'requested_by'      => $user?->id,
-            'reason'            => $reason,
-            'status'            => 'pending',
+            'requested_by' => $user?->id,
+            'reason' => $reason,
+            'status' => 'pending',
         ]);
 
         $questionBank->update(['status' => 'pending_archive_approval']);
 
         AclAuditTrail::create([
-            'resource_type'        => 'QuestionBank',
-            'resource_id'          => $questionBank->id,
-            'action'               => 'archive_requested',
-            'actor_id'             => $user?->id,
+            'resource_type' => 'QuestionBank',
+            'resource_id' => $questionBank->id,
+            'action' => 'archive_requested',
+            'actor_id' => $user?->id,
             'archive_requested_by' => $user?->id,
-            'version'              => $questionBank->current_version ?? '1.0',
-            'reason'               => $reason,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => $reason,
         ]);
 
         return redirect()->route('admin.question-banks.index')
@@ -566,55 +569,55 @@ class QuestionBankController extends Controller
         $questionBank->update(['status' => 'pending_restore_approval']);
 
         // Task Synchronization: Create GovernanceApprovalTask for restoration
-        if (class_exists(\App\Models\GovernanceApprovalTask::class)) {
-            \App\Models\GovernanceApprovalTask::create([
+        if (class_exists(GovernanceApprovalTask::class)) {
+            GovernanceApprovalTask::create([
                 'question_bank_id' => $questionBank->id,
-                'teacher_id'       => $questionBank->created_by ?: $user->id,
-                'workflow'         => 'APPROVAL',
-                'status'           => 'OPEN',
-                'submitted_at'     => now(),
+                'teacher_id' => $questionBank->created_by ?: $user->id,
+                'workflow' => 'APPROVAL',
+                'status' => 'OPEN',
+                'submitted_at' => now(),
             ]);
         }
 
         AclAuditTrail::create([
-            'resource_type'        => 'QuestionBank',
-            'resource_id'          => $questionBank->id,
-            'action'               => 'restore_requested',
-            'actor_id'             => $user->id,
+            'resource_type' => 'QuestionBank',
+            'resource_id' => $questionBank->id,
+            'action' => 'restore_requested',
+            'actor_id' => $user->id,
             'restore_requested_by' => $user->id,
-            'version'              => $questionBank->current_version ?? '1.0',
-            'reason'               => $reason,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => $reason,
         ]);
 
-        if (class_exists(\App\Models\RepositoryActivityLog::class)) {
-            \App\Models\RepositoryActivityLog::create([
+        if (class_exists(RepositoryActivityLog::class)) {
+            RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
-                'resource_id'   => $questionBank->id,
-                'actor_id'      => $user->id,
-                'action'        => 'restore_requested',
+                'resource_id' => $questionBank->id,
+                'actor_id' => $user->id,
+                'action' => 'restore_requested',
                 'approval_note' => $reason,
             ]);
         }
 
         // Notify Super Admin recipient(s)
-        if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
-            $superAdmins = \App\Models\User::role('super-admin')->get();
+        if (Schema::hasTable('notifications')) {
+            $superAdmins = User::role('super-admin')->get();
             foreach ($superAdmins as $superAdmin) {
-                \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                    'id'              => (string) \Illuminate\Support\Str::uuid(),
-                    'type'            => 'question_bank_restoration_requested',
+                DB::table('notifications')->insert([
+                    'id' => (string) Str::uuid(),
+                    'type' => 'question_bank_restoration_requested',
                     'notifiable_type' => 'App\Models\User',
-                    'notifiable_id'   => $superAdmin->id,
-                    'data'            => json_encode([
-                        'title'            => 'Question Bank Restoration Requested',
-                        'message'          => "'{$user->name}' requested restoration for '{$questionBank->title}'. Reason: {$reason}",
-                        'reason'           => $reason,
+                    'notifiable_id' => $superAdmin->id,
+                    'data' => json_encode([
+                        'title' => 'Question Bank Restoration Requested',
+                        'message' => "'{$user->name}' requested restoration for '{$questionBank->title}'. Reason: {$reason}",
+                        'reason' => $reason,
                         'question_bank_id' => $questionBank->id,
-                        'link'             => route('admin.approvals.question-bank-restorations', ['from' => 'notifications']),
-                        'priority'         => 'HIGH',
+                        'link' => route('admin.approvals.question-bank-restorations', ['from' => 'notifications']),
+                        'priority' => 'HIGH',
                     ]),
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         }
@@ -639,57 +642,57 @@ class QuestionBankController extends Controller
         }
 
         $questionBank->update([
-            'status'       => 'approved',
+            'status' => 'approved',
             'is_published' => false,
         ]);
 
         // Resolve restoration task
-        if (class_exists(\App\Models\GovernanceApprovalTask::class)) {
-            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+        if (class_exists(GovernanceApprovalTask::class)) {
+            GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
                 ->whereIn('status', ['OPEN', 'PENDING'])
                 ->update([
-                    'status'       => 'COMPLETED',
+                    'status' => 'COMPLETED',
                     'completed_at' => now(),
                 ]);
         }
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'action'        => 'restored',
-            'actor_id'      => $user->id,
-            'approver_id'   => $user->id,
-            'version'       => $questionBank->current_version ?? '1.0',
-            'reason'        => 'Approved restoration to active repository',
+            'resource_id' => $questionBank->id,
+            'action' => 'restored',
+            'actor_id' => $user->id,
+            'approver_id' => $user->id,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => 'Approved restoration to active repository',
         ]);
 
-        if (class_exists(\App\Models\RepositoryActivityLog::class)) {
-            \App\Models\RepositoryActivityLog::create([
+        if (class_exists(RepositoryActivityLog::class)) {
+            RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
-                'resource_id'   => $questionBank->id,
-                'actor_id'      => $user->id,
-                'action'        => 'restore_approved',
+                'resource_id' => $questionBank->id,
+                'actor_id' => $user->id,
+                'action' => 'restore_approved',
                 'approval_note' => 'Super Admin approved repository restoration',
             ]);
         }
 
         // Notify Repository Author
         $authorId = $questionBank->created_by;
-        if ($authorId && \Illuminate\Support\Facades\Schema::hasTable('notifications')) {
-            \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                'id'              => (string) \Illuminate\Support\Str::uuid(),
-                'type'            => 'question_bank_restoration_approved',
+        if ($authorId && Schema::hasTable('notifications')) {
+            DB::table('notifications')->insert([
+                'id' => (string) Str::uuid(),
+                'type' => 'question_bank_restoration_approved',
                 'notifiable_type' => 'App\Models\User',
-                'notifiable_id'   => $authorId,
-                'data'            => json_encode([
-                    'title'            => 'Repository Restoration Approved',
-                    'message'          => "Super Admin approved restoration for '{$questionBank->title}'. Status is now Approved.",
+                'notifiable_id' => $authorId,
+                'data' => json_encode([
+                    'title' => 'Repository Restoration Approved',
+                    'message' => "Super Admin approved restoration for '{$questionBank->title}'. Status is now Approved.",
                     'question_bank_id' => $questionBank->id,
-                    'link'             => route('admin.question-banks.show', $questionBank->id),
-                    'priority'         => 'HIGH',
+                    'link' => route('admin.question-banks.show', $questionBank->id),
+                    'priority' => 'HIGH',
                 ]),
-                'created_at'      => now(),
-                'updated_at'      => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
 
@@ -715,58 +718,58 @@ class QuestionBankController extends Controller
         $reason = trim($request->input('reason', $request->input('restoration_rejection_reason', '')) ?: 'Restoration request rejected by Super Admin');
 
         $questionBank->update([
-            'status'       => 'archived',
+            'status' => 'archived',
             'is_published' => false,
         ]);
 
         // Resolve restoration task as REJECTED
-        if (class_exists(\App\Models\GovernanceApprovalTask::class)) {
-            \App\Models\GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
+        if (class_exists(GovernanceApprovalTask::class)) {
+            GovernanceApprovalTask::where('question_bank_id', $questionBank->id)
                 ->whereIn('status', ['OPEN', 'PENDING'])
                 ->update([
-                    'status'       => 'REJECTED',
+                    'status' => 'REJECTED',
                     'completed_at' => now(),
                 ]);
         }
 
         AclAuditTrail::create([
             'resource_type' => 'QuestionBank',
-            'resource_id'   => $questionBank->id,
-            'action'        => 'restore_rejected',
-            'actor_id'      => $user->id,
-            'approver_id'   => $user->id,
-            'version'       => $questionBank->current_version ?? '1.0',
-            'reason'        => $reason,
+            'resource_id' => $questionBank->id,
+            'action' => 'restore_rejected',
+            'actor_id' => $user->id,
+            'approver_id' => $user->id,
+            'version' => $questionBank->current_version ?? '1.0',
+            'reason' => $reason,
         ]);
 
-        if (class_exists(\App\Models\RepositoryActivityLog::class)) {
-            \App\Models\RepositoryActivityLog::create([
+        if (class_exists(RepositoryActivityLog::class)) {
+            RepositoryActivityLog::create([
                 'resource_type' => 'QuestionBank',
-                'resource_id'   => $questionBank->id,
-                'actor_id'      => $user->id,
-                'action'        => 'restore_rejected',
+                'resource_id' => $questionBank->id,
+                'actor_id' => $user->id,
+                'action' => 'restore_rejected',
                 'approval_note' => $reason,
             ]);
         }
 
         // Notify Repository Author with rejection reason
         $authorId = $questionBank->created_by;
-        if ($authorId && \Illuminate\Support\Facades\Schema::hasTable('notifications')) {
-            \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                'id'              => (string) \Illuminate\Support\Str::uuid(),
-                'type'            => 'question_bank_restoration_rejected',
+        if ($authorId && Schema::hasTable('notifications')) {
+            DB::table('notifications')->insert([
+                'id' => (string) Str::uuid(),
+                'type' => 'question_bank_restoration_rejected',
                 'notifiable_type' => 'App\Models\User',
-                'notifiable_id'   => $authorId,
-                'data'            => json_encode([
-                    'title'            => 'Repository Restoration Rejected',
-                    'message'          => "Super Admin rejected restoration for '{$questionBank->title}'. Reason: {$reason}",
+                'notifiable_id' => $authorId,
+                'data' => json_encode([
+                    'title' => 'Repository Restoration Rejected',
+                    'message' => "Super Admin rejected restoration for '{$questionBank->title}'. Reason: {$reason}",
                     'rejection_reason' => $reason,
                     'question_bank_id' => $questionBank->id,
-                    'link'             => route('admin.question-banks.show', $questionBank->id),
-                    'priority'         => 'HIGH',
+                    'link' => route('admin.question-banks.show', $questionBank->id),
+                    'priority' => 'HIGH',
                 ]),
-                'created_at'      => now(),
-                'updated_at'      => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
 
@@ -814,27 +817,27 @@ class QuestionBankController extends Controller
         $promptRule = ToeicQuestionValidator::requiresPrompt($rawPartNumber) ? ['required', 'string'] : ['nullable', 'string'];
 
         $validated = $request->validate([
-            'prompt'                => $promptRule,
-            'question_type'         => ['required', 'string'],
-            'difficulty'            => ['required', 'string'],
-            'points'                => ['nullable', 'integer', 'min:1'],
-            'explanation'           => ['nullable', 'string'],
-            'passage_text'          => ['nullable', 'string'],
-            'passage_id'            => ['nullable', 'string'],
-            'image_url'             => ['nullable', 'string'],
-            'audio_url'             => ['nullable', 'string'],
-            'media_asset_id'        => ['nullable', 'string'],
-            'image_media_asset_id'  => ['nullable', 'string'],
-            'audio_media_asset_id'  => ['nullable', 'string'],
-            'part_number'           => ['nullable', 'integer', 'between:1,7'],
-            'section'               => ['nullable', 'string'],
-            'choices'               => ['nullable', 'array'],
-            'choices.*.label'       => ['nullable', 'string'],
-            'choices.*.content'     => ['nullable', 'string'],
-            'correct_choice'        => ['nullable'],
-            'correct_choices'       => ['nullable', 'array'],
-            'tf_correct_choice'     => ['nullable', 'string'],
-            'short_answer_text'     => ['nullable', 'string'],
+            'prompt' => $promptRule,
+            'question_type' => ['required', 'string'],
+            'difficulty' => ['required', 'string'],
+            'points' => ['nullable', 'integer', 'min:1'],
+            'explanation' => ['nullable', 'string'],
+            'passage_text' => ['nullable', 'string'],
+            'passage_id' => ['nullable', 'string'],
+            'image_url' => ['nullable', 'string'],
+            'audio_url' => ['nullable', 'string'],
+            'media_asset_id' => ['nullable', 'string'],
+            'image_media_asset_id' => ['nullable', 'string'],
+            'audio_media_asset_id' => ['nullable', 'string'],
+            'part_number' => ['nullable', 'integer', 'between:1,7'],
+            'section' => ['nullable', 'string'],
+            'choices' => ['nullable', 'array'],
+            'choices.*.label' => ['nullable', 'string'],
+            'choices.*.content' => ['nullable', 'string'],
+            'correct_choice' => ['nullable'],
+            'correct_choices' => ['nullable', 'array'],
+            'tf_correct_choice' => ['nullable', 'string'],
+            'short_answer_text' => ['nullable', 'string'],
             'reference_answer_text' => ['nullable', 'string'],
         ]);
 
@@ -864,27 +867,27 @@ class QuestionBankController extends Controller
         $qType = $validated['question_type'] === 'single_choice' ? 'multiple_choice' : $validated['question_type'];
 
         $question = Question::create([
-            'question_bank_id'      => $questionBank->id,
-            'media_asset_id'        => $validated['media_asset_id'] ?? null,
-            'image_media_asset_id'  => ((int) $partNumber === 2) ? null : ($validated['image_media_asset_id'] ?? null),
-            'audio_media_asset_id'  => $validated['audio_media_asset_id'] ?? null,
-            'passage_id'            => $validated['passage_id'] ?? null,
-            'image_url'             => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? null),
-            'prompt'                => $validated['prompt'] ?? '',
-            'section'               => $section ?: 'reading',
-            'part_number'           => $partNumber,
-            'question_type'         => $qType,
-            'difficulty'            => $validated['difficulty'],
-            'points'                => $validated['points'] ?? 1,
-            'explanation'           => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
-            'passage_text'          => $validated['passage_text'] ?? null,
-            'audio_url'             => $validated['audio_url'] ?? null,
+            'question_bank_id' => $questionBank->id,
+            'media_asset_id' => $validated['media_asset_id'] ?? null,
+            'image_media_asset_id' => ((int) $partNumber === 2) ? null : ($validated['image_media_asset_id'] ?? null),
+            'audio_media_asset_id' => $validated['audio_media_asset_id'] ?? null,
+            'passage_id' => $validated['passage_id'] ?? null,
+            'image_url' => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? null),
+            'prompt' => $validated['prompt'] ?? '',
+            'section' => $section ?: 'reading',
+            'part_number' => $partNumber,
+            'question_type' => $qType,
+            'difficulty' => $validated['difficulty'],
+            'points' => $validated['points'] ?? 1,
+            'explanation' => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
+            'passage_text' => $validated['passage_text'] ?? null,
+            'audio_url' => $validated['audio_url'] ?? null,
         ]);
 
         $this->saveChoicesForQuestion($question, $qType, $validated);
 
         // Auto-reconcile repository revision findings (e.g. insufficient question count, missing prompt)
-        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+        app(RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
 
         return redirect()->route('admin.question-banks.show', $questionBank->id)
             ->with('status', "Question successfully authored and saved. Total questions in bank: {$questionBank->questions()->count()}.");
@@ -909,17 +912,17 @@ class QuestionBankController extends Controller
         }
 
         $validated = $request->validate([
-            'title'          => ['nullable', 'string', 'max:255'],
-            'group_type'     => ['required', 'string', 'in:conversation,talk'],
-            'part_number'    => ['required', 'integer', 'in:3,4'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'group_type' => ['required', 'string', 'in:conversation,talk'],
+            'part_number' => ['required', 'integer', 'in:3,4'],
             'media_asset_id' => ['nullable', 'string'],
-            'audio_url'      => ['nullable', 'string'],
-            'audio_script'   => ['nullable', 'string'],
-            'questions'      => ['required', 'array', 'size:3'],
-            'questions.*.prompt'         => ['required', 'string'],
-            'questions.*.difficulty'     => ['required', 'string'],
-            'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['required', 'array', 'size:4'],
+            'audio_url' => ['nullable', 'string'],
+            'audio_script' => ['nullable', 'string'],
+            'questions' => ['required', 'array', 'size:3'],
+            'questions.*.prompt' => ['required', 'string'],
+            'questions.*.difficulty' => ['required', 'string'],
+            'questions.*.explanation' => ['nullable', 'string'],
+            'questions.*.choices' => ['required', 'array', 'size:4'],
             'questions.*.correct_choice' => ['required'],
         ]);
 
@@ -929,36 +932,36 @@ class QuestionBankController extends Controller
 
         // Run strict Audio Group validation
         ToeicQuestionValidator::validateAudioGroup([
-            'group_type'     => $groupType,
-            'part_number'    => $partNumber,
+            'group_type' => $groupType,
+            'part_number' => $partNumber,
             'media_asset_id' => $validated['media_asset_id'] ?? null,
-            'audio_url'      => $validated['audio_url'] ?? null,
+            'audio_url' => $validated['audio_url'] ?? null,
         ], $validated['questions']);
 
         DB::transaction(function () use ($questionBank, $validated, $partNumber, $groupType, $section, $user) {
             $audioGroup = AudioGroup::create([
                 'question_bank_id' => $questionBank->id,
-                'title'            => $validated['title'] ?? (ucfirst($groupType) . ' Group (' . $questionBank->title . ')'),
-                'group_type'       => $groupType,
-                'part_number'      => $partNumber,
-                'media_asset_id'   => $validated['media_asset_id'] ?? null,
-                'audio_url'        => $validated['audio_url'] ?? null,
-                'audio_script'     => $validated['audio_script'] ?? null,
-                'order'            => (AudioGroup::where('question_bank_id', $questionBank->id)->max('order') ?? 0) + 1,
-                'created_by'       => $user?->id,
+                'title' => $validated['title'] ?? (ucfirst($groupType).' Group ('.$questionBank->title.')'),
+                'group_type' => $groupType,
+                'part_number' => $partNumber,
+                'media_asset_id' => $validated['media_asset_id'] ?? null,
+                'audio_url' => $validated['audio_url'] ?? null,
+                'audio_script' => $validated['audio_script'] ?? null,
+                'order' => (AudioGroup::where('question_bank_id', $questionBank->id)->max('order') ?? 0) + 1,
+                'created_by' => $user?->id,
             ]);
 
             foreach ($validated['questions'] as $qData) {
                 $question = Question::create([
                     'question_bank_id' => $questionBank->id,
-                    'audio_group_id'   => $audioGroup->id,
-                    'prompt'           => $qData['prompt'],
-                    'section'          => $section,
-                    'part_number'      => $partNumber,
-                    'question_type'    => 'multiple_choice',
-                    'difficulty'       => $qData['difficulty'],
-                    'points'           => 1,
-                    'explanation'      => $qData['explanation'] ?? null,
+                    'audio_group_id' => $audioGroup->id,
+                    'prompt' => $qData['prompt'],
+                    'section' => $section,
+                    'part_number' => $partNumber,
+                    'question_type' => 'multiple_choice',
+                    'difficulty' => $qData['difficulty'],
+                    'points' => 1,
+                    'explanation' => $qData['explanation'] ?? null,
                 ]);
 
                 $correctChoiceIdx = $qData['correct_choice'];
@@ -967,17 +970,17 @@ class QuestionBankController extends Controller
                     $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
                     QuestionChoice::create([
                         'question_id' => $question->id,
-                        'label'       => chr(65 + $cIdx),
-                        'content'     => $content,
+                        'label' => chr(65 + $cIdx),
+                        'content' => $content,
                         'choice_text' => $content,
-                        'is_correct'  => $isCorrect,
-                        'order'       => $cIdx + 1,
+                        'is_correct' => $isCorrect,
+                        'order' => $cIdx + 1,
                     ]);
                 }
             }
         });
 
-        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+        app(RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
 
         return redirect()->route('admin.question-banks.show', $questionBank->id)
             ->with('status', "Part {$partNumber} Shared Audio Group successfully created with 3 questions.");
@@ -999,26 +1002,27 @@ class QuestionBankController extends Controller
         }
 
         $validated = $request->validate([
-            'title'          => ['nullable', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
             'media_asset_id' => ['nullable', 'string'],
-            'audio_url'      => ['nullable', 'string'],
-            'audio_script'   => ['nullable', 'string'],
+            'audio_url' => ['nullable', 'string'],
+            'audio_script' => ['nullable', 'string'],
         ]);
 
         $audioGroup->update([
-            'title'          => $validated['title'] ?? $audioGroup->title,
+            'title' => $validated['title'] ?? $audioGroup->title,
             'media_asset_id' => $validated['media_asset_id'] ?? $audioGroup->media_asset_id,
-            'audio_url'      => $validated['audio_url'] ?? $audioGroup->audio_url,
-            'audio_script'   => $validated['audio_script'] ?? $audioGroup->audio_script,
+            'audio_url' => $validated['audio_url'] ?? $audioGroup->audio_url,
+            'audio_script' => $validated['audio_script'] ?? $audioGroup->audio_script,
         ]);
 
         if ($bank) {
-            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($bank);
+            app(RepositoryQualityService::class)->reconcileRevisionItems($bank);
+
             return redirect()->route('admin.question-banks.show', $bank->id)
-                ->with('status', "Shared Audio Group updated successfully.");
+                ->with('status', 'Shared Audio Group updated successfully.');
         }
 
-        return redirect()->back()->with('status', "Shared Audio Group updated successfully.");
+        return redirect()->back()->with('status', 'Shared Audio Group updated successfully.');
     }
 
     /**
@@ -1040,20 +1044,20 @@ class QuestionBankController extends Controller
         }
 
         $validated = $request->validate([
-            'title'            => ['nullable', 'string', 'max:255'],
-            'part_number'      => ['required', 'integer', 'in:6,7'],
-            'passage_type'     => ['required', 'string', 'in:single,double,triple'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'part_number' => ['required', 'integer', 'in:6,7'],
+            'passage_type' => ['required', 'string', 'in:single,double,triple'],
             'context_metadata' => ['nullable', 'array'],
-            'passages'         => ['required', 'array', 'min:1', 'max:3'],
-            'passages.*.title'         => ['nullable', 'string', 'max:255'],
-            'passages.*.content'       => ['required', 'string'],
+            'passages' => ['required', 'array', 'min:1', 'max:3'],
+            'passages.*.title' => ['nullable', 'string', 'max:255'],
+            'passages.*.content' => ['required', 'string'],
             'passages.*.document_type' => ['nullable', 'string'],
-            'passages.*.order_in_group'=> ['nullable', 'integer'],
-            'questions'        => ['required', 'array', 'min:2', 'max:5'],
-            'questions.*.prompt'         => ['required', 'string'],
-            'questions.*.difficulty'     => ['required', 'string'],
-            'questions.*.explanation'    => ['nullable', 'string'],
-            'questions.*.choices'        => ['required', 'array', 'size:4'],
+            'passages.*.order_in_group' => ['nullable', 'integer'],
+            'questions' => ['required', 'array', 'min:2', 'max:5'],
+            'questions.*.prompt' => ['required', 'string'],
+            'questions.*.difficulty' => ['required', 'string'],
+            'questions.*.explanation' => ['nullable', 'string'],
+            'questions.*.choices' => ['required', 'array', 'size:4'],
             'questions.*.correct_choice' => ['required'],
         ]);
 
@@ -1063,19 +1067,19 @@ class QuestionBankController extends Controller
 
         // Run strict centralized Passage Group validation
         ToeicQuestionValidator::validatePassageGroup([
-            'part_number'  => $partNumber,
+            'part_number' => $partNumber,
             'passage_type' => $passageType,
         ], $validated['passages'], $validated['questions']);
 
         DB::transaction(function () use ($questionBank, $validated, $partNumber, $passageType, $section, $user) {
             $passageGroup = PassageGroup::create([
                 'question_bank_id' => $questionBank->id,
-                'title'            => $validated['title'] ?? ('Part ' . $partNumber . ' ' . ucfirst($passageType) . ' Passage Group'),
-                'part_number'      => $partNumber,
-                'passage_type'     => $passageType,
+                'title' => $validated['title'] ?? ('Part '.$partNumber.' '.ucfirst($passageType).' Passage Group'),
+                'part_number' => $partNumber,
+                'passage_type' => $passageType,
                 'context_metadata' => $validated['context_metadata'] ?? null,
-                'order'            => (PassageGroup::where('question_bank_id', $questionBank->id)->max('order') ?? 0) + 1,
-                'created_by'       => $user?->id,
+                'order' => (PassageGroup::where('question_bank_id', $questionBank->id)->max('order') ?? 0) + 1,
+                'created_by' => $user?->id,
             ]);
 
             $pIdx = 1;
@@ -1083,10 +1087,10 @@ class QuestionBankController extends Controller
                 Passage::create([
                     'passage_group_id' => $passageGroup->id,
                     'question_bank_id' => $questionBank->id,
-                    'order_in_group'   => $pIdx,
-                    'document_type'    => $pData['document_type'] ?? 'article',
-                    'title'            => $pData['title'] ?? ("Document {$pIdx}"),
-                    'content'          => $pData['content'],
+                    'order_in_group' => $pIdx,
+                    'document_type' => $pData['document_type'] ?? 'article',
+                    'title' => $pData['title'] ?? ("Document {$pIdx}"),
+                    'content' => $pData['content'],
                 ]);
                 $pIdx++;
             }
@@ -1095,13 +1099,13 @@ class QuestionBankController extends Controller
                 $question = Question::create([
                     'question_bank_id' => $questionBank->id,
                     'passage_group_id' => $passageGroup->id,
-                    'prompt'           => $qData['prompt'],
-                    'section'          => $section,
-                    'part_number'      => $partNumber,
-                    'question_type'    => 'multiple_choice',
-                    'difficulty'       => $qData['difficulty'],
-                    'points'           => 1,
-                    'explanation'      => $qData['explanation'] ?? null,
+                    'prompt' => $qData['prompt'],
+                    'section' => $section,
+                    'part_number' => $partNumber,
+                    'question_type' => 'multiple_choice',
+                    'difficulty' => $qData['difficulty'],
+                    'points' => 1,
+                    'explanation' => $qData['explanation'] ?? null,
                 ]);
 
                 $correctChoiceIdx = $qData['correct_choice'];
@@ -1110,22 +1114,23 @@ class QuestionBankController extends Controller
                     $isCorrect = (string) $cIdx === (string) $correctChoiceIdx;
                     QuestionChoice::create([
                         'question_id' => $question->id,
-                        'label'       => chr(65 + $cIdx),
-                        'content'     => $content,
+                        'label' => chr(65 + $cIdx),
+                        'content' => $content,
                         'choice_text' => $content,
-                        'is_correct'  => $isCorrect,
-                        'order'       => $cIdx + 1,
+                        'is_correct' => $isCorrect,
+                        'order' => $cIdx + 1,
                     ]);
                 }
             }
         });
 
-        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+        app(RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
 
         $qCount = count($validated['questions']);
         $pCount = count($validated['passages']);
+
         return redirect()->route('admin.question-banks.show', $questionBank->id)
-            ->with('status', "Part {$partNumber} " . ucfirst($passageType) . " Passage Group successfully created with {$pCount} passage(s) and {$qCount} questions.");
+            ->with('status', "Part {$partNumber} ".ucfirst($passageType)." Passage Group successfully created with {$pCount} passage(s) and {$qCount} questions.");
     }
 
     /**
@@ -1144,22 +1149,23 @@ class QuestionBankController extends Controller
         }
 
         $validated = $request->validate([
-            'title'            => ['nullable', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
             'context_metadata' => ['nullable', 'array'],
         ]);
 
         $passageGroup->update([
-            'title'            => $validated['title'] ?? $passageGroup->title,
+            'title' => $validated['title'] ?? $passageGroup->title,
             'context_metadata' => $validated['context_metadata'] ?? $passageGroup->context_metadata,
         ]);
 
         if ($bank) {
-            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($bank);
+            app(RepositoryQualityService::class)->reconcileRevisionItems($bank);
+
             return redirect()->route('admin.question-banks.show', $bank->id)
-                ->with('status', "Passage Group updated successfully.");
+                ->with('status', 'Passage Group updated successfully.');
         }
 
-        return redirect()->back()->with('status', "Passage Group updated successfully.");
+        return redirect()->back()->with('status', 'Passage Group updated successfully.');
     }
 
     /**
@@ -1180,12 +1186,13 @@ class QuestionBankController extends Controller
         $passageGroup->delete();
 
         if ($bank) {
-            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($bank);
+            app(RepositoryQualityService::class)->reconcileRevisionItems($bank);
+
             return redirect()->route('admin.question-banks.show', $bank->id)
-                ->with('status', "Passage Group deleted successfully.");
+                ->with('status', 'Passage Group deleted successfully.');
         }
 
-        return redirect()->back()->with('status', "Passage Group deleted successfully.");
+        return redirect()->back()->with('status', 'Passage Group deleted successfully.');
     }
 
     /**
@@ -1213,27 +1220,27 @@ class QuestionBankController extends Controller
         $promptRule = ToeicQuestionValidator::requiresPrompt($rawPartNumber) ? ['required', 'string'] : ['nullable', 'string'];
 
         $validated = $request->validate([
-            'prompt'                => $promptRule,
-            'question_type'         => ['required', 'string'],
-            'difficulty'            => ['required', 'string'],
-            'points'                => ['nullable', 'integer', 'min:1'],
-            'explanation'           => ['nullable', 'string'],
-            'passage_text'          => ['nullable', 'string'],
-            'passage_id'            => ['nullable', 'string'],
-            'image_url'             => ['nullable', 'string'],
-            'audio_url'             => ['nullable', 'string'],
-            'media_asset_id'        => ['nullable', 'string'],
-            'image_media_asset_id'  => ['nullable', 'string'],
-            'audio_media_asset_id'  => ['nullable', 'string'],
-            'part_number'           => ['nullable', 'integer', 'between:1,7'],
-            'section'               => ['nullable', 'string'],
-            'choices'               => ['nullable', 'array'],
-            'choices.*.label'       => ['nullable', 'string'],
-            'choices.*.content'     => ['nullable', 'string'],
-            'correct_choice'        => ['nullable'],
-            'correct_choices'       => ['nullable', 'array'],
-            'tf_correct_choice'     => ['nullable', 'string'],
-            'short_answer_text'     => ['nullable', 'string'],
+            'prompt' => $promptRule,
+            'question_type' => ['required', 'string'],
+            'difficulty' => ['required', 'string'],
+            'points' => ['nullable', 'integer', 'min:1'],
+            'explanation' => ['nullable', 'string'],
+            'passage_text' => ['nullable', 'string'],
+            'passage_id' => ['nullable', 'string'],
+            'image_url' => ['nullable', 'string'],
+            'audio_url' => ['nullable', 'string'],
+            'media_asset_id' => ['nullable', 'string'],
+            'image_media_asset_id' => ['nullable', 'string'],
+            'audio_media_asset_id' => ['nullable', 'string'],
+            'part_number' => ['nullable', 'integer', 'between:1,7'],
+            'section' => ['nullable', 'string'],
+            'choices' => ['nullable', 'array'],
+            'choices.*.label' => ['nullable', 'string'],
+            'choices.*.content' => ['nullable', 'string'],
+            'correct_choice' => ['nullable'],
+            'correct_choices' => ['nullable', 'array'],
+            'tf_correct_choice' => ['nullable', 'string'],
+            'short_answer_text' => ['nullable', 'string'],
             'reference_answer_text' => ['nullable', 'string'],
         ]);
 
@@ -1263,17 +1270,17 @@ class QuestionBankController extends Controller
         $qType = $validated['question_type'] === 'single_choice' ? 'multiple_choice' : $validated['question_type'];
 
         $updateData = [
-            'prompt'        => $validated['prompt'] ?? '',
-            'passage_id'    => $validated['passage_id'] ?? $question->passage_id,
-            'image_url'     => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? $question->image_url),
-            'section'       => $section ?: 'reading',
-            'part_number'   => $partNumber,
+            'prompt' => $validated['prompt'] ?? '',
+            'passage_id' => $validated['passage_id'] ?? $question->passage_id,
+            'image_url' => ((int) $partNumber === 2) ? null : ($validated['image_url'] ?? $question->image_url),
+            'section' => $section ?: 'reading',
+            'part_number' => $partNumber,
             'question_type' => $qType,
-            'difficulty'    => $validated['difficulty'],
-            'points'        => $validated['points'] ?? $question->points ?? 1,
-            'explanation'   => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
-            'passage_text'  => $validated['passage_text'] ?? null,
-            'audio_url'     => $validated['audio_url'] ?? null,
+            'difficulty' => $validated['difficulty'],
+            'points' => $validated['points'] ?? $question->points ?? 1,
+            'explanation' => $validated['explanation'] ?? ($validated['reference_answer_text'] ?? null),
+            'passage_text' => $validated['passage_text'] ?? null,
+            'audio_url' => $validated['audio_url'] ?? null,
         ];
 
         if ($request->has('media_asset_id')) {
@@ -1298,7 +1305,7 @@ class QuestionBankController extends Controller
 
         // Auto-reconcile repository revision findings
         if ($questionBank) {
-            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+            app(RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
         }
 
         return redirect()->route('admin.question-banks.show', $question->question_bank_id)
@@ -1336,7 +1343,7 @@ class QuestionBankController extends Controller
         }
 
         if ($questionBank) {
-            app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+            app(RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
         }
 
         return redirect()->route('admin.question-banks.show', $question->question_bank_id)
@@ -1358,7 +1365,7 @@ class QuestionBankController extends Controller
             description: "Deleted Question #{$question->id}: {$question->prompt}",
             subject: $question,
             properties: [
-                'question_id'    => $question->id,
+                'question_id' => $question->id,
                 'question_title' => $question->prompt,
             ]
         );
@@ -1375,8 +1382,32 @@ class QuestionBankController extends Controller
     public function destroy(QuestionBank $questionBank): RedirectResponse
     {
         $user = request()->user();
+
         if ($user && $user->hasRole('teacher')) {
-            abort(403, 'Teachers cannot delete question banks.');
+            if ((int) $questionBank->created_by !== (int) $user->id) {
+                abort(403, 'You can only delete your own question banks.');
+            }
+
+            if ($questionBank->status !== 'draft') {
+                abort(403, 'Teachers can only delete draft question banks.');
+            }
+
+            $questionBank->delete();
+
+            ActivityLogger::log(
+                action: 'question_bank_draft_deleted',
+                description: "Draft question bank deleted: {$questionBank->title}",
+                subject: $questionBank,
+                properties: [
+                    'question_bank_id' => $questionBank->id,
+                    'title' => $questionBank->title,
+                    'deleted_by' => $user->id,
+                ],
+                userId: $user->id
+            );
+
+            return redirect()->route('admin.question-banks.index')
+                ->with('status', "Draft question bank '{$questionBank->title}' deleted successfully.");
         }
 
         // TASK 4 Safe Delete Governance: Published assets enter pending_deletion for Super Admin approval
@@ -1395,7 +1426,7 @@ class QuestionBankController extends Controller
 
         $questionBank->delete();
 
-        ActivityLogger::log('question_bank_deleted', "Soft deleted question bank: {$questionBank->title}", $user);
+        ActivityLogger::log('question_bank_deleted', "Soft deleted question bank: {$questionBank->title}", $questionBank);
 
         return redirect()->route('admin.question-banks.index')
             ->with('status', "Question bank '{$questionBank->title}' deleted.");
@@ -1410,7 +1441,7 @@ class QuestionBankController extends Controller
 
         // Governance Matrix Guard: Only draft, needs_revision, rejected, published are duplicable
         $allowedStatuses = ['draft', 'needs_revision', 'rejected', 'published'];
-        if (! in_array($questionBank->status, $allowedStatuses, true)) {
+        if (!in_array($questionBank->status, $allowedStatuses, true)) {
             if ($request->expectsJson()) {
                 abort(403, 'Question Bank cannot be duplicated in its current governance state.');
             }
@@ -1419,34 +1450,34 @@ class QuestionBankController extends Controller
         }
 
         // Create new Question Bank in DRAFT status
-        $newTitle = $questionBank->title . ' (Copy)';
-        $newBank  = QuestionBank::create([
-            'title'           => $newTitle,
-            'slug'            => Str::slug($newTitle) . '-' . Str::random(5),
-            'test_type'       => $questionBank->test_type,
-            'description'     => $questionBank->description,
-            'category_id'     => $questionBank->category_id,
+        $newTitle = $questionBank->title.' (Copy)';
+        $newBank = QuestionBank::create([
+            'title' => $newTitle,
+            'slug' => Str::slug($newTitle).'-'.Str::random(5),
+            'test_type' => $questionBank->test_type,
+            'description' => $questionBank->description,
+            'category_id' => $questionBank->category_id,
             'acl_category_id' => $questionBank->acl_category_id,
-            'status'          => 'draft',
+            'status' => 'draft',
             'current_version' => '1.0',
-            'created_by'      => $user?->id,
-            'is_published'    => false,
+            'created_by' => $user?->id,
+            'is_published' => false,
         ]);
 
         // Deep copy questions and choices
         $questionBank->load(['questions.choices']);
         foreach ($questionBank->questions as $oldQ) {
             $newQ = $newBank->questions()->create([
-                'prompt'        => $oldQ->prompt,
+                'prompt' => $oldQ->prompt,
                 'question_type' => $oldQ->question_type,
-                'difficulty'    => $oldQ->difficulty,
-                'points'        => $oldQ->points,
+                'difficulty' => $oldQ->difficulty,
+                'points' => $oldQ->points,
             ]);
 
             foreach ($oldQ->choices as $oldC) {
                 $newQ->choices()->create([
-                    'label'      => $oldC->label,
-                    'content'    => $oldC->content,
+                    'label' => $oldC->label,
+                    'content' => $oldC->content,
                     'is_correct' => $oldC->is_correct,
                 ]);
             }
@@ -1469,14 +1500,18 @@ class QuestionBankController extends Controller
             $isAudioOnlyChoice = ToeicQuestionValidator::isAudioOnlyChoicePart($question->part_number);
 
             foreach ($choices as $idx => $choiceData) {
-                if ($isAudioOnlyChoice && $question->part_number == 1 && $idx >= 4) break;
-                if ($isAudioOnlyChoice && $question->part_number == 2 && $idx >= 3) break;
+                if ($isAudioOnlyChoice && $question->part_number == 1 && $idx >= 4) {
+                    break;
+                }
+                if ($isAudioOnlyChoice && $question->part_number == 2 && $idx >= 3) {
+                    break;
+                }
                 if ($isAudioOnlyChoice || !empty($choiceData['content']) || !empty($choiceData['label'])) {
                     QuestionChoice::create([
                         'question_id' => (string) $question->id,
-                        'label'       => $choiceData['label'] ?? chr(65 + (int)$idx),
-                        'content'     => $choiceData['content'] ?? '',
-                        'is_correct'  => ((string) $idx === (string) $correctIdx) || (!empty($choiceData['is_correct'])),
+                        'label' => $choiceData['label'] ?? chr(65 + (int) $idx),
+                        'content' => $choiceData['content'] ?? '',
+                        'is_correct' => ((string) $idx === (string) $correctIdx) || (!empty($choiceData['is_correct'])),
                     ]);
                 }
             }
@@ -1488,9 +1523,9 @@ class QuestionBankController extends Controller
                 if (!empty($choiceData['content']) || !empty($choiceData['label'])) {
                     QuestionChoice::create([
                         'question_id' => (string) $question->id,
-                        'label'       => $choiceData['label'] ?? chr(65 + (int)$idx),
-                        'content'     => $choiceData['content'] ?? '',
-                        'is_correct'  => in_array((string) $idx, array_map('strval', $correctIndices), true),
+                        'label' => $choiceData['label'] ?? chr(65 + (int) $idx),
+                        'content' => $choiceData['content'] ?? '',
+                        'is_correct' => in_array((string) $idx, array_map('strval', $correctIndices), true),
                     ]);
                 }
             }
@@ -1498,24 +1533,24 @@ class QuestionBankController extends Controller
             $tfCorrect = $validated['tf_correct_choice'] ?? 'true';
             QuestionChoice::create([
                 'question_id' => (string) $question->id,
-                'label'       => 'A',
-                'content'     => 'True',
-                'is_correct'  => ($tfCorrect === 'true'),
+                'label' => 'A',
+                'content' => 'True',
+                'is_correct' => ($tfCorrect === 'true'),
             ]);
             QuestionChoice::create([
                 'question_id' => (string) $question->id,
-                'label'       => 'B',
-                'content'     => 'False',
-                'is_correct'  => ($tfCorrect === 'false'),
+                'label' => 'B',
+                'content' => 'False',
+                'is_correct' => ($tfCorrect === 'false'),
             ]);
         } elseif (in_array($qType, ['short_answer', 'essay', 'speaking', 'writing'])) {
             $answerText = $validated['short_answer_text'] ?? ($validated['reference_answer_text'] ?? '');
             if (!empty($answerText)) {
                 QuestionChoice::create([
                     'question_id' => (string) $question->id,
-                    'label'       => 'Key',
-                    'content'     => $answerText,
-                    'is_correct'  => true,
+                    'label' => 'Key',
+                    'content' => $answerText,
+                    'is_correct' => true,
                 ]);
             }
         }
@@ -1546,12 +1581,14 @@ class QuestionBankController extends Controller
             return redirect()->back()->with('error', 'CSV content cannot be empty.');
         }
 
-        $lines = explode("\n", str_replace("\r", "", $csvContent));
+        $lines = explode("\n", str_replace("\r", '', $csvContent));
         $count = 0;
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line)) continue;
+            if (empty($line)) {
+                continue;
+            }
             $parts = array_map('trim', explode(',', $line));
             if (count($parts) >= 6) {
                 $prompt = $parts[0];
@@ -1563,19 +1600,19 @@ class QuestionBankController extends Controller
 
                 $question = Question::create([
                     'question_bank_id' => $questionBank->id,
-                    'prompt'           => $prompt,
-                    'question_type'    => 'single_choice',
-                    'difficulty'        => 'medium',
-                    'points'            => 1,
+                    'prompt' => $prompt,
+                    'question_type' => 'single_choice',
+                    'difficulty' => 'medium',
+                    'points' => 1,
                 ]);
 
                 $choices = [$choiceA, $choiceB, $choiceC, $choiceD];
                 foreach ($choices as $idx => $content) {
                     QuestionChoice::create([
                         'question_id' => (string) $question->id,
-                        'label'       => chr(65 + $idx),
-                        'content'     => $content,
-                        'is_correct'  => ($idx === $correctIdx),
+                        'label' => chr(65 + $idx),
+                        'content' => $content,
+                        'is_correct' => ($idx === $correctIdx),
                     ]);
                 }
                 $count++;
@@ -1583,7 +1620,7 @@ class QuestionBankController extends Controller
         }
 
         // Auto-reconcile repository revision findings (e.g. question count)
-        app(\App\Services\RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
+        app(RepositoryQualityService::class)->reconcileRevisionItems($questionBank);
 
         return redirect()->route('admin.question-banks.show', $questionBank->id)
             ->with('status', "Imported {$count} questions successfully.");

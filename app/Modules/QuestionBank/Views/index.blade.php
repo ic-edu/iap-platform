@@ -759,6 +759,16 @@ html[data-theme="dark"] .acl-form-input, html[data-theme="dark"] .acl-form-selec
                                     @endif
                                 @endif
 
+                                {{-- Delete Draft — Teacher Owner only --}}
+                                @if(Auth::user()?->hasRole('teacher') && $status === 'draft' && (int)$bank->created_by === (int)Auth::id())
+                                <form method="POST" action="{{ route('admin.question-banks.destroy', $bank->id) }}" style="display:inline;"
+                                      onsubmit="event.preventDefault(); iapConfirm({ title: 'Delete Draft Question Bank?', message: 'Are you sure you want to delete draft question bank \'{{ addslashes($bank->title) }}\'? This action cannot be undone.', confirmText: 'Delete Draft', variant: 'danger', form: this });">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="acl-act acl-act--delete" style="color:#fb7185;border:1px solid rgba(251,113,133,.3);" title="Delete draft question bank">🗑 Delete Draft</button>
+                                </form>
+                                @endif
+
                                 {{-- Request Deletion — Non-teachers only --}}
                                 @if(!Auth::user()?->hasRole('teacher'))
                                 <button type="button" onclick="openRequestDeletionModal('{{ route('admin.question-banks.destroy', $bank->id) }}', '{{ addslashes($bank->title) }}')" class="acl-act acl-act--delete">🗑 Request Deletion</button>

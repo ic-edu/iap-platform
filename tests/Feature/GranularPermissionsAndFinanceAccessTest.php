@@ -75,16 +75,22 @@ class GranularPermissionsAndFinanceAccessTest extends TestCase
         $this->assertDatabaseHas('questions', ['id' => $question->id, 'deleted_at' => null]);
     }
 
-    public function test_teacher_cannot_delete_question_bank_and_receives_403(): void
+    public function test_teacher_cannot_delete_non_draft_question_bank_and_receives_403(): void
     {
         $teacher = User::factory()->create();
         $teacher->assignRole('teacher');
 
-        $bank = QuestionBank::create(['title' => 'Protected Bank', 'slug' => 'protected-bank', 'test_type' => 'toefl', 'created_by' => $teacher->id]);
+        $bank = QuestionBank::create([
+            'title' => 'Protected Bank',
+            'slug' => 'protected-bank',
+            'test_type' => 'toefl',
+            'status' => 'needs_revision',
+            'created_by' => $teacher->id,
+        ]);
 
         $response = $this->actingAs($teacher)->delete(route('admin.question-banks.destroy', $bank->id));
         $response->assertStatus(403);
-        $this->assertDatabaseHas('question_banks', ['id' => $bank->id]);
+        $this->assertDatabaseHas('question_banks', ['id' => $bank->id, 'deleted_at' => null]);
     }
 
     public function test_teacher_cannot_delete_or_publish_test_and_receives_403(): void
