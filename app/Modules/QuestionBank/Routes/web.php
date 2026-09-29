@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\QuestionBank\Controllers\QuestionBankController;
+use App\Modules\QuestionBank\Controllers\QuestionGenerationWorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-manager'])->prefix('admin/question-banks')->group(function () {
@@ -31,4 +32,12 @@ Route::middleware(['web', 'auth', 'role:teacher|admin|super-admin|repository-man
     Route::post('/{questionBank}/duplicate', [QuestionBankController::class, 'duplicate'])->name('admin.question-banks.duplicate');
     Route::delete('/questions/{question}', [QuestionBankController::class, 'destroyQuestion'])->name('admin.question-banks.destroy-question');
     Route::delete('/{questionBank}', [QuestionBankController::class, 'destroy'])->name('admin.question-banks.destroy');
+
+    // Sprint 7E: Question Generation Workspace Routes (Teacher Only)
+    Route::middleware('role:teacher')->group(function () {
+        Route::get('/{questionBank}/generation', [QuestionGenerationWorkspaceController::class, 'index'])->name('admin.question-banks.generation.index');
+        Route::post('/{questionBank}/generation', [QuestionGenerationWorkspaceController::class, 'generate'])->name('admin.question-banks.generation.store');
+        Route::post('/{questionBank}/generation/items/{item}/retry', [QuestionGenerationWorkspaceController::class, 'retryItem'])->name('admin.question-banks.generation.retry-item');
+        Route::post('/{questionBank}/generation/batches/{batch}/retry', [QuestionGenerationWorkspaceController::class, 'retryBatch'])->name('admin.question-banks.generation.retry-batch');
+    });
 });
