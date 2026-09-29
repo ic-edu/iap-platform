@@ -530,7 +530,9 @@ class QuestionEngineGroqProviderIntegrationTest extends TestCase
         $this->assertSame(5, $question->part_number);
         $this->assertSame(SectionType::Reading, $question->section);
         $this->assertCount(4, $question->choices);
-        $this->assertSame('A', $question->choices()->where('is_correct', true)->first()->label);
+        $correctChoice = $question->choices()->where('is_correct', true)->first();
+        $this->assertNotNull($correctChoice);
+        $this->assertSame('favorably', $correctChoice->content);
         $this->assertSame('groq', $question->generation_metadata['provider_name']);
     }
 

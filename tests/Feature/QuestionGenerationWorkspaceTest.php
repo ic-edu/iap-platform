@@ -417,8 +417,9 @@ class QuestionGenerationWorkspaceTest extends TestCase
         $this->assertNotNull($question);
         $this->assertSame(ContentOrigin::Generated, $question->content_origin);
         $this->assertSame('The quarterly revenue report will _____ at next Monday\'s board meeting.', $question->prompt);
-        $this->assertCount(4, $question->choices);
-        $this->assertSame('B', $question->choices()->where('is_correct', true)->first()->label);
+        $correctChoice = $question->choices()->where('is_correct', true)->first();
+        $this->assertNotNull($correctChoice);
+        $this->assertSame('be presented', $correctChoice->content);
     }
 
     /**

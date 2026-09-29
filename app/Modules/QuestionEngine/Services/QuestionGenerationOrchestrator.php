@@ -25,8 +25,11 @@ class QuestionGenerationOrchestrator
         protected GeneratedQuestionNormalizer $normalizer,
         protected GeneratedQuestionQualityGate $qualityGate,
         protected GeneratedQuestionMaterializer $materializer,
-        protected ?QuestionGenerationProvider $defaultProvider = null
+        protected ?QuestionGenerationProvider $defaultProvider = null,
+        protected ?GeneratedAnswerChoicePositioner $positioner = null
     ) {
+        $this->positioner ??= new GeneratedAnswerChoicePositioner;
+
         if ($this->defaultProvider === null) {
             if (app()->bound(QuestionGenerationProvider::class)) {
                 $this->defaultProvider = app(QuestionGenerationProvider::class);
@@ -204,9 +207,10 @@ class QuestionGenerationOrchestrator
             ];
             $item->status = GenerationItemStatus::Generated;
 
-            // 4. Normalize Candidate
+            // 4. Normalize Candidate & Apply Deterministic System-Side Answer Positioning
             try {
                 $candidate = $this->normalizer->normalize($providerResponse, $item);
+                $candidate = $this->positioner->reposition($candidate, $item);
                 $item->normalized_output = $candidate->toArray();
             } catch (Exception $e) {
                 $rawOutput = is_array($item->raw_output) ? $item->raw_output : [];

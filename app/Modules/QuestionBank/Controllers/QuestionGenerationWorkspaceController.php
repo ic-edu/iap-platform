@@ -4,6 +4,7 @@ namespace App\Modules\QuestionBank\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\QuestionBank\Enums\DifficultyLevel;
+use App\Modules\QuestionBank\Enums\TestType;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionEngine\DTO\ToeicBlueprintRequest;
 use App\Modules\QuestionEngine\Enums\GenerationBatchStatus;
@@ -38,6 +39,7 @@ class QuestionGenerationWorkspaceController extends Controller
 
         $questionBanks = QuestionBank::where('created_by', $user->id)
             ->whereIn('status', ['draft', 'needs_revision', 'rejected'])
+            ->where('test_type', TestType::Toeic->value)
             ->withCount('questions')
             ->orderBy('updated_at', 'desc')
             ->get();
@@ -316,6 +318,12 @@ class QuestionGenerationWorkspaceController extends Controller
 
         if (!$isEditable) {
             abort(403, 'Question Bank is locked or non-editable and cannot accept question generation.');
+        }
+
+        // 4. Test Type Compatibility Check: Current active vertical slice is TOEIC only
+        $bankType = is_object($questionBank->test_type) ? $questionBank->test_type->value : (string) $questionBank->test_type;
+        if (strtolower((string) $bankType) !== TestType::Toeic->value) {
+            abort(403, 'Question Bank test type is not compatible with the active question generator (TOEIC only).');
         }
     }
 }

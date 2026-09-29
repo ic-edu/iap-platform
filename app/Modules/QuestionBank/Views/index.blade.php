@@ -765,6 +765,11 @@ html[data-theme="dark"] .acl-form-input, html[data-theme="dark"] .acl-form-selec
                                       onsubmit="event.preventDefault(); iapConfirm({ title: 'Delete Draft Question Bank?', message: 'Are you sure you want to delete draft question bank \'{{ addslashes($bank->title) }}\'? This action cannot be undone.', confirmText: 'Delete Draft', variant: 'danger', form: this });">
                                     @csrf
                                     @method('DELETE')
+                                    @foreach(request()->only(['status', 'search', 'sort', 'page', 'category', 'test_type', 'acl_category_id', 'author', 'my']) as $k => $v)
+                                        @if(!is_null($v) && $v !== '')
+                                            <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                                        @endif
+                                    @endforeach
                                     <button type="submit" class="acl-act acl-act--delete" style="color:#fb7185;border:1px solid rgba(251,113,133,.3);" title="Delete draft question bank">🗑 Delete Draft</button>
                                 </form>
                                 @endif

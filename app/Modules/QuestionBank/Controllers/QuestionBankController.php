@@ -1379,9 +1379,41 @@ class QuestionBankController extends Controller
     /**
      * Delete question bank (Safe Delete Governance Workflow TASK 4).
      */
-    public function destroy(QuestionBank $questionBank): RedirectResponse
+    public function destroy(Request $request, QuestionBank $questionBank): RedirectResponse
     {
-        $user = request()->user();
+        $user = $request->user();
+
+        // Safe query preservation allowlist
+        $allowedKeys = ['status', 'search', 'sort', 'page', 'category', 'test_type', 'acl_category_id', 'author', 'my'];
+        $redirectParams = [];
+
+        foreach ($allowedKeys as $key) {
+            if ($request->filled($key)) {
+                $redirectParams[$key] = $request->input($key);
+            }
+        }
+
+        // If no direct query/body inputs, check return_url or referer header if internal
+        if (empty($redirectParams)) {
+            $sourceUrl = $request->input('return_url') ?? $request->headers->get('referer');
+            if ($sourceUrl) {
+                $parsed = parse_url($sourceUrl);
+                $path = $parsed['path'] ?? '';
+                $isInternalQb = ($path === '/admin/question-banks' || str_starts_with($path, '/admin/question-banks'));
+                $host = $parsed['host'] ?? null;
+                $currentHost = $request->getHost();
+                $isSafeHost = $host === null || $host === $currentHost;
+
+                if ($isInternalQb && $isSafeHost && !empty($parsed['query'])) {
+                    parse_str($parsed['query'], $queryArray);
+                    foreach ($allowedKeys as $key) {
+                        if (isset($queryArray[$key]) && $queryArray[$key] !== '') {
+                            $redirectParams[$key] = $queryArray[$key];
+                        }
+                    }
+                }
+            }
+        }
 
         if ($user && $user->hasRole('teacher')) {
             if ((int) $questionBank->created_by !== (int) $user->id) {
@@ -1406,7 +1438,7 @@ class QuestionBankController extends Controller
                 userId: $user->id
             );
 
-            return redirect()->route('admin.question-banks.index')
+            return redirect()->route('admin.question-banks.index', $redirectParams)
                 ->with('status', "Draft question bank '{$questionBank->title}' deleted successfully.");
         }
 
@@ -1420,7 +1452,7 @@ class QuestionBankController extends Controller
                 subject: $questionBank
             );
 
-            return redirect()->route('admin.question-banks.index')
+            return redirect()->route('admin.question-banks.index', $redirectParams)
                 ->with('status', "Deletion requested for published question bank '{$questionBank->title}'. Awaiting Super Admin approval.");
         }
 
@@ -1428,7 +1460,7 @@ class QuestionBankController extends Controller
 
         ActivityLogger::log('question_bank_deleted', "Soft deleted question bank: {$questionBank->title}", $questionBank);
 
-        return redirect()->route('admin.question-banks.index')
+        return redirect()->route('admin.question-banks.index', $redirectParams)
             ->with('status', "Question bank '{$questionBank->title}' deleted.");
     }
 

@@ -69,7 +69,7 @@
             </div>
             <h3 class="text-base font-bold text-slate-900 dark:text-slate-200 mb-1">No Editable Question Banks Found</h3>
             <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
-                You do not have any editable Question Banks (Draft, Needs Revision, or Rejected) to generate questions into. Create a new bank to start generating.
+                No editable TOEIC Question Bank is available for generation. Create a new question bank to start generating.
             </p>
             <a href="{{ route('admin.question-banks.index') }}" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all inline-flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,7 +82,7 @@
         <div>
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Available Target Question Banks ({{ $questionBanks->count() }})</h2>
-                <span class="text-xs text-slate-500 dark:text-slate-400">Only showing editable repositories owned by you</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">Only showing eligible TOEIC repositories owned by you</span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

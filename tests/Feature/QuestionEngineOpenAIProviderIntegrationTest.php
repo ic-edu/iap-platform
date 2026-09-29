@@ -510,7 +510,9 @@ class QuestionEngineOpenAIProviderIntegrationTest extends TestCase
         $this->assertSame($this->questionBank->id, $question->question_bank_id);
         $this->assertSame(5, $question->part_number);
         $this->assertCount(4, $question->choices);
-        $this->assertSame('A', $question->choices()->where('is_correct', true)->first()->label);
+        $correctChoice = $question->choices()->where('is_correct', true)->first();
+        $this->assertNotNull($correctChoice);
+        $this->assertSame('postponed', $correctChoice->content);
     }
 
     /**
