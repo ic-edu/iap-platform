@@ -1047,4 +1047,44 @@ class QuestionEngineOpenAIProviderIntegrationTest extends TestCase
             $this->recursivelyAssertStrictObjectSchema($schema['items']);
         }
     }
+
+    /**
+     * Test OpenAI provider fails closed when PromptComposition schemaDefinition is empty, sending zero network requests
+     */
+    public function test_openai_fails_closed_when_schema_definition_is_empty_and_sends_zero_requests(): void
+    {
+        Http::fake();
+
+        $provider = new OpenAIQuestionGenerationProvider(apiKey: 'sk-test-empty-schema-key');
+
+        $promptComp = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'You are a test writer.',
+            userPrompt: 'Generate a test item.',
+            schemaDefinition: [], // Empty schema definition
+            targetMetadata: [
+                'assessment_family' => AssessmentFamily::Toeic->value,
+                'section' => 'reading',
+                'part_number' => 5,
+            ]
+        );
+
+        $genReq = new GenerationProviderRequest(
+            batchId: 'batch-test-1',
+            itemId: 'item-test-1',
+            slotSequence: 1,
+            promptComposition: $promptComp
+        );
+
+        $response = $provider->generate($genReq);
+
+        $this->assertFalse($response->isSuccess);
+        $this->assertSame(GenerationErrorCode::SchemaValidationFailed, $response->errorCode);
+        $this->assertFalse($response->metadata['retryable']);
+        $this->assertSame($promptComp->computePromptHash(), $response->metadata['prompt_hash']);
+        $this->assertStringContainsString('schemaDefinition is missing or empty', $response->errorMessage);
+
+        // Prove zero network requests occur
+        Http::assertNothingSent();
+    }
 }

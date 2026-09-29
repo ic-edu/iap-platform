@@ -10,6 +10,7 @@ use App\Modules\QuestionBank\Models\Question;
 use App\Modules\QuestionBank\Models\QuestionBank;
 use App\Modules\QuestionEngine\Contracts\QuestionGenerationProvider;
 use App\Modules\QuestionEngine\DTO\GenerationProviderRequest;
+use App\Modules\QuestionEngine\DTO\PromptComposition;
 use App\Modules\QuestionEngine\DTO\ToeflBlueprintRequest;
 use App\Modules\QuestionEngine\DTO\ToeicBlueprintRequest;
 use App\Modules\QuestionEngine\Enums\AssessmentFamily;
@@ -700,5 +701,45 @@ class QuestionEngineGroqProviderIntegrationTest extends TestCase
         $this->assertSame(GenerationErrorCode::ProviderTimeout, $response->errorCode);
         $this->assertTrue($response->metadata['retryable']);
         $this->assertStringContainsString('Groq connection/timeout failure', $response->errorMessage);
+    }
+
+    /**
+     * Test Groq provider fails closed when PromptComposition schemaDefinition is empty, sending zero network requests
+     */
+    public function test_groq_fails_closed_when_schema_definition_is_empty_and_sends_zero_requests(): void
+    {
+        Http::fake();
+
+        $provider = new GroqQuestionGenerationProvider(apiKey: 'gsk-test-empty-schema-key');
+
+        $promptComp = new PromptComposition(
+            promptContractVersion: 'question_generation_v1',
+            systemPrompt: 'You are a test writer.',
+            userPrompt: 'Generate a test item.',
+            schemaDefinition: [], // Empty schema definition
+            targetMetadata: [
+                'assessment_family' => AssessmentFamily::Toeic->value,
+                'section' => 'reading',
+                'part_number' => 5,
+            ]
+        );
+
+        $genReq = new GenerationProviderRequest(
+            batchId: 'batch-test-1',
+            itemId: 'item-test-1',
+            slotSequence: 1,
+            promptComposition: $promptComp
+        );
+
+        $response = $provider->generate($genReq);
+
+        $this->assertFalse($response->isSuccess);
+        $this->assertSame(GenerationErrorCode::SchemaValidationFailed, $response->errorCode);
+        $this->assertFalse($response->metadata['retryable']);
+        $this->assertSame($promptComp->computePromptHash(), $response->metadata['prompt_hash']);
+        $this->assertStringContainsString('schemaDefinition is missing or empty', $response->errorMessage);
+
+        // Prove zero network requests occur
+        Http::assertNothingSent();
     }
 }
