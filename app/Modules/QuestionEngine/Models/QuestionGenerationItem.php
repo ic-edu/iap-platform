@@ -177,4 +177,60 @@ class QuestionGenerationItem extends Model
 
         return $this;
     }
+
+    /**
+     * Determine if this item is eligible for another generation attempt.
+     */
+    public function isEligibleForRetry(int $maxAttempts = 3): bool
+    {
+        // 1. Quality failures and non-failed states are strictly ineligible
+        if ($this->status !== GenerationItemStatus::Failed) {
+            return false;
+        }
+
+        // 2. Budget enforcement
+        if ($this->attempt_count >= $maxAttempts) {
+            return false;
+        }
+
+        // 3. Explicit retryability recorded in raw_output
+        if (isset($this->raw_output['retryable'])) {
+            return (bool) $this->raw_output['retryable'];
+        }
+
+        // 4. Fallback on error code if retryable flag was not explicitly recorded
+        if (!empty($this->last_error_code)) {
+            $code = GenerationErrorCode::tryFrom($this->last_error_code);
+
+            return $code ? $code->isRetryable() : false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get operational telemetry including attempt history and latest execution metrics.
+     *
+     * @return array<string, mixed>
+     */
+    public function getOperationalTelemetry(): array
+    {
+        $raw = is_array($this->raw_output) ? $this->raw_output : [];
+
+        return [
+            'attempt_count' => $this->attempt_count,
+            'status' => $this->status->value,
+            'is_success' => ($this->status !== GenerationItemStatus::Failed && $this->status !== GenerationItemStatus::ValidationFailed) && (bool) ($raw['is_success'] ?? false),
+            'provider_name' => $raw['provider_name'] ?? null,
+            'model_name' => $raw['model_name'] ?? null,
+            'latency_ms' => $raw['latency_ms'] ?? 0,
+            'token_usage' => $raw['token_usage'] ?? [],
+            'error_code' => $this->last_error_code ?? ($raw['error_code'] ?? null),
+            'error_message' => $this->last_error_message ?? ($raw['error_message'] ?? null),
+            'retryable' => $raw['retryable'] ?? false,
+            'status_code' => $raw['status_code'] ?? null,
+            'prompt_hash' => $raw['prompt_hash'] ?? ($this->prompt_payload['prompt_hash'] ?? null),
+            'attempts' => $raw['attempts'] ?? [],
+        ];
+    }
 }

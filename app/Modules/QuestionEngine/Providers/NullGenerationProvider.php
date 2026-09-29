@@ -25,7 +25,12 @@ class NullGenerationProvider implements QuestionGenerationProvider
             errorMessage: $this->failureReason ?? 'Provider unavailable.',
             providerName: $this->getProviderName(),
             latencyMs: 1,
-            metadata: ['batch_id' => $request->batchId, 'item_id' => $request->itemId]
+            metadata: [
+                'batch_id' => $request->batchId,
+                'item_id' => $request->itemId,
+                'retryable' => false,
+                'prompt_hash' => $request->promptComposition->computePromptHash(),
+            ]
         );
     }
 }

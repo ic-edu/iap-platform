@@ -92,15 +92,20 @@ class QuestionGenerationOrchestrator
         array $options = []
     ): QuestionGenerationItem {
         $activeProvider = $provider ?? $this->defaultProvider;
+        $maxAttempts = (int) ($options['max_attempts'] ?? 3);
 
         // Atomic transition from pending/ready to processing
-        $claimed = DB::transaction(function () use ($item) {
+        $claimed = DB::transaction(function () use ($item, $maxAttempts) {
             /** @var QuestionGenerationItem|null $fresh */
             $fresh = QuestionGenerationItem::where('id', $item->id)
                 ->lockForUpdate()
                 ->first();
 
             if (!$fresh || !$fresh->status->canAttempt()) {
+                return false;
+            }
+
+            if ($fresh->attempt_count > 0 && !$fresh->isEligibleForRetry($maxAttempts)) {
                 return false;
             }
 
@@ -137,7 +142,45 @@ class QuestionGenerationOrchestrator
             // 3. Execute Provider Generation
             $providerResponse = $activeProvider->generate($providerRequest);
 
+            $isRetryable = isset($providerResponse->metadata['retryable'])
+                ? (bool) $providerResponse->metadata['retryable']
+                : ($providerResponse->errorCode?->isRetryable() ?? false);
+
+            $attemptRecord = [
+                'attempt_number' => $item->attempt_count,
+                'stage' => 'provider_generation',
+                'is_success' => $providerResponse->isSuccess,
+                'provider_name' => $providerResponse->providerName ?? $activeProvider->getProviderName(),
+                'model_name' => $providerResponse->modelName ?? ($providerResponse->metadata['model'] ?? null),
+                'latency_ms' => $providerResponse->latencyMs,
+                'token_usage' => $providerResponse->tokenUsage,
+                'error_code' => $providerResponse->errorCode?->value,
+                'error_message' => $providerResponse->errorMessage,
+                'retryable' => $isRetryable,
+                'status_code' => $providerResponse->metadata['status_code'] ?? null,
+                'prompt_hash' => $providerResponse->metadata['prompt_hash'] ?? $promptComposition->computePromptHash(),
+                'recorded_at' => Carbon::now()->toIso8601String(),
+            ];
+
+            $rawOutput = is_array($item->raw_output) ? $item->raw_output : [];
+            $attempts = is_array($rawOutput['attempts'] ?? null) ? $rawOutput['attempts'] : [];
+            $attempts[] = $attemptRecord;
+
             if (!$providerResponse->isSuccess) {
+                $item->raw_output = [
+                    'is_success' => false,
+                    'provider_name' => $providerResponse->providerName ?? $activeProvider->getProviderName(),
+                    'model_name' => $providerResponse->modelName ?? ($providerResponse->metadata['model'] ?? null),
+                    'latency_ms' => $providerResponse->latencyMs,
+                    'token_usage' => $providerResponse->tokenUsage,
+                    'error_code' => $providerResponse->errorCode?->value,
+                    'error_message' => $providerResponse->errorMessage,
+                    'retryable' => $isRetryable,
+                    'status_code' => $providerResponse->metadata['status_code'] ?? null,
+                    'prompt_hash' => $providerResponse->metadata['prompt_hash'] ?? $promptComposition->computePromptHash(),
+                    'attempts' => $attempts,
+                ];
+
                 $item->markFailed(
                     errorCode: $providerResponse->errorCode ?? GenerationErrorCode::ProviderError,
                     errorMessage: $providerResponse->errorMessage ?? 'Provider generation failed.'
@@ -148,12 +191,16 @@ class QuestionGenerationOrchestrator
             }
 
             $item->raw_output = [
+                'is_success' => true,
                 'provider_name' => $providerResponse->providerName,
                 'model_name' => $providerResponse->modelName,
                 'latency_ms' => $providerResponse->latencyMs,
                 'token_usage' => $providerResponse->tokenUsage,
                 'raw_content' => $providerResponse->rawContent,
                 'parsed_payload' => $providerResponse->parsedPayload,
+                'retryable' => false,
+                'prompt_hash' => $providerResponse->metadata['prompt_hash'] ?? $promptComposition->computePromptHash(),
+                'attempts' => $attempts,
             ];
             $item->status = GenerationItemStatus::Generated;
 
@@ -162,6 +209,23 @@ class QuestionGenerationOrchestrator
                 $candidate = $this->normalizer->normalize($providerResponse, $item);
                 $item->normalized_output = $candidate->toArray();
             } catch (Exception $e) {
+                $rawOutput = is_array($item->raw_output) ? $item->raw_output : [];
+                $normAttempts = is_array($rawOutput['attempts'] ?? null) ? $rawOutput['attempts'] : [];
+                $normAttempts[] = [
+                    'attempt_number' => $item->attempt_count,
+                    'stage' => 'normalization',
+                    'is_success' => false,
+                    'error_code' => GenerationErrorCode::NormalizationFailed->value,
+                    'error_message' => "Candidate normalization error: {$e->getMessage()}",
+                    'retryable' => false,
+                    'recorded_at' => Carbon::now()->toIso8601String(),
+                ];
+
+                $rawOutput['attempts'] = $normAttempts;
+                $rawOutput['retryable'] = false;
+                $rawOutput['is_success'] = false;
+                $item->raw_output = $rawOutput;
+
                 $item->markFailed(
                     errorCode: GenerationErrorCode::NormalizationFailed,
                     errorMessage: "Candidate normalization error: {$e->getMessage()}"
@@ -175,6 +239,23 @@ class QuestionGenerationOrchestrator
             $validationResult = $this->qualityGate->validate($candidate, $item);
 
             if (!$validationResult->isValid) {
+                $rawOutput = is_array($item->raw_output) ? $item->raw_output : [];
+                $qgAttempts = is_array($rawOutput['attempts'] ?? null) ? $rawOutput['attempts'] : [];
+                $qgAttempts[] = [
+                    'attempt_number' => $item->attempt_count,
+                    'stage' => 'quality_gate',
+                    'is_success' => false,
+                    'error_code' => GenerationErrorCode::QualityGateFailed->value,
+                    'error_message' => 'Quality gate validation failed: '.json_encode($validationResult->violations),
+                    'retryable' => false,
+                    'recorded_at' => Carbon::now()->toIso8601String(),
+                ];
+
+                $rawOutput['attempts'] = $qgAttempts;
+                $rawOutput['retryable'] = false;
+                $rawOutput['is_success'] = false;
+                $item->raw_output = $rawOutput;
+
                 $item->markValidationFailed(
                     validationResult: $validationResult->toArray(),
                     message: 'Quality gate validation failed: '.json_encode($validationResult->violations)
@@ -195,6 +276,23 @@ class QuestionGenerationOrchestrator
                 ]);
                 $item->refresh();
             } catch (Exception $e) {
+                $rawOutput = is_array($item->raw_output) ? $item->raw_output : [];
+                $matAttempts = is_array($rawOutput['attempts'] ?? null) ? $rawOutput['attempts'] : [];
+                $matAttempts[] = [
+                    'attempt_number' => $item->attempt_count,
+                    'stage' => 'materialization',
+                    'is_success' => false,
+                    'error_code' => GenerationErrorCode::MaterializationFailed->value,
+                    'error_message' => "Question materialization error: {$e->getMessage()}",
+                    'retryable' => false,
+                    'recorded_at' => Carbon::now()->toIso8601String(),
+                ];
+
+                $rawOutput['attempts'] = $matAttempts;
+                $rawOutput['retryable'] = false;
+                $rawOutput['is_success'] = false;
+                $item->raw_output = $rawOutput;
+
                 $item->markFailed(
                     errorCode: GenerationErrorCode::MaterializationFailed,
                     errorMessage: "Question materialization error: {$e->getMessage()}"
@@ -206,6 +304,23 @@ class QuestionGenerationOrchestrator
 
             return $item;
         } catch (Exception $e) {
+            $rawOutput = is_array($item->raw_output) ? $item->raw_output : [];
+            $unexpAttempts = is_array($rawOutput['attempts'] ?? null) ? $rawOutput['attempts'] : [];
+            $unexpAttempts[] = [
+                'attempt_number' => $item->attempt_count,
+                'stage' => 'orchestration',
+                'is_success' => false,
+                'error_code' => GenerationErrorCode::ProviderError->value,
+                'error_message' => "Unexpected orchestration error: {$e->getMessage()}",
+                'retryable' => false,
+                'recorded_at' => Carbon::now()->toIso8601String(),
+            ];
+
+            $rawOutput['attempts'] = $unexpAttempts;
+            $rawOutput['retryable'] = false;
+            $rawOutput['is_success'] = false;
+            $item->raw_output = $rawOutput;
+
             $item->markFailed(
                 errorCode: GenerationErrorCode::ProviderError,
                 errorMessage: "Unexpected orchestration error: {$e->getMessage()}"
@@ -217,7 +332,7 @@ class QuestionGenerationOrchestrator
     }
 
     /**
-     * Retry failed or validation_failed items in a batch up to maxAttempts.
+     * Retry failed items in a batch up to maxAttempts, strictly enforcing retry eligibility.
      */
     public function retryFailedItems(
         QuestionGenerationBatch $batch,
@@ -226,14 +341,17 @@ class QuestionGenerationOrchestrator
         array $options = []
     ): QuestionGenerationBatch {
         $activeProvider = $provider ?? $this->defaultProvider;
+        $effectiveOptions = array_merge($options, ['max_attempts' => $maxAttempts]);
 
         $failedItems = $batch->items()
-            ->whereIn('status', [GenerationItemStatus::Failed, GenerationItemStatus::ValidationFailed])
+            ->where('status', GenerationItemStatus::Failed)
             ->where('attempt_count', '<', $maxAttempts)
             ->get();
 
         foreach ($failedItems as $item) {
-            $this->processItem($item, $activeProvider, $options);
+            if ($item->isEligibleForRetry($maxAttempts)) {
+                $this->processItem($item, $activeProvider, $effectiveOptions);
+            }
         }
 
         return $this->finalizeBatchState($batch->fresh(['items']));
