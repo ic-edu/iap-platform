@@ -33,4 +33,21 @@ return [
         'connect_timeout' => (int) env('OPENAI_GENERATION_CONNECT_TIMEOUT', 10),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Groq Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Settings for the Groq question generation provider adapter.
+    |
+    */
+
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+        'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+        'model' => env('GROQ_GENERATION_MODEL', 'openai/gpt-oss-20b'),
+        'timeout' => (int) env('GROQ_GENERATION_TIMEOUT', 30),
+        'connect_timeout' => (int) env('GROQ_GENERATION_CONNECT_TIMEOUT', 10),
+    ],
+
 ];

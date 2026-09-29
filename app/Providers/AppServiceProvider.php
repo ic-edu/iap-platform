@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Integrations\QuestionGeneration\GroqQuestionGenerationProvider;
 use App\Integrations\QuestionGeneration\OpenAIQuestionGenerationProvider;
 use App\Modules\QuestionEngine\Contracts\QuestionGenerationProvider;
 use App\Modules\QuestionEngine\Providers\FakeGenerationProvider;
@@ -31,6 +32,13 @@ class AppServiceProvider extends ServiceProvider
                         baseUrl: config('question_generation.openai.base_url'),
                         timeout: (int) config('question_generation.openai.timeout', 30),
                         connectTimeout: (int) config('question_generation.openai.connect_timeout', 10),
+                    ),
+                    'groq' => new GroqQuestionGenerationProvider(
+                        apiKey: config('question_generation.groq.api_key'),
+                        model: config('question_generation.groq.model'),
+                        baseUrl: config('question_generation.groq.base_url'),
+                        timeout: (int) config('question_generation.groq.timeout', 30),
+                        connectTimeout: (int) config('question_generation.groq.connect_timeout', 10),
                     ),
                     'fake' => new FakeGenerationProvider,
                     'null' => new NullGenerationProvider,
